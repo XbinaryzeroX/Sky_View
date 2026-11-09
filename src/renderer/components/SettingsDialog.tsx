@@ -168,6 +168,9 @@ export function SettingsDialog({ settings, onClose }: { settings: Settings; onCl
             </label>
           </div>
           <label className="check">
+            <input type="checkbox" checked={s.aircraftPhotos} onChange={(e) => set('aircraftPhotos', e.target.checked)} /> Aircraft photos from Planespotters.net (exact aircraft only, matched by ICAO address; the app sends the selected aircraft’s address to Planespotters.net; review their API terms before commercial use)
+          </label>
+          <label className="check">
             <input type="checkbox" checked={s.streetLabels} onChange={(e) => set('streetLabels', e.target.checked)} /> Street names when zoomed in (below about 3 km)
           </label>
           <button

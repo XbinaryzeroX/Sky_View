@@ -23,6 +23,8 @@ import {
   VerticalOrigin,
   type CesiumWidget,
 } from 'cesium';
+import { classifyAircraft, classifyVessel } from '../../shared/vehicleClass';
+import { aircraftSymbol, vesselSymbol } from './symbols';
 import { eciToGeodetic, gstime, propagate, twoline2satrec, type SatRec } from 'satellite.js';
 import type { GeoRecord, LayerId } from '../../shared/layers';
 import { altitudeColor, deadReckon, passesFilter, specialCode, trackState, type AircraftFilter } from '../../shared/aircraft';
@@ -167,7 +169,12 @@ export class LayerRenderer {
   /** Hover state from the globe's mouse-move picking. */
   setHovered(h: { layer: LayerId; id: string } | null): void {
     if (h?.layer === this.hovered?.layer && h?.id === this.hovered?.id) return;
+    const prev = this.hovered;
     this.hovered = h;
+    for (const x of [prev, h]) {
+      const e = x ? this.entities.get(x.layer)?.get(x.id) : undefined;
+      if (e?.billboard) e.billboard.scale = ((x === h ? 1.3 : 1) * (this.sel.layer === x!.layer && this.sel.id === x!.id ? 1.35 : 1)) as never;
+    }
     this.cullBehindEarth();
     this.widget.scene.requestRender();
   }
@@ -253,7 +260,7 @@ export class LayerRenderer {
         if (existing.billboard) {
           existing.billboard.rotation = this.rotationFor(r) as never;
           existing.billboard.scale = (selected ? 1.35 : 1) as never;
-          if (id === 'aircraft' || id === 'aircraftMil') existing.billboard.image = glyph('plane', aircraftColor(r)) as never;
+          existing.billboard.image = this.iconFor(id, r, selected) as never;
         }
         if (existing.label) existing.label.text = r.label as never;
         continue;
@@ -312,6 +319,13 @@ export class LayerRenderer {
     return 0;
   }
 
+  /** Class silhouette (exact type → family → category → unknown), with a ring when selected. */
+  private iconFor(id: LayerId, r: GeoRecord, selected: boolean): string {
+    if (id === 'vessels') return vesselSymbol(classifyVessel(typeof r.props.shipType === 'number' ? r.props.shipType : null).symbol, vesselColor(r), 30, selected ? '#ffd84a' : undefined);
+    if (id === 'aircraft' || id === 'aircraftMil') return aircraftSymbol(classifyAircraft(r.props.type as string | null, r.props.emitterCategory as string | null).symbol, aircraftColor(r), 40, selected ? '#ffd84a' : undefined);
+    return glyph('plane', '#fff');
+  }
+
   private rotationFor(r: GeoRecord): number {
     return r.heading === null ? 0 : -CMath.toRadians(r.heading);
   }
@@ -338,7 +352,7 @@ export class LayerRenderer {
         return new Entity({
           ...base,
           billboard: {
-            image: glyph('plane', aircraftColor(r)),
+            image: this.iconFor(id, r, selected),
             rotation: this.rotationFor(r),
             alignedAxis: Cartesian3.UNIT_Z,
             scale: selected ? 1.35 : 1,
@@ -354,7 +368,7 @@ export class LayerRenderer {
         return new Entity({
           ...base,
           // At sea level: lifted toward the camera so the flat sea surface does not cut the icon.
-          billboard: { image: glyph('ship', vesselColor(r), 26), rotation: this.rotationFor(r), alignedAxis: Cartesian3.UNIT_Z, scale: selected ? 1.4 : 1, scaleByDistance: new NearFarScalar(2e4, 1, 3e6, 0.4), disableDepthTestDistance: 0, eyeOffset: new Cartesian3(0, 0, -60) },
+          billboard: { image: this.iconFor(id, r, selected), rotation: this.rotationFor(r), alignedAxis: Cartesian3.UNIT_Z, scale: selected ? 1.4 : 1, scaleByDistance: new NearFarScalar(2e4, 1, 3e6, 0.4), disableDepthTestDistance: 0, eyeOffset: new Cartesian3(0, 0, -60) },
           label: { ...label(r.label, 1.5e5), disableDepthTestDistance: 0, eyeOffset: new Cartesian3(0, 0, -60) },
         });
       case 'satellites':

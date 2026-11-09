@@ -1,3 +1,5 @@
+import type { RouteInfo } from '../../shared/route';
+import { VehicleExtras } from './VehicleExtras';
 import { useEffect, useMemo, useState } from 'react';
 import { CameraPlayer, cameraMedia } from './CameraPlayer';
 import { geodesicDistanceKm } from '../../shared/geo';
@@ -17,6 +19,9 @@ interface Props {
   onFocus(lat: number, lon: number, radiusKm?: number): void;
   watched?: boolean;
   onWatch?(on: boolean): void;
+  photosEnabled?: boolean;
+  onEnablePhotos?(): void;
+  onShowRoute?(route: RouteInfo | null): void;
 }
 
 const PROP_LABEL: Record<string, string> = {
@@ -235,6 +240,9 @@ export function RecordDetails(p: Props) {
             </div>
           ))}
       </dl>
+      {(p.layer === 'aircraft' || p.layer === 'aircraftMil' || p.layer === 'vessels') && (
+        <VehicleExtras layer={p.layer} r={r} photosEnabled={!!p.photosEnabled} onEnablePhotos={() => p.onEnablePhotos?.()} onShowRoute={(x) => p.onShowRoute?.(x)} />
+      )}
       {p.layer === 'cameras' ? <CameraPlayer key={r.id} media={cameraMedia(r)} title={r.label} /> : r.imageUrl && <CameraImage url={r.imageUrl} refreshMin={typeof r.props.updateFrequencyMin === 'number' ? r.props.updateFrequencyMin : null} />}
       {nearby.length > 0 && (
         <>

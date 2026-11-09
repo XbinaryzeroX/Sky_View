@@ -266,3 +266,32 @@ describe('label hierarchy', () => {
     expect(placeBoxes([city, far], 1).size).toBe(1);
   });
 });
+
+describe('vehicle symbol classes', () => {
+  it('uses exact type, then emitter category, then unknown (never a guessed model)', async () => {
+    const { classifyAircraft, classifyVessel } = await import('../src/shared/vehicleClass');
+    expect(classifyAircraft('B77W', 'A5')).toMatchObject({ symbol: 'widebody', basis: 'type' });
+    expect(classifyAircraft('A20N', 'A3')).toMatchObject({ symbol: 'narrowbody', basis: 'type' });
+    expect(classifyAircraft('E75L', null)).toMatchObject({ symbol: 'regional', basis: 'type' });
+    expect(classifyAircraft('DH8D', null)).toMatchObject({ symbol: 'turboprop', basis: 'type' });
+    expect(classifyAircraft('GLF6', null)).toMatchObject({ symbol: 'bizjet', basis: 'type' });
+    expect(classifyAircraft('C172', null)).toMatchObject({ symbol: 'light', basis: 'type' });
+    expect(classifyAircraft('EC35', null)).toMatchObject({ symbol: 'helicopter', basis: 'type' });
+    expect(classifyAircraft('ZZZZ', 'A7')).toMatchObject({ symbol: 'helicopter', basis: 'category' });
+    expect(classifyAircraft(null, null)).toMatchObject({ symbol: 'unknown', basis: 'unknown' });
+    expect(classifyAircraft('XYZ1', null).symbol).toBe('unknown');
+    expect(classifyVessel(71).symbol).toBe('cargo');
+    expect(classifyVessel(84).symbol).toBe('tanker');
+    expect(classifyVessel(30).symbol).toBe('fishing');
+    expect(classifyVessel(null)).toMatchObject({ symbol: 'unknown', basis: 'unknown' });
+  });
+
+  it('parses reported routes and returns null when none is known', async () => {
+    const { parseRouteset } = await import('../src/shared/route');
+    expect(parseRouteset(null, 'UAL1')).toBeNull();
+    expect(parseRouteset([], 'UAL1')).toBeNull();
+    const r = parseRouteset([{ callsign: 'UAL1', plausible: true, _airports: [{ icao: 'KSFO', iata: 'SFO', name: 'San Francisco Intl', location: 'San Francisco', countryiso2: 'US', lat: 37.6, lon: -122.4 }, { icao: 'RJTT', iata: 'HND', name: 'Haneda', location: 'Tokyo', countryiso2: 'JP', lat: 35.5, lon: 139.8 }] }], 'ual1');
+    expect(r?.airports.map((a) => a.iata)).toEqual(['SFO', 'HND']);
+    expect(r?.plausible).toBe(true);
+  });
+});

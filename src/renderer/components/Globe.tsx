@@ -1,5 +1,7 @@
+import type { RouteInfo } from '../../shared/route';
 import '../lib/cesiumBase';
 import {
+  ArcType,
   SkyAtmosphere,
   SkyBox,
   Cartesian2,
@@ -138,6 +140,8 @@ interface Props {
   annotations: Annotation[];
   playback: PlaybackFrame | null;
   google3dKey: string | null;
+  /** Reported route airports for the selected aircraft (dashed; not the flown path). */
+  routeLine?: RouteInfo | null;
   imageryKeys: { esri: string | null; mapbox: string | null; google: string | null };
   /** Shown to the user when a customer-credential provider (Google) refuses requests. */
   onProviderError?: (message: string) => void;
@@ -623,6 +627,26 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       lr.setVisible(lid, on);
     }
   }, [props.layerSnaps, props.layersOn, selRecord?.layer, selRecord?.id, props.playback === null, ready, props.aircraftFilter, props.vesselClasses, props.settings.smoothMotion, props.settings.aircraftLabels, props.settings.vesselLabels]);
+
+  // ----- reported route (dashed great-circle legs between reported airports) -----
+  const routeEntRef = useRef<Entity | null>(null);
+  useEffect(() => {
+    const w = widgetRef.current;
+    if (!w || !ready) return;
+    if (routeEntRef.current) w.entities.remove(routeEntRef.current);
+    routeEntRef.current = null;
+    const pts = (props.routeLine?.airports ?? []).filter((a) => a.lat !== null && a.lon !== null);
+    if (pts.length >= 2)
+      routeEntRef.current = w.entities.add({
+        polyline: {
+          positions: Cartesian3.fromDegreesArray(pts.flatMap((a) => [a.lon!, a.lat!])),
+          width: 2,
+          arcType: ArcType.GEODESIC,
+          material: new PolylineDashMaterialProperty({ color: Color.fromCssColorString('#ffd84a').withAlpha(0.85), dashLength: 18 }),
+        },
+      });
+    w.scene.requestRender();
+  }, [props.routeLine, ready]);
 
   // ----- geographic labels (screen-space, collision-managed) -----
   useEffect(() => {

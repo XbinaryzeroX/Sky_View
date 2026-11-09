@@ -1,3 +1,4 @@
+import type { RouteInfo } from '../shared/route';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { isAlertCountable } from '../shared/dedupe';
 import type { AlertSeverity, AppSnapshot, SavedLocation, Settings } from '../shared/types';
@@ -74,6 +75,7 @@ export function App() {
   const [playbackOn, setPlaybackOn] = useState(false);
   const [playbackFrame, setPlaybackFrame] = useState<PlaybackFrame | null>(null);
   const [google3dKey, setGoogle3dKey] = useState<string | null>(null);
+  const [routeLine, setRouteLine] = useState<RouteInfo | null>(null);
   const [imageryKeys, setImageryKeys] = useState<{ esri: string | null; mapbox: string | null; google: string | null }>({ esri: null, mapbox: null, google: null });
   const [googleConfigured, setGoogleConfigured] = useState(false);
   const [eoxLicensed, setEoxLicensed] = useState(false);
@@ -641,6 +643,7 @@ export function App() {
             layerSnaps={layerSnaps}
             layersOn={snap.settings.layersEnabled as LayerId[]}
             trail={trail}
+            routeLine={routeLine}
             trailAirborne={tracked?.layer === 'aircraft' || tracked?.layer === 'aircraftMil'}
             trackedRecord={tracked}
             showOrbitFor={orbitFor}
@@ -885,6 +888,9 @@ export function App() {
               onOrbit={(on) => setOrbitFor(on ? recordSel.id : null)}
               onSelect={(layer, id) => setRecordSel({ layer, id })}
               onFocus={(lat, lon, r) => globeRef.current?.focus(lat, lon, r)}
+              photosEnabled={snap.settings.aircraftPhotos}
+              onEnablePhotos={() => void patchSettings({ aircraftPhotos: true })}
+              onShowRoute={setRouteLine}
             />
           </aside>
         ) : (

@@ -1,3 +1,4 @@
+import { parseRouteset } from '../shared/route';
 // IPC request handlers. Every request is validated against the schema for
 // its channel before any work happens. No Electron imports here so the
 // handlers can be tested directly; platform services are injected.
@@ -246,6 +247,11 @@ export function createHandlers(core: AppCore, store: AtlasStore, fetchJson: Fetc
       const [la, lo, r] = validateIpcArgs(IPC.aircraftNear, a);
       const res = await fetchJson(`https://api.adsb.lol/v2/point/${la.toFixed(4)}/${lo.toFixed(4)}/${r}`, { timeoutMs: 15000 });
       return normalizeAdsb(res.body, 'adsb.lol (ODbL)', Date.now()).records;
+    },
+    [IPC.aircraftRoute]: async (a) => {
+      const [cs, la, lo] = validateIpcArgs(IPC.aircraftRoute, a);
+      const res = await fetchJson('https://api.adsb.lol/api/0/routeset', { method: 'POST', body: JSON.stringify({ planes: [{ callsign: cs, lat: la, lng: lo }] }), headers: { 'Content-Type': 'application/json' }, timeoutMs: 15000 });
+      return parseRouteset(res.body, cs);
     },
     [IPC.watchlistGet]: (a) => {
       validateIpcArgs(IPC.watchlistGet, a);

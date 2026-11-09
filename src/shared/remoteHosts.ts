@@ -19,6 +19,8 @@ export const RENDERER_REMOTES: RendererRemote[] = [
   { prefix: 'https://weathercam.digitraffic.fi/', purpose: 'Fintraffic published weather-camera stills' },
   { prefix: 'https://wzmedia.dot.ca.gov/', purpose: 'Caltrans published live camera video (HLS)' },
   { prefix: 'https://webcams.nyctmc.org/api/cameras/', purpose: 'NYC DOT published traffic-camera stills' },
+  { prefix: 'https://api.planespotters.net/pub/photos/', purpose: 'Aircraft photo lookup by ICAO address (only when Aircraft photos is on)' },
+  { prefix: 'https://t.plnspttrs.net/', purpose: 'Planespotters.net photo thumbnails (photographer credited)' },
   { prefix: 'https://tiles.openfreemap.org/', purpose: 'OpenFreeMap vector tiles (OpenStreetMap streets, places, buildings)' },
   { prefix: 'https://tile.googleapis.com/', purpose: 'Google Photorealistic 3D Tiles (customer key)', optional: 'google3d' },
   { prefix: 'https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/', purpose: 'Esri World Imagery (customer key)', optional: 'esri' },

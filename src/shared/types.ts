@@ -191,6 +191,8 @@ export interface Settings {
   vesselLabels: 'selected' | 'hovered' | 'all';
   /** Camera record ids the user starred (stored locally). */
   favoriteCameras: string[];
+  /** Opt-in: exact-aircraft photos from Planespotters.net (photographer credit and link shown). */
+  aircraftPhotos: boolean;
   homeLat: number | null;
   homeLon: number | null;
   orgName: string;

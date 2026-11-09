@@ -1590,3 +1590,14 @@ h2 {
 .cam-open { display: grid; gap: 8px; padding: 10px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel-2); }
 .cam-open-head { display: grid; gap: 2px; }
 .tag-live { background: rgba(179, 38, 30, 0.25); border-color: #b3261e; color: #ffb4ab; }
+
+/* ---------- vehicle extras ---------- */
+.veh-extras { display: grid; gap: 8px; margin: 10px 0; }
+.veh-photo { margin: 0; display: grid; gap: 4px; }
+.veh-photo img { width: 100%; border-radius: var(--radius); display: block; }
+.veh-nophoto { border: 1px dashed var(--border-strong); border-radius: var(--radius); padding: 12px; color: var(--muted); font-size: 12px; }
+.linkish { background: none; border: none; color: var(--accent); cursor: pointer; padding: 0; font: inherit; text-decoration: underline; }
+.route-list { margin: 4px 0; padding-left: 18px; font-size: 12px; }
+.journey-legend { list-style: none; padding: 0; margin: 4px 0 0; display: grid; gap: 3px; color: var(--muted); }
+.jl { display: inline-block; width: 22px; height: 0; vertical-align: middle; margin-right: 6px; border-top: 2px solid #4fc3f7; }
+.jl-rep { border-top: 2px dashed #ffd84a; }
