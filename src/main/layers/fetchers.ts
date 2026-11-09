@@ -1,3 +1,4 @@
+import { mergeIncidents, normalizeEonet, normalizeGdacs } from '../../shared/incidents';
 // Per-layer fetch functions. URLs come from fixed templates; the only
 // variable inputs are validated numbers (view center/bbox) and enum values.
 
@@ -293,6 +294,32 @@ async function fetchCameras(ctx: FetchContext): Promise<FetchResult> {
   return { records: out, skipped, sourceUpdatedAt: null, note: failed.length ? `Unavailable: ${failed.join(', ')}` : 'Images are loaded only when you open a camera.' };
 }
 
+async function fetchIncidents(ctx: FetchContext): Promise<FetchResult> {
+  const failed: string[] = [];
+  let gd: GeoRecord[] = [];
+  let eo: GeoRecord[] = [];
+  let skipped = 0;
+  try {
+    const res = await ctx.fetchJson('https://www.gdacs.org/gdacsapi/api/events/geteventlist/EVENTS4APP', { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 30000, maxBytes: 10 * 1024 * 1024 });
+    const n = normalizeGdacs(res.body);
+    gd = n.records;
+    skipped += n.skipped;
+  } catch (e) {
+    failed.push(`GDACS (${(e as Error).message})`);
+  }
+  try {
+    const res = await ctx.fetchJson('https://eonet.gsfc.nasa.gov/api/v3/events?status=open&days=30', { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 30000, maxBytes: 10 * 1024 * 1024 });
+    const n = normalizeEonet(res.body);
+    eo = n.records;
+    skipped += n.skipped;
+  } catch (e) {
+    failed.push(`NASA EONET (${(e as Error).message})`);
+  }
+  if (!gd.length && !eo.length && failed.length) throw new Error(failed.join('; '));
+  const records = mergeIncidents(gd, eo);
+  return { records, skipped, sourceUpdatedAt: null, note: `${gd.length} GDACS + ${eo.length} EONET reports, ${records.length} after merging duplicates.${failed.length ? ` Unavailable: ${failed.join('; ')}` : ''}` };
+}
+
 export const FETCHERS: Record<LayerId, (ctx: FetchContext) => Promise<FetchResult>> = {
   aircraft: fetchAircraft,
   aircraftMil: fetchAircraftMil,
@@ -312,6 +339,7 @@ export const FETCHERS: Record<LayerId, (ctx: FetchContext) => Promise<FetchResul
     return { ...n, note: n.records.length === 0 ? 'No active storms in NHC/CPHC basins (request succeeded).' : 'Forecast tracks and cones: open the NHC link on a storm.' };
   },
   cameras: fetchCameras,
+  incidents: fetchIncidents,
   transit: async (ctx) => {
     const res = await ctx.fetchJson('https://api-v3.mbta.com/vehicles?include=route&fields%5Bvehicle%5D=latitude,longitude,bearing,speed,current_status,updated_at,label,direction_id&fields%5Broute%5D=type,short_name,long_name', {
       headers: { 'User-Agent': ctx.userAgent, Accept: 'application/vnd.api+json' },

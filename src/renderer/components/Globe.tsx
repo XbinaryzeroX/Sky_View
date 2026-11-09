@@ -1,3 +1,4 @@
+import { buildImageryLayers, type ImageryState } from '../map/imageryOverlay';
 import type { RouteInfo } from '../../shared/route';
 import '../lib/cesiumBase';
 import {
@@ -142,6 +143,9 @@ interface Props {
   google3dKey: string | null;
   /** Reported route airports for the selected aircraft (dashed; not the flown path). */
   routeLine?: RouteInfo | null;
+  /** Dated NASA GIBS product over the globe, with optional two-date swipe comparison. */
+  imagery?: ImageryState;
+  onImagerySplit?(split: number): void;
   imageryKeys: { esri: string | null; mapbox: string | null; google: string | null };
   /** Shown to the user when a customer-credential provider (Google) refuses requests. */
   onProviderError?: (message: string) => void;
@@ -628,6 +632,24 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     }
   }, [props.layerSnaps, props.layersOn, selRecord?.layer, selRecord?.id, props.playback === null, ready, props.aircraftFilter, props.vesselClasses, props.settings.smoothMotion, props.settings.aircraftLabels, props.settings.vesselLabels]);
 
+  // ----- dated imagery overlay -----
+  const imageryLayersRef = useRef<ImageryLayer[]>([]);
+  const im = props.imagery;
+  useEffect(() => {
+    const w = widgetRef.current;
+    if (!w || !ready) return;
+    for (const l of imageryLayersRef.current) w.imageryLayers.remove(l, true);
+    imageryLayersRef.current = im ? buildImageryLayers(im) : [];
+    for (const l of imageryLayersRef.current) w.imageryLayers.add(l);
+    w.scene.requestRender();
+  }, [ready, im?.product, im?.date, im?.compare, im?.compareDate, im?.opacity, basemapLayersRef.current]);
+  useEffect(() => {
+    const w = widgetRef.current;
+    if (!w || !ready) return;
+    w.scene.splitPosition = im?.split ?? 0.5;
+    w.scene.requestRender();
+  }, [ready, im?.split]);
+
   // ----- reported route (dashed great-circle legs between reported airports) -----
   const routeEntRef = useRef<Entity | null>(null);
   useEffect(() => {
@@ -1024,6 +1046,36 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
         <div className="globe-failed" role="alert">
           <strong>The 3D globe could not start.</strong>
           <p>WebGL may be unavailable on this computer ({failed}). Lists, monitoring, history, and briefings still work.</p>
+        </div>
+      )}
+      {im?.compare && im.product && (
+        <div
+          className="split-handle"
+          style={{ left: `${(im.split ?? 0.5) * 100}%` }}
+          role="slider"
+          aria-label="Comparison divider: left shows the first date, right the second"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round((im.split ?? 0.5) * 100)}
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowLeft') props.onImagerySplit?.(Math.max(0.02, (im.split ?? 0.5) - 0.05));
+            if (e.key === 'ArrowRight') props.onImagerySplit?.(Math.min(0.98, (im.split ?? 0.5) + 0.05));
+          }}
+          onPointerDown={(e) => {
+            const box = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect();
+            const move = (ev: PointerEvent) => props.onImagerySplit?.(Math.min(0.98, Math.max(0.02, (ev.clientX - box.left) / box.width)));
+            const up = () => {
+              window.removeEventListener('pointermove', move);
+              window.removeEventListener('pointerup', up);
+            };
+            window.addEventListener('pointermove', move);
+            window.addEventListener('pointerup', up);
+          }}
+        >
+          <span className="split-tag left">{im.date}</span>
+          <span className="split-grip" aria-hidden="true">⇔</span>
+          <span className="split-tag right">{im.compareDate}</span>
         </div>
       )}
       <div ref={creditRef} className="cesium-credits" aria-hidden="true" />

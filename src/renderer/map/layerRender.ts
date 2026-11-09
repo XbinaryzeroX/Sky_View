@@ -409,6 +409,11 @@ export class LayerRenderer {
         });
       case 'cyclones':
         return new Entity({ ...base, billboard: { image: glyph('storm', '#ff5a4f', 36), scale: 1, disableDepthTestDistance: Number.POSITIVE_INFINITY }, label: label(r.label, 4e7, -22) });
+      case 'incidents': {
+        const lvl = String(r.props.alertLevel ?? '');
+        const color = lvl === 'Red' ? '#e5534b' : lvl === 'Orange' ? '#f0883e' : lvl === 'Green' ? '#57ab5a' : '#9fb3c8';
+        return new Entity({ ...base, point: { pixelSize: selected ? 14 : 10, color: C(color), outlineColor: Color.BLACK, outlineWidth: 2, disableDepthTestDistance: 0 }, label: label(r.label, 3e6, -12) });
+      }
       case 'cameras':
         return new Entity({ ...base, billboard: { image: glyph('camera', '#6fd0e2', 20), scale: selected ? 1.4 : 1 }, label: label(r.label, 4e4) });
       case 'transit':

@@ -202,7 +202,7 @@ export interface Settings {
   satelliteGroups: string[];
   trackRetentionHours: number;
   radarEnabled: boolean;
-  visualMode: 'normal' | 'nvg' | 'thermal' | 'crt' | 'noir';
+  visualMode: 'normal' | 'crt' | 'nvg' | 'thermal' | 'anime' | 'noir' | 'snow';
   reducedMotion: boolean;
   aiEnabled: boolean;
   ollamaPort: number;

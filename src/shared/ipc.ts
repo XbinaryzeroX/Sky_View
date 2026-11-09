@@ -3,6 +3,7 @@
 
 import { z } from 'zod';
 import { MAX_IMPORT_ROWS, MAX_RADIUS_KM } from './csv';
+import { LAYER_IDS, type LayerId } from './layers';
 import type { Settings } from './types';
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -48,7 +49,7 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 const id = z.string().min(1).max(100).regex(/^[A-Za-z0-9_-]+$/);
-const layerId = z.enum(['aircraft', 'aircraftMil', 'vessels', 'satellites', 'fires', 'firePerimeters', 'metar', 'cyclones', 'cameras', 'transit', 'airspace']);
+const layerId = z.enum(LAYER_IDS as [LayerId, ...LayerId[]]);
 const recordId = z.string().min(1).max(160);
 const lat = z.number().finite().min(-90).max(90);
 const lon = z.number().finite().min(-180).max(180);
@@ -99,7 +100,7 @@ export const sceneSchema = z
     basemap: z.enum(['atlas', 'streets', 'usgsImageryTopo', 'usgsTopo', 'gibsDaily', 'esri', 'mapbox', 'eox', 'naturalEarth', 'neutral', 'google3d', 'google2d']),
     terrainEnabled: z.boolean(),
     layersEnabled: z.array(layerId).max(20),
-    visualMode: z.enum(['normal', 'nvg', 'thermal', 'crt', 'noir']),
+    visualMode: z.enum(['normal', 'crt', 'nvg', 'thermal', 'anime', 'noir', 'snow']),
     annotations: z.array(annotationSchema).max(2000),
     views: z.array(savedViewSchema).max(500),
   })
@@ -153,12 +154,12 @@ export const settingsPatchSchema = z
     homeLat: z.number().finite().min(-90).max(90).nullable(),
     homeLon: z.number().finite().min(-180).max(180).nullable(),
     orgName: z.string().max(120),
-    layersEnabled: z.array(z.enum(['aircraft', 'aircraftMil', 'vessels', 'satellites', 'fires', 'firePerimeters', 'metar', 'cyclones', 'cameras', 'transit', 'airspace'])).max(20),
+    layersEnabled: z.array(z.enum(LAYER_IDS as [LayerId, ...LayerId[]])).max(20),
     firmsRegion: z.enum(['us', 'global']),
     satelliteGroups: z.array(z.enum(['stations', 'visual', 'gnss', 'weather', 'science', 'starlink'])).max(6),
     trackRetentionHours: z.number().int().min(1).max(72),
     radarEnabled: z.boolean(),
-    visualMode: z.enum(['normal', 'nvg', 'thermal', 'crt', 'noir']),
+    visualMode: z.enum(['normal', 'crt', 'nvg', 'thermal', 'anime', 'noir', 'snow']),
     reducedMotion: z.boolean(),
     aiEnabled: z.boolean(),
     ollamaPort: z.number().int().min(1).max(65535),

@@ -5,9 +5,9 @@
 import type { LineString, MultiPolygon, Polygon } from 'geojson';
 import type { FeedState, Freshness } from './types';
 
-export type LayerId = 'aircraft' | 'aircraftMil' | 'vessels' | 'satellites' | 'fires' | 'firePerimeters' | 'metar' | 'cyclones' | 'cameras' | 'transit' | 'airspace';
+export type LayerId = 'aircraft' | 'aircraftMil' | 'vessels' | 'satellites' | 'fires' | 'firePerimeters' | 'metar' | 'cyclones' | 'cameras' | 'transit' | 'airspace' | 'incidents';
 
-export const LAYER_IDS: LayerId[] = ['aircraft', 'aircraftMil', 'vessels', 'satellites', 'fires', 'firePerimeters', 'metar', 'cyclones', 'cameras', 'transit', 'airspace'];
+export const LAYER_IDS: LayerId[] = ['aircraft', 'aircraftMil', 'vessels', 'satellites', 'fires', 'firePerimeters', 'metar', 'cyclones', 'cameras', 'transit', 'airspace', 'incidents'];
 
 export type Temporal = 'live' | 'delayed' | 'periodic' | 'forecast' | 'calculated' | 'interpolated' | 'simulated' | 'static';
 
@@ -150,6 +150,20 @@ export const LAYERS: Record<LayerId, LayerMeta> = {
     coverage: 'Atlantic and eastern/central North Pacific',
     auth: 'None',
     pollSeconds: 1800,
+    viewport: false,
+  },
+  incidents: {
+    id: 'incidents',
+    name: 'Disaster & natural-event incidents',
+    group: 'Hazards',
+    temporal: 'periodic',
+    temporalNote: 'Event reports from GDACS (with its Green/Orange/Red alert level) and NASA EONET (open natural events), merged when both describe the same event. Each record shows its source and last update; the app does not assign its own severity.',
+    source: 'GDACS (EC JRC / UN OCHA) · NASA EONET',
+    sourceUrl: 'https://www.gdacs.org/',
+    license: 'GDACS: free public information with attribution; NASA EONET: U.S. government work',
+    coverage: 'Worldwide (GDACS: latest 100 events; EONET: open events of the last 30 days)',
+    auth: 'None',
+    pollSeconds: 900,
     viewport: false,
   },
   cameras: {

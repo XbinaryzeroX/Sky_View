@@ -295,3 +295,22 @@ describe('vehicle symbol classes', () => {
     expect(r?.plausible).toBe(true);
   });
 });
+
+describe('incident sources', () => {
+  it('normalizes GDACS and EONET, keeps source levels, and merges the same event', async () => {
+    const { normalizeGdacs, normalizeEonet, mergeIncidents } = await import('../src/shared/incidents');
+    const g = normalizeGdacs({ features: [{ geometry: { type: 'Point', coordinates: [120.5, 15.2] }, properties: { eventtype: 'TC', eventid: 7, name: 'Tropical Cyclone X', alertlevel: 'Orange', country: 'Philippines', iso3: 'PHL', fromdate: '2026-11-08T00:00:00', datemodified: '2026-11-09T06:00:00', iscurrent: 'true', url: { report: 'https://www.gdacs.org/report.aspx?eventid=7' } } }, { geometry: { type: 'Point', coordinates: [0, 99] }, properties: { eventtype: 'EQ' } }] });
+    expect(g.records).toHaveLength(1);
+    expect(g.skipped).toBe(1);
+    expect(g.records[0].props).toMatchObject({ incidentType: 'Tropical cyclone', alertLevel: 'Orange', sourceSeverity: 'GDACS Orange alert', country: 'Philippines' });
+    expect(g.records[0].observedAt).toBe('2026-11-09T06:00:00.000Z');
+    const e = normalizeEonet({ events: [{ id: 'EONET_1', title: 'Typhoon X', categories: [{ id: 'severeStorms' }], sources: [{ id: 'JTWC', url: 'https://example.org/x' }], geometry: [{ type: 'Point', date: '2026-11-08T12:00:00Z', coordinates: [120.9, 15.0], magnitudeValue: 70, magnitudeUnit: 'kts' }] }, { id: 'EONET_2', title: 'Volcano Y', categories: [{ id: 'volcanoes' }], sources: [], geometry: [{ type: 'Point', date: '2026-11-01T00:00:00Z', coordinates: [-155.3, 19.4] }] }] });
+    expect(e.records.map((r) => r.category)).toEqual(['Severe storm', 'Volcano']);
+    // Different type (cyclone vs severe storm) → not merged; same type nearby → merged.
+    expect(mergeIncidents(g.records, e.records)).toHaveLength(3);
+    const e2 = { ...e.records[0], category: 'Tropical cyclone' };
+    const merged = mergeIncidents(g.records, [e2]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].props.reportedBy).toBe(2);
+  });
+});

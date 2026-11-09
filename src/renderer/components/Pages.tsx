@@ -104,64 +104,259 @@ function Head({ title, sub }: { title: string; sub?: string }) {
 const allAircraft = (ctx: PageCtx): GeoRecord[] => [...new Map([...(ctx.layerSnaps.aircraft?.records ?? []), ...(ctx.layerSnaps.aircraftMil?.records ?? [])].map((r) => [r.id, r])).values()];
 
 // ---------------- Ops center ----------------
+interface IncidentRow {
+  key: string;
+  type: string;
+  title: string;
+  country: string;
+  when: string | null;
+  sev: string;
+  rank: number;
+  source: string;
+  link: string | null;
+  lat: number | null;
+  lon: number | null;
+  reportedBy: number;
+}
+
+const SEV_RANK: Record<string, number> = { Red: 3, Orange: 2, Extreme: 3, Severe: 2, Green: 1, Moderate: 1 };
+
+/** Incident register rows from connected sources. Severity labels are the sources' own. */
+function incidentRows(ctx: PageCtx): IncidentRow[] {
+  const rows: IncidentRow[] = [];
+  for (const r of ctx.layerSnaps.incidents?.records ?? [])
+    rows.push({
+      key: r.id,
+      type: String(r.props.incidentType ?? r.category ?? 'Other'),
+      title: r.label,
+      country: String(r.props.country ?? '—'),
+      when: (r.props.updatedAt as string | null) ?? r.observedAt,
+      sev: String(r.props.sourceSeverity ?? 'No level given'),
+      rank: SEV_RANK[String(r.props.alertLevel)] ?? 0,
+      source: String(r.props.sources ?? r.source),
+      link: r.sourceUrl ?? null,
+      lat: r.lat,
+      lon: r.lon,
+      reportedBy: Number(r.props.reportedBy ?? 1),
+    });
+  const now = Date.now();
+  const sup = new Set(ctx.snap.supersededAlertIds);
+  for (const a of ctx.snap.alerts)
+    if ((a.severity === 'Extreme' || a.severity === 'Severe') && isAlertCountable(a, sup, now))
+      rows.push({ key: `nws-${a.id}`, type: 'Weather warning (U.S.)', title: a.event + (a.areaDesc ? ` · ${a.areaDesc.slice(0, 80)}` : ''), country: 'United States', when: a.sent ?? null, sev: `NWS ${a.severity}`, rank: SEV_RANK[a.severity] ?? 0, source: 'NWS', link: null, lat: null, lon: null, reportedBy: 1 });
+  for (const q of ctx.snap.quakes)
+    if ((q.mag ?? 0) >= 5)
+      rows.push({ key: `usgs-${q.id}`, type: 'Earthquake', title: q.place ?? 'Earthquake', country: (q.place ?? '').split(',').pop()?.trim() || '—', when: q.time, sev: `M${(q.mag ?? 0).toFixed(1)} (USGS)`, rank: (q.mag ?? 0) >= 7 ? 3 : (q.mag ?? 0) >= 6 ? 2 : 1, source: 'USGS', link: q.url ?? null, lat: q.lat, lon: q.lon, reportedBy: 1 });
+  return rows;
+}
+
 function OpsPage({ ctx }: { ctx: PageCtx }) {
   const { snap } = ctx;
-  const sup = new Set(snap.supersededAlertIds);
-  const activeAlerts = snap.alerts.filter((a) => isAlertCountable(a, sup, Date.now())).length;
-  const affected = snap.locations.filter((l) => (snap.evaluations[l.id]?.alertsInside.length ?? 0) > 0).length;
-  const specials = allAircraft(ctx).filter((r) => specialCode(r)).length;
-  const rows: { name: string; on: boolean; fresh: string; n: number; last: string | null; err: string | null }[] = [
-    { name: 'NWS alerts (U.S.)', on: true, fresh: snap.freshness.nws, n: snap.feeds.nws.recordCount, last: snap.feeds.nws.lastSuccessAt, err: snap.feeds.nws.error },
-    { name: 'USGS earthquakes', on: true, fresh: snap.freshness.usgs, n: snap.quakes.length, last: snap.feeds.usgs.lastSuccessAt, err: snap.feeds.usgs.error },
+  const incOn = snap.settings.layersEnabled.includes('incidents');
+  const all = incidentRows(ctx);
+  const [q, setQ] = useState('');
+  const [type, setType] = useState('all');
+  const [country, setCountry] = useState('all');
+  const [hours, setHours] = useState(72);
+  const [sort, setSort] = useState<'time' | 'sev'>('time');
+  const [open, setOpen] = useState<string | null>(null);
+  const now = Date.now();
+  const inWindow = (r: IncidentRow) => !r.when || now - Date.parse(r.when) <= hours * 3600_000;
+  const needle = q.trim().toLocaleLowerCase();
+  const rows = all
+    .filter((r) => inWindow(r) && (type === 'all' || r.type === type) && (country === 'all' || r.country === country) && (!needle || `${r.title} ${r.country} ${r.type}`.toLocaleLowerCase().includes(needle)))
+    .sort((a, b) => (sort === 'sev' ? b.rank - a.rank : 0) || (Date.parse(b.when ?? '') || 0) - (Date.parse(a.when ?? '') || 0));
+  const windowed = all.filter(inWindow);
+  const types = [...new Set(all.map((r) => r.type))].sort();
+  const countries = [...new Set(all.map((r) => r.country).filter((c) => c !== '—'))].sort();
+  const lastHour = windowed.filter((r) => r.when && now - Date.parse(r.when) <= 3600_000).length;
+  const multi = windowed.filter((r) => r.reportedBy > 1).length;
+  // Trends: incidents per 6-hour bucket over the window, by source level.
+  const buckets = Math.min(16, Math.max(4, Math.round(hours / 6)));
+  const span = (hours * 3600_000) / buckets;
+  const series = Array.from({ length: buckets }, (_, i) => {
+    const t0 = now - hours * 3600_000 + i * span;
+    const inB = windowed.filter((r) => r.when && Date.parse(r.when) >= t0 && Date.parse(r.when) < t0 + span);
+    return { t0, hi: inB.filter((r) => r.rank >= 2).length, lo: inB.filter((r) => r.rank < 2).length };
+  });
+  const maxB = Math.max(1, ...series.map((b) => b.hi + b.lo));
+  const byCountry = [...windowed.reduce((m, r) => (r.country !== '—' ? m.set(r.country, [...(m.get(r.country) ?? []), r]) : m), new Map<string, IncidentRow[]>())]
+    .map(([c, list]) => ({ c, n: list.length, top: Math.max(...list.map((r) => r.rank)), types: [...new Set(list.map((r) => r.type))].join(', ') }))
+    .sort((a, b) => b.top - a.top || b.n - a.n)
+    .slice(0, 20);
+  const feedRows: { name: string; on: boolean; fresh: string; n: number; last: string | null; err: string | null; cov: string }[] = [
+    { name: 'NWS alerts', on: true, fresh: snap.freshness.nws, n: snap.feeds.nws.recordCount, last: snap.feeds.nws.lastSuccessAt, err: snap.feeds.nws.error, cov: 'United States' },
+    { name: 'USGS earthquakes', on: true, fresh: snap.freshness.usgs, n: snap.quakes.length, last: snap.feeds.usgs.lastSuccessAt, err: snap.feeds.usgs.error, cov: 'Worldwide' },
     ...LAYER_IDS.map((id) => {
       const st = ctx.layerSnaps[id]?.status;
-      return { name: LAYERS[id].name, on: !!st?.enabled, fresh: st?.freshness ?? 'unavailable', n: st?.recordCount ?? 0, last: st?.lastSuccessAt ?? null, err: st?.error ?? null };
+      return { name: LAYERS[id].name, on: !!st?.enabled, fresh: st?.freshness ?? 'unavailable', n: st?.recordCount ?? 0, last: st?.lastSuccessAt ?? null, err: st?.error ?? null, cov: LAYERS[id].coverage };
     }),
   ];
+  const sevCls = (r: IncidentRow) => (r.rank >= 3 ? 'sev-extreme' : r.rank === 2 ? 'sev-severe' : r.rank === 1 ? 'sev-minor' : '');
   return (
     <>
-      <Head title="Operations center" sub="Feed health and the current picture, computed from loaded data." />
-      <div className="stat-grid">
+      <Head title="Operations center" sub="Incidents from connected sources (GDACS, NASA EONET, NWS severe/extreme warnings, USGS M5+). Severity labels are each source’s own; the app adds no risk score." />
+      {!incOn && (
+        <button className="btn primary" onClick={() => ctx.enableLayers(['incidents'])}>
+          Load worldwide incidents (GDACS, NASA EONET)
+        </button>
+      )}
+      <div className="stat-grid ops-stats">
         <div className="stat">
-          <b>{activeAlerts}</b>
-          <span>active NWS alerts</span>
+          <b>{windowed.length}</b>
+          <span>incidents, last {hours} h</span>
         </div>
         <div className="stat">
-          <b>{affected}</b>
-          <span>saved places in alerts</span>
+          <b>{windowed.filter((r) => r.rank >= 3).length}</b>
+          <span>highest source level (Red / Extreme / M7+)</span>
         </div>
         <div className="stat">
-          <b>{specials}</b>
-          <span>special squawks</span>
+          <b>{windowed.filter((r) => r.rank === 2).length}</b>
+          <span>second level (Orange / Severe / M6+)</span>
         </div>
         <div className="stat">
-          <b>{ctx.watchlist.length}</b>
-          <span>watched objects</span>
+          <b>{lastHour}</b>
+          <span>updated in the last hour</span>
+        </div>
+        <div className="stat">
+          <b>{new Set(windowed.map((r) => r.country).filter((c) => c !== '—')).size}</b>
+          <span>countries named</span>
+        </div>
+        <div className="stat">
+          <b>{multi}</b>
+          <span>reported by 2 sources</span>
         </div>
       </div>
+
+      <h3 className="sub">Incident register</h3>
+      <div className="btn-row">
+        <input className="view-name" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search incidents" aria-label="Search incidents" />
+        <select value={type} onChange={(e) => setType(e.target.value)} aria-label="Type">
+          <option value="all">All types</option>
+          {types.map((t) => (
+            <option key={t}>{t}</option>
+          ))}
+        </select>
+        <select value={country} onChange={(e) => setCountry(e.target.value)} aria-label="Country">
+          <option value="all">All countries</option>
+          {countries.map((c) => (
+            <option key={c}>{c}</option>
+          ))}
+        </select>
+        <select value={hours} onChange={(e) => setHours(Number(e.target.value))} aria-label="Time window">
+          <option value={24}>24 h</option>
+          <option value={72}>3 days</option>
+          <option value={168}>7 days</option>
+          <option value={720}>30 days</option>
+        </select>
+        <select value={sort} onChange={(e) => setSort(e.target.value as 'time' | 'sev')} aria-label="Sort">
+          <option value="time">Newest first</option>
+          <option value="sev">Source level first</option>
+        </select>
+      </div>
+      {rows.length === 0 ? (
+        <Empty>{incOn || all.length ? 'No incidents match.' : 'Load the incident sources to fill the register.'}</Empty>
+      ) : (
+        <ul className="rec-list incident-list">
+          {rows.slice(0, 150).map((r) => (
+            <li key={r.key} className="incident">
+              <button className="rec-item" onClick={() => setOpen(open === r.key ? null : r.key)} aria-expanded={open === r.key}>
+                <span className={`tag ${sevCls(r)}`}>{r.sev}</span>
+                <strong className="incident-title">{r.title}</strong>
+                <span className="muted small">
+                  {r.type} · {r.country} · {r.when ? `${relativeTime(r.when)} (${new Date(r.when).toISOString().slice(0, 16).replace('T', ' ')} UTC)` : 'time not given'}
+                </span>
+              </button>
+              {open === r.key && (
+                <div className="incident-more small">
+                  <div>Source: {r.source}{r.reportedBy > 1 ? ' (the same event reported by two sources)' : ''}</div>
+                  <div className="btn-row">
+                    {r.lat !== null && r.lon !== null && (
+                      <button className="btn small-btn" onClick={() => ctx.focus(r.lat!, r.lon!, 300)}>
+                        Show on map
+                      </button>
+                    )}
+                    {r.link && (
+                      <a className="btn small-btn" href={r.link} target="_blank" rel="noreferrer">
+                        Source report
+                      </a>
+                    )}
+                  </div>
+                  {r.lat === null && <div className="muted">No single coordinate (area warning); not drawn as a point.</div>}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h3 className="sub">Trends · last {hours} h</h3>
+      <div className="trend" role="img" aria-label={`Incidents per ${Math.round(span / 3600_000)}-hour interval over the last ${hours} hours`}>
+        {series.map((b, i) => (
+          <div key={i} className="trend-bar" title={`${new Date(b.t0).toISOString().slice(5, 16).replace('T', ' ')} UTC: ${b.hi + b.lo}`}>
+            <span className="hi" style={{ height: `${(b.hi / maxB) * 100}%` }} />
+            <span className="lo" style={{ height: `${(b.lo / maxB) * 100}%` }} />
+          </div>
+        ))}
+      </div>
+      <p className="muted small">
+        Bars: incidents by last update per {Math.round(span / 3600_000)} h. Dark = top two source levels, light = lower or no level. By type: {types.map((t) => `${t} ${windowed.filter((r) => r.type === t).length}`).join(' · ') || '—'}.
+      </p>
+
+      <h3 className="sub">Countries</h3>
+      {byCountry.length === 0 ? (
+        <Empty>No country-tagged incidents in this window.</Empty>
+      ) : (
+        <table className="mini-table">
+          <thead>
+            <tr>
+              <th>Country</th>
+              <th>Incidents</th>
+              <th>Types</th>
+            </tr>
+          </thead>
+          <tbody>
+            {byCountry.map((c) => (
+              <tr key={c.c}>
+                <td>
+                  <button className="linkish" onClick={() => setCountry(c.c)}>
+                    {c.c}
+                  </button>
+                </td>
+                <td>{c.n}</td>
+                <td className="small">{c.types}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <p className="muted small">Countries are as named by the sources and sorted by the highest source level, then count. This is not a country risk rating, and travel advisories are not connected.</p>
+
+      <h3 className="sub">Source monitor</h3>
       <table className="mini-table">
         <thead>
           <tr>
-            <th>Feed</th>
+            <th>Source</th>
             <th>State</th>
             <th>Records</th>
             <th>Last success</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
-            <tr key={r.name} className={r.on ? '' : 'dim'}>
+          {feedRows.map((r) => (
+            <tr key={r.name} className={r.on ? '' : 'dim'} title={`Coverage: ${r.cov}${r.err ? `\nLast error: ${r.err}` : ''}`}>
               <td>{r.name}</td>
               <td>{r.on ? <span className={`mini-chip ${FRESHNESS_META[r.fresh as 'fresh'].cls}`}>{FRESHNESS_META[r.fresh as 'fresh'].label}</span> : <span className="muted">off</span>}</td>
               <td>{r.on ? r.n.toLocaleString() : '—'}</td>
-              <td title={r.err ?? ''}>
+              <td>
                 {r.on ? relativeTime(r.last) : '—'}
-                {r.err && r.on ? <span className="err-text"> ⚠</span> : null}
+                {r.err && r.on ? <span className="err-text" title={r.err}> ⚠</span> : null}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      <p className="muted small">Hover a row for coverage and the last error. Refresh intervals are set per source (Settings and each layer’s note).</p>
     </>
   );
 }

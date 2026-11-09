@@ -1,3 +1,4 @@
+import type { ImageryState } from './map/imageryOverlay';
 import type { RouteInfo } from '../shared/route';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { isAlertCountable } from '../shared/dedupe';
@@ -76,6 +77,10 @@ export function App() {
   const [playbackFrame, setPlaybackFrame] = useState<PlaybackFrame | null>(null);
   const [google3dKey, setGoogle3dKey] = useState<string | null>(null);
   const [routeLine, setRouteLine] = useState<RouteInfo | null>(null);
+  const [imagery, setImagery] = useState<ImageryState>(() => {
+    const y = new Date(Date.now() - 86400_000).toISOString().slice(0, 10);
+    return { product: null, date: y, compare: false, compareDate: new Date(Date.now() - 31 * 86400_000).toISOString().slice(0, 10), opacity: 1, split: 0.5 };
+  });
   const [imageryKeys, setImageryKeys] = useState<{ esri: string | null; mapbox: string | null; google: string | null }>({ esri: null, mapbox: null, google: null });
   const [googleConfigured, setGoogleConfigured] = useState(false);
   const [eoxLicensed, setEoxLicensed] = useState(false);
@@ -116,6 +121,8 @@ export function App() {
       setView: (lat: number, lon: number, h: number, pitch?: number) => globeRef.current?.setView(lat, lon, h, pitch),
       diag: () => globeRef.current?.getDiagnostics() ?? null,
       setSceneMode: (m: '2d' | '3d') => setSceneMode(m),
+      setPage: (p: PageId) => setPage(p),
+      setImagery: (s: Partial<ImageryState>) => setImagery((x) => ({ ...x, ...s })),
       select: (layer: LayerId, id: string) => setRecordSel({ layer, id }),
       track: (layer: LayerId, id: string) => setTracked({ layer, id }),
       records: (layer: LayerId) => (layerSnapsRef.current[layer]?.records ?? []).slice(0, 2000).map((r) => ({ id: r.id, lat: r.lat, lon: r.lon, label: r.label, imageUrl: r.imageUrl ?? null })),
@@ -607,7 +614,7 @@ export function App() {
           }}
           onSettingsPatch={(p) => void patchSettings(p)}
         >
-          <LayersPanel settings={snap.settings} snaps={layerSnaps} onPatch={(p) => void patchSettings(p)} />
+          <LayersPanel settings={snap.settings} snaps={layerSnaps} onPatch={(p) => void patchSettings(p)} imagery={imagery} onImagery={setImagery} />
         </LeftPanel>
         )}
 
@@ -644,6 +651,8 @@ export function App() {
             layersOn={snap.settings.layersEnabled as LayerId[]}
             trail={trail}
             routeLine={routeLine}
+            imagery={imagery}
+            onImagerySplit={(split) => setImagery((s) => ({ ...s, split }))}
             trailAirborne={tracked?.layer === 'aircraft' || tracked?.layer === 'aircraftMil'}
             trackedRecord={tracked}
             showOrbitFor={orbitFor}
