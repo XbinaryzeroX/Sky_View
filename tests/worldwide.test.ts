@@ -314,3 +314,22 @@ describe('incident sources', () => {
     expect(merged[0].props.reportedBy).toBe(2);
   });
 });
+
+describe('OpenSky worldwide snapshot', () => {
+  it('normalizes state vectors and keeps snapshot positions visible only for their refresh interval', async () => {
+    const { normalizeOpenSky } = await import('../src/shared/opensky');
+    const { trackState } = await import('../src/shared/aircraft');
+    const t = 1_794_263_594;
+    const out = normalizeOpenSky({ time: t, states: [['c07d0b', 'CGVJE   ', 'Canada', t - 10, t - 10, -74.49, 45.56, 640.08, false, 58.41, 84.44, -2.28, null, 548.64, '1234', false, 0, 3], ['zzz', null, null, null, null, null, null, null, false, null, null, null, null, null, null, false, 0, 0]] }, 1080);
+    expect(out.records).toHaveLength(1);
+    expect(out.skipped).toBe(1);
+    const r = out.records[0];
+    expect(r).toMatchObject({ id: 'c07d0b', label: 'CGVJE', source: 'OpenSky Network' });
+    expect(r.props).toMatchObject({ emitterCategory: 'A2', originCountry: 'Canada', altitudeFt: 2100, snapshot: true, maxAgeS: 1080 });
+    expect(r.speedKts).toBeCloseTo(113.5, 0);
+    const obs = Date.parse(r.observedAt!);
+    expect(trackState(r, obs + 5_000)).toBe('stale');
+    expect(trackState(r, obs + 1000 * 1000)).toBe('stale');
+    expect(trackState(r, obs + 1100 * 1000)).toBe('expired');
+  });
+});

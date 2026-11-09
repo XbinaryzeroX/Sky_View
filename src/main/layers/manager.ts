@@ -22,6 +22,8 @@ export interface LayerManagerDeps {
   getSettings: () => Settings;
   userAgent: () => string;
   localReceiverUrl: () => string | null;
+  /** OpenSky API client 'id:secret' from Provider settings, if configured. */
+  openskyClient?: () => string | null;
   ais: AisStreamClient | null;
   aisConfigured: () => boolean;
   emit: (id: LayerId) => void;
@@ -185,6 +187,7 @@ export class LayerManager {
         userAgent: this.d.userAgent(),
         store: this.d.store,
         localReceiverUrl: id === 'aircraft' ? this.d.localReceiverUrl() : null,
+        openskyClient: id === 'aircraft' ? (this.d.openskyClient?.() ?? null) : null,
         now: started,
       });
       let records = res.records;

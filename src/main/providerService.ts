@@ -111,6 +111,17 @@ export class ProviderService {
         const b = (await json('https://meri.digitraffic.fi/api/ais/v1/locations?from=' + (Date.now() - 60_000), { 'Digitraffic-User': this.ua() })) as { features?: unknown[] };
         return { ok: true, message: `Connected. ${b.features?.length ?? 0} vessel positions in the last minute.` };
       }
+      case 'opensky': {
+        if (secret && secret.includes(':')) {
+          const [id, ...rest] = secret.split(':');
+          const r = await this.fetchJson('https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token', { method: 'POST', headers: { ...headers, 'Content-Type': 'application/x-www-form-urlencoded' }, body: `grant_type=client_credentials&client_id=${encodeURIComponent(id)}&client_secret=${encodeURIComponent(rest.join(':'))}`, timeoutMs: 15000 });
+          if (typeof (r.body as { access_token?: unknown }).access_token !== 'string') return { ok: false, message: 'OpenSky did not issue a token. Check the client id and secret.' };
+          return { ok: true, message: 'OpenSky accepted your API client. Worldwide refresh about every 90 s.' };
+        }
+        if (secret) return { ok: false, message: 'Enter the client as client_id:client_secret.' };
+        await this.fetchJson('https://opensky-network.org/api/states/all?lamin=45.8&lomin=5.9&lamax=47.8&lomax=10.5', { headers, timeoutMs: 20000 });
+        return { ok: true, message: 'OpenSky reachable anonymously (one worldwide refresh per 15 min). This test used 1 of your 400 daily credits.' };
+      }
       case 'aisstream': {
         if (!secret) return { ok: false, message: 'Add your AISStream API key first.' };
         return this.testWebSocket(secret);

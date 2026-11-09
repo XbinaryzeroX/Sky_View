@@ -114,6 +114,17 @@ export function SettingsDialog({ settings, onClose }: { settings: Settings; onCl
           <label className="check">
             <input type="checkbox" checked={s.labelsOverlay} onChange={(e) => set('labelsOverlay', e.target.checked)} /> Roads and boundaries over imagery (OpenStreetMap, worldwide)
           </label>
+          <label className="field">
+            <span>Rendering quality (applies now and every launch)</span>
+            <select value={s.renderQuality} onChange={(e) => set('renderQuality', e.target.value as Settings['renderQuality'])}>
+              <option value="balanced">Balanced (default)</option>
+              <option value="maximum">Maximum: sharpest tiles, full screen resolution, 4× anti-aliasing, more 3D buildings</option>
+            </select>
+            <small className="muted">Maximum uses more GPU memory and downloads more tiles. Google Photoreal 3D tiles load at higher detail and stay in memory for the session; Google’s terms do not allow pre-downloading them.</small>
+          </label>
+          <label className="check">
+            <input type="checkbox" checked={s.worldAircraft} onChange={(e) => set('worldAircraft', e.target.checked)} /> Worldwide aircraft when zoomed out (OpenSky Network snapshot: every 15 min anonymously, about every 90 s with your OpenSky client in Providers; OpenSky’s free API is for non-commercial use)
+          </label>
           <h3 className="sub">Labels</h3>
           <div className="field-row">
             <label className="field">

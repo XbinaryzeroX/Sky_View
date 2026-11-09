@@ -33,6 +33,8 @@ export const DEFAULT_SETTINGS: Settings = {
   vesselLabels: 'hovered',
   favoriteCameras: [],
   aircraftPhotos: false,
+  worldAircraft: false,
+  renderQuality: 'balanced',
   homeLat: null,
   homeLon: null,
   orgName: '',
@@ -111,7 +113,7 @@ export const watchItemSchema = z
   .strict();
 const docKind = z.enum(['boards', 'people']);
 
-const providerId = z.enum(['openfreemap', 'esri-imagery', 'mapbox', 'eox', 'ourairports', 'nws', 'usgs-quakes', 'usgs-basemap', 'nasa-gibs', 'terrain-tiles', 'adsblol', 'local-adsb', 'digitraffic', 'aisstream', 'celestrak', 'firms', 'nifc', 'awc', 'nhc', 'nowcoast', 'caltrans', 'fintraffic-cams', 'mbta', 'faa-sua', 'census-geocoder', 'google3d', 'ollama']);
+const providerId = z.enum(['opensky', 'openfreemap', 'esri-imagery', 'mapbox', 'eox', 'ourairports', 'nws', 'usgs-quakes', 'usgs-basemap', 'nasa-gibs', 'terrain-tiles', 'adsblol', 'local-adsb', 'digitraffic', 'aisstream', 'celestrak', 'firms', 'nifc', 'awc', 'nhc', 'nowcoast', 'caltrans', 'fintraffic-cams', 'mbta', 'faa-sua', 'census-geocoder', 'google3d', 'ollama']);
 
 export const locationInputSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -151,6 +153,8 @@ export const settingsPatchSchema = z
     vesselLabels: z.enum(['selected', 'hovered', 'all']),
     favoriteCameras: z.array(z.string().max(80)).max(500),
     aircraftPhotos: z.boolean(),
+    worldAircraft: z.boolean(),
+    renderQuality: z.enum(['balanced', 'maximum']),
     homeLat: z.number().finite().min(-90).max(90).nullable(),
     homeLon: z.number().finite().min(-180).max(180).nullable(),
     orgName: z.string().max(120),

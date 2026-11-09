@@ -9,6 +9,8 @@ export const ALLOWED_HOSTS = new Set([
   'tie.digitraffic.fi',
   'webcams.nyctmc.org',
   'www.gdacs.org',
+  'opensky-network.org',
+  'auth.opensky-network.org',
   'eonet.gsfc.nasa.gov',
   'celestrak.org',
   'firms.modaps.eosdis.nasa.gov',

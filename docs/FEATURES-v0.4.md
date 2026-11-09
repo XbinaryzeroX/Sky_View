@@ -83,3 +83,15 @@ Screenshots: `docs/screenshots/v0.4/`.
 - The CSP adds `media-src blob:` plus the allow-listed hosts for HLS. Web security is unchanged.
 - Video is decoded in software (Chromium's GPU decoder rejected Caltrans streams). Cost: low CPU at 352×264.
 - No new paid services. Everything added in v0.4 is keyless.
+
+## v0.4.2 additions
+
+| Feature | Now | Status |
+|---|---|---|
+| Built-in title bar | No separate OS title strip or File/Edit/View row. The app's top bar is the window title bar (drag to move), and Windows draws minimize / maximize / close over its right end. Menu keyboard shortcuts still work | ✅ |
+| Camera markers | Fixed: markers turned into plane icons after a catalog refresh | ✅ |
+| Rendering quality (Settings → Display) | Maximum: sharper terrain/imagery level selection, full device resolution, 4× MSAA, larger tile cache, 5×5 building tiles (up to 12,000 per tile, below 8 km), finer Google Photoreal 3D detail with a 2 GB session cache and flight-destination preloading. Saved, so the app launches with it | ✅ (78,325 OSM buildings around Manhattan, no render errors). Google 3D part not verified (needs your key) |
+| Pre-rendering Google Photoreal 3D | Not done: Google's Map Tiles API terms do not allow pre-downloading or storing tiles. Tiles are cached in memory for the session only | ⛔ by provider terms |
+| Worldwide aircraft (Settings) | Opt-in. When zoomed out past 3,000 km, uses the OpenSky Network worldwide snapshot: every 15 min anonymously, about every 90 s with your free OpenSky API client (Providers → OpenSky). Positions are labelled as a snapshot, not a live track. Zoomed in, live adsb.lol data is used | ✅ (10,672 aircraft in one snapshot). OpenSky's free API is meant for non-commercial use, so check with OpenSky before selling |
+| Many-object rendering | More than 1,500 aircraft or vessels in a layer are drawn as one batched billboard collection (picking and selection still work) | ✅ |
+| Worldwide ships | With your AISStream key, ships stream for the whole visible area, worldwide at globe scale (up to 20,000 kept) | 🟨 needs your key |

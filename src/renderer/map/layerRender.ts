@@ -3,6 +3,8 @@
 // propagation for satellites (calculated positions, labeled as such).
 
 import {
+  BillboardCollection,
+  type Billboard,
   Ellipsoid,
   EllipsoidalOccluder,
   SceneMode,
@@ -125,6 +127,9 @@ export interface RenderOptions {
   vesselLabels?: 'selected' | 'hovered' | 'all';
 }
 
+/** Above this many records a vehicle layer is drawn as one batched billboard collection. */
+const BULK_THRESHOLD = 1500;
+
 export class LayerRenderer {
   private sources = new Map<LayerId, CustomDataSource>();
   private entities = new Map<LayerId, Map<string, Entity>>();
@@ -134,6 +139,7 @@ export class LayerRenderer {
   private trailEntity: Entity | null = null;
   private records = new Map<LayerId, Map<string, GeoRecord>>();
   private motionTimer: ReturnType<typeof setInterval> | null = null;
+  private bulk = new Map<LayerId, { coll: BillboardCollection; byId: Map<string, Billboard> }>();
   private smooth = true;
 
   private hovered: { layer: LayerId; id: string } | null = null;
@@ -179,6 +185,52 @@ export class LayerRenderer {
     this.widget.scene.requestRender();
   }
 
+  /** Batched rendering for large vehicle sets; picking uses the same 'rec|layer|id' ids as entities. */
+  private updateBulk(id: LayerId, records: GeoRecord[], opts: RenderOptions): void {
+    const src = this.sources.get(id);
+    if (src && src.entities.values.length) {
+      src.entities.removeAll();
+      this.entities.get(id)?.clear();
+    }
+    let b = this.bulk.get(id);
+    if (!b) {
+      b = { coll: this.widget.scene.primitives.add(new BillboardCollection({ scene: this.widget.scene })) as BillboardCollection, byId: new Map() };
+      this.bulk.set(id, b);
+    }
+    const now = Date.now();
+    const keep = new Set<string>();
+    const near = id === 'vessels' ? new NearFarScalar(2e4, 1, 3e6, 0.4) : new NearFarScalar(5e4, 1, 8e6, 0.45);
+    for (const r of records) {
+      keep.add(r.id);
+      const sel = opts.selectedLayer === id && opts.selectedId === r.id;
+      const position = Cartesian3.fromDegrees(r.lon, r.lat, this.heightFor(id, r));
+      const image = this.iconFor(id, r, sel);
+      const color = id !== 'vessels' && trackState(r, now) !== 'fresh' ? Color.WHITE.withAlpha(0.55) : Color.WHITE;
+      const ex = b.byId.get(r.id);
+      if (ex) {
+        ex.position = position;
+        ex.rotation = this.rotationFor(r);
+        if (ex.image !== image) ex.image = image;
+        ex.scale = sel ? 1.35 : 1;
+        ex.color = color;
+      } else b.byId.set(r.id, b.coll.add({ id: `rec|${id}|${r.id}`, position, image, rotation: this.rotationFor(r), alignedAxis: Cartesian3.UNIT_Z, scale: sel ? 1.35 : 1, scaleByDistance: near, eyeOffset: new Cartesian3(0, 0, -30), color }));
+    }
+    for (const [rid, bb] of b.byId)
+      if (!keep.has(rid)) {
+        b.coll.remove(bb);
+        b.byId.delete(rid);
+      }
+    this.cullBehindEarth();
+    this.widget.scene.requestRender();
+  }
+
+  private dropBulk(id: LayerId): void {
+    const b = this.bulk.get(id);
+    if (!b) return;
+    this.widget.scene.primitives.remove(b.coll);
+    this.bulk.delete(id);
+  }
+
   /** Hides aircraft/vessel icons and labels that are below the earth's horizon from the camera (3D only). */
   cullBehindEarth(): void {
     const scene = this.widget.scene;
@@ -188,6 +240,8 @@ export class LayerRenderer {
     for (const lid of ['aircraft', 'aircraftMil', 'vessels'] as LayerId[]) {
       const ents = this.entities.get(lid);
       if (!ents) continue;
+      const bk = this.bulk.get(lid);
+      if (bk) for (const bb of bk.byId.values()) bb.show = !in3D || occluder.isPointVisible(bb.position);
       for (const e of ents.values()) {
         const p = e.position?.getValue(now);
         const visible = !in3D || !p || occluder.isPointVisible(p);
@@ -231,6 +285,8 @@ export class LayerRenderer {
   setVisible(id: LayerId, visible: boolean): void {
     const s = this.sources.get(id);
     if (s) s.show = visible;
+    const bk = this.bulk.get(id);
+    if (bk) bk.coll.show = visible;
     if (id === 'satellites' && !visible) this.stopSatTimer();
     this.widget.scene.requestRender();
   }
@@ -247,6 +303,12 @@ export class LayerRenderer {
     if (opts.aircraftLabels) this.labelModes.aircraft = opts.aircraftLabels;
     if (opts.vesselLabels) this.labelModes.vessel = opts.vesselLabels;
     if ((id === 'aircraft' || id === 'aircraftMil') && !this.motionTimer) this.motionTimer = setInterval(() => this.tickMotion(), 1000);
+    // Thousands of aircraft or ships (worldwide views): one batched BillboardCollection instead of entities.
+    if ((id === 'aircraft' || id === 'aircraftMil' || id === 'vessels') && records.length > BULK_THRESHOLD) {
+      this.updateBulk(id, records, opts);
+      return;
+    }
+    this.dropBulk(id);
     const src = this.source(id);
     const map = this.entities.get(id)!;
     const keep = new Set<string>();
@@ -260,7 +322,7 @@ export class LayerRenderer {
         if (existing.billboard) {
           existing.billboard.rotation = this.rotationFor(r) as never;
           existing.billboard.scale = (selected ? 1.35 : 1) as never;
-          existing.billboard.image = this.iconFor(id, r, selected) as never;
+          if (id === 'aircraft' || id === 'aircraftMil' || id === 'vessels') existing.billboard.image = this.iconFor(id, r, selected) as never;
         }
         if (existing.label) existing.label.text = r.label as never;
         continue;
@@ -291,6 +353,15 @@ export class LayerRenderer {
     for (const lid of ['aircraft', 'aircraftMil'] as LayerId[]) {
       const ents = this.entities.get(lid);
       const recs = this.records.get(lid);
+      const bk = this.bulk.get(lid);
+      if (bk && recs)
+        for (const [rid, bb] of bk.byId) {
+          const r = recs.get(rid);
+          if (!r || r.props.snapshot === true) continue;
+          const p = this.smooth ? deadReckon(r, now) : { lat: r.lat, lon: r.lon, estimatedS: 0 };
+          bb.position = Cartesian3.fromDegrees(p.lon, p.lat, this.heightFor(lid, r));
+          changed = true;
+        }
       if (!ents || !recs) continue;
       for (const [rid, e] of ents) {
         const r = recs.get(rid);

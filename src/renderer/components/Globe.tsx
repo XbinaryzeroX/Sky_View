@@ -408,7 +408,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
         return;
       }
       const picked = scene.pick(movement.position);
-      const pid = !defined(picked) ? null : picked.id instanceof Entity ? String(picked.id.id) : typeof picked.id === 'string' && picked.id.startsWith('apt|') ? picked.id : null;
+      const pid = !defined(picked) ? null : picked.id instanceof Entity ? String(picked.id.id) : typeof picked.id === 'string' && (picked.id.startsWith('apt|') || picked.id.startsWith('rec|')) ? picked.id : null;
       p.onSelect(pid ? parseEntityId(pid) : null);
     }, ScreenSpaceEventType.LEFT_CLICK);
     handler.setInputAction(() => {
@@ -421,7 +421,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       if (now - lastHover < 80) return;
       lastHover = now;
       const picked = scene.pick(m.endPosition);
-      const sel = !defined(picked) ? null : picked.id instanceof Entity ? parseEntityId(String(picked.id.id)) : typeof picked.id === 'string' && picked.id.startsWith('apt|') ? parseEntityId(picked.id) : null;
+      const sel = !defined(picked) ? null : picked.id instanceof Entity ? parseEntityId(String(picked.id.id)) : typeof picked.id === 'string' && (picked.id.startsWith('apt|') || picked.id.startsWith('rec|')) ? parseEntityId(picked.id) : null;
       const rec = sel && sel.kind === 'record' ? { layer: sel.layer, id: sel.id } : null;
       layerRendererRef.current?.setHovered(rec);
       if (propsRef.current.tool === 'none' && !propsRef.current.pickMode) scene.canvas.style.cursor = sel ? 'pointer' : '';
@@ -710,6 +710,30 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     w.scene.requestRender();
   }, [props.routeLine, ready]);
 
+  // ----- rendering quality -----
+  useEffect(() => {
+    const w = widgetRef.current;
+    if (!w || !ready) return;
+    const max = props.settings.renderQuality === 'maximum';
+    // Maximum: sharpest terrain/imagery level selection, full device-pixel resolution, 4× MSAA, bigger caches.
+    w.scene.globe.maximumScreenSpaceError = max ? 1.2 : 2;
+    w.scene.globe.tileCacheSize = max ? 1500 : 600;
+    w.useBrowserRecommendedResolution = !max;
+    w.resolutionScale = 1;
+    w.scene.msaaSamples = max ? 4 : 1;
+    w.scene.postProcessStages.fxaa.enabled = !max;
+    buildingsRef.current?.setQuality(max);
+    // Reload buildings and labels for the current view with the new radius and density.
+    reportViewRef.current?.();
+    const ts = tilesetRef.current;
+    if (ts) {
+      ts.maximumScreenSpaceError = max ? 6 : 16;
+      ts.cacheBytes = max ? 2 * 1024 ** 3 : 512 * 1024 ** 2;
+      ts.preloadWhenHidden = max;
+    }
+    w.scene.requestRender();
+  }, [ready, props.settings.renderQuality]);
+
   // ----- geographic labels (screen-space, collision-managed) -----
   useEffect(() => {
     if (!ready) return;
@@ -872,7 +896,10 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     setPhotorealOn(false);
     if (props.google3dKey) {
       GoogleMaps.defaultApiKey = props.google3dKey;
-      void createGooglePhotorealistic3DTileset({ onlyUsingWithGoogleGeocoder: true })
+      const maxQ = propsRef.current.settings.renderQuality === 'maximum';
+      // Session cache only (Google's terms do not allow pre-downloading or storing tiles). Maximum quality
+      // asks for finer detail, keeps up to 2 GB of tiles in memory and preloads flight destinations.
+      void createGooglePhotorealistic3DTileset({ onlyUsingWithGoogleGeocoder: true }, { maximumScreenSpaceError: maxQ ? 6 : 16, cacheBytes: maxQ ? 2 * 1024 ** 3 : 512 * 1024 ** 2, preloadFlightDestinations: true, preloadWhenHidden: maxQ })
         .then((ts) => {
           if (cancelled) return;
           // The root can load while individual tiles are refused (quota, restrictions). If tiles keep

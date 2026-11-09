@@ -26,6 +26,7 @@ interface Props {
 
 const PROP_LABEL: Record<string, string> = {
   icao24: 'ICAO address',
+  originCountry: 'Country of registration',
   streamUrl: 'Live stream (HLS)',
   mediaType: 'Media type',
   country: 'Country',
@@ -247,8 +248,14 @@ export function RecordDetails(p: Props) {
             <Time iso={status?.lastSuccessAt} />
           </dd>
         </div>
+        {r.props.snapshot === true && (
+          <div className="kv">
+            <dt>Data type</dt>
+            <dd>Worldwide snapshot (OpenSky Network), not a live track; position shown until the next refresh</dd>
+          </div>
+        )}
         {Object.entries(r.props)
-          .filter(([, v]) => v !== null && v !== '')
+          .filter(([k, v]) => v !== null && v !== '' && k !== 'snapshot' && k !== 'maxAgeS')
           .map(([k, v]) => (
             <div className="kv" key={k}>
               <dt>{PROP_LABEL[k] ?? k}</dt>

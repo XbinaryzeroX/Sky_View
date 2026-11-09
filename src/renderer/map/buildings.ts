@@ -64,6 +64,10 @@ export class BuildingManager {
   private tiles = new Map<string, Primitive[] | null>();
   private enabled = true;
   private facades = true;
+  /** Maximum quality: 5×5 tiles, more buildings per tile, visible from higher up. */
+  private radius = 1;
+  private perTile = MAX_PER_TILE;
+  private maxCameraM = BUILDINGS_MAX_CAMERA_M;
   stats: BuildingStats = { tilesLoaded: 0, buildingsDrawn: 0, lastError: null, visible: false };
 
   constructor(private readonly widget: CesiumWidget) {
@@ -92,6 +96,13 @@ export class BuildingManager {
     this.widget.scene.requestRender();
   }
 
+  /** Rendering quality: 'maximum' loads a 5×5 block of tiles with up to 12,000 buildings each, below 8 km. */
+  setQuality(max: boolean): void {
+    this.radius = max ? 2 : 1;
+    this.perTile = max ? 12000 : MAX_PER_TILE;
+    this.maxCameraM = max ? 8000 : BUILDINGS_MAX_CAMERA_M;
+  }
+
   /** Switches stylized window façades on or off; loaded tiles are rebuilt. */
   setFacades(on: boolean): void {
     if (on === this.facades) return;
@@ -105,7 +116,7 @@ export class BuildingManager {
 
   /** Called when the camera settles. Loads the 3×3 block of zoom-14 tiles around the view center. */
   update(lat: number, lon: number, heightAboveGroundM: number): void {
-    const visible = this.enabled && heightAboveGroundM < BUILDINGS_MAX_CAMERA_M;
+    const visible = this.enabled && heightAboveGroundM < this.maxCameraM;
     this.stats.visible = visible;
     for (const ps of this.tiles.values()) for (const p of ps ?? []) p.show = visible;
     if (!visible) {
@@ -114,7 +125,7 @@ export class BuildingManager {
     }
     const [cx, cy] = tileXY(lat, lon);
     const want = new Set<string>();
-    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) want.add(`${cx + dx}/${cy + dy}`);
+    for (let dx = -this.radius; dx <= this.radius; dx++) for (let dy = -this.radius; dy <= this.radius; dy++) want.add(`${cx + dx}/${cy + dy}`);
     // Unload distant tiles to bound memory.
     for (const [k, p] of this.tiles) {
       if (!want.has(k)) {
@@ -144,7 +155,7 @@ export class BuildingManager {
       const tB = performance.now();
       const instances: GeometryInstance[] = [];
       const facades = this.facades ? new FacadeBatch() : null;
-      for (let i = 0; i < layer.length && instances.length < MAX_PER_TILE; i++) {
+      for (let i = 0; i < layer.length && instances.length < this.perTile; i++) {
         const f = layer.feature(i);
         if (f.type !== 3 || f.properties.hide_3d === true) continue;
         const h = Number(f.properties.render_height ?? 0);

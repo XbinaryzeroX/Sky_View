@@ -118,6 +118,10 @@ function createWindow(): void {
     minHeight: 640,
     title: 'Atlas Watch',
     backgroundColor: '#0d141c',
+    // The app's own top bar is the title bar: no separate OS strip or menu row. Windows draws its
+    // minimize / maximize / close buttons over the right end of the top bar in matching colors.
+    titleBarStyle: 'hidden',
+    titleBarOverlay: { color: '#111a24', symbolColor: '#dce4ec', height: 46 },
     show: false,
     webPreferences: {
       preload: join(__dirname, '../preload/preload.cjs'),
@@ -229,6 +233,7 @@ app.whenReady().then(async () => {
     getSettings: () => core!.settings,
     userAgent: ua,
     localReceiverUrl: () => providers.localReceiverUrl(),
+    openskyClient: () => secrets.get('opensky'),
     ais,
     aisConfigured: () => secrets.has('aisstream'),
     emit: scheduleLayerEmit,

@@ -193,6 +193,10 @@ export interface Settings {
   favoriteCameras: string[];
   /** Opt-in: exact-aircraft photos from Planespotters.net (photographer credit and link shown). */
   aircraftPhotos: boolean;
+  /** Opt-in: worldwide aircraft snapshot from OpenSky Network when zoomed out past the live-query limit. */
+  worldAircraft: boolean;
+  /** 'maximum' = sharpest tiles, MSAA, full device resolution, larger caches and building radius. */
+  renderQuality: 'balanced' | 'maximum';
   homeLat: number | null;
   homeLon: number | null;
   orgName: string;

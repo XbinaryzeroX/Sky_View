@@ -106,7 +106,9 @@ export type TrackState = 'fresh' | 'stale' | 'expired';
 export function trackState(r: GeoRecord, nowMs: number): TrackState {
   const a = ageSeconds(r, nowMs);
   if (a === null) return 'stale';
-  if (a > EXPIRE_AFTER_S) return 'expired';
+  const maxAge = typeof r.props.maxAgeS === 'number' ? r.props.maxAgeS : EXPIRE_AFTER_S;
+  if (a > maxAge) return 'expired';
+  if (r.props.snapshot === true) return 'stale';
   if (a > STALE_AFTER_S) return 'stale';
   return 'fresh';
 }

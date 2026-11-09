@@ -1,3 +1,4 @@
+import { normalizeOpenSky, OPENSKY_REFRESH_ANON_S, OPENSKY_REFRESH_AUTH_S } from '../../shared/opensky';
 import { mergeIncidents, normalizeEonet, normalizeGdacs } from '../../shared/incidents';
 // Per-layer fetch functions. URLs come from fixed templates; the only
 // variable inputs are validated numbers (view center/bbox) and enum values.
@@ -10,6 +11,8 @@ import type { AtlasStore } from '../store';
 
 export interface FetchContext {
   view: ViewState | null;
+  /** OpenSky API client 'id:secret' (optional; anonymous when absent). */
+  openskyClient?: string | null;
   settings: Settings;
   fetchJson: FetchJson;
   fetchText: FetchText;
@@ -63,6 +66,37 @@ export function aircraftQueryPlan(v: ViewState): { centers: { lat: number; lon: 
 
 const areaCache = new Map<string, { at: number; body: unknown }>();
 
+let openSkyCache: { at: number; authed: boolean; records: GeoRecord[]; skipped: number; time: string | null } | null = null;
+let openSkyToken: { token: string; exp: number } | null = null;
+/** Worldwide OpenSky snapshot, refetched only after the quota-safe interval. */
+async function openSkyWorld(ctx: FetchContext): Promise<{ records: GeoRecord[]; skipped: number; time: string | null; authed: boolean }> {
+  const client = ctx.openskyClient?.trim() || null;
+  const authed = !!client && client.includes(':');
+  const interval = authed ? OPENSKY_REFRESH_AUTH_S : OPENSKY_REFRESH_ANON_S;
+  const now = ctx.now.getTime();
+  if (openSkyCache && openSkyCache.authed === authed && now - openSkyCache.at < interval * 1000) return openSkyCache;
+  const headers: Record<string, string> = { 'User-Agent': ctx.userAgent };
+  if (authed) {
+    if (!openSkyToken || openSkyToken.exp < now + 60_000) {
+      const [id, ...rest] = client!.split(':');
+      const res = await ctx.fetchJson('https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': ctx.userAgent },
+        body: `grant_type=client_credentials&client_id=${encodeURIComponent(id)}&client_secret=${encodeURIComponent(rest.join(':'))}`,
+        timeoutMs: 15000,
+      });
+      const b = res.body as { access_token?: unknown; expires_in?: unknown };
+      if (typeof b.access_token !== 'string') throw new Error('OpenSky did not issue a token (check the client id and secret)');
+      openSkyToken = { token: b.access_token, exp: now + (Number(b.expires_in) || 1800) * 1000 };
+    }
+    headers.Authorization = `Bearer ${openSkyToken.token}`;
+  }
+  const res = await ctx.fetchJson('https://opensky-network.org/api/states/all?extended=1', { headers, timeoutMs: 45000, maxBytes: 30 * 1024 * 1024 });
+  const n = normalizeOpenSky(res.body, interval + 180);
+  openSkyCache = { at: now, authed, ...n };
+  return openSkyCache;
+}
+
 /** Query radius (nautical miles) for an aircraft point query from camera height. */
 export function aircraftRadiusNm(heightM: number): number {
   return Math.round(Math.max(25, Math.min(250, (heightM * 0.9) / NM)));
@@ -77,7 +111,17 @@ async function fetchAircraft(ctx: FetchContext): Promise<FetchResult> {
   let updated: string | null = null;
   const errors: string[] = [];
   const v = ctx.view;
-  if (!v) {
+  if (v && v.heightM > VIEW_LIMIT_AIRCRAFT_M && ctx.settings.worldAircraft) {
+    try {
+      const w = await openSkyWorld(ctx);
+      out.push(...w.records);
+      skipped += w.skipped;
+      updated = w.time;
+      note = `Worldwide snapshot from OpenSky Network: ${w.records.length.toLocaleString()} aircraft, positions from ${w.time ? new Date(w.time).toISOString().slice(11, 16) + ' UTC' : 'the last snapshot'}. Refreshed every ${w.authed ? '90 s (your OpenSky client)' : '15 min (anonymous quota)'}; zoom in below 3,000 km for live adsb.lol positions.`;
+    } catch (e) {
+      errors.push(`OpenSky: ${(e as Error).message}`);
+    }
+  } else if (!v) {
     note = 'Waiting for the map view.';
   } else {
     const plan = aircraftQueryPlan(v);
