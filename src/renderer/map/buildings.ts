@@ -1,3 +1,4 @@
+import { prof, profAdd } from '../lib/prof';
 // Extruded OpenStreetMap building footprints (worldwide where mapped) from
 // OpenFreeMap zoom-14 vector tiles. Heights use OpenMapTiles render_height:
 // from OSM height/levels tags where present, otherwise an estimate. These are
@@ -140,6 +141,7 @@ export class BuildingManager {
       } catch {
         base = 0;
       }
+      const tB = performance.now();
       const instances: GeometryInstance[] = [];
       const facades = this.facades ? new FacadeBatch() : null;
       for (let i = 0; i < layer.length && instances.length < MAX_PER_TILE; i++) {
@@ -174,9 +176,10 @@ export class BuildingManager {
           }
         }
       }
+      profAdd('buildings.geometry', performance.now() - tB);
       if (!this.tiles.has(key) || instances.length === 0) return;
       const prims = [new Primitive({ geometryInstances: instances, appearance: new PerInstanceColorAppearance({ flat: false, translucent: false }), asynchronous: true, releaseGeometryInstances: true })];
-      const walls = facades?.build();
+      const walls = prof('buildings.facades', () => facades?.build());
       if (walls) prims.push(walls);
       for (const prim of prims) {
         prim.show = this.stats.visible && this.enabled;

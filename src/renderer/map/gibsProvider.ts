@@ -1,3 +1,4 @@
+import { prof } from '../lib/prof';
 // NASA GIBS global base (Blue Marble Shaded Relief + Bathymetry). Its native
 // maximum is zoom 8, about 600 m per pixel at the equator.
 //
@@ -130,7 +131,7 @@ export class GibsBaseProvider extends UrlTemplateImageryProvider {
     }
     const p = (async () => {
       const url = this.template.replace('{z}', String(level)).replace('{y}', String(y)).replace('{x}', String(x));
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: AbortSignal.timeout(20000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const bmp = await createImageBitmap(await res.blob());
       if (x !== 2 ** level - 1) return bmp;
@@ -179,7 +180,7 @@ export class GibsBaseProvider extends UrlTemplateImageryProvider {
       const mask = coarse && coverage > 0 && coverage < 1 ? ((await oceanMaskFine(NATIVE_MAX, px, py, 2)) ?? coarse) : coverage > 0 ? coarse : null;
       const c = new OffscreenCanvas(TILE, TILE);
       c.getContext('2d')!.drawImage(src, 0, 0);
-      const water = mask ? smoothOcean(c, mask, 2.2, false, BLUE_MARBLE_COASTAL_WATER) : null;
+      const water = mask ? prof('gibs.smoothParent', () => smoothOcean(c, mask, 2.2, false, BLUE_MARBLE_COASTAL_WATER)) : null;
       return { canvas: c, water };
     })();
     p.catch(() => this.smoothCache.delete(key));
@@ -195,8 +196,8 @@ export class GibsBaseProvider extends UrlTemplateImageryProvider {
     const span = TILE >> shift;
     const sx = (x - (px << shift)) * span;
     const sy = (y - (py << shift)) * span;
-    const [parent, mask] = await Promise.all([this.smoothParent(px, py), oceanMask(level, x, y)]);
-    const src = parent.canvas;
+    // Children are plain high-quality (GPU) crops of the smoothed parent: no per-tile pixel readback.
+    const src = (await this.smoothParent(px, py)).canvas;
     const c = new OffscreenCanvas(TILE, TILE);
     const g = c.getContext('2d')!;
     g.imageSmoothingEnabled = true;
@@ -208,8 +209,6 @@ export class GibsBaseProvider extends UrlTemplateImageryProvider {
     const x1 = Math.min(TILE, sx + span + 1);
     const y1 = Math.min(TILE, sy + span + 1);
     g.drawImage(src, x0, y0, x1 - x0, y1 - y0, (x0 - sx) * k, (y0 - sy) * k, (x1 - x0) * k, (y1 - y0) * k);
-    // Coast fix at this level: land-colored source pixels inside the finer OSM ocean outline take nearby water color.
-    if (mask) smoothOcean(c, mask, Math.min(12, 2 + 0.9 * k), true);
     gibsStats.smoothed++;
     return createImageBitmap(c, { imageOrientation: 'flipY' });
   }
@@ -227,8 +226,10 @@ export class OffshoreVeilProvider extends GibsBaseProvider {
   override requestImage(x: number, y: number, level: number) {
     if (level < 9) return createImageBitmap(new ImageData(1, 1)) as never;
     return (async () => {
-      const [img, mask] = await Promise.all([this.smoothed(x, y, level), offshoreMask(level, x, y)]);
-      if (!mask) return createImageBitmap(new ImageData(1, 1));
+      // Check for offshore water first: most tiles have none, and then no smoothing work is done at all.
+      const mask = await offshoreMask(level, x, y);
+      if (!mask || mask === 'none') return createImageBitmap(new ImageData(1, 1));
+      const img = await this.smoothed(x, y, level);
       const c = new OffscreenCanvas(TILE, TILE);
       const cg = c.getContext('2d')!;
       // `img` is already flipped for Cesium; flip the mask the same way before combining.

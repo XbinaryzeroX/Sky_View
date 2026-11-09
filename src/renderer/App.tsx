@@ -116,6 +116,20 @@ export function App() {
   layerSnapsRef.current = layerSnaps;
   const getDiag = useCallback(() => globeRef.current?.getDiagnostics() ?? null, []);
   useEffect(() => {
+    // Main-thread blocking (tasks over 50 ms), read by the performance smoke test.
+    try {
+      const lt = { count: 0, totalMs: 0, maxMs: 0 };
+      (window as unknown as { __atlasLongTasks: unknown }).__atlasLongTasks = lt;
+      new PerformanceObserver((list) => {
+        for (const e of list.getEntries()) {
+          lt.count++;
+          lt.totalMs = Math.round(lt.totalMs + e.duration);
+          lt.maxMs = Math.max(lt.maxMs, Math.round(e.duration));
+        }
+      }).observe({ type: 'longtask', buffered: true });
+    } catch {
+      // longtask timing unavailable
+    }
     // Renderer-only camera hooks used by automated smoke tests (no privileged access).
     (window as unknown as { __atlasDebug: unknown }).__atlasDebug = {
       setView: (lat: number, lon: number, h: number, pitch?: number) => globeRef.current?.setView(lat, lon, h, pitch),

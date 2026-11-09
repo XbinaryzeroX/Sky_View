@@ -1,7 +1,18 @@
+import { profAdd } from '../lib/prof';
 import { buildImageryLayers, type ImageryState } from '../map/imageryOverlay';
 import type { RouteInfo } from '../../shared/route';
 import '../lib/cesiumBase';
 import {
+  PointPrimitiveCollection,
+  LabelCollection,
+  HorizontalOrigin,
+  GeometryInstance,
+  PolylineGeometry,
+  PolylineColorAppearance,
+  Primitive,
+  ColorGeometryInstanceAttribute,
+  DistanceDisplayConditionGeometryInstanceAttribute,
+  RequestScheduler,
   ArcType,
   SkyAtmosphere,
   SkyBox,
@@ -17,11 +28,9 @@ import {
   Entity,
   ImageryLayer,
   LabelStyle,
-  Material,
   Math as CMath,
   NearFarScalar,
   PolygonHierarchy,
-  PolylineCollection,
   Rectangle,
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
@@ -84,6 +93,8 @@ export const MIN_CAMERA_HEIGHT_M = 100;
 export const MAX_TILT_DEG = 80;
 
 export interface GlobeDiagnostics {
+  renderErrors: number;
+  lastRenderError: string | null;
   globeShown: boolean | null;
   imageryLayerCount: number | null;
   photorealLoaded: boolean;
@@ -175,14 +186,26 @@ function linesOf(g: MultiLineString): Position[][] {
   return g.coordinates;
 }
 
-function addMesh(collection: PolylineCollection, g: MultiLineString, color: Color, width: number) {
+/**
+ * Boundary lines as ONE static batched primitive (geometry built in Cesium's workers, one draw call).
+ * A PolylineCollection with thousands of separate lines re-derived a material key for every line on
+ * every frame (≈26 s of main-thread time in a profiled session).
+ */
+function meshInstances(g: MultiLineString, color: Color, width: number): GeometryInstance[] {
+  const out: GeometryInstance[] = [];
+  const colorAttr = ColorGeometryInstanceAttribute.fromColor(color);
+  // Hidden below ~40 km altitude so outlines do not draw across detailed imagery.
+  const ddc = new DistanceDisplayConditionGeometryInstanceAttribute(40_000, Number.MAX_VALUE);
   for (const line of linesOf(g)) {
     if (line.length < 2) continue;
     const flat: number[] = [];
     for (const [lon, lat] of line) flat.push(lon, lat);
-    // Hidden below ~40 km altitude so outlines do not draw across detailed imagery.
-    collection.add({ positions: Cartesian3.fromDegreesArray(flat), width, material: Material.fromType('Color', { color }), distanceDisplayCondition: new DistanceDisplayCondition(40_000, Number.MAX_VALUE) });
+    out.push(new GeometryInstance({ geometry: new PolylineGeometry({ positions: Cartesian3.fromDegreesArray(flat), width, vertexFormat: PolylineColorAppearance.VERTEX_FORMAT }), attributes: { color: colorAttr, distanceDisplayCondition: ddc } }));
   }
+  return out;
+}
+function linePrimitive(instances: GeometryInstance[]): Primitive {
+  return new Primitive({ geometryInstances: instances, appearance: new PolylineColorAppearance({ translucent: true }), asynchronous: true, releaseGeometryInstances: true, allowPicking: false });
 }
 
 function parseEntityId(id: string): GlobeSelection | null {
@@ -222,7 +245,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   const creditRef = useRef<HTMLDivElement>(null);
   const widgetRef = useRef<CesiumWidget | null>(null);
   const sourcesRef = useRef<{ alerts: CustomDataSource; quakes: CustomDataSource; locations: CustomDataSource; radii: CustomDataSource } | null>(null);
-  const boundariesRef = useRef<PolylineCollection[]>([]);
+  const boundariesRef = useRef<Primitive[]>([]);
   const propsRef = useRef(props);
   propsRef.current = props;
   const [failed, setFailed] = useState<string | null>(null);
@@ -239,6 +262,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   const [photorealOn, setPhotorealOn] = useState(false);
   const photorealCleanupRef = useRef<(() => void) | null>(null);
   const reportViewRef = useRef<(() => void) | null>(null);
+  const renderErrorsRef = useRef<{ count: number; last: string | null }>({ count: 0, last: null });
   const placeLabelsRef = useRef<PlaceLabelManager | null>(null);
   const buildingsRef = useRef<BuildingManager | null>(null);
   const [ready, setReady] = useState(false);
@@ -263,6 +287,8 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
         creditContainer: creditRef.current ?? undefined,
         shouldAnimate: false,
         showRenderLoopErrors: false,
+        // Ask the browser for the high-performance GPU and skip the costly preserveDrawingBuffer path.
+        contextOptions: { webgl: { powerPreference: 'high-performance', alpha: false, antialias: true, preserveDrawingBuffer: false } },
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -284,7 +310,28 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     scene.globe.lightingFadeInDistance = 2;
     scene.globe.showWaterEffect = true;
     scene.fog.enabled = false;
+    let frameStart = 0;
+    scene.preUpdate.addEventListener(() => (frameStart = performance.now()));
+    scene.postRender.addEventListener(() => frameStart && profAdd('cesium.frame', performance.now() - frameStart));
+    // A render error stops Cesium's render loop (the globe would freeze). Record it for Diagnostics and restart.
+    scene.renderError.addEventListener((_sc: unknown, err: unknown) => {
+      const msg = err instanceof Error ? `${err.message} | ${(err.stack ?? '').split('\n').slice(0, 4).join(' | ')}` : String(err);
+      renderErrorsRef.current = { count: renderErrorsRef.current.count + 1, last: msg.slice(0, 600) };
+      console.error('Cesium render error', msg);
+      setTimeout(() => {
+        if (!widget.isDestroyed() && renderErrorsRef.current.count < 20) {
+          widget.useDefaultRenderLoop = true;
+          widget.scene.requestRender();
+        }
+      }, 250);
+    });
     scene.globe.depthTestAgainstTerrain = false;
+    // Tile loading: keep more tiles resident in GPU memory (fewer re-downloads and re-decodes when panning
+    // back), preload neighbours of visible tiles, and allow more parallel requests to the tile hosts.
+    scene.globe.tileCacheSize = 600;
+    scene.globe.preloadSiblings = true;
+    scene.globe.loadingDescendantLimit = 30;
+    for (const host of ['gibs.earthdata.nasa.gov:443', 'basemap.nationalmap.gov:443', 'tiles.openfreemap.org:443', 's3.amazonaws.com:443']) RequestScheduler.requestsByServer[host] = 24;
     if (scene.skyAtmosphere) {
       scene.skyAtmosphere.brightnessShift = -0.9;
       scene.skyAtmosphere.saturationShift = -0.15;
@@ -305,21 +352,18 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     scene.screenSpaceCameraController.maximumZoomDistance = 40_000_000;
 
     // Boundaries (bundled; Natural Earth countries and U.S. Census states).
-    const countries = new PolylineCollection();
-    const states = new PolylineCollection();
+    const lineSets: Primitive[] = [];
     try {
       const ct = countriesTopo as unknown as Topology<{ countries: GeometryCollection }>;
-      addMesh(countries, mesh(ct, ct.objects.countries) as MultiLineString, COUNTRY_LINE, 1);
+      lineSets.push(linePrimitive(meshInstances(mesh(ct, ct.objects.countries) as MultiLineString, COUNTRY_LINE, 1)));
       const st = statesTopo as unknown as Topology<{ states: GeometryCollection; nation: GeometryCollection }>;
-      addMesh(states, mesh(st, st.objects.states, (a, b) => a !== b) as MultiLineString, STATE_LINE, 1.2);
-      // Coastline / national outline for the U.S. comes from the nation object.
-      addMesh(states, mesh(st, st.objects.nation) as MultiLineString, STATE_LINE, 1.2);
+      // State lines plus the U.S. coastline / national outline from the nation object.
+      lineSets.push(linePrimitive([...meshInstances(mesh(st, st.objects.states, (a, b) => a !== b) as MultiLineString, STATE_LINE, 1.2), ...meshInstances(mesh(st, st.objects.nation) as MultiLineString, STATE_LINE, 1.2)]));
     } catch (e) {
       console.warn('Boundary load failed', e);
     }
-    scene.primitives.add(countries);
-    scene.primitives.add(states);
-    boundariesRef.current = [countries, states];
+    for (const p of lineSets) scene.primitives.add(p);
+    boundariesRef.current = lineSets;
 
     const sources = {
       radii: new CustomDataSource('radii'),
@@ -364,12 +408,8 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
         return;
       }
       const picked = scene.pick(movement.position);
-      if (defined(picked) && picked.id instanceof Entity) {
-        const sel = parseEntityId(String(picked.id.id));
-        p.onSelect(sel);
-      } else {
-        p.onSelect(null);
-      }
+      const pid = !defined(picked) ? null : picked.id instanceof Entity ? String(picked.id.id) : typeof picked.id === 'string' && picked.id.startsWith('apt|') ? picked.id : null;
+      p.onSelect(pid ? parseEntityId(pid) : null);
     }, ScreenSpaceEventType.LEFT_CLICK);
     handler.setInputAction(() => {
       if (propsRef.current.tool !== 'none') propsRef.current.onToolFinish();
@@ -381,7 +421,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       if (now - lastHover < 80) return;
       lastHover = now;
       const picked = scene.pick(m.endPosition);
-      const sel = defined(picked) && picked.id instanceof Entity ? parseEntityId(String(picked.id.id)) : null;
+      const sel = !defined(picked) ? null : picked.id instanceof Entity ? parseEntityId(String(picked.id.id)) : typeof picked.id === 'string' && picked.id.startsWith('apt|') ? parseEntityId(picked.id) : null;
       const rec = sel && sel.kind === 'record' ? { layer: sel.layer, id: sel.id } : null;
       layerRendererRef.current?.setHovered(rec);
       if (propsRef.current.tool === 'none' && !propsRef.current.pickMode) scene.canvas.style.cursor = sel ? 'pointer' : '';
@@ -678,27 +718,31 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   }, [ready, props.settings.geoLabels, props.settings.streetLabels, props.settings.labelDensity, props.settings.labelSize, props.settings.labelLanguage]);
 
   // ----- airports (bundled OurAirports, public domain) -----
-  const airportSourceRef = useRef<CustomDataSource | null>(null);
+  // Static primitives (not entities): 5,282 airports would otherwise be re-evaluated by the entity
+  // system on every frame. Picking still works through the 'apt|ICAO' ids.
+  const airportPrimsRef = useRef<{ points: PointPrimitiveCollection; labels: LabelCollection } | null>(null);
   useEffect(() => {
     const w = widgetRef.current;
     if (!w || !ready) return;
-    if (!airportSourceRef.current) {
-      const src = new CustomDataSource('airports');
+    if (!airportPrimsRef.current) {
+      const points = new PointPrimitiveCollection();
+      const labels = new LabelCollection();
       const list = (airportsData as unknown as { airports: [string, string, string, number, number, number | null, string, string, 'L' | 'M'][] }).airports;
-      for (const [icao, iata, name, la, lo, , , , size] of list) {
+      const fill = Color.fromCssColorString('#cfd8e3');
+      const ring = Color.fromCssColorString('#0a1017');
+      for (const [icao, iata, , la, lo, , , , size] of list) {
         const far = size === 'L' ? 1.5e6 : 4e5;
-        src.entities.add({
-          id: 'apt|' + icao,
-          position: Cartesian3.fromDegrees(lo, la),
-          point: { pixelSize: size === 'L' ? 7 : 5, color: Color.fromCssColorString('#cfd8e3'), outlineColor: Color.fromCssColorString('#0a1017'), outlineWidth: 2, distanceDisplayCondition: new DistanceDisplayCondition(0, far) },
-          label: { text: iata || icao, font: '600 11px "Segoe UI", sans-serif', fillColor: Color.fromCssColorString('#cfd8e3'), outlineColor: Color.BLACK, outlineWidth: 3, style: LabelStyle.FILL_AND_OUTLINE, pixelOffset: new Cartesian2(10, 0), horizontalOrigin: 1 as never, distanceDisplayCondition: new DistanceDisplayCondition(0, far * 0.6) },
-          description: name,
-        });
+        const position = Cartesian3.fromDegrees(lo, la);
+        const id = 'apt|' + icao;
+        points.add({ id, position, pixelSize: size === 'L' ? 7 : 5, color: fill, outlineColor: ring, outlineWidth: 2, distanceDisplayCondition: new DistanceDisplayCondition(0, far) });
+        labels.add({ id, position, text: iata || icao, font: '600 11px "Segoe UI", sans-serif', fillColor: fill, outlineColor: Color.BLACK, outlineWidth: 3, style: LabelStyle.FILL_AND_OUTLINE, pixelOffset: new Cartesian2(10, 0), horizontalOrigin: HorizontalOrigin.LEFT, distanceDisplayCondition: new DistanceDisplayCondition(0, far * 0.6) });
       }
-      void w.dataSources.add(src);
-      airportSourceRef.current = src;
+      w.scene.primitives.add(points);
+      w.scene.primitives.add(labels);
+      airportPrimsRef.current = { points, labels };
     }
-    airportSourceRef.current.show = props.showAirports;
+    airportPrimsRef.current.points.show = props.showAirports;
+    airportPrimsRef.current.labels.show = props.showAirports;
     w.scene.requestRender();
   }, [props.showAirports, ready]);
 
@@ -926,6 +970,8 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
           imageryAtLimit: maxRenderedLevel !== null && imageryMaxLevelHere > 0 && maxRenderedLevel + (ts ? 0 : 1) > imageryMaxLevelHere,
           imageryErrors: imageryErrorsRef.current.count,
           globeShown: widgetRef.current?.scene.globe.show ?? null,
+          renderErrors: renderErrorsRef.current.count,
+          lastRenderError: renderErrorsRef.current.last,
           imageryLayerCount: widgetRef.current?.imageryLayers.length ?? null,
           photorealLoaded: !!tilesetRef.current,
           lastImageryError: imageryErrorsRef.current.last,

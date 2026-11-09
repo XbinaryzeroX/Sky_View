@@ -29,6 +29,9 @@ export function CameraPlayer({ media, title }: { media: CameraMedia; title: stri
   const [muted, setMuted] = useState(true);
   const [attempt, setAttempt] = useState(0);
   const restartsRef = useRef<number[]>([]);
+  /** Time of the last advancing playback; used to reset the reconnect budget after good playback. */
+  const lastGoodRef = useRef(0);
+  const lastRestartRef = useRef(0);
   const [preferStill, setPreferStill] = useState(!media.streamUrl);
 
   useEffect(() => {
@@ -44,6 +47,10 @@ export function CameraPlayer({ media, title }: { media: CameraMedia; title: stri
     setState('loading');
     setError(null);
     const onPlaying = () => setState('playing');
+    const onTime = () => {
+      if (!v.paused && v.currentTime > 0) lastGoodRef.current = Date.now();
+    };
+    v.addEventListener('timeupdate', onTime);
     const onWaiting = () => setState('buffering');
     const onPause = () => setState((s) => (s === 'offline' || s === 'error' ? s : 'paused'));
     v.addEventListener('playing', onPlaying);
@@ -51,11 +58,16 @@ export function CameraPlayer({ media, title }: { media: CameraMedia; title: stri
     v.addEventListener('pause', onPause);
     const onVideoError = () => {
       v.dataset.mediaError = `${v.error?.code ?? ''} ${v.error?.message ?? ''}`;
-      // Damaged frames in the publisher's stream stop Chromium's decoder; reconnect at the live edge (bounded).
-      if (restartsRef.current.filter((t) => Date.now() - t < 120_000).length < 30) {
-        restartsRef.current = [...restartsRef.current, Date.now()].slice(-30);
+      // Damaged frames in the publisher's stream stop the decoder; reconnect at the live edge with
+      // exponential backoff (0.4 s … 8 s). Any 5 s of good playback resets the budget.
+      const now = Date.now();
+      if (lastGoodRef.current - lastRestartRef.current >= 5000) restartsRef.current = [];
+      lastRestartRef.current = now;
+      restartsRef.current = [...restartsRef.current.filter((t) => now - t < 120_000), now];
+      const n = restartsRef.current.length;
+      if (n <= 12) {
         setState('buffering');
-        setTimeout(() => setAttempt((n) => n + 1), 200);
+        setTimeout(() => setAttempt((x) => x + 1), Math.min(8000, 400 * 2 ** (n - 1)));
       } else fail('error', 'The publisher’s video keeps failing to decode (damaged frames in the stream). Try again later.');
     };
     v.addEventListener('error', onVideoError);
@@ -104,6 +116,8 @@ export function CameraPlayer({ media, title }: { media: CameraMedia; title: stri
       v.removeEventListener('playing', onPlaying);
       v.removeEventListener('waiting', onWaiting);
       v.removeEventListener('pause', onPause);
+      v.removeEventListener('timeupdate', onTime);
+      v.removeEventListener('error', onVideoError);
       hls?.destroy();
       v.removeAttribute('src');
       v.load();

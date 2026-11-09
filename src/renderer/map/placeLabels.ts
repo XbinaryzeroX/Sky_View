@@ -1,3 +1,4 @@
+import { prof, profAdd } from '../lib/prof';
 // Place, water and street labels as screen-space Cesium labels with a real
 // label hierarchy and collision handling.
 //
@@ -201,6 +202,7 @@ export class PlaceLabelManager {
   private async loadTile(key: string): Promise<Candidate[]> {
     const [z, x, y] = key.split('/').map(Number);
     const vt = await loadVectorTile(z, x, y);
+    const tL = performance.now();
     const out: Candidate[] = [];
     const lang = this.opts.language;
     const place = vt.layers.place;
@@ -250,6 +252,7 @@ export class PlaceLabelManager {
         out.push({ key: `road|${text}|${x}|${y}`, text, kind: 'road', rank: cls === 'primary' || cls === 'trunk' || cls === 'motorway' ? 2 : cls === 'secondary' ? 5 : 9, lon, lat });
       }
     }
+    profAdd('labels.parse', performance.now() - tL);
     return out;
   }
 
@@ -265,6 +268,9 @@ export class PlaceLabelManager {
   }
 
   private sync(want: Set<string>): void {
+    prof('labels.sync', () => this.syncImpl(want));
+  }
+  private syncImpl(want: Set<string>): void {
     const scale = this.opts.size === 'small' ? 0.88 : this.opts.size === 'large' ? 1.18 : 1;
     const active = new Map<string, { c: Candidate; tiles: Set<string> }>();
     for (const key of want)
@@ -355,6 +361,9 @@ export class PlaceLabelManager {
 
   /** Screen-space collision and visibility decisions. */
   private layout(): void {
+    prof('labels.layout', () => this.layoutImpl());
+  }
+  private layoutImpl(): void {
     const scene = this.widget.scene;
     const camPos = this.widget.camera.positionWC;
     const occ = new EllipsoidalOccluder(Ellipsoid.WGS84, camPos);

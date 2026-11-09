@@ -8,6 +8,7 @@
 // are transparent (see usgsProvider.ts) so the base shows through.
 
 import {
+  Color,
   buildModuleUrl,
   Credit,
   GeographicTilingScheme,
@@ -150,7 +151,8 @@ function usgsLayers(service: UsgsService): ImageryLayer[] {
       new ImageryLayer(
         new UsgsImageryProvider({ url: `https://basemap.nationalmap.gov/arcgis/rest/services/${service}/MapServer/tile/{z}/{y}/{x}`, tilingScheme: MERC, maximumLevel: 16, rectangle, credit: new Credit('USGS The National Map') }, service),
         // Used from level 9 down; above that the global base is shown, so there is no seam at globe scale.
-        { rectangle, minimumTerrainLevel: 9 },
+        // Pure-black no-data fill at USGS coverage edges is made transparent on the GPU (shader), not per pixel on the CPU.
+        { rectangle, minimumTerrainLevel: 9, ...(service !== 'USGSTopo' ? { colorToAlpha: Color.BLACK, colorToAlphaThreshold: 0.006 } : {}) },
       ),
   );
 }

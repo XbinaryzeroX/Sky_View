@@ -1,6 +1,6 @@
 // Electron main process entry point.
 
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, safeStorage, screen, session } from 'electron';
+import { app, BrowserWindow, contentTracing, dialog, ipcMain, Menu, nativeTheme, safeStorage, screen, session } from 'electron';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { buildBriefing } from '../shared/briefing';
@@ -175,9 +175,14 @@ app.on('second-instance', () => {
   }
 });
 
-// Public camera streams (HLS) are decoded in software: the GPU decoder failed mid-stream on Caltrans
-// H.264 feeds (Chromium PIPELINE_ERROR_DECODE). Video sizes are small (≈352×264), so the CPU cost is low.
-app.commandLine.appendSwitch('disable-accelerated-video-decode');
+// GPU use: prefer the discrete/high-performance GPU on dual-GPU machines, rasterize canvas and page
+// content on the GPU, and let decoded images and video go to the GPU without extra copies. Video is
+// hardware-decoded. Measured 2026-11-09 on Caltrans camera streams: playback quality depended on the
+// publisher's stream at that moment (GPU 21 s and software 0 s of 60 s in back-to-back runs), not on
+// the decoder, so the camera player handles damaged frames by reconnecting with backoff.
+app.commandLine.appendSwitch('force_high_performance_gpu');
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
 
 app.whenReady().then(async () => {
   const rendererRoot = join(__dirname, '../renderer');
@@ -284,6 +289,16 @@ app.whenReady().then(async () => {
     mainWindow?.webContents.once('did-finish-load', () => {
       setTimeout(async () => {
         const wc = mainWindow!.webContents;
+        // Optional Chromium trace of the whole view run (development only).
+        // Optional V8 CPU profile of the renderer (development only), aggregated by function self time.
+        const cpuProfile = process.env.ATLAS_WATCH_SMOKE_CPUPROFILE;
+        if (cpuProfile) {
+          wc.debugger.attach('1.3');
+          await wc.debugger.sendCommand('Profiler.enable');
+          await wc.debugger.sendCommand('Profiler.setSamplingInterval', { interval: 1000 });
+          await wc.debugger.sendCommand('Profiler.start');
+        }
+        if (process.env.ATLAS_WATCH_SMOKE_TRACE) await contentTracing.startRecording({ included_categories: ['devtools.timeline', 'v8.execute', 'disabled-by-default-devtools.timeline', 'gpu', 'blink'] });
         for (const v of views) {
           await wc.executeJavaScript(`window.__atlasDebug.setView(${v.lat}, ${v.lon}, ${v.h}, ${v.pitch ?? -90})`);
           let settled = 0;
@@ -304,9 +319,31 @@ app.whenReady().then(async () => {
           const img = await wc.capturePage();
           await writeFile(join(outDir, `${v.name}.png`), img.toPNG());
           const d = diag ?? {};
-          console.log(`SMOKE_VIEW ${v.name} settledMs=${Date.now() - t0} ${JSON.stringify({ h: d.cameraHeightM, level: d.maxRenderedLevel, maxHere: d.imageryMaxLevelHere, atLimit: d.imageryAtLimit, pending: d.tilesPending, errors: d.imageryErrors, lastErr: d.lastImageryError, terrain: d.terrain ? { loaded: (d.terrain as Record<string, unknown>).loaded, failed: (d.terrain as Record<string, unknown>).failed, deepest: (d.terrain as Record<string, unknown>).deepestLevelRequested } : null })}`);
+          console.log(`SMOKE_VIEW ${v.name} settledMs=${Date.now() - t0} ${JSON.stringify({ h: d.cameraHeightM, level: d.maxRenderedLevel, maxHere: d.imageryMaxLevelHere, atLimit: d.imageryAtLimit, pending: d.tilesPending, errors: d.imageryErrors, lastErr: d.lastImageryError, renderErrors: d.renderErrors, lastRenderError: d.lastRenderError, terrain: d.terrain ? { loaded: (d.terrain as Record<string, unknown>).loaded, failed: (d.terrain as Record<string, unknown>).failed, deepest: (d.terrain as Record<string, unknown>).deepestLevelRequested } : null })}`);
         }
         console.log(`SMOKE_NET ${JSON.stringify(getNetStats())}`);
+        if (cpuProfile) {
+          const { profile } = (await wc.debugger.sendCommand('Profiler.stop')) as { profile: { nodes: { id: number; callFrame: { functionName: string; url: string; lineNumber: number } }[]; samples: number[]; timeDeltas: number[] } };
+          await writeFile(cpuProfile, JSON.stringify(profile));
+          const byId = new Map(profile.nodes.map((n) => [n.id, n]));
+          const self = new Map<string, number>();
+          profile.samples.forEach((id, i) => {
+            const n = byId.get(id);
+            if (!n) return;
+            const key = `${n.callFrame.functionName || '(anonymous)'} @${n.callFrame.url.split('/').pop()}:${n.callFrame.lineNumber}`;
+            self.set(key, (self.get(key) ?? 0) + (profile.timeDeltas[i] ?? 0) / 1000);
+          });
+          console.log(`SMOKE_CPUPROFILE ${JSON.stringify([...self].sort((x, y) => y[1] - x[1]).slice(0, 30).map(([k, v]) => [k, Math.round(v)]))}`);
+          wc.debugger.detach();
+        }
+        if (process.env.ATLAS_WATCH_SMOKE_TRACE) console.log(`SMOKE_TRACE ${await contentTracing.stopRecording(process.env.ATLAS_WATCH_SMOKE_TRACE)}`);
+        // Performance: CPU seconds per process type since launch, GPU feature status, renderer main-thread blocking.
+        const cpu: Record<string, number> = {};
+        for (const m of app.getAppMetrics()) cpu[m.type] = Math.round(((cpu[m.type] ?? 0) + (m.cpu.cumulativeCPUUsage ?? 0)) * 10) / 10;
+        const lt = await wc.executeJavaScript('JSON.stringify(window.__atlasLongTasks ?? null)').catch(() => 'null');
+        console.log(`SMOKE_PROF ${await wc.executeJavaScript('JSON.stringify(window.__atlasProf ?? null)').catch(() => 'null')}`);
+        const gpu = app.getGPUFeatureStatus() as unknown as Record<string, string>;
+        console.log(`SMOKE_PERF ${JSON.stringify({ cpuSeconds: cpu, longTasks: JSON.parse(lt), gpu: { gpu_compositing: gpu.gpu_compositing, rasterization: gpu.rasterization, video_decode: gpu.video_decode, webgl2: gpu.webgl2, canvas_oop: gpu.canvas_oop_rasterization } })}`);
         app.quit();
       }, 4000);
     });

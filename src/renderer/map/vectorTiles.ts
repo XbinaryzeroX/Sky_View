@@ -1,3 +1,4 @@
+import { prof, profAdd } from '../lib/prof';
 // Worldwide streets, water, land use, boundaries, place names and building
 // footprints from OpenFreeMap vector tiles (OpenMapTiles schema, OpenStreetMap
 // data). OpenFreeMap: free, commercial use allowed, no key, no request limits;
@@ -57,7 +58,7 @@ export function loadVectorTile(z: number, x: number, y: number): Promise<VectorT
     vectorStats.requested++;
     try {
       const tpl = await tileTemplate();
-      const res = await fetch(tpl.replace('{z}', String(z)).replace('{x}', String(x)).replace('{y}', String(y)));
+      const res = await fetch(tpl.replace('{z}', String(z)).replace('{x}', String(x)).replace('{y}', String(y)), { signal: AbortSignal.timeout(20000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const vt = new VectorTile(new PbfReader(new Uint8Array(await res.arrayBuffer())));
       vectorStats.loaded++;
@@ -152,6 +153,9 @@ function roadWidth(cls: string, z: number): number {
 
 /** Rasterizes the visible portion of a source tile into a 256×256 canvas. */
 export function drawTile(vt: VectorTile, style: VectorStyle, level: number, sub: { ox: number; oy: number; scale: number }): Promise<ImageBitmap> {
+  return prof('vector.draw', () => drawTileImpl(vt, style, level, sub));
+}
+function drawTileImpl(vt: VectorTile, style: VectorStyle, level: number, sub: { ox: number; oy: number; scale: number }): Promise<ImageBitmap> {
   const c = new OffscreenCanvas(TILE, TILE);
   const g = c.getContext('2d')!;
   const pal = PALETTES[style];
@@ -346,47 +350,71 @@ export async function oceanMaskFine(level: number, x: number, y: number, extra =
 /** Distance from land (metres) within which USGS water imagery is kept. */
 export const NEARSHORE_KEEP_M = 1500;
 
-const offshoreCache = new Map<string, Promise<OffscreenCanvas>>();
+
+const GRID = 24; // coverage grid cells across a 3×3-tile region (one cell = 32 region px)
+interface OffshoreRegion {
+  canvas: OffscreenCanvas;
+  /** 1 where the cell contains any offshore water. */
+  grid: Uint8Array;
+}
+const offshoreRegions = new Map<string, Promise<OffshoreRegion>>();
 
 /**
  * Offshore mask for a Web Mercator tile: opaque where OSM ocean is more than
- * ~NEARSHORE_KEEP_M from any land, transparent near land, with a soft fade
- * between. Used to remove USGS water imagery only offshore, where its coverage
- * ends in ragged patches. Harbors, rivers, bays and beaches keep their real
- * imagery.
+ * ~NEARSHORE_KEEP_M from any land, transparent near land, with a soft fade.
+ * Used to remove USGS water imagery only offshore, where its coverage ends in
+ * ragged patches. Harbors, rivers, bays and beaches keep their real imagery.
  *
- * Distance needs context beyond the tile, so land is drawn for the 3×3 block of
- * vector tiles two zooms up (cached and shared by the 16 tiles inside it).
- * Vector tiles that fail to load count as land, so imagery is kept.
+ * Returns 'none' when the tile has no offshore water (most tiles; callers then
+ * skip all canvas work), the mask canvas otherwise, or null if vector tiles are
+ * unavailable. Land context comes from the 3×3 block of vector tiles two zooms
+ * up, cached and shared by the 16 tiles inside it.
  */
-export async function offshoreMask(level: number, x: number, y: number): Promise<OffscreenCanvas | null> {
+export async function offshoreMask(level: number, x: number, y: number): Promise<OffscreenCanvas | 'none' | null> {
   const zv = Math.max(0, Math.min(SOURCE_MAX, level - 2));
   const f = 2 ** (level - zv);
   const cx = Math.floor(x / f);
   const cy = Math.floor(y / f);
   const key = `${zv}/${cx}/${cy}`;
-  let region = offshoreCache.get(key);
+  let region = offshoreRegions.get(key);
   if (!region) {
     region = buildOffshoreRegion(zv, cx, cy);
-    region.catch(() => offshoreCache.delete(key));
-    offshoreCache.set(key, region);
-    if (offshoreCache.size > 16) offshoreCache.delete(offshoreCache.keys().next().value!);
+    region.catch(() => offshoreRegions.delete(key));
+    offshoreRegions.set(key, region);
+    if (offshoreRegions.size > 24) offshoreRegions.delete(offshoreRegions.keys().next().value!);
   }
-  let r: OffscreenCanvas;
+  let r: OffshoreRegion;
   try {
     r = await region;
   } catch {
     return null;
   }
+  const span = TILE / f;
+  const sx = TILE + (x - cx * f) * span;
+  const sy = TILE + (y - cy * f) * span;
+  const cell = (TILE * 3) / GRID;
+  let any = false;
+  for (let gy = Math.floor(sy / cell); gy <= Math.floor((sy + span - 1) / cell) && !any; gy++)
+    for (let gx = Math.floor(sx / cell); gx <= Math.floor((sx + span - 1) / cell); gx++)
+      if (r.grid[gy * GRID + gx]) {
+        any = true;
+        break;
+      }
+  if (!any) return 'none';
   const out = new OffscreenCanvas(TILE, TILE);
   const g = out.getContext('2d')!;
   g.imageSmoothingQuality = 'high';
-  const span = TILE / f;
-  g.drawImage(r, TILE + (x - cx * f) * span, TILE + (y - cy * f) * span, span, span, 0, 0, TILE, TILE);
+  g.drawImage(r.canvas, sx, sy, span, span, 0, 0, TILE, TILE);
   return out;
 }
 
-async function buildOffshoreRegion(z: number, cx: number, cy: number): Promise<OffscreenCanvas> {
+/**
+ * Builds the offshore mask for a 3×3 tile block entirely with canvas
+ * compositing (GPU-accelerated, no pixel readback): start opaque, cut away
+ * land, then cut away a blurred copy of land several times so water close to
+ * the coast fades out. Only a 24×24 coverage summary is read back.
+ */
+async function buildOffshoreRegion(z: number, cx: number, cy: number): Promise<OffshoreRegion> {
   const n = 2 ** z;
   const W = TILE * 3;
   const land = new OffscreenCanvas(W, W);
@@ -427,25 +455,32 @@ async function buildOffshoreRegion(z: number, cx: number, cy: number): Promise<O
       );
     }
   await Promise.all(jobs);
-  // Ground resolution at the tile's latitude.
+  const tReg = performance.now();
+  // `land` is opaque on land, transparent on ocean. Vector tiles that failed count as land (imagery kept).
   const latRad = Math.atan(Math.sinh(Math.PI * (1 - (2 * (cy + 0.5)) / n)));
   const mpp = (40075016.686 * Math.cos(latRad)) / (TILE * n);
-  const sigma = Math.max(0.6, NEARSHORE_KEEP_M / mpp / 2);
-  const near = new OffscreenCanvas(W, W);
-  const ng = near.getContext('2d', { willReadFrequently: true })!;
-  ng.filter = `blur(${Math.min(64, sigma).toFixed(2)}px)`;
-  ng.drawImage(land, 0, 0);
-  const nd = ng.getImageData(0, 0, W, W);
-  const ld = lg.getImageData(0, 0, W, W).data;
-  const d = nd.data;
-  for (let i = 0; i < d.length; i += 4) {
-    const nearLand = Math.min(1, (d[i + 3] / 255) * 6);
-    const ocean = 1 - ld[i + 3] / 255;
-    d[i] = d[i + 1] = d[i + 2] = 0;
-    d[i + 3] = Math.round(255 * ocean * (1 - nearLand));
-  }
-  ng.putImageData(nd, 0, 0);
-  return near;
+  const sigma = Math.min(64, Math.max(0.6, NEARSHORE_KEEP_M / mpp / 2));
+  const out = new OffscreenCanvas(W, W);
+  const g = out.getContext('2d')!;
+  g.fillStyle = '#000';
+  g.fillRect(0, 0, W, W);
+  g.globalCompositeOperation = 'destination-out';
+  g.drawImage(land, 0, 0);
+  g.filter = `blur(${sigma.toFixed(2)}px)`;
+  // Each pass keeps (1 − a) of the alpha: six passes give a steep fade within the keep distance.
+  for (let i = 0; i < 6; i++) g.drawImage(land, 0, 0);
+  g.filter = 'none';
+  g.globalCompositeOperation = 'source-over';
+  const small = new OffscreenCanvas(GRID, GRID);
+  const sg = small.getContext('2d', { willReadFrequently: true })!;
+  sg.imageSmoothingEnabled = true;
+  sg.imageSmoothingQuality = 'high';
+  sg.drawImage(out, 0, 0, GRID, GRID);
+  const d = sg.getImageData(0, 0, GRID, GRID).data;
+  const grid = new Uint8Array(GRID * GRID);
+  for (let i = 0; i < grid.length; i++) grid[i] = d[i * 4 + 3] > 2 ? 1 : 0;
+  profAdd('vector.offshoreRegion', performance.now() - tReg);
+  return { canvas: out, grid };
 }
 
 export { GeographicTilingScheme, Rectangle };

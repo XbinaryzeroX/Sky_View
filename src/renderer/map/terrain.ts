@@ -1,3 +1,5 @@
+import { terrainPool } from './workerPool';
+import { profAdd } from '../lib/prof';
 // Keyless global terrain from the Terrain Tiles dataset on the AWS Registry
 // of Open Data (Mapzen/Tilezen "terrarium" PNG encoding). Real elevation
 // to zoom 15; deeper levels resample the zoom-15 ancestor (no invented detail).
@@ -34,7 +36,8 @@ export const TERRAIN_INFO = {
 
 const SIZE = 65;
 const SOURCE_MAX = 15;
-const MAX_IN_FLIGHT = 8;
+// Decoding runs in workers (workerPool.ts), so more requests can be in flight without blocking the map.
+const MAX_IN_FLIGHT = 12;
 /** Water mask resolution per terrain tile (square, rows north to south). */
 const MASK = 128;
 const MASK_TIMEOUT_MS = 6000;
@@ -50,6 +53,13 @@ function oceanAlpha(z: number, x: number, y: number): Promise<Uint8Array | null>
   const p = Promise.race([
     oceanMask(z, x, y).then((c) => {
       if (!c) return null;
+      // Pixel readback happens in a worker; the mask is handed over as a GPU-backed bitmap.
+      const pool = terrainPool();
+      if (pool) {
+        // Transfer (not copy) the bitmap: copying a GPU-backed bitmap forces a synchronous GPU readback on this thread.
+        const bitmap = c.transferToImageBitmap();
+        return pool.run<Uint8Array>({ kind: 'alpha', bitmap }, [bitmap]).catch(() => null);
+      }
       const d = c.getContext('2d', { willReadFrequently: true })!.getImageData(0, 0, 256, 256).data;
       const a = new Uint8Array(256 * 256);
       for (let i = 0; i < a.length; i++) a[i] = d[i * 4 + 3];
@@ -124,16 +134,26 @@ export function createTerrariumTerrain(): { provider: CustomHeightmapTerrainProv
       await acquire();
       stats.requested++;
       try {
-        const res = await fetch(`https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`);
+        const url = `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`;
+        const pool = terrainPool();
+        if (pool) {
+          const out = await pool.run<Float32Array>({ kind: 'height', url });
+          stats.loaded++;
+          stats.lastSuccessAt = new Date().toISOString();
+          return out;
+        }
+        const res = await fetch(url, { signal: AbortSignal.timeout(20000) });
         if (res.status === 404) return new Float32Array(256 * 256); // no source data: sea level
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const bmp = await createImageBitmap(await res.blob(), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
         const canvas = new OffscreenCanvas(256, 256);
         const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
         ctx.drawImage(bmp, 0, 0);
+        const tDec = performance.now();
         const px = ctx.getImageData(0, 0, 256, 256).data;
         const out = new Float32Array(256 * 256);
         for (let i = 0; i < out.length; i++) out[i] = px[i * 4] * 256 + px[i * 4 + 1] + px[i * 4 + 2] / 256 - 32768;
+        profAdd('terrain.decode', performance.now() - tDec);
         stats.loaded++;
         stats.lastSuccessAt = new Date().toISOString();
         return out;
@@ -205,6 +225,7 @@ export function createTerrariumTerrain(): { provider: CustomHeightmapTerrainProv
           if (!t) return 0;
           return t[(Math.floor(cy) % 256) * 256 + (Math.floor(cx) % 256)];
         };
+        const tRes = performance.now();
         const out = new Float32Array(SIZE * SIZE);
         for (let r = 0; r < SIZE; r++) {
           const fy = py[r];
@@ -222,6 +243,7 @@ export function createTerrariumTerrain(): { provider: CustomHeightmapTerrainProv
             out[r * SIZE + c] = oceanKnown ? h * (1 - sea(fx, fy)) : h;
           }
         }
+        profAdd('terrain.resample', performance.now() - tRes);
         if (!oceanKnown) {
           seaStats.maskUnavailable++;
           return { heights: out, water: null };
