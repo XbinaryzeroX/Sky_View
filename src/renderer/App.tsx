@@ -113,6 +113,7 @@ export function App() {
     (window as unknown as { __atlasDebug: unknown }).__atlasDebug = {
       setView: (lat: number, lon: number, h: number, pitch?: number) => globeRef.current?.setView(lat, lon, h, pitch),
       diag: () => globeRef.current?.getDiagnostics() ?? null,
+      setSceneMode: (m: '2d' | '3d') => setSceneMode(m),
       select: (layer: LayerId, id: string) => setRecordSel({ layer, id }),
       track: (layer: LayerId, id: string) => setTracked({ layer, id }),
       records: (layer: LayerId) => (layerSnapsRef.current[layer]?.records ?? []).slice(0, 2000).map((r) => ({ id: r.id, lat: r.lat, lon: r.lon, label: r.label, imageUrl: r.imageUrl ?? null })),

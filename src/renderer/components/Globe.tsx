@@ -26,6 +26,7 @@ import {
   WebMercatorTilingScheme,
   createGooglePhotorealistic3DTileset,
   GoogleMaps,
+  SceneMode,
   type Cesium3DTileset,
   type PostProcessStage,
 } from 'cesium';
@@ -66,6 +67,10 @@ export interface GlobeLayers {
   radii: boolean;
   boundaries: boolean;
 }
+
+/** Google Photoreal 3D appears below this camera height and hides above PHOTOREAL_HIDE_ABOVE_M (3D mode only). */
+export const PHOTOREAL_SHOW_BELOW_M = 40_000;
+export const PHOTOREAL_HIDE_ABOVE_M = 50_000;
 
 /** Closest the camera may get to the ground, metres. */
 export const MIN_CAMERA_HEIGHT_M = 100;
@@ -221,6 +226,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   const playbackSourceRef = useRef<CustomDataSource | null>(null);
   const tilesetRef = useRef<Cesium3DTileset | null>(null);
   const [photorealOn, setPhotorealOn] = useState(false);
+  const photorealCleanupRef = useRef<(() => void) | null>(null);
   const buildingsRef = useRef<BuildingManager | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -731,6 +737,8 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     const w = widgetRef.current;
     if (!w || !ready) return;
     let cancelled = false;
+    photorealCleanupRef.current?.();
+    photorealCleanupRef.current = null;
     if (tilesetRef.current) {
       w.scene.primitives.remove(tilesetRef.current);
       tilesetRef.current = null;
@@ -761,9 +769,29 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
             }
           });
           tilesetRef.current = w.scene.primitives.add(ts);
-          w.scene.globe.show = false;
-          setPhotorealOn(true);
-          w.scene.requestRender();
+          // Google's tiles are only shown up close in 3D. At globe scale they are a patchwork of differently
+          // processed imagery (e.g. Antarctica), and 3D Tiles cannot be flattened for the 2D map (they break
+          // into curved pieces). Elsewhere the app's own globe is shown. Hysteresis avoids flicker.
+          let near = false;
+          const apply = () => {
+            if (tilesetRef.current !== ts) return;
+            const h = w.camera.positionCartographic.height;
+            const want = w.scene.mode === SceneMode.SCENE3D && (near ? h < PHOTOREAL_HIDE_ABOVE_M : h < PHOTOREAL_SHOW_BELOW_M);
+            if (want === near && ts.show === want) return;
+            near = want;
+            ts.show = want;
+            w.scene.globe.show = !want;
+            setPhotorealOn(want);
+            w.scene.requestRender();
+          };
+          ts.show = false;
+          const offCam = w.camera.changed.addEventListener(apply);
+          const offMorph = w.scene.morphComplete.addEventListener(apply);
+          photorealCleanupRef.current = () => {
+            offCam();
+            offMorph();
+          };
+          apply();
         })
         .catch((e) => {
           imageryErrorsRef.current.last = 'Google 3D Tiles: ' + (e instanceof Error ? e.message : String(e));
