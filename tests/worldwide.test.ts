@@ -234,3 +234,18 @@ describe('geographic terrain resampling helpers', () => {
     expect(sourceZoomFor(0, 89)).toBeGreaterThanOrEqual(0);
   });
 });
+
+describe('aircraft query plan', () => {
+  it('uses one circle close in and a capped grid of 250 nm areas when zoomed out', async () => {
+    const { aircraftQueryPlan, AIRCRAFT_MAX_AREAS } = await import('../src/main/layers/fetchers');
+    const near = aircraftQueryPlan({ lat: 40.7, lon: -74, heightM: 500_000, bbox: [-80, 35, -68, 46] });
+    expect(near.centers).toHaveLength(1);
+    const far = aircraftQueryPlan({ lat: 40.7, lon: -74, heightM: 12_000_000, bbox: [-180, -60, 180, 85] });
+    expect(far.centers.length).toBe(AIRCRAFT_MAX_AREAS);
+    expect(far.partial).toBe(true);
+    expect(far.radiusNm).toBe(250);
+    // Nearest area first, and every area is on the visible side of the globe.
+    const d = (c: { lat: number; lon: number }) => Math.hypot(c.lat - 40.7, (c.lon + 74) * Math.cos((40.7 * Math.PI) / 180));
+    expect(d(far.centers[0])).toBeLessThan(6);
+  });
+});

@@ -26,6 +26,42 @@ const NM = 1852;
 const VIEW_LIMIT_AIRCRAFT_M = 3_000_000;
 const VIEW_LIMIT_METAR_M = 1_500_000;
 
+/** Most adsb.lol area queries per refresh when zoomed out (fair use; each area is also cached for a minute). */
+export const AIRCRAFT_MAX_AREAS = 12;
+const AREA_CACHE_MS = 60_000;
+/** Grid spacing (degrees of latitude) so 250 nm circles overlap and cover the area between them. */
+const AREA_STEP_DEG = 5.6;
+const EARTH_R = 6_371_000;
+
+/**
+ * Query plan for aircraft. Close in (≤ 3,000 km camera height) one circle around the view center. Further
+ * out, adsb.lol still only answers 250 nm circles (it has no worldwide query), so the visible part of the
+ * globe is covered with a fixed grid of circles, nearest to the view center first, up to AIRCRAFT_MAX_AREAS.
+ * `partial` is true when the view needs more circles than that.
+ */
+export function aircraftQueryPlan(v: ViewState): { centers: { lat: number; lon: number }[]; radiusNm: number; partial: boolean } {
+  if (v.heightM <= VIEW_LIMIT_AIRCRAFT_M) return { centers: [{ lat: v.lat, lon: v.lon }], radiusNm: aircraftRadiusNm(v.heightM), partial: false };
+  // Angular radius of the visible cap (horizon) from the camera height.
+  const horizonDeg = (Math.acos(EARTH_R / (EARTH_R + v.heightM)) * 180) / Math.PI;
+  const lat0 = (v.lat * Math.PI) / 180;
+  const cands: { lat: number; lon: number; d: number }[] = [];
+  for (let lat = -84; lat <= 84; lat += AREA_STEP_DEG) {
+    const stepLon = Math.min(120, AREA_STEP_DEG / Math.max(0.1, Math.cos((lat * Math.PI) / 180)));
+    const n = Math.max(1, Math.round(360 / stepLon));
+    for (let i = 0; i < n; i++) {
+      const lon = -180 + (i + 0.5) * (360 / n);
+      const la = (lat * Math.PI) / 180;
+      const dl = ((lon - v.lon) * Math.PI) / 180;
+      const d = (Math.acos(Math.min(1, Math.sin(lat0) * Math.sin(la) + Math.cos(lat0) * Math.cos(la) * Math.cos(dl))) * 180) / Math.PI;
+      if (d <= horizonDeg + 2) cands.push({ lat: Math.round(lat * 100) / 100, lon: Math.round(lon * 100) / 100, d });
+    }
+  }
+  cands.sort((a, b) => a.d - b.d);
+  return { centers: cands.slice(0, AIRCRAFT_MAX_AREAS).map(({ lat, lon }) => ({ lat, lon })), radiusNm: 250, partial: cands.length > AIRCRAFT_MAX_AREAS };
+}
+
+const areaCache = new Map<string, { at: number; body: unknown }>();
+
 /** Query radius (nautical miles) for an aircraft point query from camera height. */
 export function aircraftRadiusNm(heightM: number): number {
   return Math.round(Math.max(25, Math.min(250, (heightM * 0.9) / NM)));
@@ -40,20 +76,41 @@ async function fetchAircraft(ctx: FetchContext): Promise<FetchResult> {
   let updated: string | null = null;
   const errors: string[] = [];
   const v = ctx.view;
-  if (!v || v.heightM > VIEW_LIMIT_AIRCRAFT_M) {
-    note = 'Zoom in below 3,000 km altitude to load aircraft (adsb.lol queries are limited to a 250 nm radius).';
+  if (!v) {
+    note = 'Waiting for the map view.';
   } else {
-    const r = aircraftRadiusNm(v.heightM);
-    try {
-      const res = await ctx.fetchJson(`https://api.adsb.lol/v2/point/${v.lat.toFixed(4)}/${v.lon.toFixed(4)}/${r}`, { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 20000 });
-      const n = normalizeAdsb(res.body, 'adsb.lol (ODbL)', ctx.now.getTime());
-      out.push(...n.records);
-      skipped += n.skipped;
-      updated = n.sourceUpdatedAt;
-      note = `Showing aircraft within ${r} nm of the view center.`;
-    } catch (e) {
-      errors.push(`adsb.lol: ${(e as Error).message}`);
+    const plan = aircraftQueryPlan(v);
+    const multi = plan.centers.length > 1;
+    const seenIds = new Set<string>();
+    let ok = 0;
+    // A few at a time; areas fetched in the last minute are reused.
+    for (let i = 0; i < plan.centers.length; i += 3) {
+      await Promise.all(
+        plan.centers.slice(i, i + 3).map(async (c) => {
+          const url = `https://api.adsb.lol/v2/point/${c.lat.toFixed(4)}/${c.lon.toFixed(4)}/${plan.radiusNm}`;
+          try {
+            const hit = multi ? areaCache.get(url) : undefined;
+            let body: unknown;
+            if (hit && ctx.now.getTime() - hit.at < AREA_CACHE_MS) body = hit.body;
+            else {
+              body = (await ctx.fetchJson(url, { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 20000 })).body;
+              if (multi) areaCache.set(url, { at: ctx.now.getTime(), body });
+            }
+            const n = normalizeAdsb(body, 'adsb.lol (ODbL)', ctx.now.getTime());
+            for (const rec of n.records) if (!seenIds.has(rec.id)) (seenIds.add(rec.id), out.push(rec));
+            skipped += n.skipped;
+            if (!updated || (n.sourceUpdatedAt ?? '') > updated) updated = n.sourceUpdatedAt;
+            ok++;
+          } catch (e) {
+            errors.push(`adsb.lol: ${(e as Error).message}`);
+          }
+        }),
+      );
     }
+    if (areaCache.size > 200) for (const [k, val] of areaCache) if (ctx.now.getTime() - val.at > AREA_CACHE_MS) areaCache.delete(k);
+    note = !multi
+      ? `Showing aircraft within ${plan.radiusNm} nm of the view center.`
+      : `Showing aircraft in ${ok} areas of 250 nm around the view center${plan.partial ? ' (not the whole visible globe: adsb.lol answers one 250 nm area per request, so the nearest areas are loaded first; zoom in or pan to see others)' : ''}.`;
   }
   if (ctx.localReceiverUrl) {
     try {

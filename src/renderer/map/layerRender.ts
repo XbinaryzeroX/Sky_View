@@ -3,6 +3,9 @@
 // propagation for satellites (calculated positions, labeled as such).
 
 import {
+  Ellipsoid,
+  EllipsoidalOccluder,
+  SceneMode,
   CallbackPositionProperty,
   Cartesian2,
   Cartesian3,
@@ -129,7 +132,39 @@ export class LayerRenderer {
   private motionTimer: ReturnType<typeof setInterval> | null = null;
   private smooth = true;
 
-  constructor(private readonly widget: CesiumWidget) {}
+  private lastCull = 0;
+  private readonly cullCam = new Cartesian3();
+
+  constructor(private readonly widget: CesiumWidget) {
+    // Aircraft and vessels on the far side of the earth are hidden (they used to show through the globe).
+    widget.scene.preRender.addEventListener(() => {
+      const now = performance.now();
+      if (now - this.lastCull < 250) return;
+      if (Cartesian3.equalsEpsilon(widget.camera.positionWC, this.cullCam, 0, 1)) return;
+      this.lastCull = now;
+      Cartesian3.clone(widget.camera.positionWC, this.cullCam);
+      this.cullBehindEarth();
+    });
+  }
+
+  /** Hides aircraft/vessel icons and labels that are below the earth's horizon from the camera (3D only). */
+  cullBehindEarth(): void {
+    const scene = this.widget.scene;
+    const in3D = scene.mode === SceneMode.SCENE3D;
+    const occluder = new EllipsoidalOccluder(Ellipsoid.WGS84, this.widget.camera.positionWC);
+    const now = JulianDate.now();
+    for (const lid of ['aircraft', 'aircraftMil', 'vessels'] as LayerId[]) {
+      const ents = this.entities.get(lid);
+      if (!ents) continue;
+      for (const e of ents.values()) {
+        const p = e.position?.getValue(now);
+        const visible = !in3D || !p || occluder.isPointVisible(p);
+        if (e.billboard) e.billboard.show = visible as never;
+        if (e.label) e.label.show = visible as never;
+        if (e.point) e.point.show = visible as never;
+      }
+    }
+  }
 
   private source(id: LayerId): CustomDataSource {
     let s = this.sources.get(id);
@@ -232,7 +267,10 @@ export class LayerRenderer {
         changed = true;
       }
     }
-    if (changed) this.widget.scene.requestRender();
+    if (changed) {
+      this.cullBehindEarth();
+      this.widget.scene.requestRender();
+    }
   }
 
   entityFor(id: LayerId, rid: string): Entity | undefined {
@@ -276,16 +314,19 @@ export class LayerRenderer {
             alignedAxis: Cartesian3.UNIT_Z,
             scale: selected ? 1.35 : 1,
             scaleByDistance: new NearFarScalar(5e4, 1, 8e6, 0.45),
-            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+            // Depth-tested: hidden behind 3D buildings and Google 3D tiles; the far side of the earth is culled in cullBehindEarth().
+            disableDepthTestDistance: 0,
+            eyeOffset: new Cartesian3(0, 0, -30),
           },
-          label: label(specialCode(r) ? `${r.label} · ${String(r.props.squawk ?? r.props.emergency)}` : r.label, specialCode(r) ? 4e7 : 4e5),
-          point: specialCode(r) ? { pixelSize: 26, color: Color.TRANSPARENT, outlineColor: C('#ff5a4f'), outlineWidth: 2, disableDepthTestDistance: Number.POSITIVE_INFINITY } : undefined,
+          label: { ...label(specialCode(r) ? `${r.label} · ${String(r.props.squawk ?? r.props.emergency)}` : r.label, specialCode(r) ? 4e7 : 4e5), disableDepthTestDistance: 0, eyeOffset: new Cartesian3(0, 0, -30) },
+          point: specialCode(r) ? { pixelSize: 26, color: Color.TRANSPARENT, outlineColor: C('#ff5a4f'), outlineWidth: 2, disableDepthTestDistance: 0 } : undefined,
         });
       case 'vessels':
         return new Entity({
           ...base,
-          billboard: { image: glyph('ship', vesselColor(r), 26), rotation: this.rotationFor(r), alignedAxis: Cartesian3.UNIT_Z, scale: selected ? 1.4 : 1, scaleByDistance: new NearFarScalar(2e4, 1, 3e6, 0.4) },
-          label: label(r.label, 1.5e5),
+          // At sea level: lifted toward the camera so the flat sea surface does not cut the icon.
+          billboard: { image: glyph('ship', vesselColor(r), 26), rotation: this.rotationFor(r), alignedAxis: Cartesian3.UNIT_Z, scale: selected ? 1.4 : 1, scaleByDistance: new NearFarScalar(2e4, 1, 3e6, 0.4), disableDepthTestDistance: 0, eyeOffset: new Cartesian3(0, 0, -60) },
+          label: { ...label(r.label, 1.5e5), disableDepthTestDistance: 0, eyeOffset: new Cartesian3(0, 0, -60) },
         });
       case 'satellites':
         return new Entity({

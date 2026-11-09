@@ -1,5 +1,7 @@
 import '../lib/cesiumBase';
 import {
+  SkyAtmosphere,
+  SkyBox,
   Cartesian2,
   Cartesian3,
   Cartographic,
@@ -227,6 +229,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   const tilesetRef = useRef<Cesium3DTileset | null>(null);
   const [photorealOn, setPhotorealOn] = useState(false);
   const photorealCleanupRef = useRef<(() => void) | null>(null);
+  const reportViewRef = useRef<(() => void) | null>(null);
   const buildingsRef = useRef<BuildingManager | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -242,8 +245,9 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       widget = new CesiumWidget(containerRef.current, {
         baseLayer: false,
         terrainProvider: new EllipsoidTerrainProvider(),
-        skyBox: false,
-        skyAtmosphere: false,
+        // Night sky: Cesium's bundled star field plus a darkened horizon glow (set below).
+        skyBox: SkyBox.createEarthSkyBox(),
+        skyAtmosphere: new SkyAtmosphere(),
         requestRenderMode: true,
         maximumRenderTimeChange: Infinity,
         creditContainer: creditRef.current ?? undefined,
@@ -271,6 +275,11 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     scene.globe.showWaterEffect = true;
     scene.fog.enabled = false;
     scene.globe.depthTestAgainstTerrain = false;
+    if (scene.skyAtmosphere) {
+      scene.skyAtmosphere.brightnessShift = -0.9;
+      scene.skyAtmosphere.saturationShift = -0.15;
+      scene.skyAtmosphere.hueShift = 0.02;
+    }
     if (scene.sun) scene.sun.show = false;
     if (scene.moon) scene.moon.show = false;
     scene.globe.tileLoadProgressEvent.addEventListener((n: number) => {
@@ -371,6 +380,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       buildingsRef.current?.update(CMath.toDegrees(cc.latitude), CMath.toDegrees(cc.longitude), c.height - ground);
     };
     widget.camera.moveEnd.addEventListener(reportView);
+    reportViewRef.current = reportView;
     setTimeout(reportView, 500);
     setReady(true);
 
@@ -887,6 +897,8 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
         if (!w) return;
         w.camera.setView({ destination: Cartesian3.fromDegrees(lon, lat, heightM), orientation: { heading: 0, pitch: CMath.toRadians(pitchDeg), roll: 0 } });
         w.scene.requestRender();
+        // An instant jump with on-demand rendering may not raise moveEnd; report the view directly.
+        setTimeout(() => reportViewRef.current?.(), 60);
       },
       flyHome: () => fly(Cartesian3.fromDegrees(VIEWS.us.lon, VIEWS.us.lat, VIEWS.us.height)),
       flyRegion: (r) => {

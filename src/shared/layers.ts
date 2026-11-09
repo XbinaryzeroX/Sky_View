@@ -49,7 +49,7 @@ export const LAYERS: Record<LayerId, LayerMeta> = {
     source: 'adsb.lol (plus your local receiver, if configured)',
     sourceUrl: 'https://www.adsb.lol/docs/open-data/api/',
     license: 'ODbL 1.0 (attribution; share-alike for derived databases)',
-    coverage: 'Worldwide where feeders exist; queried within 250 nm of the view center',
+    coverage: 'Worldwide where feeders exist; 250 nm around the view center, or up to 12 such areas when zoomed out',
     auth: 'None',
     pollSeconds: 20,
     viewport: true,

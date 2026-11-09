@@ -246,7 +246,7 @@ export class LayerManager {
   private syncAis(): void {
     const ais = this.d.ais;
     if (!ais) return;
-    const want = this.running && this.isEnabled('vessels') && this.d.aisConfigured() && this.view !== null && this.view.heightM < 2_500_000;
+    const want = this.running && this.isEnabled('vessels') && this.d.aisConfigured() && this.view !== null;
     if (want) {
       ais.start(this.view!.bbox);
       if (!this.aisTimer) {
