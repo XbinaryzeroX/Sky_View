@@ -1,0 +1,285 @@
+import { useEffect, useMemo, useState } from 'react';
+import { geodesicDistanceKm } from '../../shared/geo';
+import { LAYERS, TEMPORAL_LABEL, type GeoRecord, type LayerId, type LayerSnapshot } from '../../shared/layers';
+import { relativeTime } from '../lib/format';
+import { Empty, ExternalLink, Time } from './common';
+
+interface Props {
+  layer: LayerId;
+  record: GeoRecord | null;
+  snaps: Partial<Record<LayerId, LayerSnapshot>>;
+  tracked: boolean;
+  orbitShown: boolean;
+  onTrack(on: boolean): void;
+  onOrbit(on: boolean): void;
+  onSelect(layer: LayerId, id: string): void;
+  onFocus(lat: number, lon: number, radiusKm?: number): void;
+  watched?: boolean;
+  onWatch?(on: boolean): void;
+}
+
+const PROP_LABEL: Record<string, string> = {
+  icao24: 'ICAO address',
+  callsign: 'Callsign',
+  registration: 'Registration',
+  type: 'Aircraft type',
+  description: 'Type description',
+  emitterCategory: 'Emitter category code',
+  altitudeFt: 'Altitude (ft, barometric)',
+  onGround: 'On ground',
+  squawk: 'Squawk',
+  emergency: 'Emergency status',
+  militaryFlag: 'Military flag (database)',
+  positionAgeS: 'Position age at fetch (s)',
+  verticalRateFpm: 'Vertical rate (ft/min)',
+  mmsi: 'MMSI',
+  callSign: 'Call sign',
+  destination: 'Reported destination',
+  shipType: 'AIS ship type code',
+  navStatus: 'Navigation status',
+  courseDeg: 'Course over ground (°)',
+  noradId: 'NORAD catalog #',
+  elementEpoch: 'Orbital element epoch',
+  group: 'CelesTrak group',
+  satellite: 'Satellite',
+  instrument: 'Instrument',
+  confidence: 'Detection confidence',
+  frpMW: 'Fire radiative power (MW)',
+  brightnessK: 'Brightness temp. I4 (K)',
+  region: 'FIRMS file',
+  acres: 'Size (acres)',
+  percentContained: 'Contained (%)',
+  discovered: 'Discovered',
+  state: 'State',
+  upper: 'Upper limit',
+  lower: 'Lower limit',
+  timesOfUse: 'Times of use',
+  controllingAgency: 'Controlling agency',
+  station: 'Station',
+  tempC: 'Temperature (°C)',
+  dewpointC: 'Dew point (°C)',
+  windDir: 'Wind direction (°)',
+  windKt: 'Wind (kt)',
+  gustKt: 'Gust (kt)',
+  visibility: 'Visibility (sm)',
+  altimeterHpa: 'Altimeter (hPa)',
+  weather: 'Present weather',
+  flightCategory: 'Flight category',
+  raw: 'Raw METAR',
+  intensityKt: 'Max sustained wind (kt)',
+  pressureMb: 'Min pressure (mb)',
+  movementMph: 'Movement speed (mph)',
+  route: 'Route',
+  direction: 'Direction',
+  county: 'County',
+  nearbyPlace: 'Nearby place',
+  updateFrequencyMin: 'Publisher refresh (min)',
+  publisher: 'Publisher',
+  catalogRecordUpdated: 'Catalog entry updated',
+  presets: 'Camera presets',
+  status: 'Status',
+  imo: 'IMO number',
+  destinationReported: 'Destination (reported)',
+  etaReported: 'ETA (reported)',
+  lengthM: 'Length (m)',
+  beamM: 'Beam (m)',
+  draughtM: 'Draught (m)',
+  headingDeg: 'Heading (°)',
+};
+
+function fmt(v: string | number | boolean | null): string {
+  if (v === null || v === '') return '—';
+  if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+  if (typeof v === 'number') return Number.isInteger(v) ? v.toLocaleString() : v.toFixed(2);
+  if (/^\d{4}-\d{2}-\d{2}T/.test(v)) return new Date(v).toLocaleString();
+  return v;
+}
+
+function CameraImage({ url, refreshMin }: { url: string; refreshMin: number | null }) {
+  const [tick, setTick] = useState(0);
+  const [err, setErr] = useState(false);
+  const [loadedAt, setLoadedAt] = useState<string | null>(null);
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), Math.max(60, (refreshMin ?? 2) * 60) * 1000);
+    return () => clearInterval(t);
+  }, [refreshMin]);
+  const src = `${url}${url.includes('?') ? '&' : '?'}t=${Math.floor(Date.now() / 60000)}-${tick}`;
+  return (
+    <figure className="cam">
+      {err ? (
+        <Empty>The publisher’s image could not be loaded (camera offline or image unavailable).</Empty>
+      ) : (
+        <img
+          src={src}
+          alt="Latest published camera still"
+          onLoad={() => {
+            setErr(false);
+            setLoadedAt(new Date().toISOString());
+          }}
+          onError={() => setErr(true)}
+        />
+      )}
+      <figcaption className="muted small">Published still image. Loaded {relativeTime(loadedAt)}; the capture time is set by the publisher and may lag.</figcaption>
+    </figure>
+  );
+}
+
+export function RecordDetails(p: Props) {
+  const meta = LAYERS[p.layer];
+  const r = p.record;
+  const status = p.snaps[p.layer]?.status;
+  const nearby = useMemo(() => {
+    if (!r || (p.layer !== 'aircraft' && p.layer !== 'aircraftMil' && p.layer !== 'vessels')) return [];
+    const pool = [...(p.snaps.aircraft?.records ?? []).map((x) => ({ l: 'aircraft' as LayerId, x })), ...(p.snaps.vessels?.records ?? []).map((x) => ({ l: 'vessels' as LayerId, x }))];
+    return pool
+      .filter(({ x }) => x.id !== r.id)
+      .map(({ l, x }) => ({ l, x, d: geodesicDistanceKm(r.lat, r.lon, x.lat, x.lon) }))
+      .filter((o) => o.d <= 250)
+      .sort((a, b) => a.d - b.d)
+      .slice(0, 25);
+  }, [r, p.snaps.aircraft, p.snaps.vessels, p.layer]);
+
+  if (!r) return <Empty>This record is no longer in the latest {meta.name.toLowerCase()} data (it may have left the coverage area or the view).</Empty>;
+  const movable = p.layer === 'aircraft' || p.layer === 'aircraftMil' || p.layer === 'vessels' || p.layer === 'transit' || p.layer === 'satellites';
+  return (
+    <div className="details">
+      <header className="details-head">
+        <div className="eyebrow">{meta.name}</div>
+        <h2>{r.label}</h2>
+        <div className="tag-row">
+          <span className={`tag temporal t-${meta.temporal}`}>{TEMPORAL_LABEL[meta.temporal]}</span>
+          {r.category && <span className="tag">{r.category}</span>}
+          {r.props.militaryFlag === true && <span className="tag sev-moderate">Military flag (unverified)</span>}
+          {typeof r.props.emergency === 'string' && r.props.emergency !== 'none' && <span className="tag sev-extreme">Emergency: {r.props.emergency}</span>}
+        </div>
+      </header>
+      <div className="btn-row">
+        <button className="btn" onClick={() => p.onFocus(r.lat, r.lon, p.layer === 'satellites' ? 3000 : 30)} disabled={p.layer === 'satellites'}>
+          Focus
+        </button>
+        {movable && (
+          <button className={`btn ${p.tracked ? 'primary' : ''}`} onClick={() => p.onTrack(!p.tracked)} aria-pressed={p.tracked}>
+            {p.tracked ? 'Stop tracking' : 'Track'}
+          </button>
+        )}
+        {p.onWatch && (p.layer === 'aircraft' || p.layer === 'aircraftMil' || p.layer === 'vessels') && (
+          <button className={`btn ${p.watched ? 'primary' : ''}`} onClick={() => p.onWatch!(!p.watched)} aria-pressed={p.watched}>
+            {p.watched ? '★ Watching' : '☆ Watch'}
+          </button>
+        )}
+        {p.layer === 'satellites' && (
+          <button className={`btn ${p.orbitShown ? 'primary' : ''}`} onClick={() => p.onOrbit(!p.orbitShown)} aria-pressed={p.orbitShown}>
+            {p.orbitShown ? 'Hide predicted orbit' : 'Show predicted orbit'}
+          </button>
+        )}
+      </div>
+      <p className="muted small">{meta.temporalNote}</p>
+      {p.tracked && movable && p.layer !== 'satellites' && <p className="muted small">The trail shows positions this app recorded while running (observed fixes joined by straight lines; not interpolated estimates).</p>}
+      {p.orbitShown && <p className="muted small">The orbit line is a prediction from the orbital elements for about one revolution.</p>}
+      <dl className="kvs">
+        {p.layer !== 'satellites' && (
+          <div className="kv">
+            <dt>Position</dt>
+            <dd>
+              {r.lat.toFixed(4)}, {r.lon.toFixed(4)}
+            </dd>
+          </div>
+        )}
+        {r.altM !== null && p.layer !== 'metar' && (
+          <div className="kv">
+            <dt>Altitude</dt>
+            <dd>
+              {Math.round(r.altM).toLocaleString()} m ({Math.round(r.altM / 0.3048).toLocaleString()} ft)
+            </dd>
+          </div>
+        )}
+        {r.heading !== null && p.layer !== 'metar' && (
+          <div className="kv">
+            <dt>Heading / course</dt>
+            <dd>{Math.round(r.heading)}°</dd>
+          </div>
+        )}
+        {r.speedKts !== null && p.layer !== 'metar' && (
+          <div className="kv">
+            <dt>Speed</dt>
+            <dd>{r.speedKts.toFixed(1)} kt</dd>
+          </div>
+        )}
+        <div className="kv">
+          <dt>{meta.temporal === 'calculated' ? 'Element epoch' : meta.temporal === 'static' ? 'Published' : p.layer === 'cameras' ? 'Image time' : 'Observed'}</dt>
+          <dd>
+            {r.observedAt ? (
+              <>
+                <Time iso={r.observedAt} /> <span className="muted">({relativeTime(r.observedAt)})</span>
+              </>
+            ) : p.layer === 'cameras' ? (
+              <span className="muted">Set by the publisher; not provided in the catalog</span>
+            ) : (
+              '—'
+            )}
+          </dd>
+        </div>
+        <div className="kv">
+          <dt>Fetched</dt>
+          <dd>
+            <Time iso={status?.lastSuccessAt} />
+          </dd>
+        </div>
+        {Object.entries(r.props)
+          .filter(([, v]) => v !== null && v !== '')
+          .map(([k, v]) => (
+            <div className="kv" key={k}>
+              <dt>{PROP_LABEL[k] ?? k}</dt>
+              <dd className={k === 'raw' ? 'mono' : ''}>{fmt(v)}</dd>
+            </div>
+          ))}
+      </dl>
+      {r.imageUrl && <CameraImage url={r.imageUrl} refreshMin={typeof r.props.updateFrequencyMin === 'number' ? r.props.updateFrequencyMin : null} />}
+      {nearby.length > 0 && (
+        <>
+          <h3 className="sub">Nearby contacts (≤ 250 km)</h3>
+          <ul className="rec-list">
+            {nearby.map(({ l, x, d }) => (
+              <li key={`${l}-${x.id}`}>
+                <button className="rec-item" onClick={() => p.onSelect(l, x.id)}>
+                  <span className="tag">{l === 'vessels' ? 'Vessel' : 'Aircraft'}</span>
+                  <span className="rec-title">{x.label}</span>
+                  <span className="rec-meta">
+                    {d.toFixed(1)} km{x.altM !== null && l !== 'vessels' ? ` · ${Math.round(x.altM / 0.3048).toLocaleString()} ft` : ''}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <h3 className="sub">Source</h3>
+      <dl className="kvs">
+        <div className="kv">
+          <dt>Provider</dt>
+          <dd>{r.source}</dd>
+        </div>
+        <div className="kv">
+          <dt>Record</dt>
+          <dd>
+            <ExternalLink url={r.sourceUrl}>Open source</ExternalLink>
+          </dd>
+        </div>
+        <div className="kv">
+          <dt>Record id</dt>
+          <dd>
+            <code className="wrap">{r.id}</code>
+          </dd>
+        </div>
+        <div className="kv">
+          <dt>Terms</dt>
+          <dd>{meta.license}</dd>
+        </div>
+        <div className="kv">
+          <dt>Coverage</dt>
+          <dd>{meta.coverage}</dd>
+        </div>
+      </dl>
+    </div>
+  );
+}

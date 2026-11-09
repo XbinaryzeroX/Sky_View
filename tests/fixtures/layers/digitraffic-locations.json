@@ -1,0 +1,5 @@
+{"type":"FeatureCollection","dataUpdatedTime":"2026-11-09T06:23:26Z","features":[
+ {"mmsi":265588910,"type":"Feature","geometry":{"type":"Point","coordinates":[19.093962,59.858088]},"properties":{"mmsi":265588910,"sog":7.7,"cog":145.6,"navStat":0,"heading":146,"timestampExternal":1794212000000}},
+ {"mmsi":230000001,"type":"Feature","geometry":{"type":"Point","coordinates":[24.9,60.1]},"properties":{"mmsi":230000001,"sog":0,"cog":0,"navStat":5,"heading":511,"timestampExternal":1794100000000}},
+ {"mmsi":1,"type":"Feature","geometry":{"type":"Point","coordinates":[999,60]},"properties":{}}
+]}

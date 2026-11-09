@@ -1,0 +1,275 @@
+// Domain types shared by the main process, preload bridge, and renderer.
+// All timestamps are ISO-8601 strings in UTC unless noted otherwise.
+
+import type { MultiPolygon, Polygon } from 'geojson';
+
+export type FeedId = 'nws' | 'usgs';
+
+export type AlertSeverity = 'Extreme' | 'Severe' | 'Moderate' | 'Minor' | 'Unknown';
+
+export interface WeatherAlert {
+  /** NWS alert identifier (URN), e.g. urn:oid:2.49.0.1.840.0.xxx */
+  id: string;
+  /** API URL for the record (feature id). */
+  sourceUrl: string;
+  event: string;
+  headline: string | null;
+  description: string | null;
+  instruction: string | null;
+  severity: AlertSeverity;
+  urgency: string;
+  certainty: string;
+  status: string;
+  messageType: string;
+  category: string | null;
+  sent: string | null;
+  effective: string | null;
+  onset: string | null;
+  expires: string | null;
+  ends: string | null;
+  senderName: string | null;
+  areaDesc: string | null;
+  /** Zone URLs the alert applies to (forecast, county, fire, marine...). */
+  affectedZones: string[];
+  ugc: string[];
+  same: string[];
+  /** Identifiers of earlier alerts this one updates or replaces. */
+  references: string[];
+  geometry: Polygon | MultiPolygon | null;
+  /** [minLon, minLat, maxLon, maxLat] of geometry, if present. */
+  bbox: [number, number, number, number] | null;
+}
+
+export interface Earthquake {
+  /** USGS preferred event id. */
+  id: string;
+  /** All associated ids across networks (includes id). */
+  ids: string[];
+  mag: number | null;
+  magType: string | null;
+  place: string | null;
+  title: string | null;
+  time: string; // ISO UTC
+  updated: string; // ISO UTC
+  lat: number;
+  lon: number;
+  depthKm: number | null;
+  url: string | null;
+  status: string | null;
+  tsunami: boolean;
+  sig: number | null;
+  alert: string | null;
+  eventType: string | null;
+}
+
+export type ZoneLookupStatus = 'pending' | 'resolved' | 'outside_coverage' | 'error' | 'disabled';
+
+export interface LocationZones {
+  status: ZoneLookupStatus;
+  /** Normalized zone keys, e.g. "forecast/KSZ039", "county/KSC005", "fire/KSZ039". */
+  zones: string[];
+  checkedAt: string | null;
+  error: string | null;
+}
+
+export interface SavedLocation {
+  id: string;
+  name: string;
+  category: string;
+  notes: string;
+  lat: number;
+  lon: number;
+  radiusKm: number;
+  createdAt: string;
+  updatedAt: string;
+  zones: LocationZones;
+}
+
+export interface LocationInput {
+  name: string;
+  category: string;
+  notes: string;
+  lat: number;
+  lon: number;
+  radiusKm: number;
+}
+
+export type FeedState = 'idle' | 'loading' | 'ok' | 'error';
+
+export interface FeedStatus {
+  feed: FeedId;
+  state: FeedState;
+  /** Last time a request was attempted. */
+  lastAttemptAt: string | null;
+  /** Last time a request succeeded (data in memory was retrieved at this time). */
+  lastSuccessAt: string | null;
+  /** Source-reported generation/update time of the current dataset, if supplied. */
+  sourceUpdatedAt: string | null;
+  /** True when the current dataset was loaded from the on-disk cache rather than fetched this session. */
+  fromCache: boolean;
+  error: string | null;
+  consecutiveFailures: number;
+  nextAttemptAt: string | null;
+  recordCount: number;
+  skippedRecords: number;
+}
+
+export type Freshness = 'fresh' | 'stale' | 'unavailable';
+
+export type AlertMatchStatus = 'inside' | 'outside' | 'unknown';
+export type AlertMatchMethod = 'polygon' | 'zone' | 'none';
+
+export interface AlertMatch {
+  alertId: string;
+  status: AlertMatchStatus;
+  method: AlertMatchMethod;
+}
+
+export interface QuakeMatch {
+  quakeId: string;
+  distanceKm: number;
+}
+
+export interface LocationEvaluation {
+  locationId: string;
+  evaluatedAt: string;
+  /** Alerts confirmed to contain the location. */
+  alertsInside: AlertMatch[];
+  /** Alerts for which intersection could not be determined. */
+  alertsUnknown: AlertMatch[];
+  /** Number of active alerts confirmed NOT to contain the location. */
+  alertsOutsideCount: number;
+  nwsFreshness: Freshness;
+  /** Explains why alert coverage may be incomplete (null when complete). */
+  alertCoverageNote: string | null;
+  quakesNearby: QuakeMatch[];
+  usgsFreshness: Freshness;
+}
+
+export interface FeedDiff {
+  feed: FeedId;
+  at: string;
+  added: string[];
+  updated: string[];
+  removed: string[];
+  previousAt: string | null;
+}
+
+export interface QuakeQuery {
+  window: 'hour' | 'day' | 'week' | 'month';
+  minMagnitude: number;
+}
+
+export interface Settings {
+  nwsContact: string;
+  nwsPollSeconds: number;
+  usgsPollSeconds: number;
+  quakeWindow: QuakeQuery['window'];
+  quakeMinMagnitude: number;
+  /** When true, only earthquakes within a saved location's radius are drawn on the globe. */
+  quakesNearLocationsOnly: boolean;
+  historyRetentionDays: number;
+  historyMaxRecords: number;
+  zoneLookupEnabled: boolean;
+  basemap: 'atlas' | 'streets' | 'usgsImageryTopo' | 'usgsTopo' | 'gibsDaily' | 'esri' | 'mapbox' | 'eox' | 'naturalEarth' | 'neutral' | 'google3d' | 'google2d';
+  labelsOverlay: boolean;
+  buildings3d: boolean;
+  units: 'metric' | 'imperial' | 'nautical';
+  smoothMotion: boolean;
+  /** Draw the same smoothed sea over customer imagery more than 1.5 km offshore (Google/Esri/Mapbox/EOX). */
+  evenOcean: boolean;
+  /** Decorative window grids on OSM building walls (generated, not the real building). */
+  buildingFacades: boolean;
+  homeLat: number | null;
+  homeLon: number | null;
+  orgName: string;
+  terrainEnabled: boolean;
+  layersEnabled: string[];
+  firmsRegion: 'us' | 'global';
+  satelliteGroups: string[];
+  trackRetentionHours: number;
+  radarEnabled: boolean;
+  visualMode: 'normal' | 'nvg' | 'thermal' | 'crt' | 'noir';
+  reducedMotion: boolean;
+  aiEnabled: boolean;
+  ollamaPort: number;
+  ollamaModel: string;
+}
+
+export interface AppSnapshot {
+  locations: SavedLocation[];
+  alerts: WeatherAlert[];
+  /** Alert ids superseded by a newer revision in the current dataset. */
+  supersededAlertIds: string[];
+  quakes: Earthquake[];
+  feeds: Record<FeedId, FeedStatus>;
+  freshness: Record<FeedId, Freshness>;
+  evaluations: Record<string, LocationEvaluation>;
+  diffs: Partial<Record<FeedId, FeedDiff>>;
+  settings: Settings;
+  generatedAt: string;
+}
+
+export type HistoryKind = 'alert' | 'quake';
+
+export interface HistoryRecord {
+  key: string;
+  kind: HistoryKind;
+  sourceId: string;
+  title: string;
+  severity: string | null;
+  magnitude: number | null;
+  eventTime: string | null;
+  sourceUpdated: string | null;
+  firstObservedAt: string;
+  lastObservedAt: string;
+  supersededBy: string | null;
+  sourceUrl: string | null;
+  lat: number | null;
+  lon: number | null;
+}
+
+export interface HistoryRecordDetail extends HistoryRecord {
+  payload: WeatherAlert | Earthquake;
+}
+
+export interface HistoryQuery {
+  text?: string;
+  kind?: HistoryKind | 'all';
+  severity?: AlertSeverity | 'all';
+  minMagnitude?: number | null;
+  since?: string | null;
+  includeSuperseded?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+export interface HistoryPage {
+  records: HistoryRecord[];
+  total: number;
+  storedTotal: number;
+  oldestObservedAt: string | null;
+}
+
+export type DuplicateMode = 'skip' | 'update' | 'keep';
+
+export interface ImportResult {
+  created: number;
+  updated: number;
+  skipped: number;
+}
+
+export interface AiStatus {
+  enabled: boolean;
+  reachable: boolean;
+  models: string[];
+  error: string | null;
+  endpoint: string;
+}
+
+export interface AiAnswer {
+  model: string;
+  answer: string;
+  generatedAt: string;
+  contextRecordIds: string[];
+}

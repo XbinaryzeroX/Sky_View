@@ -1,0 +1,5 @@
+{"data":[
+ {"cctv":{"index":"1","recordTimestamp":{"recordDate":"2026-05-14","recordTime":"20:56:28"},"location":{"locationName":"SR-20 : At SR-1 - Looking East (C020)","latitude":"39.42","longitude":"-123.808","elevation":"100","route":"SR-20","county":"Mendocino","direction":"East"},"inService":"true","imageData":{"static":{"currentImageUpdateFrequency":"5","currentImageURL":"https://cwwp2.dot.ca.gov/data/d1/cctv/image/sr20atsr1/sr20atsr1.jpg"}}}},
+ {"cctv":{"index":"2","location":{"latitude":"39","longitude":"-123"},"inService":"false","imageData":{"static":{"currentImageURL":"https://cwwp2.dot.ca.gov/data/d1/cctv/image/x/x.jpg"}}}},
+ {"cctv":{"index":"3","location":{"latitude":"39","longitude":"-123"},"inService":"true","imageData":{"static":{"currentImageURL":"https://evil.example/x.jpg"}}}}
+]}

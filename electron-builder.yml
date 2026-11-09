@@ -1,0 +1,39 @@
+appId: app.atlaswatch.desktop
+productName: Atlas Watch
+copyright: Copyright © 2026 Atlas Watch
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**/*
+  - package.json
+  - '!**/*.map'
+  - '!node_modules/**/*'
+extraResources:
+  - from: THIRD_PARTY_NOTICES.md
+    to: THIRD_PARTY_NOTICES.md
+  - from: samples/sample-locations.csv
+    to: samples/sample-locations.csv
+  - from: samples/README.md
+    to: samples/README.md
+asar: true
+npmRebuild: false
+nodeGypRebuild: false
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.png
+  # No code-signing certificate is configured. Windows SmartScreen will warn
+  # on first run until the installer is signed (see README).
+  signAndEditExecutable: true
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Atlas Watch
+  artifactName: Atlas-Watch-Setup-${version}.exe
+  deleteAppDataOnUninstall: false
+publish: null

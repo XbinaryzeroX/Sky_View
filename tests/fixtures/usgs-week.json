@@ -1,0 +1,10 @@
+{
+  "type": "FeatureCollection",
+  "metadata": { "generated": 1794211200000, "title": "FIXTURE USGS feed", "count": 4 },
+  "features": [
+    { "type": "Feature", "id": "ci40000001", "properties": { "mag": 3.4, "place": "10 km N of Fixture, CA", "time": 1794200000000, "updated": 1794200500000, "url": "https://earthquake.usgs.gov/earthquakes/eventpage/ci40000001", "ids": ",ci40000001,us7000aaaa,", "status": "reviewed", "tsunami": 0, "sig": 180, "type": "earthquake", "title": "M 3.4 - 10 km N of Fixture, CA", "magType": "ml" }, "geometry": { "type": "Point", "coordinates": [-122.4, 37.86, 8.2] } },
+    { "type": "Feature", "id": "us7000aaaa", "properties": { "mag": 3.5, "place": "10 km N of Fixture, CA", "time": 1794200000000, "updated": 1794201000000, "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us7000aaaa", "ids": ",us7000aaaa,ci40000001,", "status": "reviewed", "tsunami": 0, "type": "earthquake", "title": "M 3.5 - 10 km N of Fixture, CA" }, "geometry": { "type": "Point", "coordinates": [-122.4, 37.86, 8.0] } },
+    { "type": "Feature", "id": "ak0000002", "properties": { "mag": 5.1, "place": "Fixture Island, AK", "time": 1794100000000, "updated": 1794100000000, "url": "https://phish.example/x", "ids": ",ak0000002,", "status": "automatic", "tsunami": 1, "type": "earthquake" }, "geometry": { "type": "Point", "coordinates": [179.5, 51.5, 30] } },
+    { "type": "Feature", "id": "bad1", "properties": { "mag": 2.0, "time": 1794100000000 }, "geometry": { "type": "Point", "coordinates": [500, 20, 1] } }
+  ]
+}

@@ -1,0 +1,134 @@
+import { useEffect, useState } from 'react';
+import { PROVIDERS, type ProviderId, type ProviderState, type ProviderStatus } from '../../shared/providers';
+import { api, errorText } from '../lib/api';
+import { relativeTime } from '../lib/format';
+import { ExternalLink, Modal } from './common';
+
+const STATUS_LABEL: Record<ProviderStatus, { label: string; cls: string }> = {
+  free: { label: 'Free · no key', cls: 'ok-badge' },
+  'free-key': { label: 'Free · key required', cls: 'sev-minor' },
+  restricted: { label: 'Restricted / unclear terms', cls: 'sev-moderate' },
+  metered: { label: 'Metered · your billing', cls: 'sev-extreme' },
+};
+
+export function ProvidersDialog({ onClose }: { onClose(): void }) {
+  const [states, setStates] = useState<ProviderState[]>([]);
+  const [drafts, setDrafts] = useState<Partial<Record<ProviderId, string>>>({});
+  const [busy, setBusy] = useState<ProviderId | null>(null);
+  const [msg, setMsg] = useState<Partial<Record<ProviderId, { ok: boolean; message: string }>>>({});
+  const [filter, setFilter] = useState<'all' | 'credentials'>('all');
+
+  useEffect(() => {
+    void api.listProviders().then(setStates);
+  }, []);
+
+  const stateOf = (id: ProviderId) => states.find((s) => s.id === id);
+
+  async function save(id: ProviderId, value: string | null) {
+    setBusy(id);
+    try {
+      setStates(await api.setProviderCredential(id, value));
+      setDrafts((d) => ({ ...d, [id]: '' }));
+      setMsg((m) => ({ ...m, [id]: { ok: true, message: value ? 'Saved (encrypted with the Windows credential store).' : 'Removed.' } }));
+    } catch (e) {
+      setMsg((m) => ({ ...m, [id]: { ok: false, message: errorText(e) } }));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function test(id: ProviderId) {
+    setBusy(id);
+    try {
+      const r = await api.testProvider(id);
+      setMsg((m) => ({ ...m, [id]: r }));
+      setStates(await api.listProviders());
+    } catch (e) {
+      setMsg((m) => ({ ...m, [id]: { ok: false, message: errorText(e) } }));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const list = PROVIDERS.filter((p) => filter === 'all' || p.credential);
+  return (
+    <Modal title="Provider settings" onClose={onClose} wide>
+      <p className="muted small">
+        Atlas Watch needs no paid credentials. Optional integrations below stay off until you configure them with your own account. Atlas Watch never uses its own keys for them. Secret keys are encrypted with
+        the Windows credential store and never shown again, exported, or logged. Google’s 3D Tiles key is a browser key by design: restrict it to the Map Tiles API in Google Cloud.
+      </p>
+      <div className="btn-row">
+        <button className={`btn small-btn ${filter === 'all' ? 'primary' : ''}`} onClick={() => setFilter('all')}>
+          All providers
+        </button>
+        <button className={`btn small-btn ${filter === 'credentials' ? 'primary' : ''}`} onClick={() => setFilter('credentials')}>
+          Needs configuration
+        </button>
+      </div>
+      <div className="provider-list">
+        {list.map((p) => {
+          const st = stateOf(p.id);
+          const sl = STATUS_LABEL[p.status];
+          const m = msg[p.id] ?? (st?.lastTest ? { ok: st.lastTest.ok, message: `${st.lastTest.message} (${relativeTime(st.lastTest.at)})` } : null);
+          return (
+            <section key={p.id} className="provider">
+              <div className="provider-head">
+                <strong>{p.name}</strong>
+                <span className={`tag ${sl.cls}`}>{sl.label}</span>
+                {p.credential && <span className={`tag ${st?.configured ? 'ok-badge' : 'muted-badge'}`}>{st?.configured ? (p.credential.kind === 'ack' ? 'License confirmed' : 'Configured') : 'Not configured'}</span>}
+              </div>
+              <div className="small">{p.purpose}</div>
+              <div className="muted small">
+                {p.statusNote} · Limits: {p.limits}
+              </div>
+              <div className="muted small">Capabilities: {p.capabilities.join(', ')}</div>
+              <div className="small">
+                <ExternalLink url={p.docsUrl}>Documentation</ExternalLink>
+                {p.signupUrl && (
+                  <>
+                    {' · '}
+                    <ExternalLink url={p.signupUrl}>Sign up / get key</ExternalLink>
+                  </>
+                )}
+              </div>
+              {p.credential?.kind === 'ack' && (
+                <label className="check small">
+                  <input type="checkbox" checked={!!st?.configured} disabled={busy === p.id} onChange={(e) => void save(p.id, e.target.checked ? 'yes' : null)} /> {p.credential.label}
+                </label>
+              )}
+              {p.credential && p.credential.kind !== 'ack' && (
+                <div className="btn-row">
+                  <input
+                    className="cred-input"
+                    type={p.credential.kind === 'url' ? 'url' : 'password'}
+                    autoComplete="off"
+                    spellCheck={false}
+                    placeholder={st?.configured && p.credential.kind !== 'url' ? '•••••••• (saved; enter a new value to replace)' : (st?.configValue ?? p.credential.placeholder)}
+                    aria-label={p.credential.label}
+                    value={drafts[p.id] ?? ''}
+                    onChange={(e) => setDrafts((d) => ({ ...d, [p.id]: e.target.value }))}
+                  />
+                  <button className="btn small-btn primary" disabled={busy === p.id || !(drafts[p.id] ?? '').trim()} onClick={() => void save(p.id, drafts[p.id] ?? '')}>
+                    Save
+                  </button>
+                  {st?.configured && (
+                    <button className="btn small-btn danger" disabled={busy === p.id} onClick={() => void save(p.id, null)}>
+                      Remove
+                    </button>
+                  )}
+                </div>
+              )}
+              {p.testable && (
+                <button className="btn small-btn" disabled={busy === p.id} onClick={() => void test(p.id)}>
+                  {busy === p.id ? 'Testing…' : 'Test connection'}
+                </button>
+              )}
+              {m && <div className={`small ${m.ok ? 'ok-text' : 'err-text'}`}>{m.message}</div>}
+              {p.id === 'google3d' && st?.configured && <div className="muted small">Use the “Satellite” and “Photoreal 3D” buttons in the top bar. Saving a key reloads the window so the map can reach Google. Requests are billed to your Google account.</div>}
+            </section>
+          );
+        })}
+      </div>
+    </Modal>
+  );
+}

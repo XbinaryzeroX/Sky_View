@@ -1,0 +1,2 @@
+{"data":[{"id":"G-10057","type":"vehicle","attributes":{"latitude":42.348,"longitude":-71.099,"bearing":90,"speed":5,"current_status":"IN_TRANSIT_TO","updated_at":"2026-11-09T01:42:18-05:00","label":"3885-3825","direction_id":0},"relationships":{"route":{"data":{"id":"Green-D","type":"route"}}}},{"id":"bad","attributes":{}}],
+ "included":[{"id":"Green-D","type":"route","attributes":{"type":0,"short_name":"D","long_name":"Green Line D"}}]}

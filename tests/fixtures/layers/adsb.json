@@ -1,0 +1,7 @@
+{"now": 1794212000000, "ac": [
+  {"hex":"a1373d","flight":"DAL1732 ","r":"N178DN","t":"B763","alt_baro":38000,"gs":451.7,"track":261.7,"category":"A5","lat":40.167,"lon":-104.92,"seen_pos":2.5,"seen":1,"squawk":"1164","emergency":"none","dbFlags":0},
+  {"hex":"ae2673","flight":"C6525","t":"C130","alt_baro":"ground","gs":0,"lat":36.99,"lon":-122.18,"seen_pos":10,"dbFlags":1,"category":"A3"},
+  {"hex":"zzzzzz","lat":1,"lon":1},
+  {"hex":"a00001","flight":"NOPOS"},
+  {"hex":"a1373d","flight":"DUPLICATE","lat":40,"lon":-104}
+]}
