@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { CameraPlayer, cameraMedia } from './CameraPlayer';
 import { geodesicDistanceKm } from '../../shared/geo';
 import { LAYERS, TEMPORAL_LABEL, type GeoRecord, type LayerId, type LayerSnapshot } from '../../shared/layers';
 import { relativeTime } from '../lib/format';
@@ -234,7 +235,7 @@ export function RecordDetails(p: Props) {
             </div>
           ))}
       </dl>
-      {r.imageUrl && <CameraImage url={r.imageUrl} refreshMin={typeof r.props.updateFrequencyMin === 'number' ? r.props.updateFrequencyMin : null} />}
+      {p.layer === 'cameras' ? <CameraPlayer key={r.id} media={cameraMedia(r)} title={r.label} /> : r.imageUrl && <CameraImage url={r.imageUrl} refreshMin={typeof r.props.updateFrequencyMin === 'number' ? r.props.updateFrequencyMin : null} />}
       {nearby.length > 0 && (
         <>
           <h3 className="sub">Nearby contacts (≤ 250 km)</h3>

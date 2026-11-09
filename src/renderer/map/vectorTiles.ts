@@ -219,62 +219,8 @@ export function drawTile(vt: VectorTile, style: VectorStyle, level: number, sub:
     return null;
   });
 
-  // Labels: place names (city/town/village/suburb), water names, major road names.
-  g.textAlign = 'center';
-  g.textBaseline = 'middle';
-  const label = (text: string, x: number, y: number, size: number, color: string, weight = 600) => {
-    if (x < -40 || x > TILE + 40 || y < -10 || y > TILE + 10) return;
-    g.font = `${weight} ${size}px "Segoe UI", sans-serif`;
-    g.lineWidth = 3;
-    g.strokeStyle = pal.halo;
-    g.strokeText(text, x, y);
-    g.fillStyle = color;
-    g.fillText(text, x, y);
-  };
-  const place = layer('place');
-  if (place) {
-    const X = tx(place.extent);
-    const Y = ty(place.extent);
-    for (let i = 0; i < place.length; i++) {
-      const f = place.feature(i);
-      const cls = String(f.properties.class ?? '');
-      const name = (f.properties['name:en'] ?? f.properties['name:latin'] ?? f.properties.name) as string | undefined;
-      if (!name || f.type !== 1) continue;
-      const minLevel = cls === 'country' ? 3 : cls === 'state' ? 5 : cls === 'city' ? 6 : cls === 'town' ? 9 : cls === 'village' ? 11 : cls === 'suburb' || cls === 'quarter' ? 13 : cls === 'neighbourhood' ? 15 : 99;
-      if (level < minLevel || level > (cls === 'country' ? 7 : cls === 'state' ? 9 : 22)) continue;
-      const size = cls === 'country' ? 13 : cls === 'city' ? 13 : cls === 'state' ? 11 : cls === 'town' ? 12 : 11;
-      const p = f.loadGeometry()[0][0];
-      label(name, X(p.x), Y(p.y), size, pal.label, cls === 'suburb' || cls === 'neighbourhood' ? 500 : 600);
-    }
-  }
-  const wn = layer('water_name');
-  if (wn && level >= 4) {
-    const X = tx(wn.extent);
-    const Y = ty(wn.extent);
-    for (let i = 0; i < wn.length; i++) {
-      const f = wn.feature(i);
-      const name = (f.properties['name:en'] ?? f.properties.name) as string | undefined;
-      if (!name || f.type !== 1) continue;
-      const p = f.loadGeometry()[0][0];
-      label(name, X(p.x), Y(p.y), 11, pal.waterLabel, 500);
-    }
-  }
-  const tn = layer('transportation_name');
-  if (tn && level >= 16) {
-    const X = tx(tn.extent);
-    const Y = ty(tn.extent);
-    const seen = new Set<string>();
-    for (let i = 0; i < tn.length; i++) {
-      const f = tn.feature(i);
-      const name = (f.properties['name:en'] ?? f.properties.name) as string | undefined;
-      if (!name || seen.has(name) || f.type !== 2) continue;
-      const line = f.loadGeometry()[0];
-      if (line.length < 2) continue;
-      seen.add(name);
-      const mid = line[Math.floor(line.length / 2)];
-      label(name, X(mid.x), Y(mid.y), 10, pal.label, 500);
-    }
-  }
+  // No text is drawn into tiles: place, water and street names are screen-space labels with
+  // collision handling (placeLabels.ts), so they stay readable in tilted views and never overlap across tiles.
   // Cesium expects imagery bitmaps flipped at creation (see usgsProvider.ts).
   return createImageBitmap(c, { imageOrientation: 'flipY' });
 }

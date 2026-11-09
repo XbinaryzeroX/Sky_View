@@ -1,7 +1,7 @@
 // Per-layer fetch functions. URLs come from fixed templates; the only
 // variable inputs are validated numbers (view center/bbox) and enum values.
 
-import { aisDimensions, decodePackedEta, type VesselStatic, normalizeAdsb, normalizeArcgisPolygons, normalizeCaltrans, normalizeDigitrafficAis, normalizeFintrafficCams, normalizeFirmsCsv, normalizeMbta, normalizeMetar, normalizeNhc, normalizeTle, type Normalized } from '../../shared/layerNormalize';
+import { aisDimensions, decodePackedEta, type VesselStatic, normalizeAdsb, normalizeArcgisPolygons, normalizeCaltrans, normalizeDigitrafficAis, normalizeFintrafficCams, normalizeFirmsCsv, normalizeMbta, normalizeMetar, normalizeNhc, normalizeNycCams, normalizeTle, type Normalized } from '../../shared/layerNormalize';
 import type { GeoRecord, LayerId, ViewState } from '../../shared/layers';
 import type { Settings } from '../../shared/types';
 import { FeedHttpError, type FetchJson, type FetchText } from '../feeds/http';
@@ -280,6 +280,14 @@ async function fetchCameras(ctx: FetchContext): Promise<FetchResult> {
     skipped += n.skipped;
   } catch {
     failed.push('Fintraffic');
+  }
+  try {
+    const res = await ctx.fetchJson('https://webcams.nyctmc.org/api/cameras', { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 30000, maxBytes: 5 * 1024 * 1024 });
+    const n = normalizeNycCams(res.body);
+    out.push(...n.records);
+    skipped += n.skipped;
+  } catch {
+    failed.push('NYC DOT');
   }
   if (out.length === 0) throw new Error(`All camera catalogs failed: ${failed.join(', ')}`);
   return { records: out, skipped, sourceUpdatedAt: null, note: failed.length ? `Unavailable: ${failed.join(', ')}` : 'Images are loaded only when you open a camera.' };

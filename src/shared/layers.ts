@@ -158,7 +158,7 @@ export const LAYERS: Record<LayerId, LayerMeta> = {
     group: 'Cameras',
     temporal: 'periodic',
     temporalNote: 'Still images published by transportation agencies, refreshed by the publisher every few minutes. Camera aim and image time are the publisher’s.',
-    source: 'Caltrans CCTV (California) · Fintraffic weather cameras (Finland)',
+    source: 'Caltrans CCTV with live video (California) · NYC DOT (New York City) · Fintraffic weather cameras (Finland)',
     sourceUrl: 'https://cwwp2.dot.ca.gov/documentation/cctv/cctv.htm',
     license: 'Caltrans: public agency data · Fintraffic: CC BY 4.0',
     coverage: 'California state highways; Finnish road network',

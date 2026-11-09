@@ -1576,3 +1576,17 @@ h2 {
 .app.kiosk .workspace {
   grid-template-columns: 1fr;
 }
+
+/* ---------- camera player ---------- */
+.cam-player { display: grid; gap: 6px; }
+.cam-stage { position: relative; background: #000; border-radius: var(--radius); overflow: hidden; aspect-ratio: 16 / 9; display: grid; place-items: center; }
+.cam-stage video, .cam-stage img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.cam-badge { position: absolute; top: 6px; left: 6px; z-index: 1; font: 600 10px/1 var(--font); letter-spacing: 0.4px; padding: 4px 6px; border-radius: 3px; background: rgba(0, 0, 0, 0.65); color: var(--text); }
+.cam-badge.live { background: #b3261e; color: #fff; }
+.cam-time { position: absolute; bottom: 6px; right: 8px; font-size: 11px; color: #fff; text-shadow: 0 1px 2px #000; }
+.cam-empty { color: var(--muted); padding: 24px; text-align: center; font-size: 12px; }
+.cam-error { margin: 0; font-size: 12px; color: #ffcf8a; }
+.cam-controls .btn { text-decoration: none; }
+.cam-open { display: grid; gap: 8px; padding: 10px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel-2); }
+.cam-open-head { display: grid; gap: 2px; }
+.tag-live { background: rgba(179, 38, 30, 0.25); border-color: #b3261e; color: #ffb4ab; }

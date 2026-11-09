@@ -47,6 +47,7 @@ import { usgsStats } from '../map/usgsProvider';
 import { vectorStats, type VectorStats } from '../map/vectorTiles';
 import { createTerrariumTerrain, TERRAIN_INFO, type TerrainStats } from '../map/terrain';
 import { LayerRenderer } from '../map/layerRender';
+import { PlaceLabelManager } from '../map/placeLabels';
 import type { AircraftFilter } from '../../shared/aircraft';
 import airportsData from '../data/airports.json';
 import { applyVisualMode } from '../map/visualModes';
@@ -230,6 +231,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   const [photorealOn, setPhotorealOn] = useState(false);
   const photorealCleanupRef = useRef<(() => void) | null>(null);
   const reportViewRef = useRef<(() => void) | null>(null);
+  const placeLabelsRef = useRef<PlaceLabelManager | null>(null);
   const buildingsRef = useRef<BuildingManager | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -323,6 +325,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     void widget.dataSources.add(sources.locations);
     sourcesRef.current = sources;
     layerRendererRef.current = new LayerRenderer(widget);
+    placeLabelsRef.current = new PlaceLabelManager(widget);
     buildingsRef.current = new BuildingManager(widget);
     annoSourceRef.current = new CustomDataSource('annotations');
     playbackSourceRef.current = new CustomDataSource('playback');
@@ -363,6 +366,18 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     handler.setInputAction(() => {
       if (propsRef.current.tool !== 'none') propsRef.current.onToolFinish();
     }, ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+    // Hover: show the vehicle's label (when "hovered" labels are chosen) and a pointer cursor.
+    let lastHover = 0;
+    handler.setInputAction((m: { endPosition: Cartesian2 }) => {
+      const now = performance.now();
+      if (now - lastHover < 80) return;
+      lastHover = now;
+      const picked = scene.pick(m.endPosition);
+      const sel = defined(picked) && picked.id instanceof Entity ? parseEntityId(String(picked.id.id)) : null;
+      const rec = sel && sel.kind === 'record' ? { layer: sel.layer, id: sel.id } : null;
+      layerRendererRef.current?.setHovered(rec);
+      if (propsRef.current.tool === 'none' && !propsRef.current.pickMode) scene.canvas.style.cursor = sel ? 'pointer' : '';
+    }, ScreenSpaceEventType.MOUSE_MOVE);
 
     // Report the settled view (center, altitude, bounding box) for viewport-based layers.
     const reportView = () => {
@@ -378,6 +393,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       // Buildings load around the view center when the camera is low (height above the terrain surface).
       const ground = scene.globe.getHeight(c) ?? 0;
       buildingsRef.current?.update(CMath.toDegrees(cc.latitude), CMath.toDegrees(cc.longitude), c.height - ground);
+      placeLabelsRef.current?.refresh();
     };
     widget.camera.moveEnd.addEventListener(reportView);
     reportViewRef.current = reportView;
@@ -601,10 +617,19 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
           aircraftFilter: props.aircraftFilter,
           vesselClasses: props.vesselClasses,
           smoothMotion: props.settings.smoothMotion,
+          aircraftLabels: props.settings.aircraftLabels,
+          vesselLabels: props.settings.vesselLabels,
         });
       lr.setVisible(lid, on);
     }
-  }, [props.layerSnaps, props.layersOn, selRecord?.layer, selRecord?.id, props.playback === null, ready, props.aircraftFilter, props.vesselClasses, props.settings.smoothMotion]);
+  }, [props.layerSnaps, props.layersOn, selRecord?.layer, selRecord?.id, props.playback === null, ready, props.aircraftFilter, props.vesselClasses, props.settings.smoothMotion, props.settings.aircraftLabels, props.settings.vesselLabels]);
+
+  // ----- geographic labels (screen-space, collision-managed) -----
+  useEffect(() => {
+    if (!ready) return;
+    const s = props.settings;
+    placeLabelsRef.current?.setOptions({ level: s.geoLabels, streets: s.streetLabels, density: s.labelDensity, size: s.labelSize, language: s.labelLanguage });
+  }, [ready, props.settings.geoLabels, props.settings.streetLabels, props.settings.labelDensity, props.settings.labelSize, props.settings.labelLanguage]);
 
   // ----- airports (bundled OurAirports, public domain) -----
   const airportSourceRef = useRef<CustomDataSource | null>(null);

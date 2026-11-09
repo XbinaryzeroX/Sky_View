@@ -3,6 +3,7 @@
 // that need a licensed source or a shared backend say so instead of pretending.
 
 import { useEffect, useMemo, useState } from 'react';
+import { CameraPlayer, cameraMedia } from './CameraPlayer';
 import { aircraftClass, classifyAircraftQuery, elevationAngleDeg, specialCode, trackState } from '../../shared/aircraft';
 import { answerQuestion, ANALYST_EXAMPLES, type AnalystAnswer } from '../../shared/analyst';
 import { isAlertCountable } from '../../shared/dedupe';
@@ -488,13 +489,30 @@ function AirportsPage({ ctx, selected }: { ctx: PageCtx; selected: string | null
 function CamerasPage({ ctx }: { ctx: PageCtx }) {
   const cams = ctx.layerSnaps.cameras?.records ?? [];
   const on = ctx.snap.settings.layersEnabled.includes('cameras');
+  const favs = ctx.snap.settings.favoriteCameras;
   const [q, setQ] = useState('');
   const [pub, setPub] = useState('all');
-  const list = cams.filter((c) => (pub === 'all' || c.source.startsWith(pub)) && (!q || c.label.toLowerCase().includes(q.toLowerCase())));
+  const [media, setMedia] = useState<'all' | 'hls' | 'still' | 'fav'>('all');
+  const [inView, setInView] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const bbox = inView ? ctx.viewBbox() : null;
+  const needle = q.trim().toLocaleLowerCase();
+  const list = cams.filter(
+    (c) =>
+      (pub === 'all' || String(c.props.country) === pub) &&
+      (media === 'all' || (media === 'fav' ? favs.includes(c.id) : c.props.mediaType === media)) &&
+      (!bbox || (c.lon >= bbox[0] && c.lon <= bbox[2] && c.lat >= bbox[1] && c.lat <= bbox[3])) &&
+      (!needle || `${c.label} ${c.props.locality ?? ''} ${c.props.county ?? ''} ${c.props.route ?? ''} ${c.props.country ?? ''}`.toLocaleLowerCase().includes(needle)),
+  );
+  const countries = [...new Set(cams.map((c) => String(c.props.country ?? 'Unknown')))].sort();
+  const videoCount = cams.filter((c) => c.props.mediaType === 'hls').length;
+  const idx = openId ? list.findIndex((c) => c.id === openId) : -1;
+  const open = idx >= 0 ? list[idx] : openId ? cams.find((c) => c.id === openId) : undefined;
+  const toggleFav = (id: string) => ctx.patch({ favoriteCameras: favs.includes(id) ? favs.filter((x) => x !== id) : [...favs, id].slice(-500) });
   if (!on)
     return (
       <>
-        <Head title="Cameras" sub="Authorized public camera stills published by transportation agencies." />
+        <Head title="Cameras" sub="Public traffic and weather cameras published by transportation agencies: live video where the publisher streams it, otherwise refreshed still images." />
         <button className="btn primary" onClick={() => ctx.enableLayers(['cameras'])}>
           Load camera catalogs
         </button>
@@ -502,15 +520,65 @@ function CamerasPage({ ctx }: { ctx: PageCtx }) {
     );
   return (
     <>
-      <Head title="Cameras" sub={`${cams.length.toLocaleString()} published cameras (Caltrans, Fintraffic). Images load only when you open one.`} />
+      <Head
+        title="Cameras"
+        sub={`${cams.length.toLocaleString()} published cameras in ${countries.length} countries: ${videoCount.toLocaleString()} list a live video stream (availability is checked when played), the rest publish still images.`}
+      />
+      {open && (
+        <section className="cam-open">
+          <div className="cam-open-head">
+            <strong>{open.label}</strong>
+            <span className="muted small">{[open.props.locality, open.props.country].filter(Boolean).join(' · ')}</span>
+          </div>
+          <CameraPlayer key={open.id} media={cameraMedia(open)} title={open.label} />
+          <div className="btn-row">
+            <button className="btn" disabled={idx <= 0} onClick={() => setOpenId(list[idx - 1].id)}>
+              ‹ Prev
+            </button>
+            <button className="btn" disabled={idx < 0 || idx >= list.length - 1} onClick={() => setOpenId(list[idx + 1].id)}>
+              Next ›
+            </button>
+            <button
+              className="btn"
+              onClick={() => {
+                ctx.focus(open.lat, open.lon, 2);
+                ctx.selectRecord('cameras', open.id);
+              }}
+            >
+              Show on map
+            </button>
+            <button className="btn" onClick={() => toggleFav(open.id)} aria-pressed={favs.includes(open.id)}>
+              {favs.includes(open.id) ? '★ Favorite' : '☆ Favorite'}
+            </button>
+            <button className="btn" onClick={() => setOpenId(null)}>
+              Close
+            </button>
+          </div>
+        </section>
+      )}
       <div className="btn-row">
-        <input className="view-name" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Road, place…" />
-        <select value={pub} onChange={(e) => setPub(e.target.value)} aria-label="Publisher">
-          <option value="all">All publishers</option>
-          <option value="Caltrans">Caltrans (California)</option>
-          <option value="Fintraffic">Fintraffic (Finland)</option>
+        <input className="view-name" value={q} onChange={(e) => setQ(e.target.value)} placeholder="City, road, area, camera…" aria-label="Search cameras" />
+        <select value={pub} onChange={(e) => setPub(e.target.value)} aria-label="Country">
+          <option value="all">All countries</option>
+          {countries.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
         </select>
+        <select value={media} onChange={(e) => setMedia(e.target.value as typeof media)} aria-label="Media type">
+          <option value="all">Video and stills</option>
+          <option value="hls">Live video listed</option>
+          <option value="still">Still images</option>
+          <option value="fav">Favorites ({favs.length})</option>
+        </select>
+        <label className="check small">
+          <input type="checkbox" checked={inView} onChange={(e) => setInView(e.target.checked)} /> In map view
+        </label>
       </div>
+      <p className="muted small">
+        {list.length.toLocaleString()} match{list.length > 200 ? ' (first 200 shown)' : ''}.
+      </p>
       {list.length === 0 ? (
         <Empty>{cams.length === 0 ? 'Camera catalogs are loading or unavailable.' : 'No cameras match.'}</Empty>
       ) : (
@@ -519,16 +587,19 @@ function CamerasPage({ ctx }: { ctx: PageCtx }) {
             <Row
               key={c.id}
               onClick={() => {
+                setOpenId(c.id);
                 ctx.focus(c.lat, c.lon, 2);
-                ctx.selectRecord('cameras', c.id);
               }}
-              tag={<span className="tag">{c.source.startsWith('Caltrans') ? 'CA' : 'FI'}</span>}
-              title={c.label}
-              meta={String(c.props.county ?? c.props.publisher ?? '')}
+              tag={<span className={`tag ${c.props.mediaType === 'hls' ? 'tag-live' : ''}`}>{c.props.mediaType === 'hls' ? 'VIDEO' : 'STILL'}</span>}
+              title={`${favs.includes(c.id) ? '★ ' : ''}${c.label}`}
+              meta={[c.props.locality, c.props.country, c.props.publisher].filter(Boolean).join(' · ')}
             />
           ))}
         </ul>
       )}
+      <p className="muted small">
+        Publishers: Caltrans (California; live video and stills), NYC DOT (New York City; stills), Fintraffic (Finland; weather-camera stills, CC BY 4.0). No camera catalog is connected for other countries yet.
+      </p>
     </>
   );
 }

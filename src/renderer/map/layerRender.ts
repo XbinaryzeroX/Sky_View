@@ -119,6 +119,8 @@ export interface RenderOptions {
   aircraftFilter?: AircraftFilter;
   vesselClasses?: string[];
   smoothMotion?: boolean;
+  aircraftLabels?: 'selected' | 'hovered' | 'all';
+  vesselLabels?: 'selected' | 'hovered' | 'all';
 }
 
 export class LayerRenderer {
@@ -132,6 +134,9 @@ export class LayerRenderer {
   private motionTimer: ReturnType<typeof setInterval> | null = null;
   private smooth = true;
 
+  private hovered: { layer: LayerId; id: string } | null = null;
+  private sel: { layer: LayerId | null; id: string | null } = { layer: null, id: null };
+  private labelModes: { aircraft: 'selected' | 'hovered' | 'all'; vessel: 'selected' | 'hovered' | 'all' } = { aircraft: 'hovered', vessel: 'hovered' };
   private lastCull = 0;
   private readonly cullCam = new Cartesian3();
 
@@ -147,6 +152,26 @@ export class LayerRenderer {
     });
   }
 
+  /** Whether a vehicle's callsign/name label should show (geographic labels are separate, see placeLabels.ts). */
+  private labelWanted(lid: LayerId, e: Entity): boolean {
+    const rid = String(e.id).split('|').slice(2).join('|');
+    if (this.sel.layer === lid && this.sel.id === rid) return true;
+    const r = this.records.get(lid)?.get(rid);
+    if (r && (lid === 'aircraft' || lid === 'aircraftMil') && specialCode(r)) return true;
+    const mode = lid === 'vessels' ? this.labelModes.vessel : this.labelModes.aircraft;
+    if (mode === 'all') return true;
+    if (mode === 'hovered') return this.hovered?.layer === lid && this.hovered.id === rid;
+    return false;
+  }
+
+  /** Hover state from the globe's mouse-move picking. */
+  setHovered(h: { layer: LayerId; id: string } | null): void {
+    if (h?.layer === this.hovered?.layer && h?.id === this.hovered?.id) return;
+    this.hovered = h;
+    this.cullBehindEarth();
+    this.widget.scene.requestRender();
+  }
+
   /** Hides aircraft/vessel icons and labels that are below the earth's horizon from the camera (3D only). */
   cullBehindEarth(): void {
     const scene = this.widget.scene;
@@ -160,7 +185,7 @@ export class LayerRenderer {
         const p = e.position?.getValue(now);
         const visible = !in3D || !p || occluder.isPointVisible(p);
         if (e.billboard) e.billboard.show = visible as never;
-        if (e.label) e.label.show = visible as never;
+        if (e.label) e.label.show = (visible && this.labelWanted(lid, e)) as never;
         if (e.point) e.point.show = visible as never;
       }
     }
@@ -211,6 +236,9 @@ export class LayerRenderer {
     if (id === 'vessels' && opts.vesselClasses) records = all.filter((r) => opts.vesselClasses!.includes(vesselClass(r.category)));
     this.records.set(id, new Map(records.map((r) => [r.id, r])));
     this.smooth = opts.smoothMotion !== false;
+    this.sel = { layer: opts.selectedLayer, id: opts.selectedId };
+    if (opts.aircraftLabels) this.labelModes.aircraft = opts.aircraftLabels;
+    if (opts.vesselLabels) this.labelModes.vessel = opts.vesselLabels;
     if ((id === 'aircraft' || id === 'aircraftMil') && !this.motionTimer) this.motionTimer = setInterval(() => this.tickMotion(), 1000);
     const src = this.source(id);
     const map = this.entities.get(id)!;
@@ -245,6 +273,7 @@ export class LayerRenderer {
     }
     src.entities.resumeEvents();
     if (id === 'satellites') this.syncSatellites(records);
+    if (id === 'aircraft' || id === 'aircraftMil' || id === 'vessels') this.cullBehindEarth();
     this.widget.scene.requestRender();
   }
 

@@ -489,6 +489,8 @@ export function normalizeCaltrans(body: unknown, district: number): Normalized {
       continue;
     }
     const rt = (c.recordTimestamp ?? {}) as Record<string, unknown>;
+    const stream = (c.imageData as Record<string, unknown> | undefined)?.streamingVideoURL;
+    const streamUrl = typeof stream === 'string' && /^https:\/\/wzmedia\.dot\.ca\.gov\/[A-Za-z0-9_./-]+\.m3u8$/.test(stream) ? stream : null;
     records.push({
       id: `caltrans-d${district}-${cleanText(c.index, 12) ?? `${lat},${lon}`}`,
       lat,
@@ -511,6 +513,11 @@ export function normalizeCaltrans(body: unknown, district: number): Normalized {
         // Caltrans publishes local (Pacific) date/time without a zone; keep it verbatim rather than guess an offset.
         catalogRecordUpdated: rt.recordDate ? `${cleanText(rt.recordDate, 12)} ${cleanText(rt.recordTime, 10) ?? ''} (California local time)`.trim() : null,
         publisher: `Caltrans District ${district}`,
+        country: 'United States',
+        locality: cleanText(loc.nearbyPlace, 60) ?? cleanText(loc.county, 40),
+        // Live HLS stream published by Caltrans for this camera, if any. Its availability is checked when played.
+        streamUrl,
+        mediaType: streamUrl ? 'hls' : 'still',
       },
       imageUrl: url,
     });
@@ -547,11 +554,45 @@ export function normalizeFintrafficCams(body: unknown): Normalized {
       observedAt: null,
       sourceUrl: 'https://www.digitraffic.fi/en/road-traffic/',
       source: 'Fintraffic / digitraffic.fi (CC BY 4.0)',
-      props: { presets: presets.length, publisher: 'Fintraffic', catalogRecordUpdated: toIso(p.dataUpdatedTime) },
+      props: { presets: presets.length, publisher: 'Fintraffic', catalogRecordUpdated: toIso(p.dataUpdatedTime), country: 'Finland', locality: null, streamUrl: null, mediaType: 'still', updateFrequencyMin: 10 },
       imageUrl: `https://weathercam.digitraffic.fi/${presetId}.jpg`,
     });
   }
   return { records, skipped, sourceUpdatedAt: toIso(b.dataUpdatedTime) };
+}
+
+/** NYC DOT traffic cameras (webcams.nyctmc.org public API): still images refreshed every few seconds by the publisher. */
+export function normalizeNycCams(body: unknown): Normalized {
+  if (!Array.isArray(body)) throw new Error('Unexpected NYC DOT camera response');
+  const records: GeoRecord[] = [];
+  let skipped = 0;
+  for (const raw of body) {
+    const c = raw as Record<string, unknown>;
+    const id = cleanText(c.id, 40);
+    const lat = Number(c.latitude);
+    const lon = Number(c.longitude);
+    const url = typeof c.imageUrl === 'string' ? c.imageUrl : '';
+    if (!id || !/^[0-9a-f-]{36}$/i.test(id) || !isValidLat(lat) || !isValidLon(lon) || (lat === 0 && lon === 0) || !url.startsWith('https://webcams.nyctmc.org/api/cameras/') || String(c.isOnline) !== 'true') {
+      skipped++;
+      continue;
+    }
+    records.push({
+      id: `nycdot-${id}`,
+      lat,
+      lon,
+      altM: null,
+      heading: null,
+      speedKts: null,
+      label: cleanText(c.name, 120) ?? 'NYC DOT camera',
+      category: 'Traffic camera',
+      observedAt: null,
+      sourceUrl: 'https://webcams.nyctmc.org/',
+      source: 'NYC DOT traffic cameras',
+      props: { publisher: 'New York City DOT', country: 'United States', locality: cleanText(c.area, 40), streamUrl: null, mediaType: 'still', updateFrequencyMin: 1 },
+      imageUrl: url,
+    });
+  }
+  return { records, skipped, sourceUpdatedAt: null };
 }
 
 /** MBTA V3 vehicles with included routes. */

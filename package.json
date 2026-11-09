@@ -31,6 +31,7 @@
     "@turf/boolean-point-in-polygon": "^7.4.0",
     "cesium": "^1.147.0",
     "geographiclib-geodesic": "^2.2.0",
+    "hls.js": "^1.6.15",
     "papaparse": "^5.7.0",
     "pbf": "^5.1.2",
     "react": "^19.3.1",

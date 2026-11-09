@@ -180,6 +180,17 @@ export interface Settings {
   evenOcean: boolean;
   /** Decorative window grids on OSM building walls (generated, not the real building). */
   buildingFacades: boolean;
+  /** Geographic (place/water) label level. */
+  geoLabels: 'off' | 'minimal' | 'standard' | 'detailed';
+  streetLabels: boolean;
+  labelDensity: 'low' | 'medium' | 'high';
+  labelSize: 'small' | 'medium' | 'large';
+  labelLanguage: 'english' | 'local';
+  /** Callsign/name labels on vehicles: only the selected one, also the one under the mouse, or all visible. */
+  aircraftLabels: 'selected' | 'hovered' | 'all';
+  vesselLabels: 'selected' | 'hovered' | 'all';
+  /** Camera record ids the user starred (stored locally). */
+  favoriteCameras: string[];
   homeLat: number | null;
   homeLon: number | null;
   orgName: string;

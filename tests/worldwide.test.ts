@@ -249,3 +249,20 @@ describe('aircraft query plan', () => {
     expect(d(far.centers[0])).toBeLessThan(6);
   });
 });
+
+describe('label hierarchy', () => {
+  it('ranks place classes and keeps the most important non-overlapping labels', async () => {
+    const { labelPriority, placeBoxes } = await import('../src/renderer/map/placeLabels');
+    expect(labelPriority('capital', 1)).toBeGreaterThan(labelPriority('city', 1));
+    expect(labelPriority('city', 2)).toBeGreaterThan(labelPriority('town', 2));
+    expect(labelPriority('town', 1)).toBeGreaterThan(labelPriority('village', 1));
+    const city = { x: 100, y: 100, w: 60, h: 14, p: 700 };
+    const village = { x: 110, y: 104, w: 50, h: 12, p: 300 };
+    const far = { x: 400, y: 300, w: 50, h: 12, p: 250 };
+    const kept = placeBoxes([village, city, far], 10);
+    expect(kept.has(city)).toBe(true);
+    expect(kept.has(village)).toBe(false);
+    expect(kept.has(far)).toBe(true);
+    expect(placeBoxes([city, far], 1).size).toBe(1);
+  });
+});

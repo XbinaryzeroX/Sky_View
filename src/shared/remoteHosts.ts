@@ -17,6 +17,8 @@ export const RENDERER_REMOTES: RendererRemote[] = [
   { prefix: 'https://nowcoast.noaa.gov/geoserver/', purpose: 'NOAA nowCOAST radar (WMS)' },
   { prefix: 'https://cwwp2.dot.ca.gov/data/', purpose: 'Caltrans published camera stills' },
   { prefix: 'https://weathercam.digitraffic.fi/', purpose: 'Fintraffic published weather-camera stills' },
+  { prefix: 'https://wzmedia.dot.ca.gov/', purpose: 'Caltrans published live camera video (HLS)' },
+  { prefix: 'https://webcams.nyctmc.org/api/cameras/', purpose: 'NYC DOT published traffic-camera stills' },
   { prefix: 'https://tiles.openfreemap.org/', purpose: 'OpenFreeMap vector tiles (OpenStreetMap streets, places, buildings)' },
   { prefix: 'https://tile.googleapis.com/', purpose: 'Google Photorealistic 3D Tiles (customer key)', optional: 'google3d' },
   { prefix: 'https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/', purpose: 'Esri World Imagery (customer key)', optional: 'esri' },
@@ -54,6 +56,8 @@ export function buildCsp(opts: RemoteOptions & { devOrigin?: string | null }): s
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob: ${remotes}`,
     "font-src 'self' data:",
+    // Live camera video: hls.js feeds segments into a MediaSource (blob:) from allow-listed publishers.
+    `media-src 'self' blob: ${remotes}`,
     `connect-src 'self' data: blob: ${remotes}${dev ? ` ${dev} ${devWs}` : ''}`,
     "worker-src 'self' blob:",
     "child-src 'self' blob:",

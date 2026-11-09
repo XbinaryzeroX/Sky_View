@@ -175,6 +175,10 @@ app.on('second-instance', () => {
   }
 });
 
+// Public camera streams (HLS) are decoded in software: the GPU decoder failed mid-stream on Caltrans
+// H.264 feeds (Chromium PIPELINE_ERROR_DECODE). Video sizes are small (≈352×264), so the CPU cost is low.
+app.commandLine.appendSwitch('disable-accelerated-video-decode');
+
 app.whenReady().then(async () => {
   const rendererRoot = join(__dirname, '../renderer');
   serveAppProtocol(rendererRoot);

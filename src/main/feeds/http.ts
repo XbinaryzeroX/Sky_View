@@ -7,6 +7,7 @@ export const ALLOWED_HOSTS = new Set([
   'api.adsb.lol',
   'meri.digitraffic.fi',
   'tie.digitraffic.fi',
+  'webcams.nyctmc.org',
   'celestrak.org',
   'firms.modaps.eosdis.nasa.gov',
   'aviationweather.gov',

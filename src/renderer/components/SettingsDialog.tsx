@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { DEFAULT_SETTINGS } from '../../shared/ipc';
 import type { AiStatus, Settings } from '../../shared/types';
 import { api, errorText } from '../lib/api';
 import { Modal } from './common';
@@ -111,8 +112,73 @@ export function SettingsDialog({ settings, onClose }: { settings: Settings; onCl
             <small className="muted">{BASEMAPS[s.basemap]?.description}</small>
           </label>
           <label className="check">
-            <input type="checkbox" checked={s.labelsOverlay} onChange={(e) => set('labelsOverlay', e.target.checked)} /> Place names, roads and boundaries over imagery (OpenStreetMap, worldwide)
+            <input type="checkbox" checked={s.labelsOverlay} onChange={(e) => set('labelsOverlay', e.target.checked)} /> Roads and boundaries over imagery (OpenStreetMap, worldwide)
           </label>
+          <h3 className="sub">Labels</h3>
+          <div className="field-row">
+            <label className="field">
+              <span>Place names</span>
+              <select value={s.geoLabels} onChange={(e) => set('geoLabels', e.target.value as Settings['geoLabels'])}>
+                <option value="off">Off</option>
+                <option value="minimal">Minimal (countries, major cities)</option>
+                <option value="standard">Standard</option>
+                <option value="detailed">Detailed (villages, neighbourhoods)</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>Label density</span>
+              <select value={s.labelDensity} onChange={(e) => set('labelDensity', e.target.value as Settings['labelDensity'])}>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>Text size</span>
+              <select value={s.labelSize} onChange={(e) => set('labelSize', e.target.value as Settings['labelSize'])}>
+                <option value="small">Small</option>
+                <option value="medium">Medium</option>
+                <option value="large">Large</option>
+              </select>
+            </label>
+          </div>
+          <div className="field-row">
+            <label className="field">
+              <span>Name language</span>
+              <select value={s.labelLanguage} onChange={(e) => set('labelLanguage', e.target.value as Settings['labelLanguage'])}>
+                <option value="english">English where available</option>
+                <option value="local">Local script (e.g. 東京, القاهرة)</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>Aircraft labels</span>
+              <select value={s.aircraftLabels} onChange={(e) => set('aircraftLabels', e.target.value as Settings['aircraftLabels'])}>
+                <option value="selected">Selected only</option>
+                <option value="hovered">Selected and hovered</option>
+                <option value="all">All visible (nearby)</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>Vessel labels</span>
+              <select value={s.vesselLabels} onChange={(e) => set('vesselLabels', e.target.value as Settings['vesselLabels'])}>
+                <option value="selected">Selected only</option>
+                <option value="hovered">Selected and hovered</option>
+                <option value="all">All visible (nearby)</option>
+              </select>
+            </label>
+          </div>
+          <label className="check">
+            <input type="checkbox" checked={s.streetLabels} onChange={(e) => set('streetLabels', e.target.checked)} /> Street names when zoomed in (below about 3 km)
+          </label>
+          <button
+            className="btn"
+            type="button"
+            onClick={() => {
+              for (const k of ['geoLabels', 'streetLabels', 'labelDensity', 'labelSize', 'labelLanguage', 'aircraftLabels', 'vesselLabels'] as const) set(k, DEFAULT_SETTINGS[k] as never);
+            }}
+          >
+            Reset label defaults
+          </button>
           <label className="check">
             <input type="checkbox" checked={s.buildings3d} onChange={(e) => set('buildings3d', e.target.checked)} /> 3D buildings below 4 km altitude (OpenStreetMap footprints; heights may be estimated)
           </label>
