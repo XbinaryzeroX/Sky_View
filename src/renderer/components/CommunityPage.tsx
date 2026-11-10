@@ -73,6 +73,8 @@ export function CommunityPage({ ctx }: { ctx: PageCtx }) {
   const [action, setAction] = useState<AccountAction | null>(null);
   const [actionText, setActionText] = useState('');
   const epoch = useRef(0);
+  // Bumped on every detail navigation (open a post, back to feed, feed reset); late detail responses for an older one are dropped.
+  const detailGeneration = useRef(0);
   const live = useRef(true);
 
   useEffect(() => {
@@ -119,20 +121,24 @@ export function CommunityPage({ ctx }: { ctx: PageCtx }) {
   };
 
   const write = async (data: Write) => {
+    // Capture both generations and the open post before awaiting: navigation while the write is pending
+    // (Back to feed, another post, new filter) must win over the reload that follows it.
     const current = isCurrent();
+    const open = detail?.post ?? null;
+    const generation = detailGeneration.current;
     await api.lemmyWrite(data);
     // The write has succeeded. Reload separately: a failed reload must not look like a failed write,
     // or the caller would keep the draft open and a second click would publish a duplicate.
-    void reloadAfterWrite(current);
+    void reloadAfterWrite(current, open, generation);
   };
 
-  const reloadAfterWrite = async (current: () => boolean) => {
-    const open = detail?.post;
+  const reloadAfterWrite = async (current: () => boolean, open: LemmyPost | null, generation: number) => {
+    const sameDetail = () => current() && generation === detailGeneration.current;
     try {
       await refresh(current);
-      if (open && current()) {
+      if (open && sameDetail()) {
         const result = await api.lemmyPost(open.id);
-        if (current()) setDetail(result);
+        if (sameDetail()) setDetail(result);
       }
     } catch (error) {
       if (current()) {
@@ -144,14 +150,21 @@ export function CommunityPage({ ctx }: { ctx: PageCtx }) {
 
   const openPost = async (id: number) => {
     const current = isCurrent();
+    const generation = ++detailGeneration.current;
     const result = await api.lemmyPost(id);
-    if (current()) setDetail(result);
+    if (current() && generation === detailGeneration.current) setDetail(result);
+  };
+
+  const closePost = () => {
+    detailGeneration.current++;
+    setDetail(null);
   };
 
   useEffect(() => {
     epoch.current++;
     const at = epoch.current;
     setPosts([]);
+    detailGeneration.current++;
     setDetail(null);
     setStatus({ signedIn: false, name: null });
     setBusy(true);
@@ -346,7 +359,7 @@ export function CommunityPage({ ctx }: { ctx: PageCtx }) {
       {!busy && !posts.length && !error && <p className="muted">No visible posts returned by this instance.</p>}
       {detail ? (
         <section>
-          <button className="btn" onClick={() => setDetail(null)}>Back to feed</button>
+          <button className="btn" onClick={closePost}>Back to feed</button>
           {post ? (
             <>
               <h3>{post.title}</h3>

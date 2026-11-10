@@ -159,7 +159,9 @@ Built by Codex (spec + two fix rounds), inspected and fixed by Claude, re-inspec
 - Desktop checks at 1920×1080, 1440×900 and 1280×720: floating map workspace (Layers, Data, Places/Scenes/Cameras, bottom toolbar, zoom stack), no clipped buttons, globe full-bleed; Ops floating page; Markets setup card without a key; Community live from lemmy.world (20 posts, 80-comment thread).
 - Not verified: Markets with a real Twelve Data / Alpha Vantage key, Lemmy sign-in and writes (no account was used), local-AI summaries, Google Photoreal with an included key (none configured).
 
-### Known issues (found by the final review, not fixed in this release)
+### v0.5.1 fixes
 
-- After a vote/comment inside a post, a slow background reload can reopen that post if you have already gone back to the feed or opened another post.
-- With Diagnostics open, "Browse all cameras" and the toolbar's Watchlist open their page over the Diagnostics panel (the nav rail closes it first).
+Both known issues from the v0.5.0 final review are fixed and approved by a focused Codex review (APPROVED, no findings):
+
+- Community: opening a post, going back to the feed, or a feed reset cancels any late post refresh, including one that follows a vote or comment that was still being sent. A slow refresh can no longer reopen a post you left.
+- Floating panels: opening any page other than the Globe (nav rail, Browse all cameras, Watchlist, search results, notifications) closes Diagnostics and Credits first, so they never sit under a page. Verified in the running app.

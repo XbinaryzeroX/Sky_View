@@ -146,6 +146,13 @@ export function App() {
     if (selection || recordSel) { setDataOpen(true); setToolsOpen(false); setKeyboardOpen(false); }
   }, [selection, recordSel]);
   useEffect(() => { if (diagOpen) { setLeftFloat(null); setPage('globe'); setHistoryOpen(false); } }, [diagOpen]);
+  // Any page other than the Globe opens in the left floating slot, so close the overlays that share it.
+  useEffect(() => {
+    if (page !== 'globe') {
+      setDiagOpen(false);
+      setCreditsOpen(false);
+    }
+  }, [page]);
   useEffect(() => {
     if (playbackOn) {
       setLeftFloat(null);
@@ -690,7 +697,7 @@ export function App() {
           {NAV.map((n, i) => (
             <span key={n.id}>
               {i > 0 && NAV[i - 1].group !== n.group && <span className="nav-divider" role="separator" aria-label={n.group} />}
-              <button className={`nav-btn ${page === n.id ? 'active' : ''}`} onClick={() => { if (n.id !== 'globe') { setDiagOpen(false); setCreditsOpen(false); } setPage(n.id); }} title={n.label} aria-label={n.label} aria-current={page === n.id ? 'page' : undefined}>
+              <button className={`nav-btn ${page === n.id ? 'active' : ''}`} onClick={() => setPage(n.id)} title={n.label} aria-label={n.label} aria-current={page === n.id ? 'page' : undefined}>
                 <span className="nav-icon" aria-hidden="true"><n.icon size={18} strokeWidth={1.75} aria-hidden="true" /></span>
                 <span className="nav-label" aria-hidden="true">{n.short}</span>
               </button>
