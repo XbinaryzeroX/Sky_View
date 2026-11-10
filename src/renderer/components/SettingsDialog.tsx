@@ -224,6 +224,9 @@ export function SettingsDialog({ settings, onClose }: { settings: Settings; onCl
             <input type="checkbox" checked={s.smoothMotion} onChange={(e) => set('smoothMotion', e.target.checked)} /> Smooth aircraft motion between reports (estimated positions, max 45 s, clearly marked)
           </label>
           <label className="check">
+            <input type="checkbox" checked={s.vehicleModels} onChange={(e) => set('vehicleModels', e.target.checked)} /> 3D models for nearby aircraft and ships (3D view, below 400 km; up to 60 at once, 150 with Maximum quality). Representative shapes sized to each type, with generic paint, not airline liveries
+          </label>
+          <label className="check">
             <input type="checkbox" checked={s.buildingFacades} onChange={(e) => set('buildingFacades', e.target.checked)} /> Stylized window façades on 3D buildings (decorative pattern, not the real building’s windows or floors)
           </label>
           <label className="check">

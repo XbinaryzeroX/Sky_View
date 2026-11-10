@@ -5,12 +5,15 @@
 import {
   BillboardCollection,
   type Billboard,
+  BoundingSphere,
+  Intersect,
   Ellipsoid,
   EllipsoidalOccluder,
   SceneMode,
   CallbackPositionProperty,
   Cartesian2,
   Cartesian3,
+  Cartographic,
   Color,
   ConstantPositionProperty,
   CustomDataSource,
@@ -30,6 +33,9 @@ import { aircraftSymbol, vesselSymbol } from './symbols';
 import { eciToGeodetic, gstime, propagate, twoline2satrec, type SatRec } from 'satellite.js';
 import type { GeoRecord, LayerId } from '../../shared/layers';
 import { altitudeColor, deadReckon, passesFilter, specialCode, trackState, type AircraftFilter } from '../../shared/aircraft';
+import { CLASS_DEFAULTS, VESSEL_DEFAULTS, aircraftShape, aircraftVariant, pitchFromRates, vesselShape } from '../../shared/vehicleDims';
+import { buildAircraft, buildVessel } from './vehicleMeshes';
+import { VehicleModelLayer, type ModelCandidate } from './vehicleModels';
 
 // ---------- glyphs (generated once, data URLs) ----------
 const glyphCache = new Map<string, string>();
@@ -125,7 +131,14 @@ export interface RenderOptions {
   smoothMotion?: boolean;
   aircraftLabels?: 'selected' | 'hovered' | 'all';
   vesselLabels?: 'selected' | 'hovered' | 'all';
+  /** 3D models for the nearest aircraft and ships (Settings → Display). */
+  vehicleModels?: boolean;
+  /** Maximum number of 3D models at once (higher with Maximum rendering quality). */
+  modelBudget?: number;
 }
+
+/** 3D models are shown only below this camera height; above it every vehicle is an icon. */
+const MODEL_MAX_CAMERA_M = 400_000;
 
 /** Above this many records a vehicle layer is drawn as one batched billboard collection. */
 const BULK_THRESHOLD = 1500;
@@ -147,17 +160,131 @@ export class LayerRenderer {
   private labelModes: { aircraft: 'selected' | 'hovered' | 'all'; vessel: 'selected' | 'hovered' | 'all' } = { aircraft: 'hovered', vessel: 'hovered' };
   private lastCull = 0;
   private readonly cullCam = new Cartesian3();
+  private readonly models: VehicleModelLayer;
+  private modelled = new Set<string>();
+  private modelOpts = { enabled: true, budget: 60 };
+  private lastModelSync = 0;
+  private modelSyncTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly cullDir = new Cartesian3();
+  private readonly cullUp = new Cartesian3();
 
   constructor(private readonly widget: CesiumWidget) {
+    // A model becoming ready (or failing) swaps its icon at once, even with a still camera and no data update.
+    this.models = new VehicleModelLayer(widget, () => this.requestModelSync(0));
     // Aircraft and vessels on the far side of the earth are hidden (they used to show through the globe).
     widget.scene.preRender.addEventListener(() => {
       const now = performance.now();
       if (now - this.lastCull < 250) return;
-      if (Cartesian3.equalsEpsilon(widget.camera.positionWC, this.cullCam, 0, 1)) return;
+      const cam = widget.camera;
+      // Position and orientation both matter: rotating in place changes which vehicles are in view.
+      if (Cartesian3.equalsEpsilon(cam.positionWC, this.cullCam, 0, 1) && Cartesian3.equalsEpsilon(cam.directionWC, this.cullDir, 1e-4) && Cartesian3.equalsEpsilon(cam.upWC, this.cullUp, 1e-4)) return;
       this.lastCull = now;
-      Cartesian3.clone(widget.camera.positionWC, this.cullCam);
+      Cartesian3.clone(cam.positionWC, this.cullCam);
+      Cartesian3.clone(cam.directionWC, this.cullDir);
+      Cartesian3.clone(cam.upWC, this.cullUp);
       this.cullBehindEarth();
+      this.requestModelSync(500);
     });
+    widget.scene.morphComplete.addEventListener(() => this.requestModelSync(0));
+  }
+
+  /** Runs syncModels now if it has not run in the last `minGapMs`, otherwise once the gap has passed (never dropped). */
+  private requestModelSync(minGapMs: number): void {
+    const wait = this.lastModelSync + minGapMs - performance.now();
+    if (wait <= 0) {
+      if (this.modelSyncTimer) clearTimeout(this.modelSyncTimer);
+      this.modelSyncTimer = null;
+      this.syncModels();
+      return;
+    }
+    if (!this.modelSyncTimer)
+      this.modelSyncTimer = setTimeout(() => {
+        this.modelSyncTimer = null;
+        this.syncModels();
+      }, wait);
+  }
+
+  /**
+   * Picks the vehicles nearest the camera (in view, above the horizon, within range) for 3D models
+   * and hides their icons; everything else stays an icon.
+   */
+  private syncModels(): void {
+    this.lastModelSync = performance.now();
+    const scene = this.widget.scene;
+    const cam = this.widget.camera;
+    const height = cam.positionCartographic.height;
+    let picked: ModelCandidate[] = [];
+    if (this.modelOpts.enabled && scene.mode === SceneMode.SCENE3D && height < MODEL_MAX_CAMERA_M) {
+      const range = Math.min(600_000, Math.max(40_000, height * 4));
+      const occluder = new EllipsoidalOccluder(Ellipsoid.WGS84, cam.positionWC);
+      const volume = cam.frustum.computeCullingVolume(cam.positionWC, cam.directionWC, cam.upWC);
+      const sphere = new BoundingSphere(new Cartesian3(), 150);
+      const now = Date.now();
+      const julian = JulianDate.now();
+      const near: { d: number; lid: LayerId; r: GeoRecord; pos: Cartesian3 }[] = [];
+      for (const lid of ['aircraft', 'aircraftMil', 'vessels'] as LayerId[]) {
+        const recs = this.records.get(lid);
+        if (!recs || this.sources.get(lid)?.show === false || this.bulk.get(lid)?.coll.show === false) continue;
+        const ents = this.entities.get(lid);
+        const bk = this.bulk.get(lid);
+        for (const [rid, r] of recs) {
+          if (lid !== 'vessels' && trackState(r, now) === 'expired') continue;
+          let pos = bk?.byId.get(rid)?.position ?? ents?.get(rid)?.position?.getValue(julian);
+          if (!pos) continue;
+          if (lid !== 'vessels' && r.props.onGround === true) {
+            // Icons of parked aircraft sit at sea level; use the loaded terrain height (airports can be 2 km up),
+            // re-read on every sync so it improves as terrain tiles arrive.
+            const ground = scene.globe.getHeight(Cartographic.fromDegrees(r.lon, r.lat));
+            if (ground !== undefined && ground > 1) pos = Cartesian3.fromDegrees(r.lon, r.lat, ground);
+          }
+          const d = Cartesian3.distance(pos, cam.positionWC);
+          if (d > range || !occluder.isPointVisible(pos)) continue;
+          sphere.center = pos;
+          if (volume.computeVisibility(sphere) === Intersect.OUTSIDE) continue;
+          near.push({ d, lid, r, pos: Cartesian3.clone(pos) });
+        }
+      }
+      near.sort((a, b) => a.d - b.d);
+      // The selected vehicle always gets a model, within the budget (it takes the last slot if needed).
+      const budget = Math.max(1, this.modelOpts.budget);
+      const sel = near.find((n) => n.lid === this.sel.layer && n.r.id === this.sel.id);
+      let chosen = near.slice(0, budget);
+      if (sel && !chosen.includes(sel)) chosen = [...near.slice(0, budget - 1), sel];
+      picked = chosen.map(({ lid, r, pos }) => this.candidate(lid, r, pos));
+    }
+    this.modelled = this.models.sync(picked);
+    // Always reconcile: new entities start visible, and icons swap with ready models.
+    this.cullBehindEarth();
+  }
+
+  private candidate(lid: LayerId, r: GeoRecord, position: Cartesian3): ModelCandidate {
+    const key = 'rec|' + lid + '|' + r.id;
+    const selected = this.sel.layer === lid && this.sel.id === r.id;
+    const heading = r.heading === null ? 0 : CMath.toRadians(r.heading);
+    if (lid === 'vessels') {
+      const v = vesselShape(typeof r.props.shipType === 'number' ? r.props.shipType : null, r.props.lengthM, r.props.beamM);
+      const d = VESSEL_DEFAULTS[v.cls];
+      const sx = v.lengthM / d.lengthM;
+      const sy = v.beamM / d.beamM;
+      return { key, variant: 'sea:' + v.cls, spec: () => buildVessel(v.cls), position, heading, pitch: 0, scale: [sx, sy, (sx + sy) / 2], ground: false, selected, minimumPixelSize: 34 };
+    }
+    const shape = aircraftShape(r.props.type as string | null, r.props.emitterCategory as string | null, lid === 'aircraftMil' || r.props.militaryFlag === true);
+    const d = CLASS_DEFAULTS[shape.cls];
+    const sx = shape.lengthM / d.lengthM;
+    const sy = shape.spanM / d.spanM;
+    const ground = r.props.onGround === true;
+    return {
+      key,
+      variant: aircraftVariant(shape),
+      spec: () => buildAircraft(shape),
+      position,
+      heading,
+      pitch: ground ? 0 : pitchFromRates(r.props.verticalRateFpm, r.speedKts),
+      scale: [sx, sy, sx],
+      ground,
+      selected,
+      minimumPixelSize: 44,
+    };
   }
 
   /** Whether a vehicle's callsign/name label should show (geographic labels are separate, see placeLabels.ts). */
@@ -238,14 +365,16 @@ export class LayerRenderer {
     const occluder = new EllipsoidalOccluder(Ellipsoid.WGS84, this.widget.camera.positionWC);
     const now = JulianDate.now();
     for (const lid of ['aircraft', 'aircraftMil', 'vessels'] as LayerId[]) {
+      // Icons whose vehicle currently has a 3D model are hidden (labels stay). Bulk billboards are handled
+      // first: a layer whose first update was already bulk has no entity map.
+      const bk = this.bulk.get(lid);
+      if (bk) for (const [rid, bb] of bk.byId) bb.show = (!in3D || occluder.isPointVisible(bb.position)) && !this.modelled.has('rec|' + lid + '|' + rid);
       const ents = this.entities.get(lid);
       if (!ents) continue;
-      const bk = this.bulk.get(lid);
-      if (bk) for (const bb of bk.byId.values()) bb.show = !in3D || occluder.isPointVisible(bb.position);
       for (const e of ents.values()) {
         const p = e.position?.getValue(now);
         const visible = !in3D || !p || occluder.isPointVisible(p);
-        if (e.billboard) e.billboard.show = visible as never;
+        if (e.billboard) e.billboard.show = (visible && !this.modelled.has(String(e.id))) as never;
         if (e.label) e.label.show = (visible && this.labelWanted(lid, e)) as never;
         if (e.point) e.point.show = visible as never;
       }
@@ -284,9 +413,11 @@ export class LayerRenderer {
 
   setVisible(id: LayerId, visible: boolean): void {
     const s = this.sources.get(id);
+    const was = s?.show;
     if (s) s.show = visible;
     const bk = this.bulk.get(id);
     if (bk) bk.coll.show = visible;
+    if ((id === 'aircraft' || id === 'aircraftMil' || id === 'vessels') && was !== visible) this.syncModels();
     if (id === 'satellites' && !visible) this.stopSatTimer();
     this.widget.scene.requestRender();
   }
@@ -302,10 +433,13 @@ export class LayerRenderer {
     this.sel = { layer: opts.selectedLayer, id: opts.selectedId };
     if (opts.aircraftLabels) this.labelModes.aircraft = opts.aircraftLabels;
     if (opts.vesselLabels) this.labelModes.vessel = opts.vesselLabels;
+    if (opts.vehicleModels !== undefined) this.modelOpts.enabled = opts.vehicleModels;
+    if (opts.modelBudget !== undefined) this.modelOpts.budget = opts.modelBudget;
     if ((id === 'aircraft' || id === 'aircraftMil') && !this.motionTimer) this.motionTimer = setInterval(() => this.tickMotion(), 1000);
     // Thousands of aircraft or ships (worldwide views): one batched BillboardCollection instead of entities.
     if ((id === 'aircraft' || id === 'aircraftMil' || id === 'vessels') && records.length > BULK_THRESHOLD) {
       this.updateBulk(id, records, opts);
+      this.syncModels();
       return;
     }
     this.dropBulk(id);
@@ -342,7 +476,7 @@ export class LayerRenderer {
     }
     src.entities.resumeEvents();
     if (id === 'satellites') this.syncSatellites(records);
-    if (id === 'aircraft' || id === 'aircraftMil' || id === 'vessels') this.cullBehindEarth();
+    if (id === 'aircraft' || id === 'aircraftMil' || id === 'vessels') this.syncModels();
     this.widget.scene.requestRender();
   }
 
@@ -375,7 +509,8 @@ export class LayerRenderer {
       }
     }
     if (changed) {
-      this.cullBehindEarth();
+      // Moves the 3D models along with the dead-reckoned positions.
+      this.syncModels();
       this.widget.scene.requestRender();
     }
   }
@@ -579,6 +714,8 @@ export class LayerRenderer {
   destroy(): void {
     this.stopSatTimer();
     if (this.motionTimer) clearInterval(this.motionTimer);
+    if (this.modelSyncTimer) clearTimeout(this.modelSyncTimer);
+    this.models.destroy();
   }
 }
 

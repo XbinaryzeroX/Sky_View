@@ -181,6 +181,8 @@ export interface Settings {
   buildings3d: boolean;
   units: 'metric' | 'imperial' | 'nautical';
   smoothMotion: boolean;
+  /** App-built 3D models for the aircraft and ships nearest the camera (icons further away). */
+  vehicleModels: boolean;
   /** Draw the same smoothed sea over customer imagery more than 1.5 km offshore (Google/Esri/Mapbox/EOX). */
   evenOcean: boolean;
   /** Decorative window grids on OSM building walls (generated, not the real building). */

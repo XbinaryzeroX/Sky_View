@@ -174,3 +174,17 @@ Approved by a focused Codex review (APPROVED, no findings).
 - GDELT news: queries follow GDELT's rules (parentheses only around OR'd terms; only multi-word names quoted, since short quoted phrases are rejected). A rate-limited reply is retried once after 10 s, then explained in plain language; other plain-text GDELT errors are shown as "GDELT: <message>". GDELT throttles harder than its stated one request per 5 s, so headlines can occasionally take a minute.
 - Headline titles: spaces before punctuation removed.
 - Live results: Twelve Data (Apple, IBM) quote, chart, movement figures and 18 headlines; Alpha Vantage (IBM) quote and 1M chart.
+
+## v0.6.0 — 3D aircraft and ship models
+
+| Feature | Now | Status |
+|---|---|---|
+| 3D models | In the 3D view below 400 km, the aircraft and ships nearest the camera (up to 60, or 150 with Maximum quality) are drawn as 3D models; the rest stay icons. Settings → Display → "3D models for nearby aircraft and ships" (on by default) | ✅ Verified at JFK (parked, taxiing, airborne) and Helsinki harbour; 89 models across 14 types, 0 failures; frame rate unchanged (about 278 frames/s with and without models) |
+| Aircraft shapes | Built by the app per class (wide-body, narrow-body, regional, turboprop, business jet, light, helicopter, glider, balloon, drone). About 110 common ICAO types use real length and wingspan, engine count and placement (wing, tail, nose, trijet), high or low wing and T-tail. Unknown types use the class shape. Pitch follows the climb/descent rate; heading follows the reported track | ✅ (unit-tested dimensions, layouts and orientation through Cesium's glTF axis conversion) |
+| Ship shapes | Per AIS ship type: container ship (bridge, funnel, container stacks), tanker (deck pipe), passenger/ferry (multi-deck), high-speed, fishing (wheelhouse, mast, gantry), tug, sailing (mast and sails), pleasure, service, military. Sized from the ship's AIS length and beam | ✅ |
+| Paint and textures | Generated in the app: fuselage window rows, cockpit glass, doors, a generic accent line, light-grey belly; ship hulls with red below the waterline, decks and window grids. Generic paint only: airline liveries are not available under licence and their logos are trademarks | ✅ |
+| Picking | Clicking a model selects the vehicle (same as its icon); the selected model gets a yellow outline | ✅ |
+
+Not included: the exact model, livery or registration-specific paint of individual aircraft or ships. Windows become visible only close up (the camera stops at 100 m).
+
+Review: four focused Codex reviews of the v0.6.0 change found 13 issues (VR-001…VR-013: model readiness and failure handling, camera and selection sync, budget, bulk icon culling, ground placement, terrain-height checks, ship-beam limits, military balloon paint). All are fixed; the last two (clamp parked aircraft to terrain rather than 3D tiles; grey military balloons) are one-line fixes applied exactly as the final review suggested and were not re-reviewed.

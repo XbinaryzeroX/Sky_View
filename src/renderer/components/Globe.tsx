@@ -57,6 +57,7 @@ import { quakeClass, SEVERITY_META, prefersReducedMotion } from '../lib/format';
 import { BASEMAPS, isBasemapId, labelsOverlayLayer, needsContextFills, oceanVeilLayer, isCustomerImagery, previousUtcDay, US_RECTS } from '../map/basemaps';
 import { BuildingManager, BUILDINGS_MAX_CAMERA_M, type BuildingStats } from '../map/buildings';
 import { usgsStats } from '../map/usgsProvider';
+import { modelStats } from '../map/vehicleModels';
 import { vectorStats, type VectorStats } from '../map/vectorTiles';
 import { createTerrariumTerrain, seaStats, TERRAIN_INFO, type TerrainStats } from '../map/terrain';
 import { LayerRenderer } from '../map/layerRender';
@@ -661,7 +662,9 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       const on = live && props.layersOn.includes(lid);
       if (on)
         lr.update(lid, snap.records, {
-          selectedId: selRecord?.layer === lid ? selRecord.id : null,
+          // The global selection on every layer update (each check also compares the layer); a per-layer null
+          // would make the renderer forget an aircraft selection when the vessel layer updates.
+          selectedId: selRecord?.id ?? null,
           selectedLayer: selRecord?.layer ?? null,
           trackedId: props.trackedRecord?.id ?? null,
           aircraftFilter: props.aircraftFilter,
@@ -669,10 +672,12 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
           smoothMotion: props.settings.smoothMotion,
           aircraftLabels: props.settings.aircraftLabels,
           vesselLabels: props.settings.vesselLabels,
+          vehicleModels: props.settings.vehicleModels,
+          modelBudget: props.settings.renderQuality === 'maximum' ? 150 : 60,
         });
       lr.setVisible(lid, on);
     }
-  }, [props.layerSnaps, props.layersOn, selRecord?.layer, selRecord?.id, props.playback === null, ready, props.aircraftFilter, props.vesselClasses, props.settings.smoothMotion, props.settings.aircraftLabels, props.settings.vesselLabels]);
+  }, [props.layerSnaps, props.layersOn, selRecord?.layer, selRecord?.id, props.playback === null, ready, props.aircraftFilter, props.vesselClasses, props.settings.smoothMotion, props.settings.aircraftLabels, props.settings.vesselLabels, props.settings.vehicleModels, props.settings.renderQuality]);
 
   // ----- dated imagery overlay -----
   const imageryLayersRef = useRef<ImageryLayer[]>([]);
@@ -1008,6 +1013,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
           terrain: ts ? { ...TERRAIN_INFO, ...ts } : null,
           vector: { ...vectorStats, overlayOn: propsRef.current.settings.labelsOverlay || def.id === 'streets' },
           usgs: { ...usgsStats },
+          models: { ...modelStats, textureBytes: [...modelStats.textureBytes] },
           sea: { ...seaStats, unavailableTiles: [...seaStats.unavailableTiles].slice(-20) },
           buildings: { ...(buildingsRef.current?.stats ?? { tilesLoaded: 0, buildingsDrawn: 0, lastError: null, visible: false }), enabled: propsRef.current.settings.buildings3d, maxCameraM: BUILDINGS_MAX_CAMERA_M },
           missingRequirement:
