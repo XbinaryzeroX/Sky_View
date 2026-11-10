@@ -139,6 +139,14 @@ export interface RenderOptions {
 
 /** 3D models are shown only below this camera height; above it every vehicle is an icon. */
 const MODEL_MAX_CAMERA_M = 400_000;
+/**
+ * Hysteresis so vehicles do not flip between icon and model as positions change every second: a vehicle
+ * that already has a model keeps it unless another is clearly closer (its distance counts 30 % less), and
+ * it may stay a little beyond the range and the screen edge before switching back to an icon.
+ */
+const KEEP_DISTANCE_FACTOR = 0.7;
+const KEEP_RANGE_FACTOR = 1.3;
+const KEEP_EDGE_RADIUS_M = 3000;
 
 /** Above this many records a vehicle layer is drawn as one batched billboard collection. */
 const BULK_THRESHOLD = 1500;
@@ -164,6 +172,11 @@ export class LayerRenderer {
   private modelled = new Set<string>();
   private modelOpts = { enabled: true, budget: 60 };
   private lastModelSync = 0;
+  /**
+   * Last reported ICAO type per aircraft key, captured from every update (before filtering or model selection),
+   * so a later report without type data keeps the typed model. Bounded: least recently reported first out.
+   */
+  private lastType = new Map<string, string>();
   private modelSyncTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly cullDir = new Cartesian3();
   private readonly cullUp = new Cartesian3();
@@ -218,10 +231,12 @@ export class LayerRenderer {
       const range = Math.min(600_000, Math.max(40_000, height * 4));
       const occluder = new EllipsoidalOccluder(Ellipsoid.WGS84, cam.positionWC);
       const volume = cam.frustum.computeCullingVolume(cam.positionWC, cam.directionWC, cam.upWC);
-      const sphere = new BoundingSphere(new Cartesian3(), 150);
+      // A small margin beyond the screen edge, so models load before a vehicle pans into view.
+      const sphere = new BoundingSphere(new Cartesian3(), 800);
+      const keepSphere = new BoundingSphere(new Cartesian3(), KEEP_EDGE_RADIUS_M);
       const now = Date.now();
       const julian = JulianDate.now();
-      const near: { d: number; lid: LayerId; r: GeoRecord; pos: Cartesian3 }[] = [];
+      const near: { d: number; score: number; lid: LayerId; r: GeoRecord; pos: Cartesian3 }[] = [];
       for (const lid of ['aircraft', 'aircraftMil', 'vessels'] as LayerId[]) {
         const recs = this.records.get(lid);
         if (!recs || this.sources.get(lid)?.show === false || this.bulk.get(lid)?.coll.show === false) continue;
@@ -238,13 +253,15 @@ export class LayerRenderer {
             if (ground !== undefined && ground > 1) pos = Cartesian3.fromDegrees(r.lon, r.lat, ground);
           }
           const d = Cartesian3.distance(pos, cam.positionWC);
-          if (d > range || !occluder.isPointVisible(pos)) continue;
-          sphere.center = pos;
-          if (volume.computeVisibility(sphere) === Intersect.OUTSIDE) continue;
-          near.push({ d, lid, r, pos: Cartesian3.clone(pos) });
+          const kept = this.models.has('rec|' + lid + '|' + rid);
+          if (d > range * (kept ? KEEP_RANGE_FACTOR : 1) || !occluder.isPointVisible(pos)) continue;
+          const test = kept ? keepSphere : sphere;
+          test.center = pos;
+          if (volume.computeVisibility(test) === Intersect.OUTSIDE) continue;
+          near.push({ d, score: kept ? d * KEEP_DISTANCE_FACTOR : d, lid, r, pos: Cartesian3.clone(pos) });
         }
       }
-      near.sort((a, b) => a.d - b.d);
+      near.sort((a, b) => a.score - b.score);
       // The selected vehicle always gets a model, within the budget (it takes the last slot if needed).
       const budget = Math.max(1, this.modelOpts.budget);
       const sel = near.find((n) => n.lid === this.sel.layer && n.r.id === this.sel.id);
@@ -268,7 +285,9 @@ export class LayerRenderer {
       const sy = v.beamM / d.beamM;
       return { key, variant: 'sea:' + v.cls, spec: () => buildVessel(v.cls), position, heading, pitch: 0, scale: [sx, sy, (sx + sy) / 2], ground: false, selected, minimumPixelSize: 34 };
     }
-    const shape = aircraftShape(r.props.type as string | null, r.props.emitterCategory as string | null, lid === 'aircraftMil' || r.props.militaryFlag === true);
+    // A report without type data uses the vehicle's last reported type (avoids a model swap and a flash).
+    const type = typeof r.props.type === 'string' && r.props.type ? r.props.type : (this.lastType.get(key) ?? null);
+    const shape = aircraftShape(type, r.props.emitterCategory as string | null, lid === 'aircraftMil' || r.props.militaryFlag === true);
     const d = CLASS_DEFAULTS[shape.cls];
     const sx = shape.lengthM / d.lengthM;
     const sy = shape.spanM / d.spanM;
@@ -429,6 +448,16 @@ export class LayerRenderer {
     if ((id === 'aircraft' || id === 'aircraftMil') && opts.aircraftFilter) records = all.filter((r) => trackState(r, now) !== 'expired' && passesFilter(r, opts.aircraftFilter!));
     if (id === 'vessels' && opts.vesselClasses) records = all.filter((r) => opts.vesselClasses!.includes(vesselClass(r.category)));
     this.records.set(id, new Map(records.map((r) => [r.id, r])));
+    if (id === 'aircraft' || id === 'aircraftMil')
+      for (const r of all) {
+        // Every report refreshes recency (typed or not), so an aircraft still reporting is never the oldest entry.
+        const key = 'rec|' + id + '|' + r.id;
+        const type = typeof r.props.type === 'string' && r.props.type ? r.props.type : this.lastType.get(key);
+        if (!type) continue;
+        this.lastType.delete(key); // re-insert: the Map keeps insertion order, so the least recently reported is first
+        this.lastType.set(key, type);
+        if (this.lastType.size > 20000) this.lastType.delete(this.lastType.keys().next().value!);
+      }
     this.smooth = opts.smoothMotion !== false;
     this.sel = { layer: opts.selectedLayer, id: opts.selectedId };
     if (opts.aircraftLabels) this.labelModes.aircraft = opts.aircraftLabels;

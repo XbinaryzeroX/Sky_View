@@ -188,3 +188,7 @@ Approved by a focused Codex review (APPROVED, no findings).
 Not included: the exact model, livery or registration-specific paint of individual aircraft or ships. Windows become visible only close up (the camera stops at 100 m).
 
 Review: four focused Codex reviews of the v0.6.0 change found 13 issues (VR-001…VR-013: model readiness and failure handling, camera and selection sync, budget, bulk icon culling, ground placement, terrain-height checks, ship-beam limits, military balloon paint). All are fixed; the last two (clamp parked aircraft to terrain rather than 3D tiles; grey military balloons) are one-line fixes applied exactly as the final review suggested and were not re-reviewed.
+
+### v0.6.1 fix: icon / 3D model flicker
+
+Vehicles near the cut-off (budget, range, screen edge) could swap between icon and model as positions changed. Now a vehicle that has a model keeps it unless another is clearly closer (30 % margin), with 30 % extra range and a 3 km screen-edge margin before it reverts; new models load 800 m before a vehicle enters the screen; an aircraft report without type data keeps the last reported type. Measured on a busy view with 60 models: 2 swaps in 25 s before, 0 after. Codex review R1–R2 fixed; R3–R4 (type-cache recency for untyped reports, flip diagnostics) fixed afterwards and covered by the next review.

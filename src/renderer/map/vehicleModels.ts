@@ -26,7 +26,7 @@ export interface ModelCandidate {
 }
 
 /** Diagnostics (Map diagnostics panel): variants built, models loaded/failed, texture bytes. */
-export const modelStats = { variants: 0, loaded: 0, shown: 0, failed: 0, textureBytes: [] as number[], lastError: null as string | null };
+export const modelStats = { variants: 0, loaded: 0, shown: 0, created: 0, removed: 0, flips: 0, failed: 0, textureBytes: [] as number[], lastError: null as string | null };
 
 // ---------------------------------------------------------------- textures
 
@@ -171,6 +171,8 @@ export class VehicleModelLayer {
   private live = new Map<string, Live>();
   /** Variants that failed to build or load: not attempted again this session (no retry loop). */
   private failedVariants = new Set<string>();
+  /** When each vehicle last lost its model (flip diagnostics: model → icon → model within 5 s). */
+  private removedAt = new Map<string, number>();
   private destroyed = false;
 
   /** `onReadyChange` runs when a model becomes ready or fails, so icons can be reconciled immediately. */
@@ -186,6 +188,12 @@ export class VehicleModelLayer {
       if (!want.has(key) || want.get(key)!.variant !== l.variant) {
         if (l.model) this.widget.scene.primitives.remove(l.model);
         this.live.delete(key);
+        modelStats.removed++;
+        // Flip diagnostics only track models that were actually displayed.
+        if (l.ready) {
+          if (this.removedAt.size > 2000) this.removedAt.clear();
+          this.removedAt.set(key, performance.now());
+        }
       }
     const shown = new Set<string>();
     for (const c of candidates) {
@@ -223,6 +231,7 @@ export class VehicleModelLayer {
 
   private create(c: ModelCandidate): void {
     const entry: Live = { variant: c.variant, model: null, ready: false, failed: false, ground: c.ground };
+    modelStats.created++;
     this.live.set(c.key, entry);
     void (async () => {
       try {
@@ -248,6 +257,8 @@ export class VehicleModelLayer {
           if (this.live.get(c.key) !== entry || entry.failed) return;
           entry.ready = true;
           modelStats.loaded++;
+          // A flip: this vehicle showed a model, lost it, and shows one again within 5 s.
+          if (performance.now() - (this.removedAt.get(c.key) ?? -1e9) < 5000) modelStats.flips++;
           this.onReadyChange();
         });
         model.errorEvent.addEventListener((error: unknown) => {
@@ -260,6 +271,12 @@ export class VehicleModelLayer {
         if (this.live.get(c.key) === entry) this.fail(entry, c.variant, error);
       }
     })();
+  }
+
+  /** Whether this vehicle currently has a model (ready or still loading). */
+  has(key: string): boolean {
+    const l = this.live.get(key);
+    return !!l && !l.failed;
   }
 
   clear(): void {
