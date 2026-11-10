@@ -40,9 +40,13 @@ const SOURCE_MAX = 15;
 const MAX_IN_FLIGHT = 12;
 /** Water mask resolution per terrain tile (square, rows north to south). */
 const MASK = 128;
-const MASK_TIMEOUT_MS = 6000;
+// Generous: a timed-out mask used to leave the tile at sea-floor depth (dark rectangles, 2026-11-09).
+const MASK_TIMEOUT_MS = 20000;
+/** Fallback coastline when OSM ocean data is unavailable: elevation below this is sea (-10 m keeps polders as land). */
+const SEA_BELOW_M = -10;
 
-export const seaStats = { maskedTiles: 0, maskUnavailable: 0 };
+export const seaStats = { maskedTiles: 0, maskUnavailable: 0, unavailableTiles: [] as string[], reasons: {} as Record<string, number> };
+const why = (r: string) => (seaStats.reasons[r] = (seaStats.reasons[r] ?? 0) + 1);
 
 const alphaCache = new Map<string, Promise<Uint8Array | null>>();
 /** Ocean coverage (0–255 per pixel) of a 256-px Web Mercator tile from OSM ocean polygons; null if unavailable. */
@@ -50,24 +54,42 @@ function oceanAlpha(z: number, x: number, y: number): Promise<Uint8Array | null>
   const key = `${z}/${x}/${y}`;
   const hit = alphaCache.get(key);
   if (hit) return hit;
+  let done = false;
   const p = Promise.race([
     oceanMask(z, x, y).then((c) => {
-      if (!c) return null;
+      if (!c) {
+        why('vector tile unavailable');
+        return null;
+      }
       // Pixel readback happens in a worker; the mask is handed over as a GPU-backed bitmap.
       const pool = terrainPool();
       if (pool) {
         // Transfer (not copy) the bitmap: copying a GPU-backed bitmap forces a synchronous GPU readback on this thread.
         const bitmap = c.transferToImageBitmap();
-        return pool.run<Uint8Array>({ kind: 'alpha', bitmap }, [bitmap]).catch(() => null);
+        return pool.run<Uint8Array>({ kind: 'alpha', bitmap }, [bitmap]).catch((e) => {
+          why(`worker: ${(e as Error).message}`);
+          return null;
+        });
       }
       const d = c.getContext('2d', { willReadFrequently: true })!.getImageData(0, 0, 256, 256).data;
       const a = new Uint8Array(256 * 256);
       for (let i = 0; i < a.length; i++) a[i] = d[i * 4 + 3];
       return a;
     }),
-    new Promise<null>((r) => setTimeout(() => r(null), MASK_TIMEOUT_MS)),
-  ]).catch(() => null);
-  p.then((v) => v === null && alphaCache.delete(key));
+    new Promise<null>((r) =>
+      setTimeout(() => {
+        if (!done) why('timeout');
+        r(null);
+      }, MASK_TIMEOUT_MS),
+    ),
+  ]).catch((e) => {
+    why(`error: ${(e as Error).message}`);
+    return null;
+  });
+  p.then((v) => {
+    done = true;
+    if (v === null) alphaCache.delete(key);
+  });
   alphaCache.set(key, p);
   if (alphaCache.size > 300) alphaCache.delete(alphaCache.keys().next().value!);
   return p;
@@ -240,13 +262,26 @@ export function createTerrariumTerrain(): { provider: CustomHeightmapTerrainProv
             const b = (byKey.has(`${tileOf(x0)}/${tileOf(y0 + 1)}`) ? at(x0, y0 + 1) : at(x0, y0)) * (1 - tx) + (byKey.has(`${tileOf(x0 + 1)}/${tileOf(y0 + 1)}`) ? at(x0 + 1, y0 + 1) : at(x0, y0)) * tx;
             const h = a * (1 - ty) + b * ty;
             // Inside OSM ocean: sea level (blended across the coastline pixel).
-            out[r * SIZE + c] = oceanKnown ? h * (1 - sea(fx, fy)) : h;
+            // Without OSM ocean data, the elevation itself marks the sea, so the tile matches its neighbours.
+            out[r * SIZE + c] = oceanKnown ? h * (1 - sea(fx, fy)) : h < SEA_BELOW_M ? 0 : h;
           }
         }
         profAdd('terrain.resample', performance.now() - tRes);
         if (!oceanKnown) {
           seaStats.maskUnavailable++;
-          return { heights: out, water: null };
+          seaStats.unavailableTiles.push(`${level}/${x}/${y}`);
+          if (seaStats.unavailableTiles.length > 50) seaStats.unavailableTiles.shift();
+          const wf = new Uint8Array(MASK * MASK);
+          let anyF = 0;
+          let allF = 255;
+          for (let r = 0; r < MASK; r++)
+            for (let c = 0; c < MASK; c++) {
+              const v = at(mpx[c], mpy[r]) < SEA_BELOW_M ? 255 : 0;
+              wf[r * MASK + c] = v;
+              anyF |= v;
+              allF &= v;
+            }
+          return { heights: out, water: anyF === 0 ? new Uint8Array([0]) : allF === 255 ? new Uint8Array([255]) : wf };
         }
         const water = new Uint8Array(MASK * MASK);
         let any = 0;

@@ -177,8 +177,10 @@ export function lockDownSession(log: (m: string) => void): void {
       callback({ responseHeaders: headers });
     });
   }
-  ses.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
-  ses.setPermissionCheckHandler(() => false);
+  // Everything is denied except HTML fullscreen (camera player Fullscreen button), and only for the app's own page.
+  const ownPage = (url: string | undefined) => !!url && (url.startsWith(`${APP_ORIGIN}/`) || (devOrigin !== null && url.startsWith(`${devOrigin}/`)));
+  ses.setPermissionRequestHandler((_wc, permission, callback, details) => callback(permission === 'fullscreen' && ownPage(details.requestingUrl)));
+  ses.setPermissionCheckHandler((_wc, permission, origin) => permission === 'fullscreen' && ownPage(`${origin}/`));
 }
 
 export function hardenWebContents(contents: WebContents): void {

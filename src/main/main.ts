@@ -318,7 +318,7 @@ app.whenReady().then(async () => {
             if (settled >= 3) break;
           }
           if (v.wait) await new Promise((r) => setTimeout(r, v.wait));
-          if (v.js) console.log(`SMOKE_VIEWJS ${v.name} ${JSON.stringify(await wc.executeJavaScript(v.js))}`);
+          if (v.js) console.log(`SMOKE_VIEWJS ${v.name} ${JSON.stringify(await wc.executeJavaScript(v.js, true))}`);
           await new Promise((r) => setTimeout(r, 800));
           wc.invalidate();
           const img = await wc.capturePage();

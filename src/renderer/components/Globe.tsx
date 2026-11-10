@@ -57,7 +57,7 @@ import { BASEMAPS, isBasemapId, labelsOverlayLayer, needsContextFills, oceanVeil
 import { BuildingManager, BUILDINGS_MAX_CAMERA_M, type BuildingStats } from '../map/buildings';
 import { usgsStats } from '../map/usgsProvider';
 import { vectorStats, type VectorStats } from '../map/vectorTiles';
-import { createTerrariumTerrain, TERRAIN_INFO, type TerrainStats } from '../map/terrain';
+import { createTerrariumTerrain, seaStats, TERRAIN_INFO, type TerrainStats } from '../map/terrain';
 import { LayerRenderer } from '../map/layerRender';
 import { PlaceLabelManager } from '../map/placeLabels';
 import type { AircraftFilter } from '../../shared/aircraft';
@@ -1006,6 +1006,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
           terrain: ts ? { ...TERRAIN_INFO, ...ts } : null,
           vector: { ...vectorStats, overlayOn: propsRef.current.settings.labelsOverlay || def.id === 'streets' },
           usgs: { ...usgsStats },
+          sea: { ...seaStats, unavailableTiles: [...seaStats.unavailableTiles].slice(-20) },
           buildings: { ...(buildingsRef.current?.stats ?? { tilesLoaded: 0, buildingsDrawn: 0, lastError: null, visible: false }), enabled: propsRef.current.settings.buildings3d, maxCameraM: BUILDINGS_MAX_CAMERA_M },
           missingRequirement:
             def.requires === 'esri' && !propsRef.current.imageryKeys.esri

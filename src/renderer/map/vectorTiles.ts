@@ -288,9 +288,11 @@ export async function oceanMask(level: number, x: number, y: number): Promise<Of
     return null;
   }
   const c = new OffscreenCanvas(TILE, TILE);
+  // Context first: a tile with no water layer (all land) must still be a usable, empty mask (2026-11-09:
+  // a context-less canvas made transferToImageBitmap throw, and terrain tiles touching it lost their sea).
+  const g = c.getContext('2d')!;
   const l = vt.layers.water;
   if (!l) return c;
-  const g = c.getContext('2d')!;
   const ox = x - sx * scale;
   const oy = y - sy * scale;
   const X = (v: number) => (v / l.extent) * TILE * scale - ox * TILE;

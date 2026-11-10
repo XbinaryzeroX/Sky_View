@@ -1,7 +1,7 @@
 {
   "name": "atlas-watch",
   "productName": "Atlas Watch",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "See what is happening around the places you care about.",
   "private": true,
   "type": "module",

@@ -104,3 +104,10 @@ Screenshots: `docs/screenshots/v0.4/`.
 | Vehicle identity at the top of the details panel | Model line, operator, photo and journey now appear right under the Focus/Track buttons. IMO, MMSI and similar identifiers are shown without digit grouping | ✅ |
 
 New main-process hosts: api.adsbdb.com, commons.wikimedia.org, airport-data.com. New renderer image prefixes: upload.wikimedia.org/wikipedia/commons/, thumb.wikimedia.org/wikipedia/commons/, image.airport-data.com/aircraft/, airport-data.com/images/aircraft/. Planespotters hosts removed. airport-data.com photos are the photographers' copyright; review their terms before commercial use.
+
+## v0.4.4 fixes
+
+| Issue | Cause and fix | Status |
+|---|---|---|
+| Dark rectangles in the ocean (e.g. Gulf of Guinea) while rotating | About 7% of terrain tiles lost their water mask: an all-land map data tile (no water layer) produced an uninitialised canvas that crashed the mask step, so any terrain tile touching inland areas was left at sea-floor depth without water shading. Fixed at the source; if coastline data is ever unavailable, elevation below -10 m is now used as the sea, so a tile can no longer sink | ✅ (Gulf of Guinea views: 0 tiles without a mask, was 19-59) |
+| Camera Fullscreen button did nothing | The app denied all browser permissions, including fullscreen. Fullscreen (only) is now allowed, and only for the app's own page | ✅ (camera picture entered and left fullscreen) |
