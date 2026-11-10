@@ -1,4 +1,5 @@
 import { parseRouteset } from '../shared/route';
+import { commonsSearchUrl, parseAdsbdb, parseAirportData, parseCommons, type VehicleInfo } from '../shared/vehicleInfo';
 // IPC request handlers. Every request is validated against the schema for
 // its channel before any work happens. No Electron imports here so the
 // handlers can be tested directly; platform services are injected.
@@ -32,9 +33,13 @@ export interface PlatformServices {
 export interface ExtraServices {
   layers: LayerManager | null;
   providers: ProviderService | null;
+  userAgent?: () => string;
 }
 
 export type Handler = (args: unknown[]) => Promise<unknown> | unknown;
+
+/** Session cache of vehicle model/photo lookups (successful ones only). */
+const vehicleInfoCache = new Map<string, VehicleInfo>();
 
 export function createHandlers(core: AppCore, store: AtlasStore, fetchJson: FetchJson, platform: PlatformServices, extra: ExtraServices = { layers: null, providers: null }): Record<InvokeChannel, Handler> {
   const need = <T>(v: T | null, what: string): T => {
@@ -247,6 +252,59 @@ export function createHandlers(core: AppCore, store: AtlasStore, fetchJson: Fetc
       const [la, lo, r] = validateIpcArgs(IPC.aircraftNear, a);
       const res = await fetchJson(`https://api.adsb.lol/v2/point/${la.toFixed(4)}/${lo.toFixed(4)}/${r}`, { timeoutMs: 15000 });
       return normalizeAdsb(res.body, 'adsb.lol (ODbL)', Date.now()).records;
+    },
+    [IPC.vehicleInfo]: async (a) => {
+      const [q] = validateIpcArgs(IPC.vehicleInfo, a);
+      if (!core.settings.aircraftPhotos) throw new Error('Aircraft and ship photos are turned off in Settings.');
+      const key = JSON.stringify(q);
+      const hit = vehicleInfoCache.get(key);
+      if (hit) return hit;
+      const headers = { 'User-Agent': extra.userAgent?.() ?? 'AtlasWatch (desktop monitoring app)' };
+      const get = async (url: string): Promise<unknown | null> => {
+        try {
+          return (await fetchJson(url, { headers, timeoutMs: 15000, maxBytes: 2 * 1024 * 1024 })).body;
+        } catch (e) {
+          if ((e as { status?: number }).status === 404) return null;
+          throw e;
+        }
+      };
+      const out: VehicleInfo = { model: null, photo: null, notes: [] };
+      if (q.kind === 'aircraft') {
+        if (q.hex) {
+          try {
+            out.model = parseAdsbdb(await get(`https://api.adsbdb.com/v0/aircraft/${q.hex}`));
+            if (!out.model) out.notes.push('adsbdb.com has no record of this ICAO address.');
+          } catch (e) {
+            out.notes.push(`adsbdb.com: ${(e as Error).message}`);
+          }
+        }
+        const reg = q.registration ?? out.model?.registration ?? null;
+        if (reg && /^[A-Z0-9-]{3,12}$/.test(reg)) {
+          try {
+            out.photo = parseCommons(await get(commonsSearchUrl(`intitle:"${reg}" filetype:bitmap`)), `registration ${reg} in the file title`, reg);
+          } catch (e) {
+            out.notes.push(`Wikimedia Commons: ${(e as Error).message}`);
+          }
+        }
+        if (!out.photo && q.hex) {
+          try {
+            out.photo = parseAirportData(await get(`https://airport-data.com/api/ac_thumb.json?m=${q.hex.toUpperCase()}&n=1`));
+          } catch (e) {
+            out.notes.push(`airport-data.com: ${(e as Error).message}`);
+          }
+        }
+      } else if (q.imo) {
+        try {
+          out.photo = parseCommons(await get(commonsSearchUrl(`"IMO ${q.imo}" filetype:bitmap`)), `IMO number ${q.imo}`);
+        } catch (e) {
+          out.notes.push(`Wikimedia Commons: ${(e as Error).message}`);
+        }
+      } else out.notes.push('This vessel reports no IMO number, so no photo can be matched to it.');
+      if (!out.notes.some((n) => n.includes(':'))) {
+        if (vehicleInfoCache.size > 500) vehicleInfoCache.clear();
+        vehicleInfoCache.set(key, out);
+      }
+      return out;
     },
     [IPC.aircraftRoute]: async (a) => {
       const [cs, la, lo] = validateIpcArgs(IPC.aircraftRoute, a);

@@ -88,3 +88,70 @@ export function repairRightEdge(rgba: Uint8ClampedArray, width: number, height: 
   }
   return width - 1 - good;
 }
+
+/**
+ * Clears USGS white no-data fill inside a *mixed* JPEG tile (part imagery,
+ * part white). Measured 2026-11-09 near Kingston, Ontario: border tiles are
+ * 5-11 KB JPEGs whose outside-coverage area is flat white (255) with JPEG
+ * ringing along the boundary.
+ *
+ * Only connected near-white regions (min channel >= 245) that are large
+ * (>= minFraction of the tile) and flat (>= 85 % of pixels at 252+) are
+ * cleared, so snow, clouds and white roofs in real imagery are kept. The
+ * cleared area is then grown by `halo` pixels over light ringing pixels.
+ * Returns the number of pixels cleared.
+ */
+export function clearWhiteFill(rgba: Uint8ClampedArray, width: number, height: number, minFraction = 0.01, halo = 2): number {
+  const n = width * height;
+  const minC = (p: number) => Math.min(rgba[p * 4], rgba[p * 4 + 1], rgba[p * 4 + 2]);
+  const label = new Int32Array(n).fill(-1);
+  const clear = new Uint8Array(n);
+  const stack: number[] = [];
+  let comp = 0;
+  let cleared = 0;
+  for (let s = 0; s < n; s++) {
+    if (label[s] !== -1 || rgba[s * 4 + 3] === 0 || minC(s) < 245) continue;
+    const members: number[] = [];
+    let flat = 0;
+    label[s] = comp;
+    stack.push(s);
+    while (stack.length) {
+      const p = stack.pop()!;
+      members.push(p);
+      if (minC(p) >= 252) flat++;
+      const x = p % width;
+      const y = (p - x) / width;
+      const nb = [x > 0 ? p - 1 : -1, x < width - 1 ? p + 1 : -1, y > 0 ? p - width : -1, y < height - 1 ? p + width : -1];
+      for (const q of nb) {
+        if (q < 0 || label[q] !== -1 || rgba[q * 4 + 3] === 0 || minC(q) < 245) continue;
+        label[q] = comp;
+        stack.push(q);
+      }
+    }
+    comp++;
+    if (members.length >= n * minFraction && flat >= members.length * 0.85) for (const p of members) clear[p] = 1;
+  }
+  // Grow over the light JPEG ringing that borders the fill.
+  for (let r = 0; r < halo; r++) {
+    const add: number[] = [];
+    for (let p = 0; p < n; p++) {
+      if (clear[p] || minC(p) < 170) continue;
+      const x = p % width;
+      if ((x > 0 && clear[p - 1]) || (x < width - 1 && clear[p + 1]) || (p >= width && clear[p - width]) || (p + width < n && clear[p + width])) add.push(p);
+    }
+    for (const p of add) clear[p] = 1;
+  }
+  for (let p = 0; p < n; p++)
+    if (clear[p] && rgba[p * 4 + 3] !== 0) {
+      rgba[p * 4 + 3] = 0;
+      cleared++;
+    }
+  return cleared;
+}
+
+/** Quick probe on a small downscaled copy: does the tile contain a flat white area worth checking? */
+export function probeHasWhite(rgba: Uint8ClampedArray, minPixels = 2): boolean {
+  let w = 0;
+  for (let i = 0; i < rgba.length; i += 4) if (rgba[i] >= 250 && rgba[i + 1] >= 250 && rgba[i + 2] >= 250 && ++w >= minPixels) return true;
+  return false;
+}

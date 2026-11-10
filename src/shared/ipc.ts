@@ -228,6 +228,7 @@ export const IPC = {
   aircraftLookup: 'aircraft:lookup',
   aircraftNear: 'aircraft:near',
   aircraftRoute: 'aircraft:route',
+  vehicleInfo: 'vehicle:info',
   watchlistGet: 'watchlist:get',
   watchlistSet: 'watchlist:set',
   docsList: 'docs:list',
@@ -295,6 +296,14 @@ export const ipcArgSchemas = {
   [IPC.sceneImport]: z.tuple([]),
   [IPC.aircraftLookup]: z.tuple([z.string().trim().min(2).max(12).regex(/^[A-Za-z0-9-]+$/)]),
   [IPC.aircraftNear]: z.tuple([lat, lon, z.number().int().min(1).max(100)]),
+  [IPC.vehicleInfo]: z.tuple([
+    z.object({
+      kind: z.enum(['aircraft', 'vessel']),
+      hex: z.string().regex(/^[0-9a-f]{6}$/).optional(),
+      registration: z.string().trim().max(12).regex(/^[A-Z0-9-]+$/).optional(),
+      imo: z.number().int().min(1000000).max(9999999).optional(),
+    }),
+  ]),
   [IPC.aircraftRoute]: z.tuple([z.string().trim().min(2).max(8).regex(/^[A-Z0-9]+$/), lat, lon]),
   [IPC.watchlistGet]: z.tuple([]),
   [IPC.watchlistSet]: z.tuple([z.array(watchItemSchema).max(500)]),

@@ -179,7 +179,7 @@ export function SettingsDialog({ settings, onClose }: { settings: Settings; onCl
             </label>
           </div>
           <label className="check">
-            <input type="checkbox" checked={s.aircraftPhotos} onChange={(e) => set('aircraftPhotos', e.target.checked)} /> Aircraft photos from Planespotters.net (exact aircraft only, matched by ICAO address; the app sends the selected aircraft’s address to Planespotters.net; review their API terms before commercial use)
+            <input type="checkbox" checked={s.aircraftPhotos} onChange={(e) => set('aircraftPhotos', e.target.checked)} /> Aircraft and ship photos and exact aircraft model: when you select an aircraft or ship, its ICAO address, registration or IMO number is sent to adsbdb.com, Wikimedia Commons and airport-data.com. Only photos of that exact aircraft or ship are shown, with author and license; airport-data.com photos are the photographers’ copyright, so review their terms before commercial use
           </label>
           <label className="check">
             <input type="checkbox" checked={s.streetLabels} onChange={(e) => set('streetLabels', e.target.checked)} /> Street names when zoomed in (below about 3 km)

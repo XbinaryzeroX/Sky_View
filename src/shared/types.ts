@@ -191,7 +191,7 @@ export interface Settings {
   vesselLabels: 'selected' | 'hovered' | 'all';
   /** Camera record ids the user starred (stored locally). */
   favoriteCameras: string[];
-  /** Opt-in: exact-aircraft photos from Planespotters.net (photographer credit and link shown). */
+  /** Opt-in: exact aircraft model and photos of the exact aircraft/ship (adsbdb.com, Wikimedia Commons, airport-data.com). */
   aircraftPhotos: boolean;
   /** Opt-in: worldwide aircraft snapshot from OpenSky Network when zoomed out past the live-query limit. */
   worldAircraft: boolean;

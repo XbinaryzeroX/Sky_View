@@ -25,10 +25,15 @@ import { UrlTemplateImageryProvider, type Request } from 'cesium';
 
 export type UsgsService = 'USGSImageryOnly' | 'USGSImageryTopo' | 'USGSTopo';
 
-import { BLANK_JPEG_MAX_BYTES, BLANK_WHITE_FRACTION, clearNoDataPixels, whiteFraction } from '../../shared/tilePixels';
+import { BLANK_JPEG_MAX_BYTES, BLANK_WHITE_FRACTION, clearNoDataPixels, clearWhiteFill, probeHasWhite, whiteFraction } from '../../shared/tilePixels';
 import { offshoreMask } from './vectorTiles';
 
-export const usgsStats = { noDataTiles: 0, blankTiles: 0, imageryTiles: 0, oceanMasked: 0, maskUnavailable: 0 };
+export const usgsStats = { noDataTiles: 0, blankTiles: 0, imageryTiles: 0, oceanMasked: 0, maskUnavailable: 0, mixedWhiteTiles: 0 };
+
+// Coverage-edge tiles (2026-11-09, Kingston ON): JPEGs of 5-11 KB that are part imagery, part flat white
+// no-data. They pass the size test, so each imagery JPEG is probed on a 32×32 copy (≈4 KB readback) and only
+// tiles with white in the probe get the full-resolution white-fill clearing.
+const PROBE = 32;
 
 export class UsgsImageryProvider extends UrlTemplateImageryProvider {
   private readonly service: UsgsService;
@@ -54,6 +59,33 @@ export class UsgsImageryProvider extends UrlTemplateImageryProvider {
       // removed on the GPU (colorToAlpha on the layer, see basemaps.ts), so no pixel readback is needed.
       if (!isPng && (!clearable || blob.size > BLANK_JPEG_MAX_BYTES)) {
         usgsStats.imageryTiles++;
+        if (clearable) {
+          const dec = await createImageBitmap(blob);
+          const pc = new OffscreenCanvas(PROBE, PROBE);
+          const pg = pc.getContext('2d', { willReadFrequently: true })!;
+          pg.drawImage(dec, 0, 0, PROBE, PROBE);
+          if (probeHasWhite(pg.getImageData(0, 0, PROBE, PROBE).data)) {
+            const t0 = performance.now();
+            const c = new OffscreenCanvas(dec.width, dec.height);
+            const g = c.getContext('2d', { willReadFrequently: true })!;
+            g.drawImage(dec, 0, 0);
+            const img = g.getImageData(0, 0, dec.width, dec.height);
+            if (clearWhiteFill(img.data, dec.width, dec.height) > 0) {
+              usgsStats.mixedWhiteTiles++;
+              g.putImageData(img, 0, 0);
+              profAdd('usgs.white', performance.now() - t0);
+              dec.close();
+              const m = await maskP;
+              if (m && m !== 'none') {
+                usgsStats.oceanMasked++;
+                g.globalCompositeOperation = 'destination-out';
+                g.drawImage(m, 0, 0, c.width, c.height);
+              }
+              return createImageBitmap(c, { imageOrientation: 'flipY' });
+            }
+          }
+          dec.close();
+        }
         const mask = await maskP;
         if (mask === null || mask === 'none') {
           if (mask === null && clearable && this.maskOcean) usgsStats.maskUnavailable++;
@@ -83,7 +115,11 @@ export class UsgsImageryProvider extends UrlTemplateImageryProvider {
       } else if (whiteFraction(img.data) >= BLANK_WHITE_FRACTION) {
         usgsStats.blankTiles++;
         for (let i = 3; i < img.data.length; i += 4) img.data[i] = 0;
-      } else usgsStats.imageryTiles++;
+      } else {
+        // Small JPEG that is mostly white with a corner of imagery: clear the white part only.
+        usgsStats.imageryTiles++;
+        if (clearable && clearWhiteFill(img.data, bmp.width, bmp.height) > 0) usgsStats.mixedWhiteTiles++;
+      }
       g.putImageData(img, 0, 0);
       profAdd('usgs.pixels', performance.now() - t0);
       const m = await maskP;

@@ -110,10 +110,13 @@ const PROP_LABEL: Record<string, string> = {
   headingDeg: 'Heading (°)',
 };
 
-function fmt(v: string | number | boolean | null): string {
+/** Identifier-like keys are shown without digit grouping (IMO 9401556, not 9,401,556). */
+const ID_KEYS = /^(mmsi|imo|icao24|squawk|id|year|noradId|catalogNumber)$/i;
+
+function fmt(v: string | number | boolean | null, key = ''): string {
   if (v === null || v === '') return '—';
   if (typeof v === 'boolean') return v ? 'Yes' : 'No';
-  if (typeof v === 'number') return Number.isInteger(v) ? v.toLocaleString() : v.toFixed(2);
+  if (typeof v === 'number') return Number.isInteger(v) ? (ID_KEYS.test(key) ? String(v) : v.toLocaleString()) : v.toFixed(2);
   if (/^\d{4}-\d{2}-\d{2}T/.test(v)) return new Date(v).toLocaleString();
   return v;
 }
@@ -196,6 +199,9 @@ export function RecordDetails(p: Props) {
           </button>
         )}
       </div>
+      {(p.layer === 'aircraft' || p.layer === 'aircraftMil' || p.layer === 'vessels') && (
+        <VehicleExtras layer={p.layer} r={r} photosEnabled={!!p.photosEnabled} onEnablePhotos={() => p.onEnablePhotos?.()} onShowRoute={(x) => p.onShowRoute?.(x)} />
+      )}
       <p className="muted small">{meta.temporalNote}</p>
       {p.tracked && movable && p.layer !== 'satellites' && <p className="muted small">The trail shows positions this app recorded while running (observed fixes joined by straight lines; not interpolated estimates).</p>}
       {p.orbitShown && <p className="muted small">The orbit line is a prediction from the orbital elements for about one revolution.</p>}
@@ -259,13 +265,10 @@ export function RecordDetails(p: Props) {
           .map(([k, v]) => (
             <div className="kv" key={k}>
               <dt>{PROP_LABEL[k] ?? k}</dt>
-              <dd className={k === 'raw' ? 'mono' : ''}>{fmt(v)}</dd>
+              <dd className={k === 'raw' ? 'mono' : ''}>{fmt(v, k)}</dd>
             </div>
           ))}
       </dl>
-      {(p.layer === 'aircraft' || p.layer === 'aircraftMil' || p.layer === 'vessels') && (
-        <VehicleExtras layer={p.layer} r={r} photosEnabled={!!p.photosEnabled} onEnablePhotos={() => p.onEnablePhotos?.()} onShowRoute={(x) => p.onShowRoute?.(x)} />
-      )}
       {p.layer === 'cameras' ? <CameraPlayer key={r.id} media={cameraMedia(r)} title={r.label} /> : r.imageUrl && <CameraImage url={r.imageUrl} refreshMin={typeof r.props.updateFrequencyMin === 'number' ? r.props.updateFrequencyMin : null} />}
       {nearby.length > 0 && (
         <>

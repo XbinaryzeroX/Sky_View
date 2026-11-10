@@ -260,7 +260,7 @@ app.whenReady().then(async () => {
     },
     appVersion: version,
   };
-  const handlers = createHandlers(core, store, fetchJson, platform, { layers, providers });
+  const handlers = createHandlers(core, store, fetchJson, platform, { layers, providers, userAgent: ua });
   const baseSetCredential = handlers[IPC.providersSetCredential];
   handlers[IPC.providersSetCredential] = async (args) => {
     const before = JSON.stringify(remoteOptions());

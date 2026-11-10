@@ -1,4 +1,5 @@
 import type { RouteInfo } from '../../shared/route';
+import type { VehicleInfo } from '../../shared/vehicleInfo';
 // Typed access to the preload bridge.
 
 import type {
@@ -63,6 +64,7 @@ export interface AtlasApi {
   aircraftNear(lat: number, lon: number, radiusNm: number): Promise<GeoRecord[]>;
   /** Usual route for a callsign from the adsb.lol route database (not a date-specific flight plan). */
   aircraftRoute(callsign: string, lat: number, lon: number): Promise<RouteInfo | null>;
+  vehicleInfo(q: { kind: 'aircraft' | 'vessel'; hex?: string; registration?: string; imo?: number }): Promise<VehicleInfo>;
   getWatchlist(): Promise<WatchItem[]>;
   setWatchlist(items: WatchItem[]): Promise<boolean>;
   listDocs<T = Record<string, unknown>>(kind: 'boards' | 'people'): Promise<T[]>;

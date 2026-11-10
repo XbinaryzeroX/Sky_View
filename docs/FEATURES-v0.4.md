@@ -34,8 +34,8 @@ Screenshots: `docs/screenshots/v0.4/`.
 | Vessel symbols | By AIS ship type: cargo, tanker, passenger/ferry, high-speed, fishing, tug, sailing, pleasure, service, military, unknown. AIS cannot tell container ships from bulk carriers, so they are not split | ✅ |
 | Symbol explanation | Details panel line, e.g. "Light aircraft (from ICAO type P28B)" | ✅ |
 | Hidden behind the earth | Aircraft and vessels are depth-tested and culled below the horizon | ✅ |
-| Aircraft photos | Opt-in (Settings), exact aircraft only, by ICAO address, with photographer credit and link | ⛔ Planespotters.net returns HTTP 403 because it requires apps to send a contact URL or email in the User-Agent. That isn't configured, and your email isn't sent without your consent |
-| Vessel photos | No authorized source. The panel says so; no type-based guessing | ⛔ |
+| Aircraft photos and exact model | Opt-in (Settings). Exact model, operator and registration from adsbdb.com by ICAO address; model family from a built-in ICAO type table when the registry has no record. Photo of the same airframe: Wikimedia Commons (registration in the file title; author, license and year shown), else airport-data.com (photographer credited). Planespotters.net is no longer used (it refused requests without a contact User-Agent) | ✅ (UAL2364: Boeing 757-224/W, United Airlines, photo of N17126 on Commons) |
+| Vessel photos | Opt-in. Photo of the same ship from Wikimedia Commons, matched by IMO number (author and license shown). Ships without an IMO number get no photo. AIS gives category and size, not make or class | ✅ (STAV VIKING, IMO 9401556, CC0 photo) |
 | Observed track | Positions recorded while the app runs (Track button), drawn as a solid line | ✅ (existing) |
 | Reported route | "Look up reported route" calls the adsb.lol route database and draws a dashed line between airports. Labelled as the usual route for that callsign, not today's flight plan | 🟨 The service returned an empty answer for every callsign tried during testing, so the panel shows "Not provided by connected sources" |
 | Times | UTC plus relative age on records; incidents show UTC | ✅ |
@@ -95,3 +95,12 @@ Screenshots: `docs/screenshots/v0.4/`.
 | Worldwide aircraft (Settings) | Opt-in. When zoomed out past 3,000 km, uses the OpenSky Network worldwide snapshot: every 15 min anonymously, about every 90 s with your free OpenSky API client (Providers → OpenSky). Positions are labelled as a snapshot, not a live track. Zoomed in, live adsb.lol data is used | ✅ (10,672 aircraft in one snapshot). OpenSky's free API is meant for non-commercial use, so check with OpenSky before selling |
 | Many-object rendering | More than 1,500 aircraft or vessels in a layer are drawn as one batched billboard collection (picking and selection still work) | ✅ |
 | Worldwide ships | With your AISStream key, ships stream for the whole visible area, worldwide at globe scale (up to 20,000 kept) | 🟨 needs your key |
+
+## v0.4.3 additions
+
+| Feature | Now | Status |
+|---|---|---|
+| White patches near the U.S. border | Fixed. USGS sends part-imagery, part-white JPEG tiles at the edge of its coverage (e.g. Kingston, Ontario). Large flat white areas in those tiles are now made transparent so the global base shows through; snow, clouds and white roofs are kept | ✅ (Kingston: 16 mixed tiles cleared, no white patches) |
+| Vehicle identity at the top of the details panel | Model line, operator, photo and journey now appear right under the Focus/Track buttons. IMO, MMSI and similar identifiers are shown without digit grouping | ✅ |
+
+New main-process hosts: api.adsbdb.com, commons.wikimedia.org, airport-data.com. New renderer image prefixes: upload.wikimedia.org/wikipedia/commons/, thumb.wikimedia.org/wikipedia/commons/, image.airport-data.com/aircraft/, airport-data.com/images/aircraft/. Planespotters hosts removed. airport-data.com photos are the photographers' copyright; review their terms before commercial use.
