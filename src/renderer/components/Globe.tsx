@@ -1,3 +1,4 @@
+import { redactCredentialText } from '../../shared/sanitize';
 import { profAdd } from '../lib/prof';
 import { buildImageryLayers, type ImageryState } from '../map/imageryOverlay';
 import type { RouteInfo } from '../../shared/route';
@@ -315,7 +316,8 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     scene.postRender.addEventListener(() => frameStart && profAdd('cesium.frame', performance.now() - frameStart));
     // A render error stops Cesium's render loop (the globe would freeze). Record it for Diagnostics and restart.
     scene.renderError.addEventListener((_sc: unknown, err: unknown) => {
-      const msg = err instanceof Error ? `${err.message} | ${(err.stack ?? '').split('\n').slice(0, 4).join(' | ')}` : String(err);
+      const raw = err instanceof Error ? `${err.message} | ${(err.stack ?? '').split('\n').slice(0, 4).join(' | ')}` : String(err);
+      const msg = redactCredentialText(raw, [propsRef.current.google3dKey, ...Object.values(propsRef.current.imageryKeys)]);
       renderErrorsRef.current = { count: renderErrorsRef.current.count + 1, last: msg.slice(0, 600) };
       console.error('Cesium render error', msg);
       setTimeout(() => {
@@ -488,7 +490,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       const hook = (p: { errorEvent: { addEventListener(cb: (e: { error?: unknown; level?: number }) => void): void } }) =>
         p.errorEvent.addEventListener((e) => {
           imageryErrorsRef.current.count++;
-          imageryErrorsRef.current.last = `level ${e.level ?? '?'}: ${e.error instanceof Error ? e.error.message : 'tile request failed'}`;
+          imageryErrorsRef.current.last = redactCredentialText(`level ${e.level ?? '?'}: ${e.error instanceof Error ? e.error.message : 'tile request failed'}`, Object.values(propsRef.current.imageryKeys));
         });
       if (layer.ready) hook(layer.imageryProvider as never);
       else layer.readyEvent.addEventListener((prov) => hook(prov as never));
@@ -909,7 +911,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
           ts.tileLoad.addEventListener(() => loaded++);
           ts.tileFailed.addEventListener((e: { message?: string }) => {
             failed++;
-            imageryErrorsRef.current.last = 'Google 3D Tiles: ' + (e?.message ?? 'tile failed');
+            imageryErrorsRef.current.last = 'Google 3D Tiles: ' + redactCredentialText(e?.message ?? 'tile failed', [propsRef.current.google3dKey]);
             imageryErrorsRef.current.count++;
             if (loaded === 0 && failed === 3 && tilesetRef.current === ts) {
               w.scene.primitives.remove(ts);
@@ -946,7 +948,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
           apply();
         })
         .catch((e) => {
-          imageryErrorsRef.current.last = 'Google 3D Tiles: ' + (e instanceof Error ? e.message : String(e));
+          imageryErrorsRef.current.last = 'Google 3D Tiles: ' + redactCredentialText(e instanceof Error ? e.message : String(e), [propsRef.current.google3dKey]);
           imageryErrorsRef.current.count++;
           propsRef.current.onProviderError?.(googleRefusal('Photoreal 3D', e));
         });

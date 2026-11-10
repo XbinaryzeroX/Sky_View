@@ -111,3 +111,55 @@ New main-process hosts: api.adsbdb.com, commons.wikimedia.org, airport-data.com.
 |---|---|---|
 | Dark rectangles in the ocean (e.g. Gulf of Guinea) while rotating | About 7% of terrain tiles lost their water mask: an all-land map data tile (no water layer) produced an uninitialised canvas that crashed the mask step, so any terrain tile touching inland areas was left at sea-floor depth without water shading. Fixed at the source; if coastline data is ever unavailable, elevation below -10 m is now used as the sea, so a tile can no longer sink | ✅ (Gulf of Guinea views: 0 tiles without a mask, was 19-59) |
 | Camera Fullscreen button did nothing | The app denied all browser permissions, including fullscreen. Fullscreen (only) is now allowed, and only for the app's own page | ✅ (camera picture entered and left fullscreen) |
+
+## v0.5.0 — Markets and Community
+
+| Feature | Configuration / cost | Builder verification |
+|---|---|---|
+| Markets setup and empty states | No key: no provider calls, no default symbols or fabricated prices | Unit tests; desktop visual verification blocked by sandbox |
+| Watchlist, symbol search, quotes, candlestick/line and volume charts | Included publisher key when supplied, or the user's OS-encrypted key; prices may be delayed; check exchange/plan rights | Built and fixture-tested; real-key calls not verified |
+| Twelve Data | 800 credits/day and 8/minute; app counts all attempts including Provider tests | Mock service tests; external account usage is not visible to the app |
+| Alpha Vantage | 25 requests/day and app limit 5/minute; warning at 20; premium-only responses shown as errors | Mock service tests; real-key calls not verified |
+| Market caching | Quote 60 seconds; intraday 5 minutes; daily/weekly 1 hour; search 24 hours; bounded to 200 entries with in-flight coalescing | Tests cover cache/coalescing and quotas; counters persist across restarts using UTC days |
+| What's moving it | GDELT keyless news index, no article images; 15-minute cache; one app-wide request start every 6 seconds | Fixtures include GDELT plain-text rate-limit responses; queue tested |
+| Movement context | Numeric range change, last available session, largest session move; sessions grouped by UTC date; weekly ranges explicitly report weekly-bar moves | Pure helper tests; no causal claim or investment advice |
+| Optional local AI | Enabled and reachable Ollama only; explicit click; numbered untrusted headlines, citations, maximum 120 words, no advice/prediction instructions | Prompt tests; actual model output not verified |
+| Community reading | Keyless Lemmy API v3 from the configured HTTPS instance (default lemmy.world), with NSFW/deleted/removed filters and nested comments | Helpers and mocked service tested; live anonymous feed not verified |
+| Community participation | User's Lemmy account; login/2FA, create post, comment/reply, vote, report, block author/community, follow/unfollow | Implemented; live login and writes not verified; no account created and nothing posted by builder |
+| Community secrets and images | Password sent once, never stored; JWT encrypted per instance, cleared on instance change; only same-instance thumbnails through main, image MIME allowlist and 1 MB cap | Mock auth and host-boundary tests; OS encryption unavailable during desktop smoke launch |
+| GUI | Lucide icons, calmer surfaces, finite eased feedback and content/dialog entry, reduced-motion support; title bar remains 46 px with reserved system-control space | Typechecked and renderer production build passed; 1280×720 and 1920×1080 visual checks remain unverified |
+
+Outbound JSON hosts added: `api.twelvedata.com`, `www.alphavantage.co`, `api.gdeltproject.org`, plus exactly the configured Lemmy instance at runtime. Lemmy API redirects must stay on that origin; thumbnail redirects are refused. Renderer CSP is unchanged; globe changes are limited to redacting diagnostic errors, with rendering behavior preserved. No remote scripts, widgets, or frames were added.
+
+External browser links still use the existing validated `openExternal` IPC. The main process additionally registers a bounded set of exact HTTP(S) URLs observed in news/community responses, since the previous fixed publisher list would block these user-requested links. This does not authorize renderer network access or arbitrary renderer-provided browser destinations. Provider documentation/signup domains were added to the browser-link list.
+
+Dependencies: `lightweight-charts: ^5.2.1` (Apache-2.0), `lucide-react: ^1.70.0` (ISC); `package-lock.json` and third-party notices refreshed by the host. TradingView attribution remains enabled on charts.
+
+### Built-in keys
+
+The publisher may supply an optional build-time JSON file at `%USERPROFILE%\.atlas-watch\builtin-keys.json` (resolved with `os.homedir()`), or set `ATLAS_WATCH_BUILTIN_KEYS` to its path. Supported fields are `google3d`, `twelvedata`, and `alphavantage`; values must be 8–200 printable ASCII characters. Missing file means no included keys. Keep this file outside the repository.
+
+The main bundle uses per-build random XOR/base64 **obfuscation, not security**: anyone with a copy of the application can extract these keys. Google tiles inherently need the resolved browser key in the renderer. Market included-key values stay in main. The user's saved key always wins; a failed user key is never retried using the included key. Removing the saved key restores the included key, if present.
+
+The included Google key is used **only for Photoreal 3D**. Google Satellite (2D tiles) and Google place search are separately billed products and always require the user's own key.
+
+Per install and UTC day, included-key allowances are 30 Google tileset/key requests, 200 Twelve Data requests, and 10 Alpha Vantage requests. Provider tests share the applicable allowance. Market cache hits do not consume requests. Existing user-key limits remain in effect. Providers shows the active credential source and remaining included allowance without displaying its value.
+
+**Set a daily request quota on the Map Tiles API in Google Cloud Console so usage cannot exceed the free allowance.** Per-install allowances do not cap aggregate usage across copies and are not tamper-proof. Free market-data plans may not permit commercial redistribution; the owner must check the provider's terms before distributing a keyed build.
+
+### Floating map workspace
+
+The globe fills the workspace without being unmounted. Layers, Places, Scenes, Data/legend, diagnostics and tools float above it; other narrow pages use a 400 px floating panel. Markets and Community keep their wide layouts. Existing actions remain reachable through labeled pills/tooltips, the compact top bar, bottom toolbar, and view controls. Credits remain visible and expandable; reduced motion is respected.
+
+### Host verification (2026-11-09)
+
+Built by Codex (spec + two fix rounds), inspected and fixed by Claude, re-inspected by Codex five times (13 findings fixed: R1–R13).
+
+- Proof on the host: npm run typecheck && npm test && npm run build -> 250 tests pass, build OK.
+- Desktop checks at 1920×1080, 1440×900 and 1280×720: floating map workspace (Layers, Data, Places/Scenes/Cameras, bottom toolbar, zoom stack), no clipped buttons, globe full-bleed; Ops floating page; Markets setup card without a key; Community live from lemmy.world (20 posts, 80-comment thread).
+- Not verified: Markets with a real Twelve Data / Alpha Vantage key, Lemmy sign-in and writes (no account was used), local-AI summaries, Google Photoreal with an included key (none configured).
+
+### Known issues (found by the final review, not fixed in this release)
+
+- After a vote/comment inside a post, a slow background reload can reopen that post if you have already gone back to the feed or opened another post.
+- With Diagnostics open, "Browse all cameras" and the toolbar's Watchlist open their page over the Diagnostics panel (the nav rail closes it first).

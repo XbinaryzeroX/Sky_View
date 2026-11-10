@@ -31,7 +31,9 @@ export type ProviderId =
   | 'census-geocoder'
   | 'google3d'
   | 'opensky'
-  | 'ollama';
+  | 'ollama'
+  | 'twelvedata'
+  | 'alphavantage';
 
 export interface ProviderInfo {
   id: ProviderId;
@@ -49,6 +51,8 @@ export interface ProviderInfo {
 }
 
 export const PROVIDERS: ProviderInfo[] = [
+  { id: 'twelvedata', name: 'Twelve Data', purpose: 'Stock, forex and crypto prices', status: 'free-key', statusNote: 'Included key when supplied by the publisher, or your own key. Delayed or EOD depending on exchange and plan; check your data rights.', docsUrl: 'https://twelvedata.com/docs', signupUrl: 'https://twelvedata.com/register', credential: { kind: 'secret', label: 'API key', placeholder: 'Paste your Twelve Data key' }, capabilities: ['Quotes', 'Charts', 'Symbol search'], limits: '800 API credits/day, 8/minute; cached on demand', testable: true },
+  { id: 'alphavantage', name: 'Alpha Vantage', purpose: 'Market prices', status: 'free-key', statusNote: 'Included key when supplied by the publisher, or your own key. Some intervals require a premium plan; provider errors are displayed.', docsUrl: 'https://www.alphavantage.co/documentation/', signupUrl: 'https://www.alphavantage.co/support/#api-key', credential: { kind: 'secret', label: 'API key', placeholder: 'Paste your Alpha Vantage key' }, capabilities: ['Quotes', 'Charts', 'Symbol search'], limits: '25 requests/day, app caps at 5/minute; cached on demand', testable: true },
   { id: 'openfreemap', name: 'OpenFreeMap (OpenStreetMap vector tiles)', purpose: 'Worldwide streets, water, place names, building footprints and heights', status: 'free', statusNote: 'Free, commercial use allowed, no key, no request limits (OpenFreeMap FAQ). Data ODbL © OpenStreetMap contributors, © OpenMapTiles; attribution required.', docsUrl: 'https://openfreemap.org/', signupUrl: null, credential: null, capabilities: ['Street map (worldwide)', 'Label overlay', '3D buildings (extruded)'], limits: 'Bulk/offline downloads limited by OpenFreeMap terms; tiles fetched only for the view', testable: true },
   { id: 'esri-imagery', name: 'Esri World Imagery (ArcGIS Location Platform)', purpose: 'Worldwide high-resolution satellite/aerial imagery', status: 'metered', statusNote: 'Requires your ArcGIS Location Platform API key. Free tier, then billed to your Esri account. Key is used in the map view, so restrict it to basemap services.', docsUrl: 'https://developers.arcgis.com/documentation/mapping-and-location-services/mapping/basemaps/', signupUrl: 'https://location.arcgis.com/sign-up/', credential: { kind: 'browser-key', label: 'ArcGIS API key (basemap access)', placeholder: 'AAPK… / AAPT…' }, capabilities: ['Worldwide imagery to zoom 19'], limits: 'Esri free tier limits, then metered', testable: true },
   { id: 'mapbox', name: 'Mapbox Satellite', purpose: 'Worldwide satellite/aerial imagery', status: 'metered', statusNote: 'Requires your Mapbox public access token. Free tier, then billed to your Mapbox account.', docsUrl: 'https://docs.mapbox.com/data/tilesets/reference/mapbox-satellite/', signupUrl: 'https://account.mapbox.com/auth/signup/', credential: { kind: 'browser-key', label: 'Mapbox public token (pk.…)', placeholder: 'pk.eyJ…' }, capabilities: ['Worldwide imagery to zoom 19'], limits: 'Mapbox free tier, then metered', testable: true },
@@ -75,13 +79,18 @@ export const PROVIDERS: ProviderInfo[] = [
   { id: 'mbta', name: 'MBTA V3 API', purpose: 'Boston transit vehicle positions', status: 'free', statusNote: 'MassDOT developer license. Review before commercial use.', docsUrl: 'https://www.mbta.com/developers/v3-api', signupUrl: 'https://api-v3.mbta.com/', credential: null, capabilities: ['Transit (Boston)'], limits: '20 requests/minute without a key; polled every 20 s while on', testable: true },
   { id: 'faa-sua', name: 'FAA Special Use Airspace', purpose: 'Prohibited and restricted airspace', status: 'free', statusNote: 'Public domain', docsUrl: 'https://adds-faa.opendata.arcgis.com/', signupUrl: null, credential: null, capabilities: ['Airspace'], limits: 'Refreshed daily', testable: true },
   { id: 'census-geocoder', name: 'U.S. Census Geocoder', purpose: 'U.S. street-address search', status: 'free', statusNote: 'Public domain', docsUrl: 'https://geocoding.geo.census.gov/geocoder/', signupUrl: null, credential: null, capabilities: ['Address search (U.S.)'], limits: 'Requests sent only when you search an address', testable: true },
-  { id: 'google3d', name: 'Google Maps Platform (Photoreal 3D + Satellite)', purpose: 'Photorealistic 3D cities and worldwide satellite imagery (Map Tiles API); place search via Geocoding API while these are on', status: 'metered', statusNote: 'Billed to your Google Cloud account (Map Tiles API). Google terms restrict caching and require Google attribution.', docsUrl: 'https://developers.google.com/maps/documentation/tile/3d-tiles', signupUrl: 'https://console.cloud.google.com/google/maps-apis/overview', credential: { kind: 'browser-key', label: 'Google Maps API key (browser key, restrict to Map Tiles API)', placeholder: 'AIza…' }, capabilities: ['Photorealistic 3D cities', 'Worldwide satellite imagery (2D tiles)', 'Google place search while Google imagery is on'], limits: 'Metered per root-tile session; Atlas Watch never uses its own key', testable: true },
+  { id: 'google3d', name: 'Google Maps Platform (Photoreal 3D + Satellite)', purpose: 'Photorealistic 3D cities and worldwide satellite imagery (Map Tiles API); place search via Geocoding API while these are on', status: 'metered', statusNote: 'Billed to your Google Cloud account (Map Tiles API). Google terms restrict caching and require Google attribution.', docsUrl: 'https://developers.google.com/maps/documentation/tile/3d-tiles', signupUrl: 'https://console.cloud.google.com/google/maps-apis/overview', credential: { kind: 'browser-key', label: 'Google Maps API key (browser key, restrict to Map Tiles API)', placeholder: 'AIza…' }, capabilities: ['Photorealistic 3D cities', 'Worldwide satellite imagery (2D tiles)', 'Google place search while Google imagery is on'], limits: 'Metered per root-tile session; included key allowance or your own key', testable: true },
   { id: 'ollama', name: 'Ollama (local AI)', purpose: 'Optional local language model', status: 'free', statusNote: 'Runs on your computer; each model has its own license', docsUrl: 'https://ollama.com/', signupUrl: null, credential: null, capabilities: ['AI explanations'], limits: 'Requires suitable hardware; configure in Settings', testable: false },
 ];
 
 export interface ProviderState {
   id: ProviderId;
   configured: boolean;
+  credentialSource?: 'user' | 'builtin' | null;
+  /** Set when the saved credential exists but cannot be read (replace or remove it). */
+  credentialError?: string | null;
+  builtinRemaining?: number | null;
+  userConfigured?: boolean;
   /** For URL-type config only (not secret). */
   configValue: string | null;
   lastTest: { ok: boolean; message: string; at: string } | null;

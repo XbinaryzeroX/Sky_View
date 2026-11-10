@@ -2,12 +2,16 @@
 // Tests call each provider's real endpoint with a minimal request and
 // report the actual outcome; credentials are redacted from all messages.
 
+import type { MarketService } from './markets';
+import { CredentialService, BUILTIN_ALLOWANCES, type BuiltinProvider, type Credential } from './credentials';
 import { PROVIDERS, type ProviderId, type ProviderState } from '../shared/providers';
 import { FeedHttpError, isAllowedLocalReceiverUrl, setLocalReceiverUrl, type FetchJson, type FetchText } from './feeds/http';
 import { redactSecrets, type SecretStore } from './secrets';
 import type { AtlasStore } from './store';
 
 export class ProviderService {
+  marketService?: MarketService;
+  readonly credentials: CredentialService;
   private lastTests = new Map<ProviderId, { ok: boolean; message: string; at: string }>();
 
   constructor(
@@ -17,7 +21,9 @@ export class ProviderService {
     private readonly fetchText: FetchText,
     private readonly ua: () => string,
     private readonly testWebSocket: (key: string) => Promise<{ ok: boolean; message: string }>,
+    credentials?: CredentialService,
   ) {
+    this.credentials = credentials ?? new CredentialService(secrets, store);
     setLocalReceiverUrl(this.localReceiverUrl());
   }
 
@@ -30,12 +36,27 @@ export class ProviderService {
   }
 
   list(): ProviderState[] {
-    return PROVIDERS.map((p) => ({
-      id: p.id,
-      configured: p.credential ? (p.credential.kind === 'url' ? !!this.localReceiverUrl() : p.credential.kind === 'ack' ? this.store.getMeta(`config:${p.id}-ack`) === 'yes' : this.secrets.has(p.id)) : true,
-      configValue: p.credential?.kind === 'url' ? this.localReceiverUrl() : null,
-      lastTest: this.lastTests.get(p.id) ?? null,
-    }));
+    return PROVIDERS.map((p) => {
+      // Resolve once per provider; a credential that cannot be decrypted is reported on its own row
+      // (so it can be replaced or removed) instead of failing the whole list. No built-in fallback.
+      let credential: Credential | null = null;
+      let credentialError: string | null = null;
+      try {
+        credential = this.credentials.credentialFor(p.id);
+      } catch (e) {
+        credentialError = (e as Error).message;
+      }
+      return {
+        id: p.id,
+        configured: p.credential ? (p.credential.kind === 'url' ? !!this.localReceiverUrl() : p.credential.kind === 'ack' ? this.store.getMeta(`config:${p.id}-ack`) === 'yes' : !!credential) : true,
+        credentialSource: credential?.source ?? null,
+        credentialError,
+        builtinRemaining: p.id in BUILTIN_ALLOWANCES && credential?.source === 'builtin' ? this.credentials.remaining(p.id as BuiltinProvider) : null,
+        userConfigured: this.secrets.has(p.id),
+        configValue: p.credential?.kind === 'url' ? this.localReceiverUrl() : null,
+        lastTest: this.lastTests.get(p.id) ?? null,
+      };
+    });
   }
 
   setCredential(id: ProviderId, value: string | null): void {
@@ -60,12 +81,12 @@ export class ProviderService {
   }
 
   getSecret(id: ProviderId): string | null {
-    return this.secrets.get(id);
+    return this.credentials.credentialFor(id)?.value ?? null;
   }
 
   async test(id: ProviderId): Promise<{ ok: boolean; message: string }> {
     const headers = { 'User-Agent': this.ua() };
-    const secret = this.secrets.get(id);
+    const secret = this.credentials.credentialFor(id)?.value ?? null;
     let r: { ok: boolean; message: string };
     try {
       r = await this.runTest(id, headers, secret);
@@ -89,6 +110,12 @@ export class ProviderService {
   private async runTest(id: ProviderId, headers: Record<string, string>, secret: string | null): Promise<{ ok: boolean; message: string }> {
     const json = async (url: string, extra: Record<string, string> = {}) => (await this.fetchJson(url, { headers: { ...headers, ...extra }, timeoutMs: 15000 })).body;
     switch (id) {
+      case 'twelvedata':
+      case 'alphavantage': {
+        if (!this.marketService) throw new Error('Market service unavailable');
+        const result = await this.marketService.test(id);
+        return {ok: true, message: 'Connected. Quote as of '+result.data.asOf+(result.warning?' '+result.warning:'')};
+      }
       case 'nws': {
         const b = (await json('https://api.weather.gov/alerts/active/count', { Accept: 'application/geo+json' })) as { total?: number };
         return { ok: true, message: `Connected. ${b.total ?? '?'} active alerts nationwide.` };
@@ -184,6 +211,7 @@ export class ProviderService {
       }
       case 'google3d': {
         if (!secret) return { ok: false, message: 'Add your Google Maps API key first. Requests are billed to your Google Cloud account.' };
+        if (this.credentials.credentialFor('google3d')?.source === 'builtin') this.credentials.reserveBuiltin('google3d');
         await this.fetchJson(`https://tile.googleapis.com/v1/3dtiles/root.json?key=${encodeURIComponent(secret)}`, { headers, timeoutMs: 15000 });
         return { ok: true, message: 'Key accepted by the Map Tiles API. Note: this test itself counts as a billable root-tile request.' };
       }

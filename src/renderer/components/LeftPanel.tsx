@@ -6,6 +6,7 @@ import { Empty } from './common';
 import type { GlobeLayers } from './Globe';
 
 interface Props {
+  mode?: 'all' | 'places' | 'alerts';
   snap: AppSnapshot;
   search: string;
   selectedLocationId: string | null;
@@ -57,7 +58,7 @@ export function LeftPanel(p: Props) {
 
   return (
     <aside className="panel left-panel" aria-label="Saved locations and layers">
-      <section className="panel-section grow">
+      {p.mode !== 'alerts' && <section className="panel-section grow">
         <div className="section-head">
           <h2>Saved locations</h2>
           <span className="count">{snap.locations.length}</span>
@@ -146,27 +147,27 @@ export function LeftPanel(p: Props) {
             </li>
           ))}
         </ul>
-      </section>
+      </section>}
 
-      <section className="panel-section">
+      {p.mode !== 'places' && <section className="panel-section">
         <div className="section-head">
           <h2>Alerts &amp; earthquakes</h2>
         </div>
         <div className="checks">
           <label>
-            <input type="checkbox" checked={p.layers.alerts} onChange={() => layer('alerts')} /> Weather alert polygons
+            <input type="checkbox" role="switch" className="layer-switch" checked={p.layers.alerts} onChange={() => layer('alerts')} /> Weather alert polygons
           </label>
           <label>
-            <input type="checkbox" checked={p.layers.quakes} onChange={() => layer('quakes')} /> Earthquakes
+            <input type="checkbox" role="switch" className="layer-switch" checked={p.layers.quakes} onChange={() => layer('quakes')} /> Earthquakes
           </label>
           <label>
-            <input type="checkbox" checked={p.layers.locations} onChange={() => layer('locations')} /> Saved locations
+            <input type="checkbox" role="switch" className="layer-switch" checked={p.layers.locations} onChange={() => layer('locations')} /> Saved locations
           </label>
           <label>
-            <input type="checkbox" checked={p.layers.radii} onChange={() => layer('radii')} disabled={!p.layers.locations} /> Monitoring radii
+            <input type="checkbox" role="switch" className="layer-switch" checked={p.layers.radii} onChange={() => layer('radii')} disabled={!p.layers.locations} /> Monitoring radii
           </label>
           <label>
-            <input type="checkbox" checked={p.layers.boundaries} onChange={() => layer('boundaries')} /> State &amp; country boundaries
+            <input type="checkbox" role="switch" className="layer-switch" checked={p.layers.boundaries} onChange={() => layer('boundaries')} /> State &amp; country boundaries
           </label>
         </div>
         <fieldset className="sev-filter">
@@ -207,7 +208,7 @@ export function LeftPanel(p: Props) {
             </select>
           </label>
         </div>
-      </section>
+      </section>}
       {p.children}
     </aside>
   );

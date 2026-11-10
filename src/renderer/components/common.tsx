@@ -1,3 +1,4 @@
+import { ExternalLink as ExternalIcon, X } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { AlertSeverity, FeedStatus, Freshness } from '../../shared/types';
 import { api } from '../lib/api';
@@ -28,11 +29,11 @@ export function ExternalLink({ url, children }: { url: string | null; children: 
       href={url}
       onClick={(e) => {
         e.preventDefault();
-        void api.openExternal(url);
+        void api.openExternal(url).then(ok=>{if(!ok)window.dispatchEvent(new CustomEvent('atlas-link-error',{detail:'This link was blocked by external URL validation.'}))});
       }}
       title={url}
     >
-      {children} <span aria-hidden="true">↗</span>
+      {children} <ExternalIcon size={16} strokeWidth={1.75} aria-hidden="true" />
     </a>
   );
 }
@@ -90,7 +91,7 @@ export function Modal({ title, onClose, children, wide = false, footer }: { titl
         <header className="modal-head">
           <h2>{title}</h2>
           <button className="icon-btn modal-close" onClick={onClose} aria-label="Close">
-            ✕
+            <X size={16} strokeWidth={1.75} aria-hidden="true" />
           </button>
         </header>
         <div className="modal-body">{children}</div>

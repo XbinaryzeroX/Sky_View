@@ -28,6 +28,7 @@ export function ProvidersDialog({ onClose }: { onClose(): void }) {
     setBusy(id);
     try {
       setStates(await api.setProviderCredential(id, value));
+      window.dispatchEvent(new CustomEvent('atlas-providers-changed', { detail: id }));
       setDrafts((d) => ({ ...d, [id]: '' }));
       setMsg((m) => ({ ...m, [id]: { ok: true, message: value ? 'Saved (encrypted with the Windows credential store).' : 'Removed.' } }));
     } catch (e) {
@@ -54,7 +55,7 @@ export function ProvidersDialog({ onClose }: { onClose(): void }) {
   return (
     <Modal title="Provider settings" onClose={onClose} wide>
       <p className="muted small">
-        Atlas Watch needs no paid credentials. Optional integrations below stay off until you configure them with your own account. Atlas Watch never uses its own keys for them. Secret keys are encrypted with
+        Atlas Watch needs no paid credentials. Some releases include limited provider keys. Your saved key takes precedence; removing it restores the included key. Secret keys are encrypted with
         the Windows credential store and never shown again, exported, or logged. Google’s 3D Tiles key is a browser key by design: restrict it to the Map Tiles API in Google Cloud.
       </p>
       <div className="btn-row">
@@ -77,6 +78,21 @@ export function ProvidersDialog({ onClose }: { onClose(): void }) {
                 <span className={`tag ${sl.cls}`}>{sl.label}</span>
                 {p.credential && <span className={`tag ${st?.configured ? 'ok-badge' : 'muted-badge'}`}>{st?.configured ? (p.credential.kind === 'ack' ? 'License confirmed' : 'Configured') : 'Not configured'}</span>}
               </div>
+              {st?.credentialError && (
+                <p className="error small" role="alert">
+                  {st.credentialError}
+                </p>
+              )}
+              {st?.credentialSource && (
+                <p className="small">
+                  {st.credentialSource === 'builtin'
+                    ? (p.id === 'google3d' ? 'Using the key included with Atlas Watch for Photoreal 3D · ' : 'Using the key included with Atlas Watch · ') +
+                      st.builtinRemaining +
+                      ' remaining today' +
+                      (p.id === 'google3d' ? '. Satellite imagery and Google place search need your own key.' : '')
+                    : 'Using your key'}
+                </p>
+              )}
               <div className="small">{p.purpose}</div>
               <div className="muted small">
                 {p.statusNote} · Limits: {p.limits}
@@ -103,7 +119,7 @@ export function ProvidersDialog({ onClose }: { onClose(): void }) {
                     type={p.credential.kind === 'url' ? 'url' : 'password'}
                     autoComplete="off"
                     spellCheck={false}
-                    placeholder={st?.configured && p.credential.kind !== 'url' ? '•••••••• (saved; enter a new value to replace)' : (st?.configValue ?? p.credential.placeholder)}
+                    placeholder={st?.userConfigured && p.credential.kind !== 'url' ? '•••••••• (saved; enter a new value to replace)' : (st?.configValue ?? p.credential.placeholder)}
                     aria-label={p.credential.label}
                     value={drafts[p.id] ?? ''}
                     onChange={(e) => setDrafts((d) => ({ ...d, [p.id]: e.target.value }))}
@@ -111,7 +127,7 @@ export function ProvidersDialog({ onClose }: { onClose(): void }) {
                   <button className="btn small-btn primary" disabled={busy === p.id || !(drafts[p.id] ?? '').trim()} onClick={() => void save(p.id, drafts[p.id] ?? '')}>
                     Save
                   </button>
-                  {st?.configured && (
+                  {(st?.userConfigured || (p.credential.kind === 'url' && st?.configured)) && (
                     <button className="btn small-btn danger" disabled={busy === p.id} onClick={() => void save(p.id, null)}>
                       Remove
                     </button>
@@ -124,7 +140,7 @@ export function ProvidersDialog({ onClose }: { onClose(): void }) {
                 </button>
               )}
               {m && <div className={`small ${m.ok ? 'ok-text' : 'err-text'}`}>{m.message}</div>}
-              {p.id === 'google3d' && st?.configured && <div className="muted small">Use the “Satellite” and “Photoreal 3D” buttons in the top bar. Saving a key reloads the window so the map can reach Google. Requests are billed to your Google account.</div>}
+              {p.id === 'google3d' && st?.configured && <div className="muted small">Use the “Satellite” and “Photoreal 3D” buttons in the top bar. Saving a key reloads the window so the map can reach Google. Included keys have a daily allowance; your own key is billed to your Google account.</div>}
             </section>
           );
         })}

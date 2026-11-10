@@ -13,6 +13,7 @@ export type Selection =
   | { kind: 'history'; record: HistoryRecordDetail };
 
 interface Props {
+  includeOverview?: boolean;
   snap: AppSnapshot;
   selection: Selection | null;
   onSelect(s: Selection | null): void;
@@ -414,6 +415,7 @@ export function DetailsPanel(p: Props) {
           ← Overview
         </button>
       )}
+      {p.includeOverview && selection && <Overview snap={snap} p={p} />}
       {body}
     </aside>
   );

@@ -1,7 +1,11 @@
 // Outbound HTTP for the main process. Only fixed, allow-listed hosts can be
 // reached; there is no general-purpose URL proxy.
 
+import { validateInstance } from '../../shared/lemmy';
 export const ALLOWED_HOSTS = new Set([
+  'api.twelvedata.com',
+  'www.alphavantage.co',
+  'api.gdeltproject.org',
   'api.weather.gov',
   'earthquake.usgs.gov',
   'api.adsb.lol',
@@ -52,6 +56,8 @@ export function setLocalReceiverUrl(u: string | null): void {
   localReceiverUrl = u && isAllowedLocalReceiverUrl(u) ? u : null;
 }
 /** Ollama is only ever contacted on the IPv4 loopback address. */
+let lemmyOrigin: string | null = null;
+export function setLemmyInstance(raw: string): void { lemmyOrigin = validateInstance(raw); }
 export const LOOPBACK_HOST = '127.0.0.1';
 
 export class FeedHttpError extends Error {
@@ -72,6 +78,8 @@ export interface FetchJsonOptions {
   method?: 'GET' | 'POST';
   body?: string;
   maxBytes?: number;
+  sameOrigin?: boolean;
+  providerErrors?: boolean;
 }
 
 export interface FetchJsonResult {
@@ -83,6 +91,7 @@ export type FetchJson = (url: string, opts?: FetchJsonOptions) => Promise<FetchJ
 
 export function assertAllowedUrl(raw: string): URL {
   const url = new URL(raw);
+  if (url.origin === lemmyOrigin && !url.username && !url.password) return url;
   if (url.protocol === 'https:' && ALLOWED_HOSTS.has(url.hostname) && !url.port && !url.username && !url.password) return url;
   if (url.protocol === 'https:' && ALLOWED_PREFIXES.some((p) => url.href.startsWith(p))) return url;
   if (url.protocol === 'http:' && url.hostname === LOOPBACK_HOST) return url;
@@ -125,12 +134,21 @@ async function fetchRaw(rawUrl: string, opts: FetchJsonOptions = {}): Promise<{ 
     if (res.status >= 300 && res.status < 400) {
       const loc = res.headers.get('location');
       if (!loc) throw new FeedHttpError(`Redirect without location (${res.status})`, res.status, null, 'http');
-      url = assertAllowedUrl(new URL(loc, url).toString());
+      const next = assertAllowedUrl(new URL(loc, url).toString());
+      if (opts.sameOrigin && next.origin !== new URL(rawUrl).origin) throw new FeedHttpError('Cross-origin redirect blocked', res.status, null, 'blocked');
+      url = next;
       continue;
     }
     if (!res.ok) {
       const retryAfter = parseRetryAfter(res.headers.get('retry-after'));
-      throw new FeedHttpError(`HTTP ${res.status} ${res.statusText}`.trim(), res.status, retryAfter, 'http');
+      let message = ('HTTP '+res.status+' '+res.statusText).trim();
+      if (opts.providerErrors) {
+        try { const body = JSON.parse((await res.text()).slice(0, 8192));
+          const detail = body.message ?? body['Error Message'] ?? body.Note ?? body.Information;
+          if (typeof detail === 'string') message = detail.slice(0, 2000);
+        } catch { /* Keep the honest HTTP status when the error body is not JSON. */ }
+      }
+      throw new FeedHttpError(message, res.status, retryAfter, 'http');
     }
     const len = Number(res.headers.get('content-length') ?? '0');
     if (len > maxBytes) throw new FeedHttpError('Response too large', res.status, null, 'parse');

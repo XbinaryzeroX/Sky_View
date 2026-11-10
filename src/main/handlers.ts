@@ -1,9 +1,11 @@
-import { parseRouteset } from '../shared/route';
-import { commonsSearchUrl, parseAdsbdb, parseAirportData, parseCommons, type VehicleInfo } from '../shared/vehicleInfo';
 // IPC request handlers. Every request is validated against the schema for
 // its channel before any work happens. No Electron imports here so the
 // handlers can be tested directly; platform services are injected.
 
+import type { MarketService } from './markets';
+import type { LemmyService } from './lemmy';
+import { parseRouteset } from '../shared/route';
+import { commonsSearchUrl, parseAdsbdb, parseAirportData, parseCommons, type VehicleInfo } from '../shared/vehicleInfo';
 import { buildBriefing } from '../shared/briefing';
 import { LAYER_IDS } from '../shared/layers';
 import { locationsToCsv } from '../shared/csv';
@@ -31,6 +33,8 @@ export interface PlatformServices {
 }
 
 export interface ExtraServices {
+  markets?: MarketService;
+  lemmy?: LemmyService;
   layers: LayerManager | null;
   providers: ProviderService | null;
   userAgent?: () => string;
@@ -42,11 +46,63 @@ export type Handler = (args: unknown[]) => Promise<unknown> | unknown;
 const vehicleInfoCache = new Map<string, VehicleInfo>();
 
 export function createHandlers(core: AppCore, store: AtlasStore, fetchJson: FetchJson, platform: PlatformServices, extra: ExtraServices = { layers: null, providers: null }): Record<InvokeChannel, Handler> {
-  const need = <T>(v: T | null, what: string): T => {
+  const need = <T>(v: T | null | undefined, what: string): T => {
     if (!v) throw new Error(`${what} is not available`);
     return v;
   };
   const h: Record<InvokeChannel, Handler> = {
+    [IPC.marketsSearch]: (args) => {
+      const [query] = validateIpcArgs(IPC.marketsSearch, args);
+      return need(extra.markets, 'Markets').search(query);
+    },
+    [IPC.marketsQuote]: (args) => {
+      const [symbol] = validateIpcArgs(IPC.marketsQuote, args);
+      return need(extra.markets, 'Markets').quote(symbol);
+    },
+    [IPC.marketsCandles]: (args) => {
+      const [symbol, range] = validateIpcArgs(IPC.marketsCandles, args);
+      return need(extra.markets, 'Markets').candles(symbol, range);
+    },
+    [IPC.marketsNews]: (args) => {
+      const [symbol, name] = validateIpcArgs(IPC.marketsNews, args);
+      return need(extra.markets, 'Markets').news(symbol, name);
+    },
+    [IPC.marketsExplain]: (args) => {
+      const [symbol, headlines, movement] = validateIpcArgs(IPC.marketsExplain, args);
+      return need(extra.markets, 'Markets').explain(symbol, headlines, movement);
+    },
+    [IPC.lemmyStatus]: (args) => {
+      validateIpcArgs(IPC.lemmyStatus, args);
+      return need(extra.lemmy, 'Community').status();
+    },
+    [IPC.lemmyLogin]: (args) => {
+      const [input] = validateIpcArgs(IPC.lemmyLogin, args);
+      return need(extra.lemmy, 'Community').login(input);
+    },
+    [IPC.lemmyLogout]: (args) => {
+      validateIpcArgs(IPC.lemmyLogout, args);
+      return need(extra.lemmy, 'Community').logout();
+    },
+    [IPC.lemmyFeed]: (args) => {
+      const [query] = validateIpcArgs(IPC.lemmyFeed, args);
+      return need(extra.lemmy, 'Community').feed(query);
+    },
+    [IPC.lemmyPost]: (args) => {
+      const [id] = validateIpcArgs(IPC.lemmyPost, args);
+      return need(extra.lemmy, 'Community').post(id);
+    },
+    [IPC.lemmyCommunities]: (args) => {
+      const [query] = validateIpcArgs(IPC.lemmyCommunities, args);
+      return need(extra.lemmy, 'Community').communities(query);
+    },
+    [IPC.lemmyWrite]: (args) => {
+      const [input] = validateIpcArgs(IPC.lemmyWrite, args);
+      return need(extra.lemmy, 'Community').write(input);
+    },
+    [IPC.lemmyImage]: (args) => {
+      const [url] = validateIpcArgs(IPC.lemmyImage, args);
+      return need(extra.lemmy, 'Community').image(url);
+    },
     [IPC.stateGet]: (a) => {
       validateIpcArgs(IPC.stateGet, a);
       return core.snapshot();
@@ -70,7 +126,7 @@ export function createHandlers(core: AppCore, store: AtlasStore, fetchJson: Fetc
     },
     [IPC.locationExportCsv]: async (a) => {
       validateIpcArgs(IPC.locationExportCsv, a);
-      return platform.saveTextFile('atlas-watch-locations.csv', [{ name: 'CSV', extensions: ['csv'] }], `﻿${locationsToCsv(core.locations)}`);
+      return platform.saveTextFile('atlas-watch-locations.csv', [{ name: 'CSV', extensions: ['csv'] }], `${locationsToCsv(core.locations)}`);
     },
     [IPC.feedsRefresh]: async (a) => {
       const [feed] = validateIpcArgs(IPC.feedsRefresh, a);
@@ -80,6 +136,7 @@ export function createHandlers(core: AppCore, store: AtlasStore, fetchJson: Fetc
     },
     [IPC.settingsUpdate]: (a) => {
       const [patch] = validateIpcArgs(IPC.settingsUpdate, a);
+      if (patch.lemmyInstance) extra.lemmy?.changeInstance(patch.lemmyInstance);
       const r = core.updateSettings(patch);
       if (patch.layersEnabled || patch.firmsRegion || patch.satelliteGroups) {
         extra.layers?.syncEnabled();
@@ -170,7 +227,7 @@ export function createHandlers(core: AppCore, store: AtlasStore, fetchJson: Fetc
     },
     [IPC.providersBrowserKey]: (a) => {
       const [pid] = validateIpcArgs(IPC.providersBrowserKey, a);
-      return need(extra.providers, 'Providers').getSecret(pid);
+      return need(extra.providers, 'Providers').credentials.browserKey(pid);
     },
     [IPC.geocodeAddress]: async (a) => {
       const [q] = validateIpcArgs(IPC.geocodeAddress, a);
@@ -184,7 +241,7 @@ export function createHandlers(core: AppCore, store: AtlasStore, fetchJson: Fetc
     [IPC.geocodeGoogle]: async (a) => {
       const [q] = validateIpcArgs(IPC.geocodeGoogle, a);
       // Customer key only; never a fallback key. The key stays in the main process and is not logged.
-      const key = need(extra.providers, 'Providers').getSecret('google3d');
+      const key = need(extra.providers, 'Providers').credentials.userKey('google3d');
       if (!key) throw new Error('Add your Google Maps API key in Providers first.');
       const res = await fetchJson(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(q)}&key=${encodeURIComponent(key)}`, { timeoutMs: 15000 });
       const body = res.body as { status?: unknown; error_message?: unknown; results?: { formatted_address?: unknown; geometry?: { location?: { lat?: unknown; lng?: unknown } } }[] };

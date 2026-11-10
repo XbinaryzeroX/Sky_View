@@ -2,11 +2,17 @@
 // request. The main process rejects anything that does not match.
 
 import { z } from 'zod';
+import { validateInstance } from './lemmy';
 import { MAX_IMPORT_ROWS, MAX_RADIUS_KM } from './csv';
 import { LAYER_IDS, type LayerId } from './layers';
 import type { Settings } from './types';
 
 export const DEFAULT_SETTINGS: Settings = {
+  marketProvider: 'twelvedata',
+  marketWatchlist: [],
+  lemmyInstance: 'https://lemmy.world',
+  lemmyDefaultCommunity: '',
+  lemmyShowNsfw: false,
   nwsContact: '',
   nwsPollSeconds: 180,
   usgsPollSeconds: 300,
@@ -113,7 +119,7 @@ export const watchItemSchema = z
   .strict();
 const docKind = z.enum(['boards', 'people']);
 
-const providerId = z.enum(['opensky', 'openfreemap', 'esri-imagery', 'mapbox', 'eox', 'ourairports', 'nws', 'usgs-quakes', 'usgs-basemap', 'nasa-gibs', 'terrain-tiles', 'adsblol', 'local-adsb', 'digitraffic', 'aisstream', 'celestrak', 'firms', 'nifc', 'awc', 'nhc', 'nowcoast', 'caltrans', 'fintraffic-cams', 'mbta', 'faa-sua', 'census-geocoder', 'google3d', 'ollama']);
+const providerId = z.enum(['twelvedata', 'alphavantage', 'opensky', 'openfreemap', 'esri-imagery', 'mapbox', 'eox', 'ourairports', 'nws', 'usgs-quakes', 'usgs-basemap', 'nasa-gibs', 'terrain-tiles', 'adsblol', 'local-adsb', 'digitraffic', 'aisstream', 'celestrak', 'firms', 'nifc', 'awc', 'nhc', 'nowcoast', 'caltrans', 'fintraffic-cams', 'mbta', 'faa-sua', 'census-geocoder', 'google3d', 'ollama']);
 
 export const locationInputSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -126,6 +132,18 @@ export const locationInputSchema = z.object({
 
 export const settingsPatchSchema = z
   .object({
+    marketProvider: z.enum(['twelvedata', 'alphavantage']),
+    marketWatchlist: z.array(z.string().regex(/^[A-Za-z0-9.:\-/^=]{1,20}$/)).max(50),
+    lemmyInstance: z.string().max(253).refine(value => {
+      try {
+        validateInstance(value);
+        return true;
+      } catch {
+        return false;
+      }
+    }, 'Invalid Lemmy instance'),
+    lemmyDefaultCommunity: z.string().max(150).regex(/^[A-Za-z0-9_.@-]*$/),
+    lemmyShowNsfw: z.boolean(),
     // Contact info is optional; restrict to characters that are safe in an HTTP header.
     nwsContact: z.string().max(120).regex(/^[A-Za-z0-9 @._+\-:/()]*$/),
     nwsPollSeconds: z.number().int().min(60).max(3600),
@@ -186,6 +204,19 @@ export const historyQuerySchema = z
   .strict();
 
 export const IPC = {
+  marketsSearch: 'markets:search',
+  marketsQuote: 'markets:quote',
+  marketsCandles: 'markets:candles',
+  marketsNews: 'markets:news',
+  marketsExplain: 'markets:explain',
+  lemmyStatus: 'lemmy:status',
+  lemmyLogin: 'lemmy:login',
+  lemmyLogout: 'lemmy:logout',
+  lemmyFeed: 'lemmy:feed',
+  lemmyPost: 'lemmy:post',
+  lemmyCommunities: 'lemmy:communities',
+  lemmyWrite: 'lemmy:write',
+  lemmyImage: 'lemmy:image',
   stateGet: 'state:get',
   stateChanged: 'state:changed',
   locationCreate: 'locations:create',
@@ -239,7 +270,68 @@ export const IPC = {
 } as const;
 
 /** Argument schemas per invoke channel (tuple of positional arguments). */
+const symbol = z.string().regex(/^[A-Za-z0-9.:\-/^=]{1,20}$/);
+const positiveId = z.number().int().positive();
+export const lemmyWriteSchema = z.discriminatedUnion('action', [
+  z.object({
+    action: z.literal('post'),
+    community_id: positiveId,
+    name: z.string().trim().min(1).max(200),
+    body: z.string().max(10000),
+    url: z.string().max(2048).refine(value => !value || /^https?:\/\//.test(value)),
+    nsfw: z.boolean(),
+  }).strict(),
+  z.object({
+    action: z.literal('comment'),
+    post_id: positiveId,
+    parent_id: positiveId.optional(),
+    content: z.string().trim().min(1).max(10000),
+  }).strict(),
+  ...(['post', 'comment'] as const).map(kind => z.object({
+    action: z.literal(kind + '/like'),
+    id: positiveId,
+    score: z.union([z.literal(-1), z.literal(0), z.literal(1)]),
+  }).strict()),
+  ...(['post', 'comment'] as const).map(kind => z.object({
+    action: z.literal(kind + '/report'),
+    id: positiveId,
+    reason: z.string().trim().min(1).max(1000),
+  }).strict()),
+  z.object({ action: z.literal('user/block'), person_id: positiveId, block: z.literal(true) }).strict(),
+  z.object({ action: z.literal('community/block'), community_id: positiveId, block: z.literal(true) }).strict(),
+  z.object({ action: z.literal('community/follow'), community_id: positiveId, follow: z.boolean() }).strict(),
+]);
+
 export const ipcArgSchemas = {
+  [IPC.marketsSearch]: z.tuple([z.string().trim().min(1).max(80)]),
+  [IPC.marketsQuote]: z.tuple([symbol]),
+  [IPC.marketsCandles]: z.tuple([symbol, z.enum(['1D', '5D', '1M', '6M', '1Y', '5Y'])]),
+  [IPC.marketsNews]: z.tuple([symbol, z.string().max(200).nullable()]),
+  [IPC.marketsExplain]: z.tuple([symbol, z.array(z.string().max(300)).max(25), z.string().max(1500)]),
+  [IPC.lemmyStatus]: z.tuple([]),
+  [IPC.lemmyLogin]: z.tuple([z.object({
+    username_or_email: z.string().min(1).max(200),
+    password: z.string().min(1).max(1000),
+    totp_2fa_token: z.string().regex(/^\d{6}$/).optional(),
+  }).strict()]),
+  [IPC.lemmyLogout]: z.tuple([]),
+  [IPC.lemmyFeed]: z.tuple([z.object({
+    type_: z.enum(['All', 'Local', 'Subscribed']),
+    sort: z.enum(['Active', 'Hot', 'New', 'TopDay', 'TopWeek']),
+    page: z.number().int().min(1).max(10000),
+    community_name: z.string().max(150).regex(/^[A-Za-z0-9_.@-]*$/),
+  }).strict()]),
+  [IPC.lemmyPost]: z.tuple([positiveId]),
+  [IPC.lemmyCommunities]: z.tuple([z.string().max(150)]),
+  [IPC.lemmyWrite]: z.tuple([lemmyWriteSchema]),
+  [IPC.lemmyImage]: z.tuple([z.string().url().max(2048).refine(value => {
+    try {
+      const url = new URL(value);
+      return url.protocol === 'https:' && !url.username && !url.password && !url.port;
+    } catch {
+      return false;
+    }
+  }, 'HTTPS image URL required')]),
   [IPC.stateGet]: z.tuple([]),
   [IPC.locationCreate]: z.tuple([locationInputSchema]),
   [IPC.locationUpdate]: z.tuple([id, locationInputSchema]),
@@ -283,7 +375,7 @@ export const ipcArgSchemas = {
   [IPC.providersList]: z.tuple([]),
   [IPC.providersSetCredential]: z.tuple([providerId, z.string().max(500).nullable()]),
   [IPC.providersTest]: z.tuple([providerId]),
-  [IPC.providersBrowserKey]: z.tuple([z.enum(['google3d', 'esri-imagery', 'mapbox'])]),
+  [IPC.providersBrowserKey]: z.tuple([z.enum(['google3d', 'google2d', 'esri-imagery', 'mapbox'])]),
   [IPC.geocodeAddress]: z.tuple([z.string().trim().min(3).max(200)]),
   [IPC.geocodeGoogle]: z.tuple([z.string().trim().min(2).max(200)]),
   [IPC.annotationsList]: z.tuple([]),

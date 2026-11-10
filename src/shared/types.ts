@@ -161,6 +161,11 @@ export interface QuakeQuery {
 }
 
 export interface Settings {
+  marketProvider: 'twelvedata' | 'alphavantage';
+  marketWatchlist: string[];
+  lemmyInstance: string;
+  lemmyDefaultCommunity: string;
+  lemmyShowNsfw: boolean;
   nwsContact: string;
   nwsPollSeconds: number;
   usgsPollSeconds: number;

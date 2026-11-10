@@ -2,6 +2,9 @@
 // locally persisted content, with empty/loading/unavailable states. Features
 // that need a licensed source or a shared backend say so instead of pretending.
 
+import { Globe, Camera, LayoutDashboard, Flag, Sparkles, Crosshair, PenLine, LayoutGrid, Plane, MapPin, Star, History, ScrollText, Users, ChartCandlestick, MessagesSquare, Building2, CircleHelp, type LucideIcon } from 'lucide-react';
+import { MarketsPage } from './MarketsPage';
+import { CommunityPage } from './CommunityPage';
 import { useEffect, useMemo, useState } from 'react';
 import { CameraPlayer, cameraMedia } from './CameraPlayer';
 import { aircraftClass, classifyAircraftQuery, elevationAngleDeg, specialCode, trackState } from '../../shared/aircraft';
@@ -37,25 +40,25 @@ export type PageId =
   | 'help';
 
 /** `short` is the rail label (one word); `label` is the full name used for tooltips, headings and screen readers. */
-export const NAV: { id: PageId; label: string; short: string; icon: string; group: string }[] = [
-  { id: 'globe', label: 'Globe', short: 'Globe', icon: '◍', group: 'Live' },
-  { id: 'cameras', label: 'Cameras', short: 'Cameras', icon: '▣', group: 'Live' },
-  { id: 'ops', label: 'Ops center', short: 'Ops', icon: '▦', group: 'Live' },
-  { id: 'events', label: 'Events', short: 'Events', icon: '⚑', group: 'Intelligence' },
-  { id: 'discover', label: 'Discover', short: 'Discover', icon: '✦', group: 'Intelligence' },
-  { id: 'near', label: 'Near me / overhead', short: 'Overhead', icon: '⌖', group: 'Intelligence' },
-  { id: 'analyst', label: 'Analyst', short: 'Analyst', icon: '✎', group: 'Intelligence' },
-  { id: 'boards', label: 'Boards', short: 'Boards', icon: '▤', group: 'Boards' },
-  { id: 'track', label: 'Track a flight', short: 'Flights', icon: '✈', group: 'Tools' },
-  { id: 'airports', label: 'Airports', short: 'Airports', icon: '⊕', group: 'Tools' },
-  { id: 'watchlist', label: 'Watchlist', short: 'Watch', icon: '★', group: 'Tools' },
-  { id: 'replays', label: 'Replays', short: 'Replays', icon: '⟲', group: 'Tools' },
-  { id: 'bulletins', label: 'Official bulletins', short: 'Bulletins', icon: '☰', group: 'Tools' },
-  { id: 'people', label: 'Team directory', short: 'Team', icon: '☺', group: 'Organization' },
-  { id: 'markets', label: 'Markets', short: 'Markets', icon: '$', group: 'Organization' },
-  { id: 'social', label: 'Feed / community / chat', short: 'Social', icon: '✉', group: 'Organization' },
-  { id: 'org', label: 'Organization', short: 'Org', icon: '⚙', group: 'Organization' },
-  { id: 'help', label: 'Help & resources', short: 'Help', icon: '?', group: 'Organization' },
+export const NAV: { id: PageId; label: string; short: string; icon: LucideIcon; group: string; wide?: boolean }[] = [
+  { id: 'globe', label: 'Globe', short: 'Globe', icon: Globe, group: 'Live' },
+  { id: 'cameras', label: 'Cameras', short: 'Cameras', icon: Camera, group: 'Live' },
+  { id: 'ops', label: 'Ops center', short: 'Ops', icon: LayoutDashboard, group: 'Live' },
+  { id: 'events', label: 'Events', short: 'Events', icon: Flag, group: 'Intelligence' },
+  { id: 'discover', label: 'Discover', short: 'Discover', icon: Sparkles, group: 'Intelligence' },
+  { id: 'near', label: 'Near me / overhead', short: 'Overhead', icon: Crosshair, group: 'Intelligence' },
+  { id: 'analyst', label: 'Analyst', short: 'Analyst', icon: PenLine, group: 'Intelligence' },
+  { id: 'boards', label: 'Boards', short: 'Boards', icon: LayoutGrid, group: 'Boards' },
+  { id: 'track', label: 'Track a flight', short: 'Flights', icon: Plane, group: 'Tools' },
+  { id: 'airports', label: 'Airports', short: 'Airports', icon: MapPin, group: 'Tools' },
+  { id: 'watchlist', label: 'Watchlist', short: 'Watch', icon: Star, group: 'Tools' },
+  { id: 'replays', label: 'Replays', short: 'Replays', icon: History, group: 'Tools' },
+  { id: 'bulletins', label: 'Official bulletins', short: 'Bulletins', icon: ScrollText, group: 'Tools' },
+  { id: 'people', label: 'Team directory', short: 'Team', icon: Users, group: 'Organization' },
+  { id: 'markets', label: 'Markets', short: 'Markets', icon: ChartCandlestick, wide: true, group: 'Organization' },
+  { id: 'social', label: 'Community', short: 'Community', icon: MessagesSquare, wide: true, group: 'Organization' },
+  { id: 'org', label: 'Organization', short: 'Org', icon: Building2, group: 'Organization' },
+  { id: 'help', label: 'Help & resources', short: 'Help', icon: CircleHelp, group: 'Organization' },
 ];
 
 export interface PageCtx {
@@ -1070,32 +1073,6 @@ function BulletinsPage({ ctx }: { ctx: PageCtx }) {
 }
 
 // ---------------- Unavailable-by-design pages ----------------
-function MarketsPage() {
-  return (
-    <>
-      <Head title="Markets" />
-      <div className="note">
-        Not available. Market prices need a licensed data feed with redistribution rights and timestamps, and no free commercially licensed source is included. This can be added later as an optional integration
-        using your organization’s market-data license.
-      </div>
-    </>
-  );
-}
-function SocialPage({ ctx }: { ctx: PageCtx }) {
-  return (
-    <>
-      <Head title="Feed, community and chat" />
-      <div className="note">
-        Not available in this version. Shared feeds, community posts and chat need a server with user accounts, access control and moderation. Atlas Watch is currently a single-user desktop app. Your existing
-        server could host this later. Until then, use Boards (local notes) and export scene files or briefings to share views.
-      </div>
-      <button className="btn small-btn" onClick={ctx.openSettings}>
-        Settings
-      </button>
-    </>
-  );
-}
-
 // ---------------- Organization / enterprise ----------------
 function OrgPage({ ctx }: { ctx: PageCtx }) {
   const s = ctx.snap.settings;
@@ -1200,9 +1177,9 @@ export function PageView({ page, ctx, airport }: { page: PageId; ctx: PageCtx; a
     case 'bulletins':
       return <BulletinsPage ctx={ctx} />;
     case 'markets':
-      return <MarketsPage />;
+      return <MarketsPage ctx={ctx} />;
     case 'social':
-      return <SocialPage ctx={ctx} />;
+      return <CommunityPage ctx={ctx} />;
     case 'org':
       return <OrgPage ctx={ctx} />;
     case 'help':

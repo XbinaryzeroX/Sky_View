@@ -7,6 +7,19 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 // bundle stays tiny and dependency-free. Kept in sync with src/shared/ipc.ts
 // by tests/ipc.test.ts.
 const C = {
+  marketsSearch: 'markets:search',
+  marketsQuote: 'markets:quote',
+  marketsCandles: 'markets:candles',
+  marketsNews: 'markets:news',
+  marketsExplain: 'markets:explain',
+  lemmyStatus: 'lemmy:status',
+  lemmyLogin: 'lemmy:login',
+  lemmyLogout: 'lemmy:logout',
+  lemmyFeed: 'lemmy:feed',
+  lemmyPost: 'lemmy:post',
+  lemmyCommunities: 'lemmy:communities',
+  lemmyWrite: 'lemmy:write',
+  lemmyImage: 'lemmy:image',
   stateGet: 'state:get',
   stateChanged: 'state:changed',
   locationCreate: 'locations:create',
@@ -60,6 +73,19 @@ const C = {
 } as const;
 
 const api = {
+  marketsSearch: (q: string) => ipcRenderer.invoke(C.marketsSearch, q),
+  marketsQuote: (s: string) => ipcRenderer.invoke(C.marketsQuote, s),
+  marketsCandles: (s: string, r: string) => ipcRenderer.invoke(C.marketsCandles, s, r),
+  marketsNews: (s: string, n: string | null) => ipcRenderer.invoke(C.marketsNews, s, n),
+  marketsExplain: (s: string, h: string[], m: string) => ipcRenderer.invoke(C.marketsExplain, s, h, m),
+  lemmyStatus: () => ipcRenderer.invoke(C.lemmyStatus),
+  lemmyLogin: (r: unknown) => ipcRenderer.invoke(C.lemmyLogin, r),
+  lemmyLogout: () => ipcRenderer.invoke(C.lemmyLogout),
+  lemmyFeed: (r: unknown) => ipcRenderer.invoke(C.lemmyFeed, r),
+  lemmyPost: (id: number) => ipcRenderer.invoke(C.lemmyPost, id),
+  lemmyCommunities: (q: string) => ipcRenderer.invoke(C.lemmyCommunities, q),
+  lemmyWrite: (r: unknown) => ipcRenderer.invoke(C.lemmyWrite, r),
+  lemmyImage: (url: string) => ipcRenderer.invoke(C.lemmyImage, url),
   getState: () => ipcRenderer.invoke(C.stateGet),
   onState: (cb: (snap: unknown) => void) => {
     const listener = (_e: IpcRendererEvent, snap: unknown) => cb(snap);
@@ -100,7 +126,7 @@ const api = {
   listProviders: () => ipcRenderer.invoke(C.providersList),
   setProviderCredential: (id: string, value: string | null) => ipcRenderer.invoke(C.providersSetCredential, id, value),
   testProvider: (id: string) => ipcRenderer.invoke(C.providersTest, id),
-  providerBrowserKey: (id: 'google3d' | 'esri-imagery' | 'mapbox') => ipcRenderer.invoke(C.providersBrowserKey, id),
+  providerBrowserKey: (id: 'google3d' | 'google2d' | 'esri-imagery' | 'mapbox') => ipcRenderer.invoke(C.providersBrowserKey, id),
   geocodeAddress: (q: string) => ipcRenderer.invoke(C.geocodeAddress, q),
   geocodeGoogle: (q: string) => ipcRenderer.invoke(C.geocodeGoogle, q),
   listAnnotations: () => ipcRenderer.invoke(C.annotationsList),

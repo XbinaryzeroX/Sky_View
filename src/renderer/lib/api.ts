@@ -1,7 +1,11 @@
-import type { RouteInfo } from '../../shared/route';
-import type { VehicleInfo } from '../../shared/vehicleInfo';
 // Typed access to the preload bridge.
 
+import type { Candle, Quote, SymbolMatch, MarketResult, MarketRange, Headline } from '../../shared/markets';
+import type { LemmyPost, LemmyComment, LemmyCommunity } from '../../shared/lemmy';
+import type { z } from 'zod';
+import type { lemmyWriteSchema } from '../../shared/ipc';
+import type { RouteInfo } from '../../shared/route';
+import type { VehicleInfo } from '../../shared/vehicleInfo';
 import type {
   AiAnswer,
   AiStatus,
@@ -20,6 +24,25 @@ import type { GeoRecord, LayerId, LayerSnapshot, TrackPoint, ViewState } from '.
 import type { ProviderId, ProviderState } from '../../shared/providers';
 
 export interface AtlasApi {
+  marketsSearch(q: string): Promise<MarketResult<SymbolMatch[]>>;
+  marketsQuote(s: string): Promise<MarketResult<Quote>>;
+  marketsCandles(symbol: string, range: MarketRange): Promise<MarketResult<Candle[]>>;
+  marketsNews(symbol: string, name: string | null): Promise<{ articles: Headline[]; fetchedAt: string }>;
+  marketsExplain(symbol: string, headlines: string[], movement: string): Promise<string>;
+  lemmyStatus(): Promise<{ signedIn: boolean; name: string | null }>;
+  lemmyLogin(input: { username_or_email: string; password: string; totp_2fa_token?: string }): Promise<boolean>;
+  lemmyLogout(): Promise<boolean>;
+  lemmyFeed(query: {
+    type_: 'All' | 'Local' | 'Subscribed';
+    sort: 'Active' | 'Hot' | 'New' | 'TopDay' | 'TopWeek';
+    page: number;
+    community_name: string;
+  }): Promise<{ posts: LemmyPost[]; hasMore: boolean }>;
+  lemmyPost(id: number): Promise<{ post: LemmyPost | null; comments: LemmyComment[] }>;
+  lemmyCommunities(query: string): Promise<LemmyCommunity[]>;
+  lemmyWrite(input: z.infer<typeof lemmyWriteSchema>): Promise<boolean>;
+  lemmyImage(url: string): Promise<string>;
+
   getState(): Promise<AppSnapshot>;
   onState(cb: (snap: AppSnapshot) => void): () => void;
   createLocation(input: LocationInput): Promise<SavedLocation>;
@@ -48,7 +71,7 @@ export interface AtlasApi {
   listProviders(): Promise<ProviderState[]>;
   setProviderCredential(id: ProviderId, value: string | null): Promise<ProviderState[]>;
   testProvider(id: ProviderId): Promise<{ ok: boolean; message: string }>;
-  providerBrowserKey(id: 'google3d' | 'esri-imagery' | 'mapbox'): Promise<string | null>;
+  providerBrowserKey(id: 'google3d' | 'google2d' | 'esri-imagery' | 'mapbox'): Promise<string | null>;
   geocodeAddress(q: string): Promise<{ label: string; lat: number; lon: number }[]>;
   /** Google Geocoding with the customer's Google key (used while Google 3D Tiles are on; their terms require the Google geocoder). */
   geocodeGoogle(q: string): Promise<{ label: string; lat: number; lon: number }[]>;

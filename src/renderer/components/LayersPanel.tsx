@@ -1,3 +1,4 @@
+import { Camera, Cloud, MapPin, Orbit, Plane, TriangleAlert } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { LAYER_IDS, LAYERS, TEMPORAL_LABEL, type LayerGroup, type LayerId, type LayerSnapshot } from '../../shared/layers';
 import type { Settings } from '../../shared/types';
@@ -9,6 +10,9 @@ import { VISUAL_MODE_LABEL, VISUAL_MODE_NOTE, type VisualMode } from '../map/vis
 const GROUPS: LayerGroup[] = ['Movement', 'Space', 'Hazards', 'Weather', 'Cameras', 'Reference'];
 
 interface Props {
+  alertsContent?: React.ReactNode;
+  airportsOn?: boolean;
+  onAirports?(): void;
   settings: Settings;
   snaps: Partial<Record<LayerId, LayerSnapshot>>;
   onPatch(p: Partial<Settings>): void;
@@ -45,129 +49,109 @@ export function LayersPanel(p: Props) {
   );
 }
 
-function LiveTab({ settings, snaps, onPatch }: Props) {
+function LiveTab({ settings, snaps, onPatch, alertsContent, airportsOn, onAirports }: Props) {
   const on = new Set(settings.layersEnabled);
-  const [q, setQ] = useState('');
+  const [query, setQuery] = useState('');
   const [closed, setClosed] = useState<Set<string>>(new Set());
   const toggle = (id: LayerId) => {
     const next = new Set(on);
     if (next.has(id)) next.delete(id);
     else next.add(id);
-    onPatch({ layersEnabled: LAYER_IDS.filter((l) => next.has(l)) });
+    onPatch({ layersEnabled: LAYER_IDS.filter(layer => next.has(layer)) });
   };
-  const needle = q.trim().toLowerCase();
-  const matches = (id: LayerId) => !needle || `${LAYERS[id].name} ${LAYERS[id].source} ${LAYERS[id].group}`.toLowerCase().includes(needle);
+  const needle = query.trim().toLowerCase();
+  const matches = (id: LayerId) => !needle || [LAYERS[id].name, LAYERS[id].source, LAYERS[id].group].join(' ').toLowerCase().includes(needle);
+  const icons = { Movement: Plane, Space: Orbit, Hazards: TriangleAlert, Weather: Cloud, Cameras: Camera, Reference: MapPin };
   return (
     <>
-      <input className="view-name layer-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a layer" aria-label="Find a layer" />
-      {(on.size > 0 || settings.radarEnabled) && (
-        <div className="chip-row">
-          {[...on].map((id) => (
-            <button key={id} className="chip" onClick={() => toggle(id as LayerId)} title="Turn off">
-              {LAYERS[id as LayerId].name} <span className="muted">{snaps[id as LayerId]?.status.recordCount.toLocaleString() ?? ''}</span> ×
-            </button>
-          ))}
-          {settings.radarEnabled && (
-            <button className="chip" onClick={() => onPatch({ radarEnabled: false })}>
-              Weather radar ×
-            </button>
-          )}
-          <button className="link-btn small" onClick={() => onPatch({ layersEnabled: [], radarEnabled: false })}>
-            Turn all off
-          </button>
-        </div>
+      <input className="view-name layer-search" value={query} onChange={event => setQuery(event.target.value)}
+        placeholder="Find a layer" aria-label="Find a layer" />
+      {alertsContent && (!needle || 'alerts earthquakes weather boundaries saved locations'.includes(needle)) && (
+        <details className="layer-group alert-layer-group" open>
+          <summary>Alerts &amp; earthquakes</summary>
+          {alertsContent}
+        </details>
       )}
-      <p className="muted small">Record counts are for the loaded area or catalog shown in each layer’s note, not the whole world.</p>
-      {GROUPS.map((g) => {
-        const ids = LAYER_IDS.filter((id) => LAYERS[id].group === g && matches(id));
-        const radar = g === 'Weather' && (!needle || 'weather radar nowcoast'.includes(needle));
+      {onAirports && (!needle || 'airports reference'.includes(needle)) && (
+        <label className="layer-toggle">
+          <Plane size={16} strokeWidth={1.75} aria-hidden="true" />
+          <span className="layer-name">Airports</span>
+          <input className="layer-switch" role="switch" type="checkbox" checked={!!airportsOn} onChange={onAirports} />
+        </label>
+      )}
+      {(on.size > 0 || settings.radarEnabled) && (
+        <button className="link-btn small" onClick={() => onPatch({ layersEnabled: [], radarEnabled: false })}>Turn all live feeds off</button>
+      )}
+      <p className="muted small">Counts describe the loaded area or catalog, not the whole world.</p>
+      {GROUPS.map(group => {
+        const ids = LAYER_IDS.filter(id => LAYERS[id].group === group && matches(id));
+        const radar = group === 'Weather' && (!needle || 'weather radar nowcoast'.includes(needle));
         if (!ids.length && !radar) return null;
-        const isClosed = closed.has(g) && !needle;
+        const isClosed = closed.has(group) && !needle;
+        const Icon = icons[group];
         return (
-          <div key={g} className="layer-group">
-            <button
-              className="layer-group-title group-toggle"
-              aria-expanded={!isClosed}
-              onClick={() => {
-                const n = new Set(closed);
-                if (n.has(g)) n.delete(g);
-                else n.add(g);
-                setClosed(n);
-              }}
-            >
-              {isClosed ? '▸' : '▾'} {g} <span className="muted">{ids.filter((id) => on.has(id)).length || ''}</span>
-            </button>
-            {!isClosed &&
-              ids.map((id) => {
-                const meta = LAYERS[id];
-                const st = snaps[id]?.status;
-                const enabled = on.has(id);
-                const fr = st && enabled ? FRESHNESS_META[st.freshness] : null;
-                return (
-                  <div key={id} className={`layer-row ${enabled ? 'on' : ''}`}>
-                    <label className="layer-toggle" title={`${meta.temporalNote}\nSource: ${meta.source}\nTerms: ${meta.license}\nCoverage: ${meta.coverage}\nAuth: ${meta.auth}`}>
-                      <input type="checkbox" checked={enabled} onChange={() => toggle(id)} />
-                      <span className="layer-name">{meta.name}</span>
-                      <span className={`temporal t-${meta.temporal}`}>{TEMPORAL_LABEL[meta.temporal]}</span>
-                    </label>
-                    {enabled && st && (
-                      <div className="layer-status small">
-                        {st.state === 'loading' ? (
-                          <span className="muted">Loading…</span>
-                        ) : st.state === 'error' && !st.lastSuccessAt ? (
-                          <span className="err-text">Request failed: {st.error}</span>
-                        ) : (
-                          <>
-                            {fr && (
-                              <span className={`mini-chip ${fr.cls}`}>
-                                <span aria-hidden="true">{fr.icon}</span> {fr.label}
-                              </span>
-                            )}{' '}
-                            <span>{st.recordCount.toLocaleString()} records</span>
-                            <span className="muted"> · fetched {relativeTime(st.lastSuccessAt)}</span>
-                            {st.state === 'error' && <div className="err-text">Last refresh failed: {st.error} (showing previous data)</div>}
-                          </>
-                        )}
-                        {st.note && <div className="muted">{st.note}</div>}
-                        <div className="muted">
-                          Source: {meta.source} · Coverage: {meta.coverage}
+          <div key={group} className="layer-group">
+            <button className="layer-group-title group-toggle" aria-expanded={!isClosed} onClick={() => {
+              const next = new Set(closed);
+              if (next.has(group)) next.delete(group);
+              else next.add(group);
+              setClosed(next);
+            }}>{isClosed ? '\u25b8' : '\u25be'} {group} <span className="muted">{ids.filter(id => on.has(id)).length || ''}</span></button>
+            {!isClosed && ids.map(id => {
+              const meta = LAYERS[id];
+              const status = snaps[id]?.status;
+              const enabled = on.has(id);
+              const freshness = status && enabled ? FRESHNESS_META[status.freshness] : null;
+              return (
+                <div key={id} className={'layer-row ' + (enabled ? 'on' : '')}>
+                  <label className="layer-toggle">
+                    <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
+                    <span className="layer-name">{meta.name}</span>
+                    <input className="layer-switch" role="switch" type="checkbox" checked={enabled} onChange={() => toggle(id)} />
+                  </label>
+                  <details className="layer-info">
+                    <summary>{TEMPORAL_LABEL[meta.temporal]} · Source &amp; coverage{enabled && status ? ' · ' + status.recordCount.toLocaleString() : ''}</summary>
+                    <div className="layer-status small">
+                      <p>{meta.temporalNote}</p>
+                      <p className="muted">Source: {meta.source} · Coverage: {meta.coverage} · Terms: {meta.license} · Auth: {meta.auth}</p>
+                      {enabled && status && <>
+                        <p>{status.state === 'loading' ? 'Loading…' : freshness?.label} · {status.recordCount.toLocaleString()} records</p>
+                        <p className="muted">Fetched {relativeTime(status.lastSuccessAt)} · {status.note}</p>
+                        {status.error && <p className="err-text">Last refresh failed: {status.error}{status.lastSuccessAt ? ' (showing previous data)' : ''}</p>}
+                        <button className="link-btn small" onClick={() => void api.refreshLayer(id)}>Refresh</button>
+                      </>}
+                      {enabled && id === 'fires' && (
+                        <select aria-label="Fire detection region" value={settings.firmsRegion}
+                          onChange={event => onPatch({ firmsRegion: event.target.value as Settings['firmsRegion'] })}>
+                          <option value="us">U.S. (CONUS, HI, AK)</option><option value="global">Global (≈5 MB per refresh)</option>
+                        </select>
+                      )}
+                      {enabled && id === 'satellites' && (
+                        <div className="sat-groups small">
+                          {(['stations', 'visual', 'gnss', 'weather', 'science', 'starlink'] as const).map(satelliteGroup => (
+                            <label key={satelliteGroup}>
+                              <input type="checkbox" checked={settings.satelliteGroups.includes(satelliteGroup)} onChange={event => onPatch({
+                                satelliteGroups: event.target.checked ? [...settings.satelliteGroups, satelliteGroup]
+                                  : settings.satelliteGroups.filter(value => value !== satelliteGroup),
+                              })} />{satelliteGroup === 'starlink' ? 'Starlink (≈8,000)' : satelliteGroup}
+                            </label>
+                          ))}
                         </div>
-                        <button className="link-btn small" onClick={() => void api.refreshLayer(id)}>
-                          Refresh
-                        </button>
-                        {id === 'fires' && (
-                          <select className="inline-select" aria-label="Fire detection region" value={settings.firmsRegion} onChange={(e) => onPatch({ firmsRegion: e.target.value as Settings['firmsRegion'] })}>
-                            <option value="us">U.S. (CONUS, HI, AK)</option>
-                            <option value="global">Global (≈5 MB per refresh)</option>
-                          </select>
-                        )}
-                      </div>
-                    )}
-                    {enabled && id === 'satellites' && (
-                      <div className="sat-groups small">
-                        {(['stations', 'visual', 'gnss', 'weather', 'science', 'starlink'] as const).map((sg) => (
-                          <label key={sg}>
-                            <input
-                              type="checkbox"
-                              checked={settings.satelliteGroups.includes(sg)}
-                              onChange={(e) => onPatch({ satelliteGroups: e.target.checked ? [...settings.satelliteGroups, sg] : settings.satelliteGroups.filter((x) => x !== sg) })}
-                            />{' '}
-                            {sg === 'stations' ? 'Space stations' : sg === 'visual' ? 'Brightest' : sg === 'gnss' ? 'GNSS' : sg === 'weather' ? 'Weather' : sg === 'science' ? 'Science' : 'Starlink (≈8,000)'}
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                      )}
+                    </div>
+                  </details>
+                </div>
+              );
+            })}
             {!isClosed && radar && (
-              <div className={`layer-row ${settings.radarEnabled ? 'on' : ''}`}>
-                <label className="layer-toggle" title="NOAA nowCOAST observed base-reflectivity radar mosaic (CONUS, Alaska, Hawaii, Puerto Rico). Refreshed every 5 minutes while on. Public domain.">
-                  <input type="checkbox" checked={settings.radarEnabled} onChange={(e) => onPatch({ radarEnabled: e.target.checked })} />
-                  <span className="layer-name">Weather radar (U.S.)</span>
-                  <span className="temporal t-delayed">{TEMPORAL_LABEL.delayed}</span>
+              <div className="layer-row">
+                <label className="layer-toggle"><Cloud size={16} aria-hidden="true" /><span className="layer-name">Weather radar (U.S.)</span>
+                  <input className="layer-switch" role="switch" type="checkbox" checked={settings.radarEnabled}
+                    onChange={event => onPatch({ radarEnabled: event.target.checked })} />
                 </label>
-                {settings.radarEnabled && <div className="layer-status small muted">Observation: latest nowCOAST reflectivity mosaic, typically 5–10 minutes old. U.S. coverage only.</div>}
+                <details className="layer-info"><summary>Observed · NOAA nowCOAST</summary>
+                  <p className="small muted">U.S. radar reflectivity, typically 5–10 minutes old; refreshed every 5 minutes while on. Public domain.</p>
+                </details>
               </div>
             )}
           </div>

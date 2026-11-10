@@ -6,6 +6,8 @@ import { VISUAL_MODE_LABEL, type VisualMode } from '../map/visualModes';
 import type { ToolMode } from './Globe';
 
 interface Props {
+  mode?: 'tools' | 'scenes';
+  quickViews?: React.ReactNode;
   tool: ToolMode;
   draft: [number, number][];
   onTool(t: ToolMode): void;
@@ -55,13 +57,14 @@ export function ToolsPanel(p: Props) {
     </button>
   );
   return (
-    <div className="tools" role="region" aria-label="Tools">
+    <div className={'tools ' + (p.mode === 'scenes' ? 'scenes-panel' : '')} role="region" aria-label={p.mode === 'scenes' ? 'Scenes' : 'Map tools'}>
       <div className="diag-head">
-        <strong>Tools</strong>
-        <button className="icon-btn" onClick={p.onClose} aria-label="Close tools">
+        <strong>{p.mode === 'scenes' ? 'Scenes' : 'Map tools'}</strong>
+        <button className="icon-btn" onClick={p.onClose} aria-label={p.mode === 'scenes' ? 'Close Scenes' : 'Close Map tools'}>
           ✕
         </button>
       </div>
+      {p.mode !== 'scenes' && <>
       <div className="diag-sub">Measure (geodesic, WGS84)</div>
       <div className="btn-row">
         {toolBtn('measure-line', 'Distance')}
@@ -119,6 +122,9 @@ export function ToolsPanel(p: Props) {
           })}
         </ul>
       )}
+      </>}
+      {p.mode === 'scenes' && <>
+      {p.quickViews}
       <div className="diag-sub">Saved views</div>
       <div className="btn-row">
         <input className="view-name" placeholder="Name this view" value={viewName} maxLength={120} onChange={(e) => setViewName(e.target.value)} />
@@ -157,6 +163,8 @@ export function ToolsPanel(p: Props) {
         </button>
       </div>
       <p className="muted small">Scene files hold the camera, map style, layer switches, annotations and saved views. They never include API keys, saved locations or notes.</p>
+      </>}
+      {p.mode !== 'scenes' && <>
       <div className="diag-sub">Display style (visual effect only)</div>
       <select value={p.settings.visualMode} onChange={(e) => p.onPatch({ visualMode: e.target.value as VisualMode })} aria-label="Display style">
         {(Object.keys(VISUAL_MODE_LABEL) as VisualMode[]).map((k) => (
@@ -171,6 +179,7 @@ export function ToolsPanel(p: Props) {
         {p.playbackActive ? 'Exit playback' : 'Replay recorded movement…'}
       </button>
       <p className="muted small">Replays aircraft, vessel and transit positions this app recorded while running (last {p.settings.trackRetentionHours} h). Nothing was recorded while the app was closed.</p>
+      </>}
     </div>
   );
 }

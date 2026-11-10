@@ -1,5 +1,7 @@
 // Electron main process entry point.
 
+import { MarketService } from './markets';
+import { LemmyService } from './lemmy';
 import { app, BrowserWindow, contentTracing, dialog, ipcMain, Menu, nativeTheme, safeStorage, screen, session } from 'electron';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -10,7 +12,7 @@ import { FeedHttpError, fetchJson as realFetchJson, fetchText as realFetchText, 
 import { AisStreamClient } from './layers/aisstream';
 import { LayerManager } from './layers/manager';
 import { makeAisTester, ProviderService } from './providerService';
-import { SecretStore } from './secrets';
+import { SecretStore, redactSecrets } from './secrets';
 import type { LayerId } from '../shared/layers';
 import { buildUserAgent, NwsAlertSource, UsgsQuakeSource } from './feeds/sources';
 import { createHandlers, type PlatformServices } from './handlers';
@@ -28,7 +30,7 @@ import {
 } from './security';
 import { AtlasStore } from './store';
 
-const log = (m: string) => console.log(m);
+const log = (m: string) => console.log(redactSecrets(m, []));
 
 registerAppScheme();
 app.enableSandbox();
@@ -141,8 +143,7 @@ function createWindow(): void {
     const primary = screen.getPrimaryDisplay();
     const target = want === 'secondary' ? displays.find((d) => d.id !== primary.id) : displays.find((d) => d.label === want);
     if (target) mainWindow.setBounds({ ...target.workArea });
-  }
-  hardenWebContents(mainWindow.webContents);
+  }  hardenWebContents(mainWindow.webContents);
   // When a target monitor is requested (automated runs), show without taking keyboard focus.
   mainWindow.once('ready-to-show', () => (process.env.ATLAS_WATCH_WINDOW_DISPLAY ? mainWindow?.showInactive() : mainWindow?.show()));
   mainWindow.on('closed', () => {
@@ -223,7 +224,10 @@ app.whenReady().then(async () => {
 
   const secrets = new SecretStore(store, safeStorage);
   const providers = new ProviderService(store, secrets, fetchJson, fetchText, ua, makeAisTester());
-  const remoteOptions = () => ({ google3d: secrets.has('google3d'), esri: secrets.has('esri-imagery'), mapbox: secrets.has('mapbox'), eox: providers.ackGiven('eox') });
+  const markets = new MarketService(secrets, () => core!.settings, store, providers.credentials);
+  providers.marketService = markets;
+  const lemmy = new LemmyService(secrets, () => core!.settings);
+  const remoteOptions = () => ({ google3d: providers.credentials.available('google3d'), esri: secrets.has('esri-imagery'), mapbox: secrets.has('mapbox'), eox: providers.ackGiven('eox') });
   setRendererRemoteOptions(remoteOptions());
   const ais = new AisStreamClient(() => secrets.get('aisstream'), () => scheduleLayerEmit('vessels'));
   layers = new LayerManager({
@@ -260,7 +264,7 @@ app.whenReady().then(async () => {
     },
     appVersion: version,
   };
-  const handlers = createHandlers(core, store, fetchJson, platform, { layers, providers, userAgent: ua });
+  const handlers = createHandlers(core, store, fetchJson, platform, { layers, providers, markets, lemmy, userAgent: ua });
   const baseSetCredential = handlers[IPC.providersSetCredential];
   handlers[IPC.providersSetCredential] = async (args) => {
     const before = JSON.stringify(remoteOptions());
@@ -278,7 +282,11 @@ app.whenReady().then(async () => {
       const frameUrl = event.senderFrame?.url ?? '';
       const trusted = frameUrl.startsWith(`${APP_ORIGIN}/`) || (DEV_SERVER_URL !== '' && frameUrl.startsWith(DEV_SERVER_URL));
       if (!trusted || event.senderFrame !== event.sender.mainFrame) throw new Error('Untrusted IPC sender');
-      return handlers[channel](args);
+      try {
+        return await handlers[channel](args);
+      } catch (error) {
+        throw new Error(redactSecrets((error as Error).message, []));
+      }
     });
   }
 
@@ -318,15 +326,15 @@ app.whenReady().then(async () => {
             if (settled >= 3) break;
           }
           if (v.wait) await new Promise((r) => setTimeout(r, v.wait));
-          if (v.js) console.log(`SMOKE_VIEWJS ${v.name} ${JSON.stringify(await wc.executeJavaScript(v.js, true))}`);
+          if (v.js) log(`SMOKE_VIEWJS ${v.name} ${JSON.stringify(await wc.executeJavaScript(v.js, true))}`);
           await new Promise((r) => setTimeout(r, 800));
           wc.invalidate();
           const img = await wc.capturePage();
           await writeFile(join(outDir, `${v.name}.png`), img.toPNG());
           const d = diag ?? {};
-          console.log(`SMOKE_VIEW ${v.name} settledMs=${Date.now() - t0} ${JSON.stringify({ h: d.cameraHeightM, level: d.maxRenderedLevel, maxHere: d.imageryMaxLevelHere, atLimit: d.imageryAtLimit, pending: d.tilesPending, errors: d.imageryErrors, lastErr: d.lastImageryError, renderErrors: d.renderErrors, lastRenderError: d.lastRenderError, terrain: d.terrain ? { loaded: (d.terrain as Record<string, unknown>).loaded, failed: (d.terrain as Record<string, unknown>).failed, deepest: (d.terrain as Record<string, unknown>).deepestLevelRequested } : null })}`);
+          log(`SMOKE_VIEW ${v.name} settledMs=${Date.now() - t0} ${JSON.stringify({ h: d.cameraHeightM, level: d.maxRenderedLevel, maxHere: d.imageryMaxLevelHere, atLimit: d.imageryAtLimit, pending: d.tilesPending, errors: d.imageryErrors, lastErr: d.lastImageryError, renderErrors: d.renderErrors, lastRenderError: d.lastRenderError, terrain: d.terrain ? { loaded: (d.terrain as Record<string, unknown>).loaded, failed: (d.terrain as Record<string, unknown>).failed, deepest: (d.terrain as Record<string, unknown>).deepestLevelRequested } : null })}`);
         }
-        console.log(`SMOKE_NET ${JSON.stringify(getNetStats())}`);
+        log(`SMOKE_NET ${JSON.stringify(getNetStats())}`);
         if (cpuProfile) {
           const { profile } = (await wc.debugger.sendCommand('Profiler.stop')) as { profile: { nodes: { id: number; callFrame: { functionName: string; url: string; lineNumber: number } }[]; samples: number[]; timeDeltas: number[] } };
           await writeFile(cpuProfile, JSON.stringify(profile));
@@ -338,17 +346,17 @@ app.whenReady().then(async () => {
             const key = `${n.callFrame.functionName || '(anonymous)'} @${n.callFrame.url.split('/').pop()}:${n.callFrame.lineNumber}`;
             self.set(key, (self.get(key) ?? 0) + (profile.timeDeltas[i] ?? 0) / 1000);
           });
-          console.log(`SMOKE_CPUPROFILE ${JSON.stringify([...self].sort((x, y) => y[1] - x[1]).slice(0, 30).map(([k, v]) => [k, Math.round(v)]))}`);
+          log(`SMOKE_CPUPROFILE ${JSON.stringify([...self].sort((x, y) => y[1] - x[1]).slice(0, 30).map(([k, v]) => [k, Math.round(v)]))}`);
           wc.debugger.detach();
         }
-        if (process.env.ATLAS_WATCH_SMOKE_TRACE) console.log(`SMOKE_TRACE ${await contentTracing.stopRecording(process.env.ATLAS_WATCH_SMOKE_TRACE)}`);
+        if (process.env.ATLAS_WATCH_SMOKE_TRACE) log(`SMOKE_TRACE ${await contentTracing.stopRecording(process.env.ATLAS_WATCH_SMOKE_TRACE)}`);
         // Performance: CPU seconds per process type since launch, GPU feature status, renderer main-thread blocking.
         const cpu: Record<string, number> = {};
         for (const m of app.getAppMetrics()) cpu[m.type] = Math.round(((cpu[m.type] ?? 0) + (m.cpu.cumulativeCPUUsage ?? 0)) * 10) / 10;
         const lt = await wc.executeJavaScript('JSON.stringify(window.__atlasLongTasks ?? null)').catch(() => 'null');
-        console.log(`SMOKE_PROF ${await wc.executeJavaScript('JSON.stringify(window.__atlasProf ?? null)').catch(() => 'null')}`);
+        log(`SMOKE_PROF ${await wc.executeJavaScript('JSON.stringify(window.__atlasProf ?? null)').catch(() => 'null')}`);
         const gpu = app.getGPUFeatureStatus() as unknown as Record<string, string>;
-        console.log(`SMOKE_PERF ${JSON.stringify({ cpuSeconds: cpu, longTasks: JSON.parse(lt), gpu: { gpu_compositing: gpu.gpu_compositing, rasterization: gpu.rasterization, video_decode: gpu.video_decode, webgl2: gpu.webgl2, canvas_oop: gpu.canvas_oop_rasterization } })}`);
+        log(`SMOKE_PERF ${JSON.stringify({ cpuSeconds: cpu, longTasks: JSON.parse(lt), gpu: { gpu_compositing: gpu.gpu_compositing, rasterization: gpu.rasterization, video_decode: gpu.video_decode, webgl2: gpu.webgl2, canvas_oop: gpu.canvas_oop_rasterization } })}`);
         app.quit();
       }, 4000);
     });
@@ -361,7 +369,7 @@ app.whenReady().then(async () => {
         setTimeout(async () => {
           try {
             const out = await mainWindow?.webContents.executeJavaScript(await readFile(scriptPath, 'utf8'));
-            console.log(`SMOKE_SCRIPT ${JSON.stringify(out ?? null)}`);
+            log(`SMOKE_SCRIPT ${JSON.stringify(out ?? null)}`);
             if (process.env.ATLAS_WATCH_SMOKE_SHOT && mainWindow) {
               mainWindow.showInactive();
               mainWindow.webContents.invalidate();
@@ -370,7 +378,7 @@ app.whenReady().then(async () => {
               await writeFile(process.env.ATLAS_WATCH_SMOKE_SHOT.replace(/.png$/, '-scenario.png'), img.toPNG());
             }
           } catch (e) {
-            console.log(`SMOKE_SCRIPT_ERROR ${(e as Error).message}`);
+            log(`SMOKE_SCRIPT_ERROR ${(e as Error).message}`);
           }
         }, 3000);
       });
@@ -380,15 +388,15 @@ app.whenReady().then(async () => {
       try {
         const wc = mainWindow?.webContents;
         const info = wc ? await wc.executeJavaScript('JSON.stringify(window.__atlasSmoke ?? null)') : 'null';
-        console.log(`SMOKE_RESULT ${info}`);
+        log(`SMOKE_RESULT ${info}`);
         if (process.env.ATLAS_WATCH_SMOKE_BRIEFING && core) {
           const ids = core.locations.map((l) => l.id);
           const b = buildBriefing(core.snapshot(), { locationIds: ids, now: new Date(), appVersion: version });
           await writeFile(`${process.env.ATLAS_WATCH_SMOKE_BRIEFING}.html`, b.html, 'utf8');
           await writeFile(`${process.env.ATLAS_WATCH_SMOKE_BRIEFING}.pdf`, await renderPdf(b.html));
-          console.log(`SMOKE_BRIEFING refs=${b.references.length} locations=${b.locationCount}`);
+          log(`SMOKE_BRIEFING refs=${b.references.length} locations=${b.locationCount}`);
         }
-        console.log(`SMOKE_FEEDS ${JSON.stringify({ nws: core?.feeds.nws.state, nwsCount: core?.feeds.nws.recordCount, usgs: core?.feeds.usgs.state, usgsCount: core?.feeds.usgs.recordCount, nwsErr: core?.feeds.nws.error, usgsErr: core?.feeds.usgs.error })}`);
+        log(`SMOKE_FEEDS ${JSON.stringify({ nws: core?.feeds.nws.state, nwsCount: core?.feeds.nws.recordCount, usgs: core?.feeds.usgs.state, usgsCount: core?.feeds.usgs.recordCount, nwsErr: core?.feeds.nws.error, usgsErr: core?.feeds.usgs.error })}`);
         if (process.env.ATLAS_WATCH_SMOKE_SHOT && wc) {
           const img = await wc.capturePage();
           await writeFile(process.env.ATLAS_WATCH_SMOKE_SHOT, img.toPNG());

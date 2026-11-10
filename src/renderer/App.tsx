@@ -1,3 +1,5 @@
+import { FileText, KeyRound, Settings as SettingsIcon, Bell } from 'lucide-react';
+import { FloatingMapControls, FloatingPanel, type LeftMapPanel } from './components/FloatingMapControls';
 import type { ImageryState } from './map/imageryOverlay';
 import type { RouteInfo } from '../shared/route';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -50,6 +52,11 @@ type Dialog = { kind: 'providers' } | { kind: 'import' } | { kind: 'settings' } 
 
 export function App() {
   const [snap, setSnap] = useState<AppSnapshot | null>(null);
+  useEffect(() => {
+    const onLinkError = (event: Event) => setToast(String((event as CustomEvent).detail));
+    window.addEventListener('atlas-link-error', onLinkError);
+    return () => window.removeEventListener('atlas-link-error', onLinkError);
+  }, []);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [layers, setLayers] = useState<GlobeLayers>({ alerts: true, quakes: true, locations: true, radii: true, boundaries: true });
@@ -73,9 +80,26 @@ export function App() {
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [views, setViews] = useState<SavedView[]>([]);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [leftFloat, setLeftFloat] = useState<LeftMapPanel>('layers');
+  const [dataOpen, setDataOpen] = useState(false);
+  const [hudOn, setHudOn] = useState(true);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [creditsOpen, setCreditsOpen] = useState(false);
+  const [playbackMenu, setPlaybackMenu] = useState(false);
+  const floatingStack = useRef<string[]>([]);
+  const toggleLeft = (panel: LeftMapPanel) => {
+    setDiagOpen(false);
+    setHistoryOpen(false);
+    setCreditsOpen(false);
+    if (panel === 'scenes') setToolsOpen(false);
+    setPage('globe');
+    setLeftFloat(current => current === panel ? null : panel);
+  };
   const [playbackOn, setPlaybackOn] = useState(false);
   const [playbackFrame, setPlaybackFrame] = useState<PlaybackFrame | null>(null);
   const [google3dKey, setGoogle3dKey] = useState<string | null>(null);
+  // Bumped when the Google credential changes in Providers, so the active Photoreal tileset is rebuilt with the newly resolved key.
+  const [google3dKeyVersion, setGoogle3dKeyVersion] = useState(0);
   const [routeLine, setRouteLine] = useState<RouteInfo | null>(null);
   const [imagery, setImagery] = useState<ImageryState>(() => {
     const y = new Date(Date.now() - 86400_000).toISOString().slice(0, 10);
@@ -83,8 +107,12 @@ export function App() {
   });
   const [imageryKeys, setImageryKeys] = useState<{ esri: string | null; mapbox: string | null; google: string | null }>({ esri: null, mapbox: null, google: null });
   const [googleConfigured, setGoogleConfigured] = useState(false);
+  // Satellite (Google 2D) and Google geocoding need the user's own key; the included key covers Photoreal 3D only.
+  const [googleOwnKey, setGoogleOwnKey] = useState(false);
   const [eoxLicensed, setEoxLicensed] = useState(false);
   const [page, setPage] = useState<PageId>('globe');
+  const widePage = NAV.find((entry) => entry.id === page)?.wide === true;
+
   const [airportSel, setAirportSel] = useState<string | null>(null);
   const [aircraftFilter, setAircraftFilter] = useState<AircraftFilter>(DEFAULT_AIRCRAFT_FILTER);
   const [vesselClasses, setVesselClasses] = useState<string[]>(['cargo', 'tanker', 'passenger', 'fishing', 'other']);
@@ -114,7 +142,45 @@ export function App() {
   }, []);
   const layerSnapsRef = useRef(layerSnaps);
   layerSnapsRef.current = layerSnaps;
+  useEffect(() => {
+    if (selection || recordSel) { setDataOpen(true); setToolsOpen(false); setKeyboardOpen(false); }
+  }, [selection, recordSel]);
+  useEffect(() => { if (diagOpen) { setLeftFloat(null); setPage('globe'); setHistoryOpen(false); } }, [diagOpen]);
+  useEffect(() => {
+    if (playbackOn) {
+      setLeftFloat(null);
+      setDataOpen(false);
+      setToolsOpen(false);
+      setDiagOpen(false);
+    }
+  }, [playbackOn]);
+  useEffect(() => {
+    const open = [leftFloat, dataOpen && 'data', toolsOpen && 'tools', diagOpen && 'diagnostics',
+      creditsOpen && 'credits', keyboardOpen && 'keyboard', playbackMenu && 'playback-menu', historyOpen && 'history',
+      page !== 'globe' && !widePage && 'page', bellOpen && 'notifications'].filter((value): value is string => typeof value === 'string');
+    floatingStack.current = [...floatingStack.current.filter(key => open.includes(key)), ...open.filter(key => !floatingStack.current.includes(key))];
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || dialog || form || widePage || !floatingStack.current.length) return;
+      if (document.querySelector('[aria-modal="true"]')) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const top = floatingStack.current.at(-1);
+      if (top === 'notifications') setBellOpen(false);
+      else if (top === 'data') setDataOpen(false);
+      else if (top === 'tools') { setToolsOpen(false); setTool('none'); setDraft([]); }
+      else if (top === 'diagnostics') setDiagOpen(false);
+      else if (top === 'credits') setCreditsOpen(false);
+      else if (top === 'keyboard') setKeyboardOpen(false);
+      else if (top === 'playback-menu') setPlaybackMenu(false);
+      else if (top === 'history') setHistoryOpen(false);
+      else if (top === 'page') setPage('globe');
+      else setLeftFloat(null);
+    };
+    window.addEventListener('keydown', onEscape, true);
+    return () => window.removeEventListener('keydown', onEscape, true);
+  }, [leftFloat, dataOpen, toolsOpen, diagOpen, creditsOpen, keyboardOpen, playbackMenu, historyOpen, page, widePage, dialog, form, bellOpen]);
   const getDiag = useCallback(() => globeRef.current?.getDiagnostics() ?? null, []);
+  const getHeading = useCallback(() => globeRef.current?.getCamera()?.heading ?? null, []);
   useEffect(() => {
     // Main-thread blocking (tasks over 50 ms), read by the performance smoke test.
     try {
@@ -185,7 +251,15 @@ export function App() {
     void api.trackTrail(tracked.layer, tracked.id).then((pts) => setTrail(pts.map((p) => ({ lat: p.lat, lon: p.lon, altM: p.altM }))));
   }, [tracked, tracked ? layerSnaps[tracked.layer]?.status.lastSuccessAt : null]);
 
-  // Google Photorealistic 3D: only when the user chose it and configured their own key.
+  useEffect(() => {
+    const onChange = (e: Event) => {
+      if ((e as CustomEvent).detail === 'google3d') setGoogle3dKeyVersion((v) => v + 1);
+    };
+    window.addEventListener('atlas-providers-changed', onChange);
+    return () => window.removeEventListener('atlas-providers-changed', onChange);
+  }, []);
+
+  // Google Photorealistic 3D: only when chosen, with the user's key or the included key (one allowance per request).
   useEffect(() => {
     if (snap?.settings.basemap !== ('google3d' as never)) {
       setGoogle3dKey(null);
@@ -193,9 +267,12 @@ export function App() {
     }
     void api.providerBrowserKey('google3d').then((k) => {
       setGoogle3dKey(k);
-      if (!k) setToast('Google Photorealistic 3D needs your own Google Maps key (Provider settings). Showing keyless imagery instead.');
+      if (!k) setToast('Google Photorealistic 3D needs an included or saved Google Maps key in Providers.');
+    }).catch(error => {
+      setGoogle3dKey(null);
+      setToast(errorText(error));
     });
-  }, [snap?.settings.basemap]);
+  }, [snap?.settings.basemap, google3dKeyVersion]);
 
   // Customer imagery credentials are fetched only when the chosen surface needs them (and again after Provider settings closes).
   useEffect(() => {
@@ -203,14 +280,15 @@ export function App() {
     void (async () => {
       const esri = b === 'esri' ? await api.providerBrowserKey('esri-imagery') : null;
       const mapbox = b === 'mapbox' ? await api.providerBrowserKey('mapbox') : null;
-      const google = b === 'google2d' ? await api.providerBrowserKey('google3d') : null;
+      const google = b === 'google2d' ? await api.providerBrowserKey('google2d') : null;
       const list = await api.listProviders();
       const eox = b === 'eox' ? list.some((p) => p.id === 'eox' && p.configured) : false;
       setGoogleConfigured(list.some((p) => p.id === 'google3d' && p.configured));
+      setGoogleOwnKey(list.some((p) => p.id === 'google3d' && p.credentialSource === 'user'));
       setImageryKeys({ esri, mapbox, google });
       setEoxLicensed(eox);
       if ((b === 'esri' && !esri) || (b === 'mapbox' && !mapbox) || (b === 'eox' && !eox) || (b === 'google2d' && !google)) setToast('That imagery source needs setup in Providers. Showing keyless imagery meanwhile.');
-    })();
+    })().catch(error => { setImageryKeys({ esri: null, mapbox: null, google: null }); setToast(errorText(error)); });
   }, [snap?.settings.basemap, dialog === null]);
 
   // Restore the last camera view (per-viewer convenience; falls back to the U.S. view).
@@ -468,141 +546,7 @@ export function App() {
     .filter(Boolean)
     .join(' · ');
 
-  return (
-    <div className={`app ${historyOpen ? 'history-open' : ''} ${kiosk ? 'kiosk' : ''}`}>
-      <header className="topbar">
-        <div className="brand">
-          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
-            <ellipse cx="12" cy="12" rx="4.2" ry="9.5" fill="none" stroke="currentColor" strokeWidth="1.2" />
-            <path d="M2.8 9h18.4M2.8 15h18.4" stroke="currentColor" strokeWidth="1.2" />
-            <circle cx="16.5" cy="8" r="2" fill="#e8a33a" />
-          </svg>
-          <span>Atlas Watch</span>
-        </div>
-        <SearchBox
-          googleGeocoder={!!google3dKey || !!imageryKeys.google}
-          inputRef={searchRef}
-          value={search}
-          onChange={setSearch}
-          extra={searchExtra}
-          onGo={(lat, lon, label, kind) => {
-            globeRef.current?.focus(lat, lon, kind === 'address' ? 0.4 : kind === 'coords' ? 2 : 6);
-            setToast(`Flying to ${label}`);
-          }}
-        />
-        <div className="fresh-group" aria-label="Data freshness">
-          <FreshnessChip label="NWS alerts" status={snap.feeds.nws} freshness={snap.freshness.nws} onRefresh={() => void api.refresh('nws')} />
-          <FreshnessChip label="USGS quakes" status={snap.feeds.usgs} freshness={snap.freshness.usgs} onRefresh={() => void api.refresh('usgs')} />
-        </div>
-        <button className="btn" onClick={() => void api.refresh('all')} title="Refresh both feeds now">
-          ⟳ Refresh
-        </button>
-        <span className="spacer" />
-        <button className="btn" onClick={() => setDialog({ kind: 'briefing', ids: selectedLocationId ? [selectedLocationId] : [] })}>
-          Briefing
-        </button>
-        <button className="btn" onClick={() => setDialog({ kind: 'ai' })} title={snap.settings.aiEnabled ? 'Ask the local AI' : 'Local AI is optional and turned off'}>
-          Ask AI{!snap.settings.aiEnabled && <span className="muted small"> (off)</span>}
-        </button>
-        <div className="seg" role="group" aria-label="Map mode">
-          <button className={`btn small-btn ${sceneMode === '2d' ? 'primary' : ''}`} onClick={() => setSceneMode('2d')} aria-pressed={sceneMode === '2d'}>
-            Map
-          </button>
-          <button className={`btn small-btn ${sceneMode === '3d' ? 'primary' : ''}`} onClick={() => setSceneMode('3d')} aria-pressed={sceneMode === '3d'}>
-            3D
-          </button>
-          <button
-            className="btn small-btn"
-            title="Air-traffic view: aircraft layers, airports and altitude colors (no ATC audio: no authorized audio source is included)"
-            onClick={() => {
-              void patchSettings({ layersEnabled: [...new Set([...(snap.settings.layersEnabled as LayerId[]), 'aircraft', 'aircraftMil'])] as LayerId[] });
-              setShowAirports(true);
-              setToast('ATC view: aircraft and airports on. Zoom in to load aircraft for an area.');
-            }}
-          >
-            ATC
-          </button>
-        </div>
-        <div className="seg" role="group" aria-label="Google imagery (your key)">
-          <button
-            className={`btn small-btn ${snap.settings.basemap === 'google2d' ? 'primary' : ''}`}
-            aria-pressed={snap.settings.basemap === 'google2d'}
-            title={googleConfigured ? 'Google satellite imagery worldwide (your Google key; billed per tile)' : 'Needs your Google Maps key: opens Providers'}
-            onClick={() => {
-              if (!googleConfigured) return setDialog({ kind: 'providers' } as never);
-              void patchSettings({ basemap: snap.settings.basemap === 'google2d' ? 'atlas' : 'google2d' });
-            }}
-          >
-            Satellite
-          </button>
-          <button
-            className={`btn small-btn ${snap.settings.basemap === 'google3d' ? 'primary' : ''}`}
-            aria-pressed={snap.settings.basemap === 'google3d'}
-            title={googleConfigured ? 'Google Photorealistic 3D cities (your Google key; billed per session)' : 'Needs your Google Maps key: opens Providers'}
-            onClick={() => {
-              if (!googleConfigured) return setDialog({ kind: 'providers' } as never);
-              setSceneMode('3d');
-              void patchSettings({ basemap: snap.settings.basemap === 'google3d' ? 'atlas' : 'google3d' });
-            }}
-          >
-            Photoreal 3D
-          </button>
-        </div>
-        <button className="btn" onClick={() => setPage('airports')} title="Airports">
-          Airports
-        </button>
-        <button className="btn" onClick={() => setPage('replays')} title="Recorded movement playback">
-          History
-        </button>
-        <div className="bell-wrap">
-          <button className={`icon-btn ${notifications.length ? 'bell-on' : ''}`} onClick={() => setBellOpen(!bellOpen)} aria-label={`Notifications (${notifications.length})`} title="Notifications">
-            🔔{notifications.length ? <span className="bell-count">{notifications.length}</span> : null}
-          </button>
-          {bellOpen && (
-            <div className="bell-pop">
-              <div className="diag-sub">Notifications</div>
-              {notifications.length === 0 ? <p className="muted small">Nothing needs attention in the loaded data.</p> : null}
-              <ul className="rec-list">
-                {notifications.map((n) => (
-                  <li key={n.key}>
-                    <button className="rec-item" onClick={() => { n.go(); setBellOpen(false); }}>
-                      <span className={`tag ${n.sev}`}>{n.tag}</span>
-                      <span className="rec-title">{n.title}</span>
-                      <span className="rec-meta">{n.meta}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-        <button className="btn" onClick={() => setDialog({ kind: 'providers' })} title="Data providers, credentials and connection tests">
-          Providers
-        </button>
-        <button className="icon-btn" onClick={() => setDialog({ kind: 'settings' })} aria-label="Settings" title="Settings">
-          ⚙
-        </button>
-      </header>
-
-      <main className="workspace">
-        <nav className="nav-rail" aria-label="Sections">
-          {NAV.map((n, i) => (
-            <span key={n.id}>
-              {i > 0 && NAV[i - 1].group !== n.group && <span className="nav-divider" role="separator" aria-label={n.group} />}
-              <button className={`nav-btn ${page === n.id ? 'active' : ''}`} onClick={() => setPage(n.id)} title={n.label} aria-label={n.label} aria-current={page === n.id ? 'page' : undefined}>
-                <span className="nav-icon" aria-hidden="true">{n.icon}</span>
-                <span className="nav-label" aria-hidden="true">{n.short}</span>
-              </button>
-            </span>
-          ))}
-        </nav>
-        {page !== 'globe' ? (
-          <aside className="panel left-panel page-panel" aria-label={NAV.find((n) => n.id === page)?.label}>
-            <PageView page={page} ctx={pageCtx!} airport={airportSel} />
-          </aside>
-        ) : (
-        <LeftPanel
+  const locationPanel = (<LeftPanel mode={leftFloat === 'places' ? 'places' : 'alerts'}
           snap={snap}
           search={search}
           selectedLocationId={selectedLocationId}
@@ -628,9 +572,131 @@ export function App() {
           }}
           onSettingsPatch={(p) => void patchSettings(p)}
         >
-          <LayersPanel settings={snap.settings} snaps={layerSnaps} onPatch={(p) => void patchSettings(p)} imagery={imagery} onImagery={setImagery} />
-        </LeftPanel>
-        )}
+        </LeftPanel>);
+  const exportCurrentScene = async () => {
+    const scene = currentScene();
+    if (!scene) return;
+    try {
+      const path = await api.exportScene(scene);
+      if (path) setToast('Scene saved to ' + path);
+    } catch (error) { setToast(errorText(error)); }
+  };
+  const credits = 'Alerts: NWS/NOAA · Earthquakes: USGS · Surface: ' + (BASEMAP_CREDIT[snap.settings.basemap] ?? 'neutral')
+    + (snap.settings.labelsOverlay && snap.settings.basemap !== 'streets' ? ' · Labels/roads: © OpenStreetMap contributors, © OpenMapTiles (OpenFreeMap)' : '')
+    + (snap.settings.buildings3d ? ' · Buildings: OpenStreetMap (heights may be estimated)' : '')
+    + (snap.settings.terrainEnabled ? ' · Terrain: Mapzen Terrain Tiles (AWS Open Data; 3DEP, SRTM, GMTED, ETOPO1, EU-DEM)' : '')
+    + ' · Boundaries: U.S. Census Bureau, Natural Earth · Globe: CesiumJS' + (layerCredits ? ' · ' + layerCredits : '');
+  return (
+    <div className={`app ${historyOpen ? 'history-open' : ''} ${kiosk ? 'kiosk' : ''} ${snap.settings.reducedMotion ? 'reduced-motion' : ''} ${playbackOn ? 'playback-active' : ''}`}>
+      <header className="topbar">
+        <div className="brand">
+          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+            <ellipse cx="12" cy="12" rx="4.2" ry="9.5" fill="none" stroke="currentColor" strokeWidth="1.2" />
+            <path d="M2.8 9h18.4M2.8 15h18.4" stroke="currentColor" strokeWidth="1.2" />
+            <circle cx="16.5" cy="8" r="2" fill="#e8a33a" />
+          </svg>
+          <span>Atlas Watch</span>
+        </div>
+        <div className="seg" role="group" aria-label="Map mode">
+          <button className={`btn small-btn ${sceneMode === '2d' ? 'primary' : ''}`} onClick={() => setSceneMode('2d')} aria-pressed={sceneMode === '2d'}>
+            2D
+          </button>
+          <button className={`btn small-btn ${sceneMode === '3d' ? 'primary' : ''}`} onClick={() => setSceneMode('3d')} aria-pressed={sceneMode === '3d'}>
+            3D
+          </button>
+          <button
+            className="btn small-btn"
+            title="Air-traffic view: aircraft layers, airports and altitude colors (no ATC audio: no authorized audio source is included)"
+            onClick={() => {
+              void patchSettings({ layersEnabled: [...new Set([...(snap.settings.layersEnabled as LayerId[]), 'aircraft', 'aircraftMil'])] as LayerId[] });
+              setShowAirports(true);
+              setToast('ATC view: aircraft and airports on. Zoom in to load aircraft for an area.');
+            }}
+          >
+            ATC
+          </button>
+        </div>
+        <div className="seg" role="group" aria-label="Google imagery (your key)">
+          <button
+            className={`btn small-btn ${snap.settings.basemap === 'google2d' ? 'primary' : ''}`}
+            aria-pressed={snap.settings.basemap === 'google2d'}
+            title={googleOwnKey ? 'Google satellite imagery worldwide (your Google key; billed per tile)' : 'Needs your own Google Maps key: opens Providers'}
+            onClick={() => {
+              if (!googleOwnKey) return setDialog({ kind: 'providers' } as never);
+              void patchSettings({ basemap: snap.settings.basemap === 'google2d' ? 'atlas' : 'google2d' });
+            }}
+          >
+            Satellite
+          </button>
+          <button
+            className={`btn small-btn ${snap.settings.basemap === 'google3d' ? 'primary' : ''}`}
+            aria-pressed={snap.settings.basemap === 'google3d'}
+            title={googleConfigured ? 'Google Photorealistic 3D cities (your Google key; billed per session)' : 'Needs your Google Maps key: opens Providers'}
+            onClick={() => {
+              if (!googleConfigured) return setDialog({ kind: 'providers' } as never);
+              setSceneMode('3d');
+              void patchSettings({ basemap: snap.settings.basemap === 'google3d' ? 'atlas' : 'google3d' });
+            }}
+          >
+            Photoreal 3D
+          </button>
+        </div>
+        <SearchBox
+          googleGeocoder={googleOwnKey}
+          inputRef={searchRef}
+          value={search}
+          onChange={setSearch}
+          extra={searchExtra}
+          onGo={(lat, lon, label, kind) => {
+            globeRef.current?.focus(lat, lon, kind === 'address' ? 0.4 : kind === 'coords' ? 2 : 6);
+            setToast(`Flying to ${label}`);
+          }}
+        />
+        <div className="fresh-group" aria-label="Data freshness">
+          <FreshnessChip label="NWS alerts" status={snap.feeds.nws} freshness={snap.freshness.nws} onRefresh={() => void api.refresh('nws')} />
+          <FreshnessChip label="USGS quakes" status={snap.feeds.usgs} freshness={snap.freshness.usgs} onRefresh={() => void api.refresh('usgs')} />
+        </div>
+        <div className="bell-wrap">
+          <button className={`icon-btn ${notifications.length ? 'bell-on' : ''}`} onClick={() => setBellOpen(!bellOpen)} aria-label={`Notifications (${notifications.length})`} title="Notifications">
+            <Bell aria-hidden="true" />{notifications.length ? <span className="bell-count">{notifications.length}</span> : null}
+          </button>
+          {bellOpen && (
+            <div className="bell-pop">
+              <div className="diag-sub">Notifications</div>
+              {notifications.length === 0 ? <p className="muted small">Nothing needs attention in the loaded data.</p> : null}
+              <ul className="rec-list">
+                {notifications.map((n) => (
+                  <li key={n.key}>
+                    <button className="rec-item" onClick={() => { n.go(); setBellOpen(false); }}>
+                      <span className={`tag ${n.sev}`}>{n.tag}</span>
+                      <span className="rec-title">{n.title}</span>
+                      <span className="rec-meta">{n.meta}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+        <button className="btn" onClick={() => setDialog({ kind: 'providers' })} title="Data providers, credentials and connection tests">
+          <KeyRound aria-hidden="true" /> <span className="top-action-label">Providers</span>
+        </button>
+        <button className="icon-btn" onClick={() => setDialog({ kind: 'settings' })} aria-label="Settings" title="Settings">
+          <SettingsIcon aria-hidden="true" />
+        </button>
+      </header>  <main className="workspace">
+        <nav className="nav-rail" aria-label="Sections">
+          {NAV.map((n, i) => (
+            <span key={n.id}>
+              {i > 0 && NAV[i - 1].group !== n.group && <span className="nav-divider" role="separator" aria-label={n.group} />}
+              <button className={`nav-btn ${page === n.id ? 'active' : ''}`} onClick={() => { if (n.id !== 'globe') { setDiagOpen(false); setCreditsOpen(false); } setPage(n.id); }} title={n.label} aria-label={n.label} aria-current={page === n.id ? 'page' : undefined}>
+                <span className="nav-icon" aria-hidden="true"><n.icon size={18} strokeWidth={1.75} aria-hidden="true" /></span>
+                <span className="nav-label" aria-hidden="true">{n.short}</span>
+              </button>
+            </span>
+          ))}
+        </nav>
 
         <section className="center" aria-label="Globe">
           <Globe
@@ -643,6 +709,7 @@ export function App() {
             selection={globeSelection}
             pickMode={pickMode}
             onSelect={(s) => {
+              if (s) setDataOpen(true);
               if (s?.kind === 'airport') {
                 setAirportSel(s.id);
                 setPage('airports');
@@ -705,69 +772,153 @@ export function App() {
               if (err) (smoke.current.errors as string[]).push(err);
             }}
           />
-          <div className="globe-controls" role="toolbar" aria-label="Globe view controls">
-            <button className="btn" onClick={() => globeRef.current?.flyRegion('us')} title="Show all 50 states">
-              U.S.
+          {!widePage && <FloatingMapControls
+            left={page === 'globe' ? leftFloat : null} onLeft={toggleLeft}
+            dataOpen={dataOpen} onData={() => { setDataOpen(!dataOpen); setToolsOpen(false); setKeyboardOpen(false); }}
+            toolsOpen={toolsOpen} onTools={() => { setToolsOpen(!toolsOpen); setDataOpen(false); setKeyboardOpen(false); setHistoryOpen(false); if (leftFloat === 'scenes') setLeftFloat(null); }}
+            onAi={() => setDialog({ kind: 'ai' })}
+            camerasOn={snap.settings.layersEnabled.includes('cameras')}
+            onCameras={() => void patchSettings({ layersEnabled: snap.settings.layersEnabled.includes('cameras')
+              ? snap.settings.layersEnabled.filter(id => id !== 'cameras') : [...snap.settings.layersEnabled, 'cameras'] })}
+            onBrowseCameras={() => setPage('cameras')}
+            diagnosticsOpen={diagOpen} onDiagnostics={() => setDiagOpen(!diagOpen)}
+            hudOn={hudOn} onHud={() => setHudOn(!hudOn)}
+            onPlayback={() => setPlaybackMenu(!playbackMenu)} playbackActive={playbackOn || historyOpen}
+            kiosk={kiosk} onKiosk={() => {
+              if (!kiosk) {
+                setPage('globe');
+                setLeftFloat(null);
+                setDataOpen(false);
+                setToolsOpen(false);
+                setDiagOpen(false);
+                setKeyboardOpen(false);
+                setCreditsOpen(false);
+                setHistoryOpen(false);
+              }
+              setKiosk(!kiosk);
+              void api.setKiosk(!kiosk);
+            }}
+            onScreenshot={() => void api.captureScreenshot().then(path => path && setToast('Saved ' + path))}
+            onShare={exportCurrentScene} onWatchlist={() => setPage('watchlist')}
+            onZoom={direction => globeRef.current?.zoom(direction)} onNorth={() => globeRef.current?.northUp()} getHeading={getHeading}
+            onReset={() => globeRef.current?.flyHome()} onHome={() => {
+              if (selectedRecord) globeRef.current?.focus(selectedRecord.lat, selectedRecord.lon, 20);
+              else if (snap.settings.homeLat !== null && snap.settings.homeLon !== null) globeRef.current?.focus(snap.settings.homeLat, snap.settings.homeLon, 20);
+              else setToast('Set a home location in Settings, or select an object.');
+            }} keyboardOpen={keyboardOpen} onKeyboard={() => { setKeyboardOpen(!keyboardOpen); setDataOpen(false); setToolsOpen(false); }}
+          />}
+          {page === 'globe' && leftFloat === 'layers' && !diagOpen && (
+            <FloatingPanel className="floating-left floating-layers" title={'Layers \u00b7 ' + (snap.settings.layersEnabled.length + (snap.settings.radarEnabled ? 1 : 0)) + ' on'}
+              onClose={() => setLeftFloat(null)}>
+              <LayersPanel settings={snap.settings} snaps={layerSnaps} onPatch={patch => void patchSettings(patch)} imagery={imagery}
+                onImagery={setImagery} airportsOn={showAirports} onAirports={() => setShowAirports(!showAirports)} alertsContent={locationPanel} />
+            </FloatingPanel>
+          )}
+          {page === 'globe' && leftFloat === 'places' && !diagOpen && (
+            <FloatingPanel className="floating-left floating-places" title="Places" onClose={() => setLeftFloat(null)}>{locationPanel}</FloatingPanel>
+          )}
+          {dataOpen && !widePage && (
+            <FloatingPanel className="floating-right data-panel" title="Data" onClose={() => setDataOpen(false)}
+              headerAction={<button className="btn" title="Briefing" onClick={() => setDialog({ kind: 'briefing', ids: selectedLocationId ? [selectedLocationId] : [] })}>
+                <FileText size={16} aria-hidden="true" /> Briefing</button>}>
+        {recordSel ? (
+          <aside className="panel right-panel" aria-label="Details">
+        <DetailsPanel
+          snap={snap}
+          selection={null}
+          onSelect={focusSelection}
+          onEdit={(loc) => {
+            setPicked(null);
+            setForm({ existing: loc });
+          }}
+          onDelete={(loc) => setDialog({ kind: 'delete', loc })}
+          onFocus={(lat, lon, r) => globeRef.current?.focus(lat, lon, r)}
+          onBriefing={(ids) => setDialog({ kind: 'briefing', ids })}
+        />
+            <button className="link-btn back" onClick={() => setRecordSel(null)}>
+              ← Overview
             </button>
-            <button className="btn" onClick={() => globeRef.current?.flyRegion('lower48')}>
-              Lower 48
-            </button>
-            <button className="btn" onClick={() => globeRef.current?.flyRegion('alaska')}>
-              Alaska
-            </button>
-            <button className="btn" onClick={() => globeRef.current?.flyRegion('hawaii')}>
-              Hawaii
-            </button>
-            <span className="sep" />
-            <button className="btn" onClick={() => globeRef.current?.northUp()} title="Rotate so north is up">
-              N↑
-            </button>
-            <button className="btn" onClick={() => globeRef.current?.flyHome()} title="Reset view">
-              Reset
-            </button>
-            <button className="btn" onClick={() => globeRef.current?.zoom(1)} aria-label="Zoom in">
-              +
-            </button>
-            <button className="btn" onClick={() => globeRef.current?.zoom(-1)} aria-label="Zoom out">
-              −
-            </button>
-            <span className="sep" />
-            <button className={`btn ${diagOpen ? 'primary' : ''}`} onClick={() => setDiagOpen(!diagOpen)} aria-pressed={diagOpen} title="Map diagnostics (Ctrl+Shift+D)">
-              Diag
-            </button>
-            <button className={`btn ${toolsOpen ? 'primary' : ''}`} onClick={() => setToolsOpen(!toolsOpen)} aria-pressed={toolsOpen} title="Measure, draw, saved views, scenes, display style, playback">
-              Tools
-            </button>
-            <button className={`btn ${showAirports ? 'primary' : ''}`} onClick={() => setShowAirports(!showAirports)} aria-pressed={showAirports} title="Airport markers (OurAirports)">
-              Airports
-            </button>
-            <button
-              className="btn"
-              title="Locate: fly to home (Settings) or the selected object"
-              onClick={() => {
-                const s = snap.settings;
-                if (selectedRecord) globeRef.current?.focus(selectedRecord.lat, selectedRecord.lon, 20);
-                else if (s.homeLat !== null && s.homeLon !== null) globeRef.current?.focus(s.homeLat, s.homeLon, 20);
-                else setToast('Set a home location in Settings, or select an object.');
+            <RecordDetails
+              layer={recordSel.layer}
+              record={selectedRecord}
+              snaps={layerSnaps}
+              tracked={tracked?.layer === recordSel.layer && tracked.id === recordSel.id}
+              watched={watchlist.some((w) => w.id === recordSel.id && (w.kind === 'vessel') === (recordSel.layer === 'vessels'))}
+              onWatch={(on) => {
+                const kind = recordSel.layer === 'vessels' ? 'vessel' : 'aircraft';
+                if (on) setWatchlist([...watchlist, { kind, id: recordSel.id, label: selectedRecord?.label ?? recordSel.id, addedAt: new Date().toISOString() }]);
+                else setWatchlist(watchlist.filter((w) => !(w.kind === kind && w.id === recordSel.id)));
               }}
-            >
-              ⌖
-            </button>
-            <button className="btn" title="Save a PNG screenshot of the window" onClick={() => void api.captureScreenshot().then((p) => p && setToast(`Saved ${p}`))}>
-              ⎙
-            </button>
-            <button
-              className={`btn ${kiosk ? 'primary' : ''}`}
-              title="Kiosk: full screen, globe only (Esc or button to exit)"
-              onClick={() => {
-                const on = !kiosk;
-                setKiosk(on);
-                void api.setKiosk(on);
-              }}
-            >
-              ⛶
-            </button>
+              orbitShown={orbitFor === recordSel.id && recordSel.layer === 'satellites'}
+              onTrack={(on) => setTracked(on ? recordSel : null)}
+              onOrbit={(on) => setOrbitFor(on ? recordSel.id : null)}
+              onSelect={(layer, id) => setRecordSel({ layer, id })}
+              onFocus={(lat, lon, r) => globeRef.current?.focus(lat, lon, r)}
+              photosEnabled={snap.settings.aircraftPhotos}
+              onEnablePhotos={() => void patchSettings({ aircraftPhotos: true })}
+              onShowRoute={setRouteLine}
+            />
+          </aside>
+        ) : (
+        <DetailsPanel includeOverview
+          snap={snap}
+          selection={selection}
+          onSelect={focusSelection}
+          onEdit={(loc) => {
+            setPicked(null);
+            setForm({ existing: loc });
+          }}
+          onDelete={(loc) => setDialog({ kind: 'delete', loc })}
+          onFocus={(lat, lon, r) => globeRef.current?.focus(lat, lon, r)}
+          onBriefing={(ids) => setDialog({ kind: 'briefing', ids })}
+        />
+        )}
+
+              <details className="data-legend"><summary>Legend</summary>          <div className="legend" aria-label="Legend">
+            <div className="legend-title">Legend</div>
+            <div className="legend-row">
+              {SEVERITY_ORDER.map((s) => (
+                <span key={s} className="legend-item">
+                  <span className="swatch" style={{ background: SEVERITY_META[s].color }} aria-hidden="true" />
+                  <span aria-hidden="true">{SEVERITY_META[s].icon}</span> {s}
+                </span>
+              ))}
+            </div>
+            <div className="legend-row">
+              <span className="legend-item">
+                <span className="dot" style={{ background: quakeClass(3).color }} /> Quake &lt; M4.5
+              </span>
+              <span className="legend-item">
+                <span className="dot" style={{ background: quakeClass(5).color }} /> M4.5–5.9
+              </span>
+              <span className="legend-item">
+                <span className="dot" style={{ background: quakeClass(6.5).color }} /> M6+
+              </span>
+              <span className="legend-item">
+                <span className="dot loc-dot" /> Saved location
+              </span>
+            </div>
+            <div className="legend-note">
+              Marker size scales with magnitude.
+              {zoneOnly > 0 && ` ${zoneOnly} zone-based alert(s) have no polygon and are not drawn; they are still evaluated for saved locations.`}
+            </div>
           </div>
+</details>
+              {diffText && <p className="muted small">Since previous refresh — {diffText}</p>}
+            </FloatingPanel>
+          )}
+          {keyboardOpen && !widePage && (
+            <FloatingPanel className="keyboard-panel" title="Keyboard shortcuts" onClose={() => setKeyboardOpen(false)}>
+              <ul className="shortcut-list"><li>/ — focus search</li><li>Esc — close the top panel; cancel a map tool or clear selection</li>
+                <li>Ctrl+Shift+D — diagnostics</li><li>Arrow keys — rotate the focused globe</li><li>+ / − — zoom the focused globe</li></ul>
+            </FloatingPanel>
+          )}
+          {playbackMenu && !widePage && (
+            <FloatingPanel className="playback-menu" title="Playback / History" onClose={() => setPlaybackMenu(false)}>
+              <button className="btn" onClick={() => { setPlaybackOn(!playbackOn); setPlaybackMenu(false); }}>Replay recorded movement</button>
+              <button className="btn" onClick={() => { setHistoryOpen(!historyOpen); setPlaybackMenu(false); setLeftFloat(null); setDataOpen(false); setToolsOpen(false); setDiagOpen(false); setPage('globe'); }}>Event history</button>
+            </FloatingPanel>
+          )}
           <TrafficBar
             aircraftOn={snap.settings.layersEnabled.includes('aircraft') || snap.settings.layersEnabled.includes('aircraftMil')}
             vesselsOn={snap.settings.layersEnabled.includes('vessels')}
@@ -782,9 +933,16 @@ export function App() {
               setRecordSel({ layer: 'aircraft', id });
             }}
           />
-          <Hud get={getDiag} snaps={layerSnaps} layersOn={snap.settings.layersEnabled as LayerId[]} mode={snap.settings.visualMode} playbackTime={playbackOn ? (playbackFrame?.t ?? null) : null} />
-          {toolsOpen && (
+          {hudOn && <Hud get={getDiag} snaps={layerSnaps} layersOn={snap.settings.layersEnabled as LayerId[]} mode={snap.settings.visualMode} playbackTime={playbackOn ? (playbackFrame?.t ?? null) : null} />}
+          {!widePage && (toolsOpen || (page === 'globe' && leftFloat === 'scenes' && !diagOpen)) && (
             <ToolsPanel
+              mode={toolsOpen ? 'tools' : 'scenes'}
+              quickViews={<div className="btn-row" role="group" aria-label="Quick views">
+                {(['us', 'lower48', 'alaska', 'hawaii'] as const).map(region => (
+                  <button className="btn" key={region} onClick={() => globeRef.current?.flyRegion(region)}>
+                    {{us: 'U.S.', lower48: 'Lower 48', alaska: 'Alaska', hawaii: 'Hawaii'}[region]}</button>
+                ))}
+              </div>}
               tool={tool}
               draft={draft}
               onTool={(t) => {
@@ -844,6 +1002,7 @@ export function App() {
               onPatch={(p) => void patchSettings(p)}
               onClose={() => {
                 setToolsOpen(false);
+                if (!toolsOpen) setLeftFloat(null);
                 setTool('none');
                 setDraft([]);
               }}
@@ -854,81 +1013,25 @@ export function App() {
           {playbackOn && <PlaybackBar onFrame={setPlaybackFrame} onExit={() => setPlaybackOn(false)} />}
           {diagOpen && <DiagnosticsPanel get={getDiag} onClose={() => setDiagOpen(false)} />}
           {pickMode && <div className="pick-banner">Click the globe to choose a point · Esc to cancel</div>}
-          <div className="legend" aria-label="Legend">
-            <div className="legend-title">Legend</div>
-            <div className="legend-row">
-              {SEVERITY_ORDER.map((s) => (
-                <span key={s} className="legend-item">
-                  <span className="swatch" style={{ background: SEVERITY_META[s].color }} aria-hidden="true" />
-                  <span aria-hidden="true">{SEVERITY_META[s].icon}</span> {s}
-                </span>
-              ))}
-            </div>
-            <div className="legend-row">
-              <span className="legend-item">
-                <span className="dot" style={{ background: quakeClass(3).color }} /> Quake &lt; M4.5
-              </span>
-              <span className="legend-item">
-                <span className="dot" style={{ background: quakeClass(5).color }} /> M4.5–5.9
-              </span>
-              <span className="legend-item">
-                <span className="dot" style={{ background: quakeClass(6.5).color }} /> M6+
-              </span>
-              <span className="legend-item">
-                <span className="dot loc-dot" /> Saved location
-              </span>
-            </div>
-            <div className="legend-note">
-              Marker size scales with magnitude.
-              {zoneOnly > 0 && ` ${zoneOnly} zone-based alert(s) have no polygon and are not drawn; they are still evaluated for saved locations.`}
-            </div>
-          </div>
-          <div className="attribution">
-            Alerts: NWS/NOAA · Earthquakes: USGS · Surface: {BASEMAP_CREDIT[snap.settings.basemap] ?? 'neutral'}{snap.settings.labelsOverlay && snap.settings.basemap !== 'streets' ? ' · Labels/roads: © OpenStreetMap contributors, © OpenMapTiles (OpenFreeMap)' : ''}{snap.settings.buildings3d ? ' · Buildings: OpenStreetMap (heights may be estimated)' : ''}{snap.settings.terrainEnabled ? ' · Terrain: Mapzen Terrain Tiles (AWS Open Data; 3DEP, SRTM, GMTED, ETOPO1, EU-DEM)' : ''} · Boundaries: U.S. Census Bureau, Natural Earth · Globe: CesiumJS
-            {layerCredits && <div>{layerCredits}</div>}
-            {diffText && <div className="diff-line">Since previous refresh — {diffText}</div>}
-          </div>
+          <footer className="attribution">
+            <span tabIndex={0} title={credits}>{credits}</span>
+            <button className="link-btn" aria-expanded={creditsOpen} onClick={() => { setCreditsOpen(!creditsOpen); setLeftFloat(null); setDiagOpen(false); setHistoryOpen(false); setPage('globe'); }}>Credits</button>
+          </footer>
+          {creditsOpen && <FloatingPanel className="credits-panel" title="Credits" onClose={() => setCreditsOpen(false)}><p>{credits}</p></FloatingPanel>}
+
         </section>
 
-        {recordSel ? (
-          <aside className="panel right-panel" aria-label="Details">
-            <button className="link-btn back" onClick={() => setRecordSel(null)}>
-              ← Overview
-            </button>
-            <RecordDetails
-              layer={recordSel.layer}
-              record={selectedRecord}
-              snaps={layerSnaps}
-              tracked={tracked?.layer === recordSel.layer && tracked.id === recordSel.id}
-              watched={watchlist.some((w) => w.id === recordSel.id && (w.kind === 'vessel') === (recordSel.layer === 'vessels'))}
-              onWatch={(on) => {
-                const kind = recordSel.layer === 'vessels' ? 'vessel' : 'aircraft';
-                if (on) setWatchlist([...watchlist, { kind, id: recordSel.id, label: selectedRecord?.label ?? recordSel.id, addedAt: new Date().toISOString() }]);
-                else setWatchlist(watchlist.filter((w) => !(w.kind === kind && w.id === recordSel.id)));
-              }}
-              orbitShown={orbitFor === recordSel.id && recordSel.layer === 'satellites'}
-              onTrack={(on) => setTracked(on ? recordSel : null)}
-              onOrbit={(on) => setOrbitFor(on ? recordSel.id : null)}
-              onSelect={(layer, id) => setRecordSel({ layer, id })}
-              onFocus={(lat, lon, r) => globeRef.current?.focus(lat, lon, r)}
-              photosEnabled={snap.settings.aircraftPhotos}
-              onEnablePhotos={() => void patchSettings({ aircraftPhotos: true })}
-              onShowRoute={setRouteLine}
-            />
-          </aside>
-        ) : (
-        <DetailsPanel
-          snap={snap}
-          selection={selection}
-          onSelect={focusSelection}
-          onEdit={(loc) => {
-            setPicked(null);
-            setForm({ existing: loc });
-          }}
-          onDelete={(loc) => setDialog({ kind: 'delete', loc })}
-          onFocus={(lat, lon, r) => globeRef.current?.focus(lat, lon, r)}
-          onBriefing={(ids) => setDialog({ kind: 'briefing', ids })}
-        />
+        {page !== 'globe' && !widePage && (
+          <FloatingPanel className="narrow-page page-panel" title={NAV.find(entry => entry.id === page)?.label ?? page} onClose={() => setPage('globe')}>
+            <PageView page={page} ctx={pageCtx!} airport={airportSel} />
+          </FloatingPanel>
+        )}
+        {widePage && (
+          <section className="wide-page" aria-label={NAV.find((entry) => entry.id === page)?.label}>
+            <div className={'wide-page-content ' + (page === 'social' ? 'community-column' : '')}>
+              <PageView page={page} ctx={pageCtx!} airport={airportSel} />
+            </div>
+          </section>
         )}
       </main>
 

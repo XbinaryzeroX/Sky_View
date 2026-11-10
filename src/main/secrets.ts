@@ -45,9 +45,18 @@ export class SecretStore {
   }
 }
 
+const protectedSecrets = new Set<string>();
+/** Register main-process bundled credentials once, including their URL-encoded forms. */
+export function registerProtectedSecrets(values: string[]): void {
+  for (const value of values) {
+    protectedSecrets.add(value);
+    protectedSecrets.add(encodeURIComponent(value));
+  }
+}
+
 /** Removes anything that looks like a credential from text before it is shown or logged. */
 export function redactSecrets(text: string, secrets: (string | null)[]): string {
   let out = text;
-  for (const s of secrets) if (s && s.length >= 6) out = out.split(s).join('[redacted]');
+  for (const s of [...protectedSecrets, ...secrets]) if (s && s.length >= 6) out = out.split(s).join('[redacted]');
   return out.replace(/([?&](?:key|apikey|api_key|token)=)[^&\s"']+/gi, '$1[redacted]');
 }
