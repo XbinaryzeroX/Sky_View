@@ -18,6 +18,8 @@ export class MarketService {
   private newsTail: Promise<unknown> = Promise.resolve();
   private newsAt = 0;
   private newsQueued = 0;
+  private alphaTail: Promise<unknown> = Promise.resolve();
+  private alphaAt = 0;
   private credentials: CredentialService;
 
   constructor(
@@ -25,6 +27,8 @@ export class MarketService {
     private settings: () => Settings,
     private store: Pick<AtlasStore, 'getMeta' | 'setMeta'>,
     credentials?: CredentialService,
+    /** Alpha Vantage free keys also allow at most one request per second (measured 2026-11-10). */
+    private readonly alphaSpacingMs = 1200,
   ) {
     this.credentials = credentials ?? new CredentialService(secrets, store);
   }
@@ -49,6 +53,22 @@ export class MarketService {
     }
     minute.push(now);
     this.minutes.set(provider, minute);
+  }
+
+  /** Serializes Alpha Vantage requests so a quote and its chart never hit the per-second burst limit. */
+  private spaced<T>(provider: MarketProvider, run: () => Promise<T>): Promise<T> {
+    if (provider !== 'alphavantage') return run();
+    const next = this.alphaTail.catch(() => {}).then(async () => {
+      const wait = this.alphaAt + this.alphaSpacingMs - Date.now();
+      if (wait > 0) await new Promise(resolve => setTimeout(resolve, wait));
+      try {
+        return await run();
+      } finally {
+        this.alphaAt = Date.now();
+      }
+    });
+    this.alphaTail = next;
+    return next;
   }
 
   private async cached<T>(key: string, ttl: number, load: () => Promise<T>): Promise<T> {
@@ -83,7 +103,6 @@ export class MarketService {
     const ttl = kind === 'search' ? 86400000 : kind === 'quote' ? 60000 : spec?.intraday ? 300000 : 3600000;
     const cacheKey = `${provider}:${credential.source}:${kind}:${input}:${range ?? ''}:${key}`;
     const result = await this.cached(cacheKey, ttl, async () => {
-      this.reserve(provider, credential);
       const endpoint = kind === 'search' ? 'symbol_search' : kind === 'quote' ? 'quote' : 'time_series';
       const url = new URL(provider === 'twelvedata'
         ? `https://api.twelvedata.com/${endpoint}`
@@ -109,7 +128,12 @@ export class MarketService {
         if (fn === 'TIME_SERIES_DAILY' || fn === 'TIME_SERIES_INTRADAY') url.searchParams.set('outputsize', 'compact');
       }
       try {
-        const response = await fetchJson(url.href, { maxBytes: 8 * 1024 * 1024, providerErrors: true });
+        // Reserve quota at dispatch (after any Alpha Vantage spacing wait), not at enqueue, so the rolling-minute
+        // window and the UTC-day counters reflect when requests actually leave the app.
+        const response = await this.spaced(provider, () => {
+          this.reserve(provider, credential);
+          return fetchJson(url.href, { maxBytes: 8 * 1024 * 1024, providerErrors: true });
+        });
         let data = normalize(response.body, provider);
         if (spec && Array.isArray(data) && data.length) {
           const latest = Math.max(...data.map(candle => (candle as { time: number }).time));
@@ -155,8 +179,23 @@ export class MarketService {
         const url = new URL('https://api.gdeltproject.org/api/v2/doc/doc');
         const params = { query, mode: 'artlist', maxrecords: '25', format: 'json', timespan: '3d', sort: 'datedesc' };
         for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
-        const body = await fetchText(url.href, { maxBytes: 2 * 1024 * 1024 });
-        const articles = parseGdelt(body.text);
+        const load = async () => parseGdelt((await fetchText(url.href, { maxBytes: 2 * 1024 * 1024 })).text);
+        const limited = (error: unknown) => /rate limit|429|please limit/i.test((error as Error).message ?? '');
+        let articles;
+        try {
+          articles = await load();
+        } catch (error) {
+          if (!limited(error)) throw error;
+          // GDELT asks for one request every 5 s and sometimes refuses the first one; wait and retry once.
+          await new Promise(resolve => setTimeout(resolve, 10000));
+          this.newsAt = Date.now();
+          try {
+            articles = await load();
+          } catch (retryError) {
+            if (!limited(retryError)) throw retryError;
+            throw new Error('The GDELT news index is limiting requests right now. Headlines will load if you reopen this asset in a minute.');
+          }
+        }
         registerFeedLinks(articles.map(article => article.url));
         return { articles, fetchedAt: new Date().toISOString() };
       }).finally(() => { this.newsQueued--; });

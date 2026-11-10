@@ -165,3 +165,12 @@ Both known issues from the v0.5.0 final review are fixed and approved by a focus
 
 - Community: opening a post, going back to the feed, or a feed reset cancels any late post refresh, including one that follows a vote or comment that was still being sent. A slow refresh can no longer reopen a post you left.
 - Floating panels: opening any page other than the Globe (nav rail, Browse all cameras, Watchlist, search results, notifications) closes Diagnostics and Credits first, so they never sit under a page. Verified in the running app.
+
+### v0.5.2 fixes (first live test with real Twelve Data and Alpha Vantage keys)
+
+Approved by a focused Codex review (APPROVED, no findings).
+
+- Alpha Vantage: free keys also allow at most one request per second, so a quote followed by its chart was refused. Requests are now serialized 1.2 s apart, and quota is counted when each request is actually sent.
+- GDELT news: queries follow GDELT's rules (parentheses only around OR'd terms; only multi-word names quoted, since short quoted phrases are rejected). A rate-limited reply is retried once after 10 s, then explained in plain language; other plain-text GDELT errors are shown as "GDELT: <message>". GDELT throttles harder than its stated one request per 5 s, so headlines can occasionally take a minute.
+- Headline titles: spaces before punctuation removed.
+- Live results: Twelve Data (Apple, IBM) quote, chart, movement figures and 18 headlines; Alpha Vantage (IBM) quote and 1M chart.

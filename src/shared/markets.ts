@@ -197,12 +197,22 @@ export function newsQuery(symbol: string, name?: string | null): string {
     .replace(/\b(Class\s+[A-Z]|Common Stock|Incorporated|Corporation|Holdings|Inc\.?|Corp\.?|Ltd\.?|PLC)\b\.?/gi, '')
     .replace(/["()]/g, '').replace(/\s+/g, ' ').trim() || symbol;
   const ticker = /^[A-Za-z]{3,}$/.test(symbol) && !COMMON.has(symbol.toUpperCase()) && cleaned.toUpperCase() !== symbol.toUpperCase();
-  return `("${cleaned}"${ticker ? ` OR "${symbol}"` : ''}) sourcelang:english`;
+  // GDELT rules (checked 2026-11-10): parentheses only around OR'd terms, and quoted phrases must not be
+  // short ("The specified phrase is too short"), so only multi-word names are quoted.
+  const term = (t: string) => (t.includes(' ') ? `"${t}"` : t);
+  return ticker ? `(${term(cleaned)} OR ${symbol}) sourcelang:english` : `${term(cleaned)} sourcelang:english`;
 }
 
 export function parseGdelt(body: string): Headline[] {
   if (/please limit|rate.limit/i.test(body) && !body.trim().startsWith('{')) throw new Error('GDELT rate limit: ' + body.slice(0, 300));
-  const parsed = object(JSON.parse(body));
+  let json: unknown;
+  try {
+    json = JSON.parse(body);
+  } catch {
+    // GDELT reports query problems as plain text (e.g. a phrase that is too short).
+    throw new Error('GDELT: ' + (body.trim().slice(0, 200) || 'empty response'));
+  }
+  const parsed = object(json);
   if (!Array.isArray(parsed.articles)) throw new Error('Invalid GDELT response');
   const articles: Headline[] = [];
   for (const value of parsed.articles) {
@@ -212,7 +222,9 @@ export function parseGdelt(body: string): Headline[] {
       if (!['https:', 'http:'].includes(url.protocol) || typeof row.title !== 'string' || !row.title.trim()) continue;
       const stamp = String(row.seendate).replace(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/, '$1-$2-$3T$4:$5:$6Z');
       const seenAt = new Date(stamp).toISOString();
-      articles.push({ title: row.title.slice(0, 300), url: url.href, domain: String(row.domain ?? url.hostname), seenAt });
+      // GDELT tokenizes titles with spaces before punctuation ("IBM , Atos"); tidy for display.
+      const title = row.title.replace(/\s+([,.;:!?…'’)])/g, '$1').replace(/([(‘])\s+/g, '$1').replace(/\s+/g, ' ').trim();
+      articles.push({ title: title.slice(0, 300), url: url.href, domain: String(row.domain ?? url.hostname), seenAt });
       if (articles.length === 25) break;
     } catch {
       // A malformed article must not discard otherwise valid news results.
