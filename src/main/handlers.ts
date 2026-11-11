@@ -20,6 +20,8 @@ import { cleanText } from '../shared/normalize';
 import { classifyAircraftQuery } from '../shared/aircraft';
 import { normalizeAdsb } from '../shared/layerNormalize';
 import type { AtlasStore } from './store';
+import { isKeyedCameraId } from '../shared/keyedCameras';
+import { mainGeoidHeight } from './geoid';
 
 export interface PlatformServices {
   saveTextFile(defaultName: string, filters: { name: string; extensions: string[] }[], content: string): Promise<string | null>;
@@ -219,6 +221,8 @@ export function createHandlers(core: AppCore, store: AtlasStore, fetchJson: Fetc
       const [pid, value] = validateIpcArgs(IPC.providersSetCredential, a);
       need(extra.providers, 'Providers').setCredential(pid, value);
       extra.layers?.syncEnabled();
+      // A saved or removed camera key takes effect now, even if a refresh with the old key is underway.
+      if (isKeyedCameraId(pid)) extra.layers?.credentialsChanged('cameras');
       return need(extra.providers, 'Providers').list();
     },
     [IPC.providersTest]: (a) => {
@@ -303,12 +307,12 @@ export function createHandlers(core: AppCore, store: AtlasStore, fetchJson: Fetc
       const c = classifyAircraftQuery(q);
       if (!c) throw new Error('Enter a callsign (e.g. UAL123), ICAO hex (e.g. a1b2c3) or registration (e.g. N123AB, G-ABCD).');
       const res = await fetchJson(`https://api.adsb.lol/v2/${c.kind}/${encodeURIComponent(c.value)}`, { timeoutMs: 15000 });
-      return normalizeAdsb(res.body, 'adsb.lol (ODbL)', Date.now()).records;
+      return normalizeAdsb(res.body, 'adsb.lol (ODbL)', Date.now(), mainGeoidHeight).records;
     },
     [IPC.aircraftNear]: async (a) => {
       const [la, lo, r] = validateIpcArgs(IPC.aircraftNear, a);
       const res = await fetchJson(`https://api.adsb.lol/v2/point/${la.toFixed(4)}/${lo.toFixed(4)}/${r}`, { timeoutMs: 15000 });
-      return normalizeAdsb(res.body, 'adsb.lol (ODbL)', Date.now()).records;
+      return normalizeAdsb(res.body, 'adsb.lol (ODbL)', Date.now(), mainGeoidHeight).records;
     },
     [IPC.vehicleInfo]: async (a) => {
       const [q] = validateIpcArgs(IPC.vehicleInfo, a);

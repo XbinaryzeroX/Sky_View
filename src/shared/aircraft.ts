@@ -133,6 +133,17 @@ export function deadReckon(r: GeoRecord, nowMs: number): { lat: number; lon: num
   return { lat: (lat2 * 180) / Math.PI, lon: ((((lon2 * 180) / Math.PI + 540) % 360) - 180), estimatedS: Math.round(t) };
 }
 
+/**
+ * Where a vehicle is drawn at `nowMs`: with motion smoothing on, aircraft move along their last reported track
+ * (deadReckon); history snapshots stay at their report when `snapshotsStay`; anything else sits at its report.
+ * Every re-placement of a vehicle uses this, so a height change never moves it sideways.
+ */
+export function drawnPosition(r: GeoRecord, nowMs: number, o: { aircraft: boolean; smooth: boolean; snapshotsStay: boolean }): { lat: number; lon: number } {
+  if (!o.aircraft || !o.smooth || (o.snapshotsStay && r.props.snapshot === true)) return { lat: r.lat, lon: r.lon };
+  const p = deadReckon(r, nowMs);
+  return { lat: p.lat, lon: p.lon };
+}
+
 /** Elevation angle (degrees above the horizon) of an aircraft seen from an observer, flat-earth approximation with curvature drop. */
 export function elevationAngleDeg(distanceKm: number, aircraftAltM: number, observerAltM = 0): number {
   const dropM = (distanceKm * 1000) ** 2 / (2 * 6371000);

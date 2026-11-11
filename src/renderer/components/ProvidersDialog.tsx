@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { PROVIDERS, type ProviderId, type ProviderState, type ProviderStatus } from '../../shared/providers';
+import { CAMERA_KEY_PROVIDER_IDS, PROVIDERS, type ProviderId, type ProviderState, type ProviderStatus } from '../../shared/providers';
 import { api, errorText } from '../lib/api';
 import { relativeTime } from '../lib/format';
 import { ExternalLink, Modal } from './common';
@@ -16,7 +16,7 @@ export function ProvidersDialog({ onClose }: { onClose(): void }) {
   const [drafts, setDrafts] = useState<Partial<Record<ProviderId, string>>>({});
   const [busy, setBusy] = useState<ProviderId | null>(null);
   const [msg, setMsg] = useState<Partial<Record<ProviderId, { ok: boolean; message: string }>>>({});
-  const [filter, setFilter] = useState<'all' | 'credentials'>('all');
+  const [filter, setFilter] = useState<'all' | 'credentials' | 'cameras'>('all');
 
   useEffect(() => {
     void api.listProviders().then(setStates);
@@ -51,7 +51,9 @@ export function ProvidersDialog({ onClose }: { onClose(): void }) {
     }
   }
 
-  const list = PROVIDERS.filter((p) => filter === 'all' || p.credential);
+  // The many camera systems that take a free key have their own tab, so they don't crowd the main list.
+  const list = PROVIDERS.filter((p) => (filter === 'cameras' ? CAMERA_KEY_PROVIDER_IDS.has(p.id) : !CAMERA_KEY_PROVIDER_IDS.has(p.id) && (filter === 'all' || p.credential)));
+  const cameraKeysSaved = states.filter((s) => CAMERA_KEY_PROVIDER_IDS.has(s.id) && s.userConfigured).length;
   return (
     <Modal title="Provider settings" onClose={onClose} wide>
       <p className="muted small">
@@ -65,7 +67,15 @@ export function ProvidersDialog({ onClose }: { onClose(): void }) {
         <button className={`btn small-btn ${filter === 'credentials' ? 'primary' : ''}`} onClick={() => setFilter('credentials')}>
           Needs configuration
         </button>
+        <button className={`btn small-btn ${filter === 'cameras' ? 'primary' : ''}`} onClick={() => setFilter('cameras')}>
+          Camera keys{cameraKeysSaved ? ` (${cameraKeysSaved} saved)` : ''}
+        </button>
       </div>
+      {filter === 'cameras' && (
+        <p className="muted small">
+          These camera systems each need their own free developer key: register on the publisher’s developer page (you accept its terms there), then paste the key here. Its cameras load as soon as the key is saved, while the cameras layer is on. Keys are encrypted with the Windows credential store and sent only to that publisher.
+        </p>
+      )}
       <div className="provider-list">
         {list.map((p) => {
           const st = stateOf(p.id);

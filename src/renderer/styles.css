@@ -2549,6 +2549,17 @@ h2 {
   z-index: 28;
 }
 
+.model-credits ul {
+  margin: 4px 0 6px;
+  padding-left: 18px;
+  max-height: 32vh;
+  overflow: auto;
+}
+
+.model-credits li {
+  margin-bottom: 2px;
+}
+
 .shortcut-list {
   margin: 0;
   padding-left: 20px;

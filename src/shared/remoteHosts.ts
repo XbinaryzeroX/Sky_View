@@ -1,6 +1,8 @@
 // The only remote locations the renderer may load directly: fixed map-tile
 // and image publishers. All JSON data feeds go through the main process.
 
+import { keyedCameraImagePrefixes } from './keyedCameras';
+
 export interface RendererRemote {
   /** URL prefix (scheme + host + optional path). Requests must start with this. */
   prefix: string;
@@ -20,6 +22,10 @@ export const RENDERER_REMOTES: RendererRemote[] = [
   { prefix: 'https://weathercam.digitraffic.fi/', purpose: 'Fintraffic published weather-camera stills' },
   { prefix: 'https://wzmedia.dot.ca.gov/', purpose: 'Caltrans published live camera video (HLS)' },
   { prefix: 'https://webcams.nyctmc.org/api/cameras/', purpose: 'NYC DOT published traffic-camera stills' },
+  { prefix: 'https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/', purpose: 'TfL JamCam stills (Powered by TfL Open Data)' },
+  { prefix: 'https://tdcctv.data.one.gov.hk/', purpose: 'Hong Kong Transport Department traffic snapshot images (DATA.GOV.HK)' },
+  { prefix: 'https://www.drivebc.ca/images/', purpose: 'DriveBC highway camera stills (Open Government Licence – British Columbia)' },
+  ...keyedCameraImagePrefixes().map((prefix) => ({ prefix, purpose: 'Stills of a camera system that needs your own key' })),
   { prefix: 'https://upload.wikimedia.org/wikipedia/commons/', purpose: 'Wikimedia Commons aircraft/ship photos (author and license shown; only when photos are on)' },
   { prefix: 'https://thumb.wikimedia.org/wikipedia/commons/', purpose: 'Wikimedia Commons photo thumbnails' },
   { prefix: 'https://image.airport-data.com/aircraft/', purpose: 'airport-data.com aircraft photos (photographer credited; only when photos are on)' },

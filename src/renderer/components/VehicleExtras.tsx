@@ -2,7 +2,10 @@
 // exact model and identification photograph (opt-in, exact aircraft or ship only), the reported route
 // for a callsign, and a legend separating observed track from reported route.
 
-import { useEffect, useState } from 'react';
+import { currentModelPack } from '../map/modelPack';
+import { packIdOf, shownModelVariant, subscribeShownModels } from '../map/shownModels';
+import { packCredit } from '../../shared/modelPack';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { GeoRecord } from '../../shared/layers';
 import type { RouteInfo } from '../../shared/route';
 import { classifyAircraft, classifyVessel } from '../../shared/vehicleClass';
@@ -62,6 +65,10 @@ export function VehicleExtras({ layer, r, photosEnabled, onEnablePhotos, onShowR
   const family = icaoTypeName(typeCode ?? m?.icaoType);
   const airModel = modelLine(m, null) ?? desc ?? (typeCode ? (family ? `${family} (ICAO ${typeCode})` : `ICAO type ${typeCode}`) : null);
   const modelFromFamily = !modelLine(m, null) && !desc && !!family;
+  // Credit the model the map is actually showing for this vehicle (none while it is an icon or uses an app-built model).
+  const shownVariant = useSyncExternalStore(subscribeShownModels, () => shownModelVariant(`rec|${layer}|${r.id}`));
+  const shownPackId = packIdOf(shownVariant);
+  const packModel = shownPackId ? (currentModelPack()?.models.find((m) => m.id === shownPackId) ?? null) : null;
   const shipKind = shipTypeLabel(typeof r.props.shipType === 'number' ? r.props.shipType : null);
   const dims = typeof r.props.lengthM === 'number' ? `${r.props.lengthM} m long${typeof r.props.beamM === 'number' ? ` × ${r.props.beamM} m beam` : ''}` : null;
   const [route, setRoute] = useState<{ state: 'idle' | 'loading' | 'none' | 'ok' | 'error'; info: RouteInfo | null; err?: string }>({ state: 'idle', info: null });
@@ -95,6 +102,19 @@ export function VehicleExtras({ layer, r, photosEnabled, onEnablePhotos, onShowR
         )}
       </div>
       <p className="muted small">Map symbol: {cls.explain}.</p>
+      {packModel && (
+        <p className="muted small">
+          {packCredit(packModel)} ·{' '}
+          <a href={packModel.sourceUrl} target="_blank" rel="noreferrer">
+            source
+          </a>{' '}
+          ·{' '}
+          <a href={packModel.licenseUrl} target="_blank" rel="noreferrer">
+            licence
+          </a>
+          . A generic model of the type, not this {isAir ? 'aircraft' : 'ship'}: paint may differ.
+        </p>
+      )}
       <figure className="veh-photo">
         {photo ? (
           <>

@@ -1,5 +1,7 @@
 // HTML escaping and external-link validation.
 
+import { keyedCameraLinkHosts } from './keyedCameras';
+
 export function escapeHtml(v: unknown): string {
   return String(v ?? '')
     .replace(/&/g, '&amp;')
@@ -14,7 +16,9 @@ export const EXTERNAL_LINK_HOSTS = [
   'twelvedata.com', 'alphavantage.co', 'gdeltproject.org', 'tradingview.com', 'join-lemmy.org',
   'weather.gov', 'noaa.gov', 'usgs.gov', 'naturalearthdata.com', 'census.gov', 'cesium.com', 'ollama.com',
   'adsb.lol', 'digitraffic.fi', 'celestrak.org', 'nasa.gov', 'arcgis.com', 'aviationweather.gov', 'ca.gov', 'mbta.com',
-  'aisstream.io', 'opendata.aws', 'github.com', 'google.com', 'opendatacommons.org', 'creativecommons.org',
+  'aisstream.io', 'opendata.aws', 'github.com', 'google.com', 'opendatacommons.org', 'creativecommons.org', 'sketchfab.com',
+  'tfl.gov.uk', 'data.gov.hk', 'drivebc.ca', 'quebec511.info', 'donneesquebec.ca',
+  ...keyedCameraLinkHosts(),
 ];
 
 // Main-process feed services register exact observed links; this module's renderer

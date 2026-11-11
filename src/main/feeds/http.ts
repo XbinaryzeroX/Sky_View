@@ -2,6 +2,7 @@
 // reached; there is no general-purpose URL proxy.
 
 import { validateInstance } from '../../shared/lemmy';
+import { keyedCameraApiHosts } from '../../shared/keyedCameras';
 export const ALLOWED_HOSTS = new Set([
   'api.twelvedata.com',
   'www.alphavantage.co',
@@ -24,6 +25,10 @@ export const ALLOWED_HOSTS = new Set([
   'aviationweather.gov',
   'www.nhc.noaa.gov',
   'cwwp2.dot.ca.gov',
+  'api.tfl.gov.uk',
+  'static.data.gov.hk',
+  'www.drivebc.ca',
+  'ws.mapserver.transports.gouv.qc.ca',
   'api-v3.mbta.com',
   'geocoding.geo.census.gov',
   'tile.googleapis.com',
@@ -31,6 +36,8 @@ export const ALLOWED_HOSTS = new Set([
   'ibasemaps-api.arcgis.com',
   'api.mapbox.com',
   'tiles.maps.eox.at',
+  // Keyed camera systems (called only with the customer's own key).
+  ...keyedCameraApiHosts(),
 ]);
 /** Multi-tenant hosts are allowed only for specific service paths. */
 export const ALLOWED_PREFIXES = [

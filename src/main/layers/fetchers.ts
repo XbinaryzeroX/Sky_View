@@ -4,15 +4,25 @@ import { mergeIncidents, normalizeEonet, normalizeGdacs } from '../../shared/inc
 // variable inputs are validated numbers (view center/bbox) and enum values.
 
 import { aisDimensions, decodePackedEta, type VesselStatic, normalizeAdsb, normalizeArcgisPolygons, normalizeCaltrans, normalizeDigitrafficAis, normalizeFintrafficCams, normalizeFirmsCsv, normalizeMbta, normalizeMetar, normalizeNhc, normalizeNycCams, normalizeTle, type Normalized } from '../../shared/layerNormalize';
-import type { GeoRecord, LayerId, ViewState } from '../../shared/layers';
+import { LAYERS, type GeoRecord, type LayerId, type ViewState } from '../../shared/layers';
+import { createHash } from 'node:crypto';
 import type { Settings } from '../../shared/types';
-import { FeedHttpError, type FetchJson, type FetchText } from '../feeds/http';
+import { computeBackoffMs, FeedHttpError, type FetchJson, type FetchText } from '../feeds/http';
 import type { AtlasStore } from '../store';
+import { mainGeoidHeight } from '../geoid';
+import { normalizeDriveBc, normalizeHongKongCams, normalizeQuebecCams, normalizeTflJamCams } from '../../shared/cameraSources';
+import { KEYED_CAMERA_SYSTEMS, keyedCameraRequest, normalizeKeyedCameras, type KeyedCameraId } from '../../shared/keyedCameras';
 
 export interface FetchContext {
   view: ViewState | null;
   /** OpenSky API client 'id:secret' (optional; anonymous when absent). */
   openskyClient?: string | null;
+  /** Saved keys of keyed camera systems (cameras layer only). */
+  cameraKey?: (id: KeyedCameraId) => string | null;
+  /** Per-source state kept by the layer manager between refreshes (cameras layer only). */
+  sources?: SourceState;
+  /** Current time in ms, read again as a refresh proceeds (requests are sequential and can take minutes). Defaults to Date.now. */
+  clock?: () => number;
   settings: Settings;
   fetchJson: FetchJson;
   fetchText: FetchText;
@@ -24,6 +34,21 @@ export interface FetchContext {
 
 export interface FetchResult extends Normalized {
   note: string | null;
+  /** Epoch ms at which part of the result falls due (a rate limit ends, a kept catalog ages out), if before the next poll. */
+  refreshAt?: number | null;
+  /**
+   * Set when nothing usable came back. `records` is then still the reconciled set to publish (possibly empty: expired,
+   * rejected or removed catalogs must disappear), and the layer reports this as its error.
+   */
+  failure?: string | null;
+}
+
+/** Source state a layer keeps between refreshes. */
+export interface SourceState {
+  /** Rate-limit deadline per host, with the number of limits in a row (the wait grows with each). */
+  backoff: Map<string, { until: number; strikes: number }>;
+  /** Last good catalog per source, reused while it is fresh and shown (with a note) while its source fails. */
+  cache: Map<string, { at: number; records: GeoRecord[]; skipped: number }>;
 }
 
 const NM = 1852;
@@ -92,7 +117,7 @@ async function openSkyWorld(ctx: FetchContext): Promise<{ records: GeoRecord[]; 
     headers.Authorization = `Bearer ${openSkyToken.token}`;
   }
   const res = await ctx.fetchJson('https://opensky-network.org/api/states/all?extended=1', { headers, timeoutMs: 45000, maxBytes: 30 * 1024 * 1024 });
-  const n = normalizeOpenSky(res.body, interval + 180);
+  const n = normalizeOpenSky(res.body, interval + 180, mainGeoidHeight);
   openSkyCache = { at: now, authed, ...n };
   return openSkyCache;
 }
@@ -141,7 +166,7 @@ async function fetchAircraft(ctx: FetchContext): Promise<FetchResult> {
               body = (await ctx.fetchJson(url, { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 20000 })).body;
               if (multi) areaCache.set(url, { at: ctx.now.getTime(), body });
             }
-            const n = normalizeAdsb(body, 'adsb.lol (ODbL)', ctx.now.getTime());
+            const n = normalizeAdsb(body, 'adsb.lol (ODbL)', ctx.now.getTime(), mainGeoidHeight);
             for (const rec of n.records) if (!seenIds.has(rec.id)) (seenIds.add(rec.id), out.push(rec));
             skipped += n.skipped;
             if (!updated || (n.sourceUpdatedAt ?? '') > updated) updated = n.sourceUpdatedAt;
@@ -160,7 +185,7 @@ async function fetchAircraft(ctx: FetchContext): Promise<FetchResult> {
   if (ctx.localReceiverUrl) {
     try {
       const res = await ctx.fetchJson(ctx.localReceiverUrl, { timeoutMs: 8000, maxBytes: 20 * 1024 * 1024 });
-      const n = normalizeAdsb(res.body, 'Local receiver', ctx.now.getTime());
+      const n = normalizeAdsb(res.body, 'Local receiver', ctx.now.getTime(), mainGeoidHeight);
       const seen = new Map(out.map((r, i) => [r.id, i]));
       for (const rec of n.records) {
         const i = seen.get(rec.id);
@@ -179,7 +204,7 @@ async function fetchAircraft(ctx: FetchContext): Promise<FetchResult> {
 
 async function fetchAircraftMil(ctx: FetchContext): Promise<FetchResult> {
   const res = await ctx.fetchJson('https://api.adsb.lol/v2/mil', { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 25000 });
-  return { ...normalizeAdsb(res.body, 'adsb.lol /v2/mil (ODbL)', ctx.now.getTime()), note: 'Military flag comes from the adsb.lol aircraft database and may be incomplete or wrong.' };
+  return { ...normalizeAdsb(res.body, 'adsb.lol /v2/mil (ODbL)', ctx.now.getTime(), mainGeoidHeight), note: 'Military flag comes from the adsb.lol aircraft database and may be incomplete or wrong.' };
 }
 
 let vesselMeta: { at: number; map: Map<number, VesselStatic> } | null = null;
@@ -303,39 +328,150 @@ async function fetchMetar(ctx: FetchContext): Promise<FetchResult> {
   return { ...out, note: out.records.length >= 400 ? 'The provider returns at most 400 stations; zoom in for complete coverage.' : null };
 }
 
+/** A camera catalog the cameras layer loads (one request per refresh when it is due). */
+interface CameraSource {
+  /** Cache key: the source name, plus a fingerprint of the key for keyed systems (a new key is a new catalog). */
+  key: string;
+  name: string;
+  /** Rate limits are kept per host (all Caltrans districts share one). */
+  host: string;
+  load: () => Promise<Normalized>;
+  /** Failure text (never contains a key or a URL). */
+  failure: (e: unknown) => string;
+  /** Rejected credentials: the last catalog fetched with them is not shown any more. */
+  dropCacheOn?: (e: unknown) => boolean;
+}
+
+/** A last good catalog older than this is no longer shown when its source fails. */
+const CAMERA_CATALOG_KEEP_MS = 24 * 3600_000;
+/** Catalogs fetched within this much of each other fall due together (one refresh, not one per catalog). */
+const CAMERA_CATALOG_SLACK_MS = 10 * 60_000;
+
+function keyFingerprint(key: string): string {
+  return createHash('sha256').update(key).digest('hex').slice(0, 16);
+}
+
 async function fetchCameras(ctx: FetchContext): Promise<FetchResult> {
   const out: GeoRecord[] = [];
   let skipped = 0;
   const failed: string[] = [];
+  // Timing is read per source, when its turn comes and when its answer arrives.
+  const clock = ctx.clock ?? (() => Date.now());
+  const pollMs = LAYERS.cameras.pollSeconds * 1000;
+  const reuseMs = pollMs - CAMERA_CATALOG_SLACK_MS;
+  // Without manager state (one-off calls) every source is fetched and nothing is remembered.
+  const state: SourceState = ctx.sources ?? { backoff: new Map(), cache: new Map() };
+  const plain = (name: string) => () => name;
+  const sources: CameraSource[] = [];
   for (let d = 1; d <= 12; d++) {
     const dd = String(d).padStart(2, '0');
+    sources.push({
+      key: `Caltrans D${d}`, name: `Caltrans D${d}`, host: 'cwwp2.dot.ca.gov', failure: plain(`Caltrans D${d}`),
+      load: async () => normalizeCaltrans((await ctx.fetchJson(`https://cwwp2.dot.ca.gov/data/d${d}/cctv/cctvStatusD${dd}.json`, { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 45000, maxBytes: 20 * 1024 * 1024 })).body, d),
+    });
+  }
+  const open: [string, string, () => Promise<Normalized>][] = [
+    ['Fintraffic', 'tie.digitraffic.fi', async () => normalizeFintrafficCams((await ctx.fetchJson('https://tie.digitraffic.fi/api/weathercam/v1/stations', { headers: dtHeaders(ctx.userAgent), timeoutMs: 30000 })).body)],
+    ['NYC DOT', 'webcams.nyctmc.org', async () => normalizeNycCams((await ctx.fetchJson('https://webcams.nyctmc.org/api/cameras', { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 30000, maxBytes: 5 * 1024 * 1024 })).body)],
+    // Open-data publishers whose terms allow use in a commercial app (see src/shared/cameraSources.ts).
+    ['TfL JamCams', 'api.tfl.gov.uk', async () => normalizeTflJamCams((await ctx.fetchJson('https://api.tfl.gov.uk/Place/Type/JamCam', { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 45000, maxBytes: 10 * 1024 * 1024 })).body)],
+    ['Hong Kong Transport Department', 'static.data.gov.hk', async () => normalizeHongKongCams((await ctx.fetchText('https://static.data.gov.hk/td/traffic-snapshot-images/code/Traffic_Camera_Locations_En.xml', { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 45000, maxBytes: 10 * 1024 * 1024 })).text)],
+    ['DriveBC', 'www.drivebc.ca', async () => normalizeDriveBc((await ctx.fetchJson('https://www.drivebc.ca/api/webcams/', { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 60000, maxBytes: 20 * 1024 * 1024 })).body)],
+    ['Québec 511', 'ws.mapserver.transports.gouv.qc.ca', async () => normalizeQuebecCams((await ctx.fetchJson('https://ws.mapserver.transports.gouv.qc.ca/swtq?service=wfs&version=2.0.0&request=getfeature&typename=ms:infos_cameras&srsname=EPSG:4326&outputformat=geojson', { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 60000, maxBytes: 20 * 1024 * 1024 })).body)],
+  ];
+  for (const [name, host, load] of open) sources.push({ key: name, name, host, load, failure: plain(name) });
+  // Systems the customer saved a key for (each key goes only to its own system's origin, redirects included;
+  // errors never include it).
+  const rejected = (e: unknown) => e instanceof FeedHttpError && (e.status === 400 || e.status === 401 || e.status === 403);
+  for (const sys of KEYED_CAMERA_SYSTEMS) {
+    let key: string | null = null;
     try {
-      const res = await ctx.fetchJson(`https://cwwp2.dot.ca.gov/data/d${d}/cctv/cctvStatusD${dd}.json`, { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 45000, maxBytes: 20 * 1024 * 1024 });
-      const n = normalizeCaltrans(res.body, d);
+      key = ctx.cameraKey?.(sys.id) ?? null;
+    } catch {
+      failed.push(`${sys.name} (saved key unreadable)`);
+      continue;
+    }
+    if (!key) continue;
+    const k = key;
+    sources.push({
+      key: `${sys.id}:${keyFingerprint(k)}`,
+      name: sys.name,
+      host: new URL(sys.origin).host,
+      load: async () => {
+        const req = keyedCameraRequest(sys, k);
+        const res = await ctx.fetchJson(req.url, { method: req.method, body: req.body, headers: { ...req.headers, 'User-Agent': ctx.userAgent }, timeoutMs: 60000, maxBytes: 40 * 1024 * 1024, sameOrigin: true });
+        return normalizeKeyedCameras(sys, res.body);
+      },
+      failure: (e) => (rejected(e) ? `${sys.name} (key rejected)` : sys.name),
+      dropCacheOn: rejected,
+    });
+  }
+
+  // Earliest time something should be fetched again: a rate limit expiring, or a kept catalog falling due.
+  let refreshAt: number | null = null;
+  const due = (t: number) => (refreshAt = refreshAt === null ? t : Math.min(refreshAt, t));
+  const keep = (src: CameraSource, why: string): void => {
+    const last = state.cache.get(src.key);
+    if (last && clock() - last.at < CAMERA_CATALOG_KEEP_MS) {
+      out.push(...last.records);
+      skipped += last.skipped;
+      due(last.at + CAMERA_CATALOG_KEEP_MS);
+      failed.push(`${src.name} (${why}; last catalog shown)`);
+    } else {
+      state.cache.delete(src.key);
+      failed.push(why === 'unavailable' ? src.name : `${src.name} (${why})`);
+    }
+  };
+  for (const src of sources) {
+    const cached = state.cache.get(src.key);
+    // Catalogs change slowly: one fetched within the refresh interval is reused (a refresh triggered by a key
+    // change or a rate-limit recovery fetches only what is missing or due).
+    if (cached && clock() - cached.at < reuseMs) {
+      out.push(...cached.records);
+      skipped += cached.skipped;
+      due(cached.at + reuseMs);
+      continue;
+    }
+    const held = state.backoff.get(src.host);
+    if (held && held.until > clock()) {
+      // The host asked us to wait: no request until then, whatever started this refresh.
+      due(held.until);
+      keep(src, 'rate limited');
+      continue;
+    }
+    try {
+      const n = await src.load();
       out.push(...n.records);
       skipped += n.skipped;
-    } catch {
-      failed.push(`Caltrans D${d}`);
+      const at = clock();
+      state.cache.set(src.key, { at, records: n.records, skipped: n.skipped });
+      state.backoff.delete(src.host);
+      due(at + reuseMs);
+    } catch (e) {
+      if (e instanceof FeedHttpError && (e.status === 429 || e.status === 503)) {
+        const strikes = (held?.strikes ?? 0) + 1;
+        // Measured from the answer, not from the start of the refresh.
+        const until = clock() + Math.max(60_000, computeBackoffMs(strikes, e.retryAfterSec));
+        state.backoff.set(src.host, { until, strikes });
+        due(until);
+        keep(src, 'rate limited');
+      } else if (src.dropCacheOn?.(e)) {
+        state.cache.delete(src.key);
+        failed.push(src.failure(e));
+      } else {
+        const label = src.failure(e);
+        if (label === src.name) keep(src, 'unavailable');
+        else failed.push(label);
+      }
     }
   }
-  try {
-    const res = await ctx.fetchJson('https://tie.digitraffic.fi/api/weathercam/v1/stations', { headers: dtHeaders(ctx.userAgent), timeoutMs: 30000 });
-    const n = normalizeFintrafficCams(res.body);
-    out.push(...n.records);
-    skipped += n.skipped;
-  } catch {
-    failed.push('Fintraffic');
-  }
-  try {
-    const res = await ctx.fetchJson('https://webcams.nyctmc.org/api/cameras', { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 30000, maxBytes: 5 * 1024 * 1024 });
-    const n = normalizeNycCams(res.body);
-    out.push(...n.records);
-    skipped += n.skipped;
-  } catch {
-    failed.push('NYC DOT');
-  }
-  if (out.length === 0) throw new Error(`All camera catalogs failed: ${failed.join(', ')}`);
-  return { records: out, skipped, sourceUpdatedAt: null, note: failed.length ? `Unavailable: ${failed.join(', ')}` : 'Images are loaded only when you open a camera.' };
+  // Forget catalogs of sources that are gone (a removed or replaced key).
+  const live = new Set(sources.map((s) => s.key));
+  for (const k of [...state.cache.keys()]) if (!live.has(k)) state.cache.delete(k);
+  const note = failed.length ? `Unavailable: ${failed.join(', ')}` : 'Images are loaded only when you open a camera.';
+  // Nothing usable: still publish the (empty) reconciled set, so expired, rejected and removed catalogs disappear.
+  const failure = out.length === 0 && failed.length > 0 ? `All camera catalogs failed: ${failed.join(', ')}` : null;
+  return { records: out, skipped, sourceUpdatedAt: null, note, refreshAt, failure };
 }
 
 async function fetchIncidents(ctx: FetchContext): Promise<FetchResult> {

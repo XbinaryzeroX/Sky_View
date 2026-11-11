@@ -5,6 +5,7 @@
 import type { MarketService } from './markets';
 import { CredentialService, BUILTIN_ALLOWANCES, type BuiltinProvider, type Credential } from './credentials';
 import { PROVIDERS, type ProviderId, type ProviderState } from '../shared/providers';
+import { isKeyedCameraId, keyedCameraRequest, keyedCameraSystem, normalizeKeyedCameras } from '../shared/keyedCameras';
 import { FeedHttpError, isAllowedLocalReceiverUrl, setLocalReceiverUrl, type FetchJson, type FetchText } from './feeds/http';
 import { redactSecrets, type SecretStore } from './secrets';
 import type { AtlasStore } from './store';
@@ -215,8 +216,17 @@ export class ProviderService {
         await this.fetchJson(`https://tile.googleapis.com/v1/3dtiles/root.json?key=${encodeURIComponent(secret)}`, { headers, timeoutMs: 15000 });
         return { ok: true, message: 'Key accepted by the Map Tiles API. Note: this test itself counts as a billable root-tile request.' };
       }
-      default:
+      default: {
+        const sys = isKeyedCameraId(id) ? keyedCameraSystem(id) : null;
+        if (sys) {
+          if (!secret) return { ok: false, message: `Add your ${sys.name} key first (free; register on the publisher's developer page).` };
+          const req = keyedCameraRequest(sys, secret);
+          const res = await this.fetchJson(req.url, { method: req.method, body: req.body, headers: { ...headers, ...req.headers }, timeoutMs: 30000, maxBytes: 40 * 1024 * 1024, sameOrigin: true });
+          const n = normalizeKeyedCameras(sys, res.body);
+          return { ok: n.records.length > 0, message: n.records.length ? `Key accepted. ${n.records.length.toLocaleString()} camera views listed${n.skipped ? ` (${n.skipped} without a usable image skipped)` : ''}.` : 'Key accepted, but no cameras with a usable image were listed.' };
+        }
         return { ok: false, message: 'No connection test for this provider.' };
+      }
     }
   }
 }

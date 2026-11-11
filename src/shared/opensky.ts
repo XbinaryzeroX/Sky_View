@@ -18,7 +18,12 @@ const s = (v: unknown, max = 20) => (typeof v === 'string' && v.trim() ? v.trim(
 const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
 /** Normalizes /states/all. `maxAgeS` tells the map how long a snapshot position may be shown. */
-export function normalizeOpenSky(body: unknown, maxAgeS: number): { records: GeoRecord[]; skipped: number; time: string | null } {
+/**
+ * `geoid` (optional): height of sea level above the WGS84 ellipsoid. Altitudes are kept above sea level (the
+ * barometric reference); a state with only the geometric altitude (GNSS, above the ellipsoid) is converted with it.
+ * Without it, the geometric altitude is used as reported.
+ */
+export function normalizeOpenSky(body: unknown, maxAgeS: number, geoid?: (lat: number, lon: number) => number | null): { records: GeoRecord[]; skipped: number; time: string | null } {
   const b = body as { time?: unknown; states?: unknown };
   if (!Array.isArray(b?.states)) throw new Error('Unexpected OpenSky response');
   const records: GeoRecord[] = [];
@@ -35,7 +40,7 @@ export function normalizeOpenSky(body: unknown, maxAgeS: number): { records: Geo
     const onGround = a[8] === true;
     const baroM = n(a[7]);
     const geoM = n(a[13]);
-    const altM = onGround ? 0 : (baroM ?? geoM);
+    const altM = onGround ? 0 : baroM !== null ? baroM : geoM !== null ? geoM - (geoid?.(lat, lon) ?? 0) : null;
     const tPos = n(a[3]) ?? n(a[4]);
     const cs = s(a[1], 12);
     const cat = CAT[n(a[17]) ?? 0] || null;

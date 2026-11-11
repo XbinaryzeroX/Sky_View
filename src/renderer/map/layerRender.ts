@@ -26,16 +26,27 @@ import {
   NearFarScalar,
   PolygonHierarchy,
   VerticalOrigin,
+  sampleTerrain,
   type CesiumWidget,
 } from 'cesium';
 import { classifyAircraft, classifyVessel } from '../../shared/vehicleClass';
 import { aircraftSymbol, vesselSymbol } from './symbols';
 import { eciToGeodetic, gstime, propagate, twoline2satrec, type SatRec } from 'satellite.js';
 import type { GeoRecord, LayerId } from '../../shared/layers';
-import { altitudeColor, deadReckon, passesFilter, specialCode, trackState, type AircraftFilter } from '../../shared/aircraft';
+import { altitudeColor, drawnPosition, passesFilter, specialCode, trackState, type AircraftFilter } from '../../shared/aircraft';
 import { CLASS_DEFAULTS, VESSEL_DEFAULTS, aircraftShape, aircraftVariant, pitchFromRates, vesselShape } from '../../shared/vehicleDims';
 import { buildAircraft, buildVessel } from './vehicleMeshes';
 import { VehicleModelLayer, type ModelCandidate } from './vehicleModels';
+import { currentModelPack, loadModelPack, packModelUrl } from './modelPack';
+import { packForAircraft, packForVessel, packScale } from '../../shared/modelPack';
+import { geoidHeight, loadGeoid } from './geoid';
+import { createTerrariumTerrain } from './terrain';
+import { horizonPoint } from './horizon';
+import { trailPointHeight, type TrailKind, type TrailPoint } from './trailHeights';
+import { GROUND_BACKOFF_MS, markGroundRetriesWoken, nextGroundRetryDelay, terrainCoversLatitude, type GroundFailure } from './groundRetry';
+
+/** Terrain detail level sampled for parked aircraft on Google 3D tiles (~40 m resolution). */
+const GROUND_SAMPLE_LEVEL = 13;
 
 // ---------- glyphs (generated once, data URLs) ----------
 const glyphCache = new Map<string, string>();
@@ -178,6 +189,39 @@ export class LayerRenderer {
    */
   private lastType = new Map<string, string>();
   private modelSyncTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Models wait until the model pack has loaded (or is known to be missing), so no vehicle swaps models at start-up. */
+  private packSettled = false;
+  /** Set first in destroy(): late callbacks (pack loading, timers, scene events) must not touch the destroyed widget. */
+  private destroyed = false;
+  /**
+   * Google Photorealistic 3D is showing. Its surface is at true WGS84 ellipsoid height, while the app's globe
+   * has its sea at height 0; local sea level differs from 0 by up to ~100 m (about +18 m at Helsinki, −33 m at
+   * New York). In this mode ships sit at local sea level (EGM96 geoid grid), parked aircraft at terrain height
+   * + sea level, and reported altitudes (above sea level) are raised by it. While a vehicle's height is not
+   * known yet (grid loading, terrain sample pending) it keeps its icon instead of a 3D model.
+   */
+  private photoreal = false;
+  /** Terrain height above sea level per ~200 m cell, for parked aircraft on Google 3D tiles (sampled once). */
+  private groundCache = new Map<string, number>();
+  /** Cells queued or being sampled. */
+  private groundPending = new Set<string>();
+  private groundQueue = new Map<string, Cartographic>();
+  /** Cells whose sample failed, and when (retried after a minute, never in a tight loop). */
+  private groundFailed = new Map<string, GroundFailure>();
+  private groundTimer: ReturnType<typeof setTimeout> | null = null;
+  private groundInFlight = false;
+  /** One pending re-placement after failed samples' back-off, so they are retried without waiting for another event. */
+  private groundRetryTimer: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * Terrain source for those samples: its own strict copy of the app's Terrarium terrain, independent of the Terrain
+   * display setting (with terrain display off the globe uses a flat ellipsoid, which would report 0 m everywhere).
+   * Strict: a missing source tile fails (height unknown → icon, retried) instead of reading as 0 m.
+   */
+  private groundSampler: ReturnType<typeof createTerrariumTerrain>['provider'] | null = null;
+  /** Called after vehicle heights changed (see refreshSurfaceHeights), e.g. to re-place playback markers. */
+  onSurfaceHeightsChanged: (() => void) | null = null;
+  /** Last trail shown, redrawn when the vertical reference changes. */
+  private trailArgs: { points: TrailPoint[]; kind: TrailKind } | null = null;
   private readonly cullDir = new Cartesian3();
   private readonly cullUp = new Cartesian3();
 
@@ -186,6 +230,7 @@ export class LayerRenderer {
     this.models = new VehicleModelLayer(widget, () => this.requestModelSync(0));
     // Aircraft and vessels on the far side of the earth are hidden (they used to show through the globe).
     widget.scene.preRender.addEventListener(() => {
+      if (this.destroyed) return;
       const now = performance.now();
       if (now - this.lastCull < 250) return;
       const cam = widget.camera;
@@ -199,10 +244,68 @@ export class LayerRenderer {
       this.requestModelSync(500);
     });
     widget.scene.morphComplete.addEventListener(() => this.requestModelSync(0));
+    void loadModelPack().then(() => {
+      if (this.destroyed) return;
+      this.packSettled = true;
+      this.requestModelSync(0);
+    });
+    void loadGeoid().then(() => {
+      if (this.destroyed) return;
+      this.refreshSurfaceHeights();
+    });
+  }
+
+  setPhotoreal(on: boolean): void {
+    if (this.photoreal === on) return;
+    this.photoreal = on;
+    this.refreshSurfaceHeights();
+  }
+
+  /** Re-places icons, the trail and models after the vertical reference changed (Photoreal on/off, sea-level grid or terrain heights arrived). */
+  private refreshSurfaceHeights(): void {
+    if (this.destroyed) return;
+    const now = Date.now();
+    for (const lid of ['aircraft', 'aircraftMil', 'vessels'] as LayerId[]) {
+      const recs = this.records.get(lid);
+      if (!recs) continue;
+      const bk = this.bulk.get(lid);
+      const ents = this.entities.get(lid);
+      for (const [rid, r] of recs) {
+        // Only the height changes: each vehicle keeps the horizontal position it is drawn at now.
+        const bb = bk?.byId.get(rid);
+        if (bb) {
+          const p = this.shownAt(lid, r, now, true);
+          bb.position = Cartesian3.fromDegrees(p.lon, p.lat, this.heightFor(lid, r, p));
+        }
+        const e = ents?.get(rid);
+        if (e?.position instanceof ConstantPositionProperty) {
+          const p = this.shownAt(lid, r, now, false);
+          e.position.setValue(Cartesian3.fromDegrees(p.lon, p.lat, this.heightFor(lid, r, p)));
+        }
+      }
+    }
+    if (this.trailArgs) this.showTrail(this.trailArgs.points, this.trailArgs.kind);
+    this.requestModelSync(0);
+    this.widget.scene.requestRender();
+    this.onSurfaceHeightsChanged?.();
+  }
+
+  /**
+   * Height for a recorded observation (history playback marker), with the same vertical reference as live
+   * vehicles. Ground samples are requested only near the camera (playback can cover the whole world); a marker
+   * whose height is not known (no altitude in the air, ground not sampled) is drawn at sea level, as markers are
+   * never hidden by the surface.
+   */
+  recordedHeight(layer: LayerId, p: TrailPoint): number {
+    if (layer !== 'aircraft' && layer !== 'aircraftMil' && layer !== 'vessels') return 0;
+    const sea = this.seaLevel(p.lat, p.lon) ?? 0;
+    const near = Cartesian3.distance(Cartesian3.fromDegrees(p.lon, p.lat, 0), Cartesian3.fromRadians(this.widget.camera.positionCartographic.longitude, this.widget.camera.positionCartographic.latitude, 0)) <= 100_000;
+    return trailPointHeight(p, layer === 'vessels' ? 'vessel' : 'aircraft', this.photoreal, sea, () => this.parkedGround(p.lat, p.lon, near)) ?? sea;
   }
 
   /** Runs syncModels now if it has not run in the last `minGapMs`, otherwise once the gap has passed (never dropped). */
   private requestModelSync(minGapMs: number): void {
+    if (this.destroyed) return;
     const wait = this.lastModelSync + minGapMs - performance.now();
     if (wait <= 0) {
       if (this.modelSyncTimer) clearTimeout(this.modelSyncTimer);
@@ -222,12 +325,13 @@ export class LayerRenderer {
    * and hides their icons; everything else stays an icon.
    */
   private syncModels(): void {
+    if (this.destroyed) return;
     this.lastModelSync = performance.now();
     const scene = this.widget.scene;
     const cam = this.widget.camera;
     const height = cam.positionCartographic.height;
     let picked: ModelCandidate[] = [];
-    if (this.modelOpts.enabled && scene.mode === SceneMode.SCENE3D && height < MODEL_MAX_CAMERA_M) {
+    if (this.packSettled && this.modelOpts.enabled && scene.mode === SceneMode.SCENE3D && height < MODEL_MAX_CAMERA_M) {
       const range = Math.min(600_000, Math.max(40_000, height * 4));
       const occluder = new EllipsoidalOccluder(Ellipsoid.WGS84, cam.positionWC);
       const volume = cam.frustum.computeCullingVolume(cam.positionWC, cam.directionWC, cam.upWC);
@@ -236,6 +340,10 @@ export class LayerRenderer {
       const keepSphere = new BoundingSphere(new Cartesian3(), KEEP_EDGE_RADIUS_M);
       const now = Date.now();
       const julian = JulianDate.now();
+      // The camera's ground point, for horizontal distances (see parked aircraft on Google 3D tiles below).
+      const camCarto = cam.positionCartographic;
+      const camFlat = Cartesian3.fromRadians(camCarto.longitude, camCarto.latitude, 0);
+      const scratchFlat = new Cartesian3();
       const near: { d: number; score: number; lid: LayerId; r: GeoRecord; pos: Cartesian3 }[] = [];
       for (const lid of ['aircraft', 'aircraftMil', 'vessels'] as LayerId[]) {
         const recs = this.records.get(lid);
@@ -246,7 +354,22 @@ export class LayerRenderer {
           if (lid !== 'vessels' && trackState(r, now) === 'expired') continue;
           let pos = bk?.byId.get(rid)?.position ?? ents?.get(rid)?.position?.getValue(julian);
           if (!pos) continue;
-          if (lid !== 'vessels' && r.props.onGround === true) {
+          if (this.photoreal) {
+            // On Google 3D tiles a surface vehicle gets a model only once its true height is known (see `photoreal`);
+            // visibility is then tested at that height (a parked aircraft's provisional icon height can be far off).
+            if (lid === 'vessels') {
+              if (this.seaLevel(r.lat, r.lon) === null) continue;
+            } else if (r.props.onGround === true) {
+              const ground = this.parkedGround(r.lat, r.lon);
+              if (ground === null) {
+                // Not sampled yet: request it when the aircraft is within model range horizontally (height ignored,
+                // so an airport 2 km up is not rejected for being "off screen" at sea level).
+                if (Cartesian3.distance(Cartesian3.fromDegrees(r.lon, r.lat, 0, Ellipsoid.WGS84, scratchFlat), camFlat) <= range) this.parkedGround(r.lat, r.lon, true);
+                continue;
+              }
+              pos = Cartesian3.fromDegrees(r.lon, r.lat, ground);
+            }
+          } else if (lid !== 'vessels' && r.props.onGround === true) {
             // Icons of parked aircraft sit at sea level; use the loaded terrain height (airports can be 2 km up),
             // re-read on every sync so it improves as terrain tiles arrive.
             const ground = scene.globe.getHeight(Cartographic.fromDegrees(r.lon, r.lat));
@@ -254,7 +377,7 @@ export class LayerRenderer {
           }
           const d = Cartesian3.distance(pos, cam.positionWC);
           const kept = this.models.has('rec|' + lid + '|' + rid);
-          if (d > range * (kept ? KEEP_RANGE_FACTOR : 1) || !occluder.isPointVisible(pos)) continue;
+          if (d > range * (kept ? KEEP_RANGE_FACTOR : 1) || !occluder.isPointVisible(horizonPoint(pos))) continue;
           const test = kept ? keepSphere : sphere;
           test.center = pos;
           if (volume.computeVisibility(test) === Intersect.OUTSIDE) continue;
@@ -280,6 +403,10 @@ export class LayerRenderer {
     const heading = r.heading === null ? 0 : CMath.toRadians(r.heading);
     if (lid === 'vessels') {
       const v = vesselShape(typeof r.props.shipType === 'number' ? r.props.shipType : null, r.props.lengthM, r.props.beamM);
+      // A real model of this kind of ship when the model pack has one (and it has not failed to load).
+      const pm = packForVessel(currentModelPack(), v.cls);
+      if (pm && !this.models.variantFailed('pack:' + pm.id))
+        return { key, variant: 'pack:' + pm.id, url: packModelUrl(pm), position, heading, pitch: 0, scale: packScale(pm, v.lengthM, v.beamM), ground: false, selected, minimumPixelSize: 34 };
       const d = VESSEL_DEFAULTS[v.cls];
       const sx = v.lengthM / d.lengthM;
       const sy = v.beamM / d.beamM;
@@ -288,17 +415,24 @@ export class LayerRenderer {
     // A report without type data uses the vehicle's last reported type (avoids a model swap and a flash).
     const type = typeof r.props.type === 'string' && r.props.type ? r.props.type : (this.lastType.get(key) ?? null);
     const shape = aircraftShape(type, r.props.emitterCategory as string | null, lid === 'aircraftMil' || r.props.militaryFlag === true);
+    const onGround = r.props.onGround === true;
+    const pitch = onGround ? 0 : pitchFromRates(r.props.verticalRateFpm, r.speedKts);
+    // On Google 3D tiles parked aircraft get an absolute height (terrain + sea level): the hidden globe can't clamp them.
+    const ground = onGround && !this.photoreal;
+    // The exact type's real model when the model pack has one; otherwise the app-built model.
+    const pm = packForAircraft(currentModelPack(), type, shape.military);
+    if (pm && !this.models.variantFailed('pack:' + pm.id))
+      return { key, variant: 'pack:' + pm.id, url: packModelUrl(pm), position, heading, pitch, scale: packScale(pm, shape.lengthM, shape.spanM), ground, selected, minimumPixelSize: 44 };
     const d = CLASS_DEFAULTS[shape.cls];
     const sx = shape.lengthM / d.lengthM;
     const sy = shape.spanM / d.spanM;
-    const ground = r.props.onGround === true;
     return {
       key,
       variant: aircraftVariant(shape),
       spec: () => buildAircraft(shape),
       position,
       heading,
-      pitch: ground ? 0 : pitchFromRates(r.props.verticalRateFpm, r.speedKts),
+      pitch,
       scale: [sx, sy, sx],
       ground,
       selected,
@@ -359,7 +493,8 @@ export class LayerRenderer {
         if (ex.image !== image) ex.image = image;
         ex.scale = sel ? 1.35 : 1;
         ex.color = color;
-      } else b.byId.set(r.id, b.coll.add({ id: `rec|${id}|${r.id}`, position, image, rotation: this.rotationFor(r), alignedAxis: Cartesian3.UNIT_Z, scale: sel ? 1.35 : 1, scaleByDistance: near, eyeOffset: new Cartesian3(0, 0, -30), color }));
+        ex.disableDepthTestDistance = this.depthTestFor(id, r);
+      } else b.byId.set(r.id, b.coll.add({ id: `rec|${id}|${r.id}`, position, image, rotation: this.rotationFor(r), alignedAxis: Cartesian3.UNIT_Z, scale: sel ? 1.35 : 1, scaleByDistance: near, eyeOffset: new Cartesian3(0, 0, -30), color, disableDepthTestDistance: this.depthTestFor(id, r) }));
     }
     for (const [rid, bb] of b.byId)
       if (!keep.has(rid)) {
@@ -387,12 +522,12 @@ export class LayerRenderer {
       // Icons whose vehicle currently has a 3D model are hidden (labels stay). Bulk billboards are handled
       // first: a layer whose first update was already bulk has no entity map.
       const bk = this.bulk.get(lid);
-      if (bk) for (const [rid, bb] of bk.byId) bb.show = (!in3D || occluder.isPointVisible(bb.position)) && !this.modelled.has('rec|' + lid + '|' + rid);
+      if (bk) for (const [rid, bb] of bk.byId) bb.show = (!in3D || occluder.isPointVisible(horizonPoint(bb.position))) && !this.modelled.has('rec|' + lid + '|' + rid);
       const ents = this.entities.get(lid);
       if (!ents) continue;
       for (const e of ents.values()) {
         const p = e.position?.getValue(now);
-        const visible = !in3D || !p || occluder.isPointVisible(p);
+        const visible = !in3D || !p || occluder.isPointVisible(horizonPoint(p));
         if (e.billboard) e.billboard.show = (visible && !this.modelled.has(String(e.id))) as never;
         if (e.label) e.label.show = (visible && this.labelWanted(lid, e)) as never;
         if (e.point) e.point.show = visible as never;
@@ -485,9 +620,15 @@ export class LayerRenderer {
         if (existing.billboard) {
           existing.billboard.rotation = this.rotationFor(r) as never;
           existing.billboard.scale = (selected ? 1.35 : 1) as never;
-          if (id === 'aircraft' || id === 'aircraftMil' || id === 'vessels') existing.billboard.image = this.iconFor(id, r, selected) as never;
+          if (id === 'aircraft' || id === 'aircraftMil' || id === 'vessels') {
+            existing.billboard.image = this.iconFor(id, r, selected) as never;
+            existing.billboard.disableDepthTestDistance = this.depthTestFor(id, r) as never;
+          }
         }
-        if (existing.label) existing.label.text = r.label as never;
+        if (existing.label) {
+          existing.label.text = r.label as never;
+          if (id === 'aircraft' || id === 'aircraftMil' || id === 'vessels') existing.label.disableDepthTestDistance = this.depthTestFor(id, r) as never;
+        }
         continue;
       }
       if (existing) src.entities.remove(existing);
@@ -521,8 +662,8 @@ export class LayerRenderer {
         for (const [rid, bb] of bk.byId) {
           const r = recs.get(rid);
           if (!r || r.props.snapshot === true) continue;
-          const p = this.smooth ? deadReckon(r, now) : { lat: r.lat, lon: r.lon, estimatedS: 0 };
-          bb.position = Cartesian3.fromDegrees(p.lon, p.lat, this.heightFor(lid, r));
+          const p = this.shownAt(lid, r, now, true);
+          bb.position = Cartesian3.fromDegrees(p.lon, p.lat, this.heightFor(lid, r, p));
           changed = true;
         }
       if (!ents || !recs) continue;
@@ -530,8 +671,8 @@ export class LayerRenderer {
         const r = recs.get(rid);
         if (!r) continue;
         const state = trackState(r, now);
-        const p = this.smooth ? deadReckon(r, now) : { lat: r.lat, lon: r.lon, estimatedS: 0 };
-        (e.position as ConstantPositionProperty).setValue(Cartesian3.fromDegrees(p.lon, p.lat, this.heightFor(lid, r)));
+        const p = this.shownAt(lid, r, now, false);
+        (e.position as ConstantPositionProperty).setValue(Cartesian3.fromDegrees(p.lon, p.lat, this.heightFor(lid, r, p)));
         if (e.billboard) e.billboard.color = (state === 'fresh' ? Color.WHITE : Color.WHITE.withAlpha(0.4)) as never;
         e.show = state !== 'expired';
         changed = true;
@@ -548,10 +689,117 @@ export class LayerRenderer {
     return this.entities.get(id)?.get(rid);
   }
 
-  private heightFor(id: LayerId, r: GeoRecord): number {
-    // Aircraft are drawn at reported altitude so trails and tracking read correctly in 3D.
-    if ((id === 'aircraft' || id === 'aircraftMil') && r.altM !== null && !r.props.onGround) return Math.max(0, r.altM);
-    return 0;
+  /**
+   * Icons of ships and parked aircraft sit on the surface (the 3D water or ground would cut or hide them, and
+   * their height can be approximate while terrain samples load), so they are never depth-tested; airborne
+   * aircraft still are. The far side of the earth is culled separately (cullBehindEarth).
+   */
+  private depthTestFor(id: LayerId, r: GeoRecord): number {
+    return id === 'vessels' || ((id === 'aircraft' || id === 'aircraftMil') && r.props.onGround === true) ? Number.POSITIVE_INFINITY : 0;
+  }
+
+  /** Height to draw a vehicle at in the current scene (see `photoreal`). */
+  /**
+   * Where a vehicle is drawn at `now`: aircraft move along their last reported track for up to 45 s when motion
+   * smoothing is on (history snapshots on the bulk layer stay at their report); everything else sits at its report.
+   */
+  private shownAt(id: LayerId, r: GeoRecord, now: number, bulk: boolean): { lat: number; lon: number } {
+    return drawnPosition(r, now, { aircraft: id === 'aircraft' || id === 'aircraftMil', smooth: this.smooth, snapshotsStay: bulk });
+  }
+
+  /** Height of a vehicle drawn at `at` (default: its reported position); sea level and ground are taken there. */
+  private heightFor(id: LayerId, r: GeoRecord, at: { lat: number; lon: number } = r): number {
+    const air = id === 'aircraft' || id === 'aircraftMil';
+    // Only vehicles follow the scene's vertical reference (and are re-placed when it changes); other layers keep height 0.
+    if (!air && id !== 'vessels') return 0;
+    const sea = this.seaLevel(at.lat, at.lon) ?? 0;
+    // Aircraft are drawn at reported altitude (above sea level) so trails and tracking read correctly in 3D.
+    // On Google 3D tiles altitudes below sea level are kept (terrain there can be below sea level too); the app's
+    // globe keeps its sea-level floor.
+    if (air && r.altM !== null && !r.props.onGround) return this.photoreal ? r.altM + sea : Math.max(0, r.altM);
+    if (air && r.props.onGround === true && this.photoreal) return this.parkedGround(at.lat, at.lon) ?? sea;
+    return sea;
+  }
+
+  /** Local sea level as a height in the current scene: 0 on the app's globe, the geoid height on Google 3D tiles (null until the grid has loaded). */
+  private seaLevel(lat: number, lon: number): number | null {
+    return this.photoreal ? geoidHeight(lat, lon) : 0;
+  }
+
+  /**
+   * Ground height for a parked aircraft on Google 3D tiles: terrain height above sea level (sampled once per
+   * ~200 m cell from `groundSampler`, which answers while the globe is hidden) + local sea level.
+   * null while either is unknown; `request` queues the terrain sample (done only for vehicles near the camera).
+   */
+  private parkedGround(lat: number, lon: number, request = false): number | null {
+    const sea = geoidHeight(lat, lon);
+    if (sea === null) return null;
+    // The terrain source (Web Mercator) has no data poleward of ±85.05°: no ground height there (the aircraft stays an icon).
+    if (!terrainCoversLatitude(lat)) return null;
+    const key = `${Math.round(lat * 500)}|${Math.round(lon * 500)}`;
+    const terrain = this.groundCache.get(key);
+    if (terrain !== undefined) return terrain + sea;
+    if (request) this.requestGround(key, lat, lon);
+    return null;
+  }
+
+  private requestGround(key: string, lat: number, lon: number): void {
+    if (this.groundPending.has(key) || Date.now() - (this.groundFailed.get(key)?.at ?? -Infinity) < GROUND_BACKOFF_MS) return;
+    this.groundPending.add(key);
+    this.groundQueue.set(key, Cartographic.fromDegrees(lon, lat));
+    if (!this.groundTimer && !this.groundInFlight) this.groundTimer = setTimeout(() => this.sampleGround(), 50);
+  }
+
+  /**
+   * One timer for failed cells: it wakes when the earliest back-off ends, re-places vehicles (which requests the
+   * still-needed cells again) and re-arms for failures still waiting for their wake-up, e.g. from a later batch.
+   */
+  private armGroundRetry(): void {
+    if (this.destroyed || this.groundRetryTimer) return;
+    const delay = nextGroundRetryDelay(this.groundFailed, Date.now());
+    if (delay === null) return;
+    this.groundRetryTimer = setTimeout(() => {
+      this.groundRetryTimer = null;
+      if (this.destroyed) return;
+      // Each failure gets one wake-up: cells still needed are requested again by the refresh (a new failure
+      // schedules a new wake-up); cells no longer needed don't keep the timer (and full refreshes) going.
+      markGroundRetriesWoken(this.groundFailed, Date.now());
+      this.refreshSurfaceHeights();
+      this.armGroundRetry();
+    }, delay);
+  }
+
+  /** One terrain request for the queued cells (up to 200); when heights arrive, icons and models are re-placed. */
+  private sampleGround(): void {
+    this.groundTimer = null;
+    if (this.destroyed || !this.groundQueue.size) return;
+    const batch = [...this.groundQueue].slice(0, 200);
+    for (const [k] of batch) this.groundQueue.delete(k);
+    this.groundInFlight = true;
+    const settle = (heights: (number | undefined)[]) => {
+      const now = Date.now();
+      batch.forEach(([k], i) => {
+        const h = heights[i];
+        if (typeof h === 'number' && Number.isFinite(h)) {
+          this.groundCache.set(k, h);
+          this.groundFailed.delete(k);
+        } else this.groundFailed.set(k, { at: now, woken: false });
+        this.groundPending.delete(k);
+      });
+      if (this.groundCache.size > 20_000) this.groundCache.clear();
+      if (this.groundFailed.size > 5_000) this.groundFailed.clear();
+      this.armGroundRetry();
+    };
+    this.groundSampler ??= createTerrariumTerrain({ strict: true }).provider;
+    sampleTerrain(this.groundSampler, GROUND_SAMPLE_LEVEL, batch.map(([, c]) => c.clone()))
+      .then((res) => settle(res.map((c) => c.height)))
+      .catch(() => settle([]))
+      .finally(() => {
+        this.groundInFlight = false;
+        if (this.destroyed) return;
+        if (this.groundQueue.size) this.groundTimer = setTimeout(() => this.sampleGround(), 50);
+        this.refreshSurfaceHeights();
+      });
   }
 
   /** Class silhouette (exact type → family → category → unknown), with a ring when selected. */
@@ -592,19 +840,20 @@ export class LayerRenderer {
             alignedAxis: Cartesian3.UNIT_Z,
             scale: selected ? 1.35 : 1,
             scaleByDistance: new NearFarScalar(5e4, 1, 8e6, 0.45),
-            // Depth-tested: hidden behind 3D buildings and Google 3D tiles; the far side of the earth is culled in cullBehindEarth().
-            disableDepthTestDistance: 0,
+            // Airborne: depth-tested (hidden behind 3D buildings and Google 3D tiles). Parked: never (see depthTestFor).
+            // The far side of the earth is culled in cullBehindEarth().
+            disableDepthTestDistance: this.depthTestFor(id, r),
             eyeOffset: new Cartesian3(0, 0, -30),
           },
-          label: { ...label(specialCode(r) ? `${r.label} · ${String(r.props.squawk ?? r.props.emergency)}` : r.label, specialCode(r) ? 4e7 : 4e5), disableDepthTestDistance: 0, eyeOffset: new Cartesian3(0, 0, -30) },
+          label: { ...label(specialCode(r) ? `${r.label} · ${String(r.props.squawk ?? r.props.emergency)}` : r.label, specialCode(r) ? 4e7 : 4e5), disableDepthTestDistance: this.depthTestFor(id, r), eyeOffset: new Cartesian3(0, 0, -30) },
           point: specialCode(r) ? { pixelSize: 26, color: Color.TRANSPARENT, outlineColor: C('#ff5a4f'), outlineWidth: 2, disableDepthTestDistance: 0 } : undefined,
         });
       case 'vessels':
         return new Entity({
           ...base,
-          // At sea level: lifted toward the camera so the flat sea surface does not cut the icon.
-          billboard: { image: this.iconFor(id, r, selected), rotation: this.rotationFor(r), alignedAxis: Cartesian3.UNIT_Z, scale: selected ? 1.4 : 1, scaleByDistance: new NearFarScalar(2e4, 1, 3e6, 0.4), disableDepthTestDistance: 0, eyeOffset: new Cartesian3(0, 0, -60) },
-          label: { ...label(r.label, 1.5e5), disableDepthTestDistance: 0, eyeOffset: new Cartesian3(0, 0, -60) },
+          // At height 0, never depth-tested (see depthTestFor), lifted toward the camera.
+          billboard: { image: this.iconFor(id, r, selected), rotation: this.rotationFor(r), alignedAxis: Cartesian3.UNIT_Z, scale: selected ? 1.4 : 1, scaleByDistance: new NearFarScalar(2e4, 1, 3e6, 0.4), disableDepthTestDistance: this.depthTestFor(id, r), eyeOffset: new Cartesian3(0, 0, -60) },
+          label: { ...label(r.label, 1.5e5), disableDepthTestDistance: this.depthTestFor(id, r), eyeOffset: new Cartesian3(0, 0, -60) },
         });
       case 'satellites':
         return new Entity({
@@ -723,16 +972,24 @@ export class LayerRenderer {
   }
 
   /** Recorded observed positions for a tracked object (no interpolation). */
-  showTrail(points: { lat: number; lon: number; altM: number | null }[] | null, airborne: boolean): void {
+  showTrail(points: TrailPoint[] | null, kind: TrailKind): void {
     if (this.trailEntity) {
       this.widget.entities.remove(this.trailEntity);
       this.trailEntity = null;
     }
+    this.trailArgs = points && points.length >= 2 ? { points, kind } : null;
     if (!points || points.length < 2) return;
+    // Same vertical reference as the vehicle (see `photoreal`); points without a known height are left out.
+    const positions: Cartesian3[] = [];
+    for (const p of points) {
+      const h = trailPointHeight(p, kind, this.photoreal, this.seaLevel(p.lat, p.lon) ?? 0, () => this.parkedGround(p.lat, p.lon, true));
+      if (h !== null) positions.push(Cartesian3.fromDegrees(p.lon, p.lat, h));
+    }
+    if (positions.length < 2) return;
     this.trailEntity = this.widget.entities.add({
       id: 'trail|recorded',
       polyline: {
-        positions: points.map((p) => Cartesian3.fromDegrees(p.lon, p.lat, airborne ? Math.max(0, p.altM ?? 0) : 0)),
+        positions,
         width: 2,
         material: C('#5fd0e6').withAlpha(0.85),
       },
@@ -741,9 +998,15 @@ export class LayerRenderer {
   }
 
   destroy(): void {
+    this.destroyed = true;
     this.stopSatTimer();
     if (this.motionTimer) clearInterval(this.motionTimer);
     if (this.modelSyncTimer) clearTimeout(this.modelSyncTimer);
+    this.modelSyncTimer = null;
+    if (this.groundTimer) clearTimeout(this.groundTimer);
+    this.groundTimer = null;
+    if (this.groundRetryTimer) clearTimeout(this.groundRetryTimer);
+    this.groundRetryTimer = null;
     this.models.destroy();
   }
 }

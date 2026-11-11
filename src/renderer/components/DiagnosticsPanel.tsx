@@ -119,6 +119,12 @@ export function DiagnosticsPanel({ get, onClose }: { get(): GlobeDiagnostics | n
             3D buildings {d.buildings.enabled ? (d.buildings.visible ? 'shown' : `enabled (appear below ${(d.buildings.maxCameraM / 1000).toFixed(0)} km)`) : 'off'} · {d.buildings.buildingsDrawn.toLocaleString()} footprints in {d.buildings.tilesLoaded} tiles · heights from OSM tags where present, otherwise estimated
             {d.buildings.lastError ? ` · last error: ${d.buildings.lastError}` : ''}
           </p>
+          <div className="diag-sub">Vehicle 3D models</div>
+          <p className="muted small">
+            Model pack: {d.models.pack.state === 'ready' ? `${d.models.pack.models} real models${d.models.pack.rejected ? ` (${d.models.pack.rejected} invalid entries skipped)` : ''}` : d.models.pack.state === 'none' ? 'not installed (app-built models only)' : d.models.pack.state === 'error' ? `failed to load (${d.models.pack.error})` : 'loading'} · {d.models.shown} shown · {d.models.loaded} loaded · {d.models.failed} failed
+            {d.models.lastError ? ` · last error: ${d.models.lastError}` : ''}
+            {' · '}sea-level grid (ship and parked-aircraft heights on Photoreal 3D): {d.models.geoid.state === 'error' ? `failed to load (${d.models.geoid.error}); those vehicles stay icons there` : d.models.geoid.state}
+          </p>
           <div className="diag-sub">Network (renderer tile requests)</div>
           <table className="diag-table">
             <thead>

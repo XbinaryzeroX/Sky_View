@@ -17,6 +17,8 @@ export interface CameraMedia {
   refreshMin: number | null;
   sourceUrl: string | null;
   publisher: string;
+  /** Set when the publisher shows this camera only on its own viewer page (opened with the Publisher button). */
+  viewerName: string | null;
 }
 
 type State = 'loading' | 'playing' | 'paused' | 'buffering' | 'offline' | 'error' | 'still';
@@ -125,7 +127,7 @@ export function CameraPlayer({ media, title }: { media: CameraMedia; title: stri
   }, [media.streamUrl, attempt, preferStill]);
 
   const showVideo = !!media.streamUrl && !preferStill && state !== 'offline' && state !== 'error';
-  const badge = showVideo ? (state === 'playing' ? 'LIVE VIDEO' : state === 'buffering' ? 'BUFFERING' : state === 'paused' ? 'PAUSED' : 'CONNECTING') : 'STILL IMAGE';
+  const badge = showVideo ? (state === 'playing' ? 'LIVE VIDEO' : state === 'buffering' ? 'BUFFERING' : state === 'paused' ? 'PAUSED' : 'CONNECTING') : media.viewerName && !media.stillUrl ? 'PUBLISHER VIEWER' : 'STILL IMAGE';
   return (
     <div className="cam-player" ref={boxRef}>
       <div className="cam-stage">
@@ -135,7 +137,7 @@ export function CameraPlayer({ media, title }: { media: CameraMedia; title: stri
         ) : media.stillUrl ? (
           <StillImage url={media.stillUrl} refreshMin={media.refreshMin} title={title} />
         ) : (
-          <div className="cam-empty">No image or stream is published for this camera.</div>
+          <div className="cam-empty">{media.viewerName ? `${media.viewerName} shows this camera’s images on its own page: use “Open in ${media.viewerName}” to see them in your browser.` : 'No image or stream is published for this camera.'}</div>
         )}
       </div>
       {error && (
@@ -174,13 +176,13 @@ export function CameraPlayer({ media, title }: { media: CameraMedia; title: stri
           Fullscreen
         </button>
         {media.sourceUrl && (
-          <a className="btn" href={media.sourceUrl} target="_blank" rel="noreferrer">
-            Publisher
+          <a className={media.viewerName ? 'btn primary' : 'btn'} href={media.sourceUrl} target="_blank" rel="noreferrer">
+            {media.viewerName ? `Open in ${media.viewerName}` : 'Publisher'}
           </a>
         )}
       </div>
       <p className="muted small">
-        {media.publisher}. {showVideo ? 'Live stream from the publisher; it can lag by several seconds and may drop out.' : 'Published still image; the capture time is set by the publisher and may lag.'}
+        {media.publisher}. {showVideo ? 'Live stream from the publisher; it can lag by several seconds and may drop out.' : media.viewerName ? 'Images are shown on the publisher’s own viewer, not in this app.' : 'Published still image; the capture time is set by the publisher and may lag.'}
       </p>
     </div>
   );
@@ -220,5 +222,6 @@ export function cameraMedia(r: { imageUrl?: string | null; sourceUrl?: string | 
     refreshMin: typeof r.props.updateFrequencyMin === 'number' ? r.props.updateFrequencyMin : null,
     sourceUrl: r.sourceUrl ?? null,
     publisher: String(r.props.publisher ?? r.source),
+    viewerName: r.props.mediaType === 'viewer' && typeof r.props.viewerName === 'string' ? r.props.viewerName : null,
   };
 }

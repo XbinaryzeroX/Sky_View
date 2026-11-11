@@ -7,3 +7,6 @@ release/
 .vite/
 
 builtin-keys*.json
+
+# Vehicle model pack (made by scripts/import-models.mjs from Sketchfab downloads; not committed)
+public/vehicle-models/

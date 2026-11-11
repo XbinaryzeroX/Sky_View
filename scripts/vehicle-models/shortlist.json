@@ -1,0 +1,32 @@
+{
+  "note": "Sketchfab models for Atlas Watch vehicle 3D models. Metadata only: the files are downloaded by scripts/fetch-models.mjs with the owner's Sketchfab API token and are not stored in this repository. Only CC0 and CC BY 4.0 models are accepted (the fetch script re-checks each licence). Airline liveries allowed by the owner's decision (trademark risk accepted). Military vessels keep the app-built model (no suitable modern warship). Orientation: forward/up (\"+X\" etc.) must be confirmed per model after checking its importer preview; until both are set the importer holds the model for review and it is not shipped. Other optional overrides: waterlineM (height of the waterline above the lowest point), drop (regex of node names to remove). lengthM = real length the model is normalised to; at runtime each instance is scaled to the vehicle's type length (aircraft) or AIS length (ships). draftM = typical draft, used to sink a full-hull ship model to its waterline.",
+  "models": [
+    { "id": "a320", "uid": "b14863d4091e41e6abe25832a0af3b00", "title": "A320neo", "kind": "aircraft", "lengthM": 37.6, "icao": ["A318", "A319", "A320", "A321", "A19N", "A20N", "A21N"] },
+    { "id": "b737", "uid": "259de41be0c7410e86b7e79be33d6b3a", "title": "Boeing737", "kind": "aircraft", "lengthM": 39.5, "icao": ["B736", "B737", "B738", "B739", "B37M", "B38M", "B39M", "B3XM"] },
+    { "id": "b777", "uid": "df830e5199634ae2955bf5b618ba6ab3", "title": "boeing 777", "kind": "aircraft", "lengthM": 73.9, "icao": ["B772", "B77L", "B773", "B77W", "B778", "B779"] },
+    { "id": "b787", "uid": "524f485c748146b7968e0dd8eb84e786", "title": "Boeing-787- Dreamliner", "kind": "aircraft", "lengthM": 62.8, "icao": ["B788", "B789", "B78X"] },
+    { "id": "a330", "uid": "9f40c75533df4faf9de1854fb36add80", "title": "airbus a330", "kind": "aircraft", "lengthM": 63.7, "icao": ["A332", "A333", "A338", "A339"] },
+    { "id": "a350", "uid": "cfa2836ead8c4278a199a7d34a87f02e", "title": "Airbus A350", "kind": "aircraft", "lengthM": 66.8, "icao": ["A359", "A35K"] },
+    { "id": "a380", "uid": "98d21f9c8104445f814cef47ef992889", "title": "Airbus A380", "kind": "aircraft", "lengthM": 72.7, "icao": ["A388"] },
+    { "id": "b747", "uid": "cd1977bedc32412fa1ce2cda23520b84", "title": "Boeing 747-8i", "kind": "aircraft", "lengthM": 76.3, "icao": ["B741", "B742", "B743", "B744", "B748", "B74S"] },
+    { "id": "b767", "uid": "cc2c62f56cd94a7c8b2c586515b378e7", "title": "Boeing767", "kind": "aircraft", "lengthM": 54.9, "icao": ["B762", "B763", "B764"] },
+    { "id": "b757", "uid": "77f0d3a4db5e4090a04f0daa2e09cdcc", "title": "boeing 757", "kind": "aircraft", "lengthM": 47.3, "icao": ["B752", "B753"] },
+    { "id": "ejet", "uid": "e280fdcf4f6f40048ad3b1d85a5b37e2", "title": "Mini Embraer 175 / 195", "kind": "aircraft", "lengthM": 31.7, "icao": ["E170", "E75L", "E75S", "E190", "E195", "E290", "E295"] },
+    { "id": "erj145", "uid": "d0e93f7b8717493b959d797cad7a7051", "title": "Embraer ERJ 145", "kind": "aircraft", "lengthM": 29.9, "icao": ["E135", "E145", "E45X"] },
+    { "id": "crj", "uid": "02c4fa44604243c2bb48db64506a39af", "title": "Airplane CRJ-900 Cityjet", "kind": "aircraft", "lengthM": 36.2, "icao": ["CRJ1", "CRJ2", "CRJ7", "CRJ9", "CRJX"] },
+    { "id": "atr72", "uid": "1e1a7186f7444d288675262fcee44744", "title": "ATR 72 - 600", "kind": "aircraft", "lengthM": 27.2, "icao": ["AT43", "AT45", "AT46", "AT72", "AT75", "AT76"] },
+    { "id": "q400", "uid": "5fd537e678d746778586fb73989988a0", "title": "Bombardier Dash 8-Q400", "kind": "aircraft", "lengthM": 32.8, "icao": ["DH8A", "DH8C", "DH8D"] },
+    { "id": "c172", "uid": "c9cadc2f026946da8cf9715a683739e9", "title": "FREE Cessna 172SP", "kind": "aircraft", "lengthM": 8.3, "icao": ["C150", "C152", "C172", "C182"] },
+    { "id": "g650", "uid": "b88fa0194c2b49ef8560337ab96d7579", "title": "Gulfstream G650ER", "kind": "aircraft", "lengthM": 30.4, "icao": ["GLF4", "GLF5", "GLF6", "GA5C", "GA6C", "GA7C", "GA8C"] },
+    { "id": "citx", "uid": "1d7bb0b48301482f8145cb121268dd7f", "title": "Cessna Citation X", "kind": "aircraft", "lengthM": 22.1, "icao": ["C750"] },
+    { "id": "sh60", "uid": "558373489bc145e292342efbe4b982ed", "title": "SH-60B Seahawk Helicopter", "kind": "aircraft", "lengthM": 19.8, "icao": ["H60"], "military": true },
+    { "id": "container", "uid": "aaa41cca946b4a08bc08cf692b7757be", "title": "Container Ship", "kind": "ship", "lengthM": 180, "vessel": "cargo", "draftM": 10 },
+    { "id": "tanker", "uid": "96ebf61af42b4062ae98a6ad848e1a25", "title": "Tanker Ship", "kind": "ship", "lengthM": 200, "vessel": "tanker", "draftM": 12 },
+    { "id": "ferry", "uid": "73b9556133704e73af6637a428bcb8f4", "title": "Ferry Concept", "kind": "ship", "lengthM": 160, "vessel": "passenger", "draftM": 6 },
+    { "id": "fishing", "uid": "6e33005fba3542a2aa61e187321d465e", "title": "Fishing Boat", "kind": "ship", "lengthM": 25, "vessel": "fishing", "draftM": 3 },
+    { "id": "tug", "uid": "0555e3e0c1be4080a2ba6731b801f8da", "title": "40ft Tugboat", "kind": "ship", "lengthM": 30, "vessel": "tug", "draftM": 4.5 },
+    { "id": "sailboat", "uid": "d59913994a44444b8d054f4de5f519bc", "title": "Sailboat", "kind": "ship", "lengthM": 12, "vessel": "sailing", "draftM": 1.8 },
+    { "id": "motorboat", "uid": "91f0f11ba42b4000abf788d54d73b9b1", "title": "bateau RIVA boat", "kind": "ship", "lengthM": 14, "vessel": "pleasure", "draftM": 0.9 },
+    { "id": "pilot", "uid": "6ea031237b6b4382ab362790f8af4e66", "title": "Pilot II", "kind": "ship", "lengthM": 18, "vessel": "service", "draftM": 1.5 }
+  ]
+}

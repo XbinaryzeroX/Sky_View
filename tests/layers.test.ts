@@ -42,6 +42,27 @@ describe('aircraft (ADS-B) normalization', () => {
     expect(mil.props.onGround).toBe(true);
     expect(mil.altM).toBe(0);
   });
+  it('keeps altitudes above sea level: GNSS-only (ellipsoid) altitudes are converted with the geoid', () => {
+    const body = {
+      now: 1794212000,
+      ac: [
+        { hex: 'aaa001', lat: 40.69, lon: -74.04, alt_baro: 3000, alt_geom: 2900, seen_pos: 0 },
+        { hex: 'aaa002', lat: 40.69, lon: -74.04, alt_geom: 3000, seen_pos: 0 },
+        { hex: 'aaa003', lat: 40.69, lon: -74.04, alt_baro: 'ground', alt_geom: 120, seen_pos: 0 },
+        { hex: 'aaa004', lat: 40.69, lon: -74.04, seen_pos: 0 },
+      ],
+    };
+    const nyc = () => -33; // sea level 33 m below the ellipsoid
+    const [baro, geom, ground, none] = normalizeAdsb(body, 'test', 0, nyc).records;
+    expect(baro.altM).toBeCloseTo(3000 * 0.3048, 6); // barometric: unchanged
+    expect(baro.props.altitudeFt).toBe(3000);
+    expect(geom.altM).toBeCloseTo(3000 * 0.3048 + 33, 6); // ellipsoid height − N = height above sea level
+    expect(geom.props.altitudeFt).toBe(Math.round((3000 * 0.3048 + 33) / 0.3048));
+    expect(ground.altM).toBe(0);
+    expect(none.altM).toBeNull();
+    // Without the grid: as reported.
+    expect(normalizeAdsb(body, 'test', 0).records[1].altM).toBeCloseTo(3000 * 0.3048, 6);
+  });
   it('accepts readsb aircraft.json from a local receiver (seconds-based clock)', () => {
     const n = normalizeAdsb(fxJson('readsb.json'), 'Local receiver', 0);
     expect(n.records[0].observedAt).toBe(new Date(1794212000500 - 200).toISOString());
@@ -173,6 +194,36 @@ describe('layer manager', () => {
     expect(store.trackFor('aircraft', 'a')).toHaveLength(1);
     expect(store.trackSnapshot('aircraft', new Date(Date.parse(t) + 1000).toISOString(), 300_000)).toHaveLength(1);
     expect(store.trackSnapshot('aircraft', new Date(Date.parse(t) + 600_000).toISOString(), 300_000)).toHaveLength(0);
+  });
+  it('records whether an aircraft was on the ground with each track point', () => {
+    const store = new AtlasStore(tempDbPath());
+    const t0 = Date.parse('2026-11-11T10:00:00Z');
+    const at = (s: number) => new Date(t0 + s * 1000).toISOString();
+    store.addTrackPoints('aircraft', [
+      { rid: 'g', t: at(0), lat: 1, lon: 2, alt: 0, heading: 0, ground: true },
+      { rid: 'g', t: at(10), lat: 1, lon: 2.01, alt: 150, heading: 0, ground: false },
+      { rid: 'g', t: at(20), lat: 1, lon: 2.02, alt: null, heading: 0, ground: false },
+      { rid: 'g', t: at(30), lat: 1, lon: 2.03, alt: 300, heading: 0 },
+    ]);
+    expect(store.trackFor('aircraft', 'g').map((p) => p.onGround)).toEqual([true, false, false, null]);
+    // History playback reads the same flag.
+    expect(store.trackSnapshot('aircraft', at(5), 60_000)).toEqual([{ rid: 'g', t: at(0), lat: 1, lon: 2, altM: 0, heading: 0, onGround: true }]);
+    expect(store.trackSnapshot('aircraft', at(35), 60_000)[0].onGround).toBeNull();
+  });
+  it('adds the on-ground column to a database recorded before it existed', async () => {
+    const path = tempDbPath();
+    const { DatabaseSync } = await import('node:sqlite');
+    const old = new DatabaseSync(path);
+    old.exec(`CREATE TABLE track_points (layer TEXT NOT NULL, rid TEXT NOT NULL, t TEXT NOT NULL, lat REAL NOT NULL, lon REAL NOT NULL, alt REAL, heading REAL, PRIMARY KEY (layer, rid, t));`);
+    old.prepare('INSERT INTO track_points VALUES (?, ?, ?, ?, ?, ?, ?)').run('aircraft', 'old', '2026-11-01T00:00:00.000Z', 1, 2, 0, 90);
+    old.close();
+    const store = new AtlasStore(path);
+    expect(store.trackFor('aircraft', 'old')).toEqual([{ t: '2026-11-01T00:00:00.000Z', lat: 1, lon: 2, altM: 0, heading: 90, onGround: null }]);
+    store.addTrackPoints('aircraft', [{ rid: 'old', t: '2026-11-01T00:00:10.000Z', lat: 1, lon: 2, alt: 0, heading: 90, ground: true }]);
+    expect(store.trackFor('aircraft', 'old').map((p) => p.onGround)).toEqual([null, true]);
+    store.close();
+    // Opening it again does not try to add the column twice.
+    expect(() => new AtlasStore(path).close()).not.toThrow();
   });
   it('treats small camera moves as the same view', () => {
     const a = { lat: 40, lon: -105, heightM: 200_000, bbox: [-106, 39, -104, 41] as [number, number, number, number] };

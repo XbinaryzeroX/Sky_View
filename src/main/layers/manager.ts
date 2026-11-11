@@ -4,13 +4,14 @@
 // reconciles additions/updates/removals by stable id, and records observed
 // positions for playback. One timer per layer; no duplicate requests.
 
+import type { KeyedCameraId } from '../../shared/keyedCameras';
 import { LAYER_IDS, LAYERS, type GeoRecord, type LayerId, type LayerSnapshot, type LayerStatus, type ViewState } from '../../shared/layers';
 import { freshnessOf } from '../../shared/monitoring';
 import type { Settings } from '../../shared/types';
 import { computeBackoffMs, FeedHttpError, type FetchJson, type FetchText } from '../feeds/http';
 import type { AtlasStore } from '../store';
 import type { AisStreamClient } from './aisstream';
-import { FETCHERS, type FetchResult } from './fetchers';
+import { FETCHERS, type FetchResult, type SourceState } from './fetchers';
 
 const TRACKED_LAYERS: LayerId[] = ['aircraft', 'aircraftMil', 'vessels', 'transit'];
 const VIEW_REFETCH_MIN_MS: Partial<Record<LayerId, number>> = { aircraft: 8000, metar: 15_000 };
@@ -24,6 +25,8 @@ export interface LayerManagerDeps {
   localReceiverUrl: () => string | null;
   /** OpenSky API client 'id:secret' from Provider settings, if configured. */
   openskyClient?: () => string | null;
+  /** The customer's saved key for a keyed camera system, or null. */
+  cameraKey?: (id: KeyedCameraId) => string | null;
   ais: AisStreamClient | null;
   aisConfigured: () => boolean;
   emit: (id: LayerId) => void;
@@ -63,6 +66,12 @@ export class LayerManager {
   private lastFetchView = new Map<LayerId, ViewState | null>();
   private lastFetchAt = new Map<LayerId, number>();
   private rateLimitedUntil = new Map<LayerId, number>();
+  /** Bumped when credentials a layer uses change; a refresh started under an older value is discarded. */
+  private credentialGen = new Map<LayerId, number>();
+  /** Layers whose credentials changed while a refresh was in flight: one more refresh runs after it settles. */
+  private rerun = new Set<LayerId>();
+  /** Per-source catalogs and rate limits (cameras), kept across refreshes. */
+  private sourceStates = new Map<LayerId, SourceState>();
   private view: ViewState | null = null;
   private viewTimer: ReturnType<typeof setTimeout> | null = null;
   private aisTimer: ReturnType<typeof setInterval> | null = null;
@@ -167,14 +176,33 @@ export class LayerManager {
     if (existing) return existing;
     const until = this.rateLimitedUntil.get(id);
     if (until && until > this.now().getTime()) return Promise.resolve();
-    const p = this.doRefresh(id).finally(() => this.inFlight.delete(id));
+    const p = this.doRefresh(id).finally(() => {
+      this.inFlight.delete(id);
+      // Credentials changed mid-refresh: fetch once more with the current ones.
+      if (this.rerun.delete(id) && this.isEnabled(id)) void this.refresh(id).catch(() => {});
+    });
     this.inFlight.set(id, p);
     return p;
+  }
+
+  /**
+   * Call after the customer saves or removes a credential the layer uses. A refresh already
+   * underway was started with the old value, so its outcome is discarded and one fresh refresh
+   * follows it; otherwise a refresh starts now (rate limits are still respected).
+   */
+  credentialsChanged(id: LayerId): void {
+    this.credentialGen.set(id, (this.credentialGen.get(id) ?? 0) + 1);
+    if (!this.isEnabled(id)) return;
+    if (this.inFlight.has(id)) this.rerun.add(id);
+    else void this.refresh(id).catch(() => {});
   }
 
   private async doRefresh(id: LayerId): Promise<void> {
     const snap = this.snaps.get(id)!;
     const started = this.now();
+    const gen = this.credentialGen.get(id) ?? 0;
+    const stale = () => (this.credentialGen.get(id) ?? 0) !== gen;
+    const before = snap.status.state;
     snap.status = { ...snap.status, state: 'loading', lastAttemptAt: started.toISOString() };
     this.d.emit(id);
     const view = this.view;
@@ -188,8 +216,21 @@ export class LayerManager {
         store: this.d.store,
         localReceiverUrl: id === 'aircraft' ? this.d.localReceiverUrl() : null,
         openskyClient: id === 'aircraft' ? (this.d.openskyClient?.() ?? null) : null,
+        cameraKey: id === 'cameras' ? this.d.cameraKey : undefined,
+        sources: id === 'cameras' ? this.sourceState(id) : undefined,
+        clock: () => this.now().getTime(),
         now: started,
       });
+      if (stale()) {
+        // Fetched with credentials that have since changed: never publish it (the queued refresh replaces it).
+        snap.status = { ...snap.status, state: before };
+        this.d.emit(id);
+        return;
+      }
+      if (res.failure) {
+        this.publishFailedResult(id, res);
+        return;
+      }
       let records = res.records;
       if (id === 'vessels' && this.d.ais && this.d.aisConfigured()) records = this.mergeAis(records);
       // Reconcile: the new set replaces the old one (removals handled); ids are stable per provider.
@@ -209,12 +250,22 @@ export class LayerManager {
       this.lastFetchAt.set(id, this.now().getTime());
       this.rateLimitedUntil.delete(id);
       if (TRACKED_LAYERS.includes(id)) this.recordTracks(id, records);
-      this.schedule(id, LAYERS[id].pollSeconds * 1000);
+      // Part of the result may fall due sooner (a source's rate limit ends): refresh then; due sources only are fetched.
+      const soon = res.refreshAt != null ? Math.max(5_000, res.refreshAt - this.now().getTime()) : Infinity;
+      this.schedule(id, Math.min(LAYERS[id].pollSeconds * 1000, soon));
     } catch (e) {
       const failures = snap.status.consecutiveFailures + 1;
       const rl = e instanceof FeedHttpError && (e.status === 429 || e.status === 503);
       const backoff = computeBackoffMs(failures, rl ? ((e as FeedHttpError).retryAfterSec ?? 60) : null);
       if (rl) this.rateLimitedUntil.set(id, this.now().getTime() + backoff);
+      if (stale()) {
+        // A failure under old credentials says nothing about the new ones; only a rate limit (which is
+        // about the host) is kept, and the next attempt waits for it.
+        snap.status = { ...snap.status, state: before };
+        if (rl) this.schedule(id, backoff);
+        this.d.emit(id);
+        return;
+      }
       // Keep last-known records and their original timestamps.
       snap.status = { ...snap.status, state: 'error', error: describe(e), consecutiveFailures: failures };
       this.log(`[layers] ${id} failed (${failures}): ${describe(e)}`);
@@ -223,11 +274,35 @@ export class LayerManager {
     this.d.emit(id);
   }
 
+  /**
+   * A fetcher that reconciles its own sources reported that nothing usable came back. Unlike a thrown error (where
+   * the last-known records stay), its reconciled records are published, even when empty: catalogs that expired or
+   * whose key was rejected or removed must not linger. The layer still shows the error and backs off.
+   */
+  private publishFailedResult(id: LayerId, res: FetchResult): void {
+    const snap = this.snaps.get(id)!;
+    const failures = snap.status.consecutiveFailures + 1;
+    snap.records = res.records;
+    snap.status = { ...snap.status, state: 'error', error: res.failure ?? 'Failed', consecutiveFailures: failures, recordCount: res.records.length, skippedRecords: res.skipped, note: res.note };
+    this.log(`[layers] ${id} failed (${failures}): ${res.failure}`);
+    this.d.emit(id);
+    const backoff = computeBackoffMs(failures, null);
+    // Never before a source's rate limit ends (the fetcher would skip that host anyway), never later than the poll.
+    const limitEnds = res.refreshAt != null ? res.refreshAt - this.now().getTime() : 0;
+    this.schedule(id, Math.min(LAYERS[id].pollSeconds * 1000, Math.max(backoff, limitEnds, Math.min(LAYERS[id].pollSeconds * 1000, 30_000))));
+  }
+
+  private sourceState(id: LayerId): SourceState {
+    let s = this.sourceStates.get(id);
+    if (!s) this.sourceStates.set(id, (s = { backoff: new Map(), cache: new Map() }));
+    return s;
+  }
+
   private recordTracks(id: LayerId, records: GeoRecord[]): void {
     try {
       const pts = records
         .filter((r) => r.observedAt)
-        .map((r) => ({ rid: r.id, t: r.observedAt!, lat: r.lat, lon: r.lon, alt: r.altM, heading: r.heading }));
+        .map((r) => ({ rid: r.id, t: r.observedAt!, lat: r.lat, lon: r.lon, alt: r.altM, heading: r.heading, ground: typeof r.props.onGround === 'boolean' ? r.props.onGround : null }));
       this.d.store.addTrackPoints(id, pts);
       const s = this.d.getSettings();
       this.d.store.pruneTracks(s.trackRetentionHours, 400_000, this.now());

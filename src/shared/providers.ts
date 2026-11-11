@@ -2,6 +2,8 @@
 // deliberately conservative: "restricted" means terms are unclear or limit
 // commercial use; "metered" means usage is billed to the customer's account.
 
+import { KEYED_CAMERA_SYSTEMS, type KeyedCameraId } from './keyedCameras';
+
 export type ProviderStatus = 'free' | 'free-key' | 'restricted' | 'metered';
 export type ProviderId =
   | 'openfreemap'
@@ -33,7 +35,8 @@ export type ProviderId =
   | 'opensky'
   | 'ollama'
   | 'twelvedata'
-  | 'alphavantage';
+  | 'alphavantage'
+  | KeyedCameraId;
 
 export interface ProviderInfo {
   id: ProviderId;
@@ -50,6 +53,9 @@ export interface ProviderInfo {
   testable: boolean;
 }
 
+/** Provider ids of the keyed camera systems (shown on their own tab in Provider settings). */
+export const CAMERA_KEY_PROVIDER_IDS: ReadonlySet<string> = new Set(KEYED_CAMERA_SYSTEMS.map((s) => s.id));
+
 export const PROVIDERS: ProviderInfo[] = [
   { id: 'twelvedata', name: 'Twelve Data', purpose: 'Stock, forex and crypto prices', status: 'free-key', statusNote: 'Included key when supplied by the publisher, or your own key. Delayed or EOD depending on exchange and plan; check your data rights.', docsUrl: 'https://twelvedata.com/docs', signupUrl: 'https://twelvedata.com/register', credential: { kind: 'secret', label: 'API key', placeholder: 'Paste your Twelve Data key' }, capabilities: ['Quotes', 'Charts', 'Symbol search'], limits: '800 API credits/day, 8/minute; cached on demand', testable: true },
   { id: 'alphavantage', name: 'Alpha Vantage', purpose: 'Market prices', status: 'free-key', statusNote: 'Included key when supplied by the publisher, or your own key. Some intervals require a premium plan; provider errors are displayed.', docsUrl: 'https://www.alphavantage.co/documentation/', signupUrl: 'https://www.alphavantage.co/support/#api-key', credential: { kind: 'secret', label: 'API key', placeholder: 'Paste your Alpha Vantage key' }, capabilities: ['Quotes', 'Charts', 'Symbol search'], limits: '25 requests/day, app caps at 5/minute; cached on demand', testable: true },
@@ -61,7 +67,7 @@ export const PROVIDERS: ProviderInfo[] = [
   { id: 'nws', name: 'National Weather Service API', purpose: 'Active weather alerts, NWS zones', status: 'free', statusNote: 'U.S. government data, free for any purpose', docsUrl: 'https://www.weather.gov/documentation/services-web-api', signupUrl: null, credential: null, capabilities: ['Weather alerts', 'Zone lookup'], limits: 'Unpublished “generous” rate limit; User-Agent required', testable: true },
   { id: 'usgs-quakes', name: 'USGS earthquake feeds', purpose: 'Recent earthquakes', status: 'free', statusNote: 'Public domain', docsUrl: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php', signupUrl: null, credential: null, capabilities: ['Earthquakes'], limits: 'Feeds update every minute', testable: true },
   { id: 'usgs-basemap', name: 'USGS The National Map basemaps', purpose: 'U.S. orthoimagery and topo tiles to zoom 16', status: 'free', statusNote: 'Public domain', docsUrl: 'https://apps.nationalmap.gov/services/', signupUrl: null, credential: null, capabilities: ['Imagery (U.S.)', 'Topo map (U.S.)'], limits: 'Tiles cached 24 h by HTTP headers', testable: false },
-  { id: 'nasa-gibs', name: 'NASA GIBS', purpose: 'Global Blue Marble and daily VIIRS imagery', status: 'free', statusNote: 'NASA open data, attribution requested', docsUrl: 'https://nasa-gibs.github.io/gibs-api-docs/', signupUrl: null, credential: null, capabilities: ['Global imagery', 'Daily satellite imagery'], limits: 'Zoom 8–9 maximum', testable: false },
+  { id: 'nasa-gibs', name: 'NASA GIBS', purpose: 'Global Blue Marble, daily VIIRS imagery and 10-minute weather-satellite frames (GOES, Himawari)', status: 'free', statusNote: 'NASA open data, attribution requested', docsUrl: 'https://nasa-gibs.github.io/gibs-api-docs/', signupUrl: null, credential: null, capabilities: ['Global imagery', 'Daily satellite imagery', 'Weather satellite (10-min)'], limits: 'Zoom 8–9 maximum', testable: false },
   { id: 'terrain-tiles', name: 'Terrain Tiles (AWS Open Data)', purpose: '3D terrain', status: 'free', statusNote: 'Open data; attribution of sources required', docsUrl: 'https://registry.opendata.aws/terrain-tiles/', signupUrl: null, credential: null, capabilities: ['Terrain'], limits: 'Zoom 15 maximum', testable: false },
   { id: 'adsblol', name: 'adsb.lol', purpose: 'Live aircraft positions, military-flagged aircraft', status: 'free', statusNote: 'ODbL 1.0 data; attribution and share-alike on derived databases', docsUrl: 'https://www.adsb.lol/docs/open-data/api/', signupUrl: 'https://www.adsb.lol/docs/open-data/api/', credential: null, capabilities: ['Aircraft', 'Military-flagged aircraft'], limits: 'Rate limits unpublished; queries limited to 250 nm radius; polled every 20–60 s only while the layer is on', testable: true },
   { id: 'local-adsb', name: 'Local ADS-B receiver (readsb/dump1090)', purpose: 'Aircraft from your own receiver on your network', status: 'free', statusNote: 'Your own hardware', docsUrl: 'https://github.com/wiedehopf/readsb', signupUrl: null, credential: { kind: 'url', label: 'aircraft.json URL (private IP only)', placeholder: 'http://192.168.1.50/tar1090/data/aircraft.json' }, capabilities: ['Aircraft (local coverage)'], limits: 'Literal private IPv4 addresses only', testable: true },
@@ -81,6 +87,20 @@ export const PROVIDERS: ProviderInfo[] = [
   { id: 'census-geocoder', name: 'U.S. Census Geocoder', purpose: 'U.S. street-address search', status: 'free', statusNote: 'Public domain', docsUrl: 'https://geocoding.geo.census.gov/geocoder/', signupUrl: null, credential: null, capabilities: ['Address search (U.S.)'], limits: 'Requests sent only when you search an address', testable: true },
   { id: 'google3d', name: 'Google Maps Platform (Photoreal 3D + Satellite)', purpose: 'Photorealistic 3D cities and worldwide satellite imagery (Map Tiles API); place search via Geocoding API while these are on', status: 'metered', statusNote: 'Billed to your Google Cloud account (Map Tiles API). Google terms restrict caching and require Google attribution.', docsUrl: 'https://developers.google.com/maps/documentation/tile/3d-tiles', signupUrl: 'https://console.cloud.google.com/google/maps-apis/overview', credential: { kind: 'browser-key', label: 'Google Maps API key (browser key, restrict to Map Tiles API)', placeholder: 'AIza…' }, capabilities: ['Photorealistic 3D cities', 'Worldwide satellite imagery (2D tiles)', 'Google place search while Google imagery is on'], limits: 'Metered per root-tile session; included key allowance or your own key', testable: true },
   { id: 'ollama', name: 'Ollama (local AI)', purpose: 'Optional local language model', status: 'free', statusNote: 'Runs on your computer; each model has its own license', docsUrl: 'https://ollama.com/', signupUrl: null, credential: null, capabilities: ['AI explanations'], limits: 'Requires suitable hardware; configure in Settings', testable: false },
+  // Camera systems that need the customer's own free key (one per publisher; see keyedCameras.ts).
+  ...KEYED_CAMERA_SYSTEMS.map((s): ProviderInfo => ({
+    id: s.id,
+    name: s.name,
+    purpose: `Traffic camera stills (${s.region}, ${s.country})`,
+    status: 'free-key',
+    statusNote: s.termsNote,
+    docsUrl: s.docsUrl,
+    signupUrl: s.signupUrl,
+    credential: { kind: 'secret', label: s.kind === 'wsdot' ? 'Access code' : s.kind === '511' ? 'Developer key' : 'API key', placeholder: `Paste your ${s.name} key` },
+    capabilities: [`Cameras (${s.region})`],
+    limits: 'One catalog request every 6 hours; images load only when you open a camera',
+    testable: true,
+  })),
 ];
 
 export interface ProviderState {

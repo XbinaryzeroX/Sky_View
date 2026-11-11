@@ -128,7 +128,13 @@ export interface TerrainStats {
   deepestLevelRequested: number;
 }
 
-export function createTerrariumTerrain(): { provider: CustomHeightmapTerrainProvider; stats: TerrainStats } {
+/**
+ * `strict` (ground-height sampling): the source elevations as they are. A missing source tile (HTTP 404) fails
+ * instead of being filled with sea level, and no ocean mask or sea flattening is applied (a valid elevation below
+ * sea level stays negative). The globe keeps both display adjustments (no data = sea, oceans flattened to 0 m).
+ */
+export function createTerrariumTerrain(options: { strict?: boolean } = {}): { provider: CustomHeightmapTerrainProvider; stats: TerrainStats } {
+  const strict = options.strict === true;
   const stats: TerrainStats = { requested: 0, loaded: 0, failed: 0, inFlight: 0, lastSuccessAt: null, lastError: null, deepestLevelRequested: 0 };
   const cache = new Map<string, Promise<Float32Array>>(); // decoded 256x256 source tiles
   const queue: (() => void)[] = [];
@@ -159,13 +165,16 @@ export function createTerrariumTerrain(): { provider: CustomHeightmapTerrainProv
         const url = `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`;
         const pool = terrainPool();
         if (pool) {
-          const out = await pool.run<Float32Array>({ kind: 'height', url });
+          const out = await pool.run<Float32Array>({ kind: 'height', url, strict });
           stats.loaded++;
           stats.lastSuccessAt = new Date().toISOString();
           return out;
         }
         const res = await fetch(url, { signal: AbortSignal.timeout(20000) });
-        if (res.status === 404) return new Float32Array(256 * 256); // no source data: sea level
+        if (res.status === 404) {
+          if (strict) throw new Error('no terrain data for this tile');
+          return new Float32Array(256 * 256); // no source data: sea level
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const bmp = await createImageBitmap(await res.blob(), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
         const canvas = new OffscreenCanvas(256, 256);
@@ -222,10 +231,13 @@ export function createTerrariumTerrain(): { provider: CustomHeightmapTerrainProv
       }
       const keys = [...need.keys()];
       // Ocean coverage for the same source tiles (OSM vector data stops at zoom 14; deeper zooms use a sub-area).
-      const oceanJobs = keys.map((k) => {
-        const [tx, ty] = k.split('/').map(Number);
-        return oceanAlpha(z, tx, ty);
-      });
+      // Strict (ground-height sampling): no ocean data and no sea flattening, only the source elevations.
+      const oceanJobs = strict
+        ? []
+        : keys.map((k) => {
+            const [tx, ty] = k.split('/').map(Number);
+            return oceanAlpha(z, tx, ty);
+          });
       // Water-mask sample grid (finer than the height grid).
       const mpx = Array.from({ length: MASK }, (_, c) => mercatorPixel(west + ((east - west) * (c + 0.5)) / MASK, 0, z).x);
       const mpy = Array.from({ length: MASK }, (_, r) => mercatorPixel(0, Math.max(-MERCATOR_MAX_LAT, Math.min(MERCATOR_MAX_LAT, north - ((north - south) * (r + 0.5)) / MASK)), z).y);
@@ -263,7 +275,7 @@ export function createTerrariumTerrain(): { provider: CustomHeightmapTerrainProv
             const h = a * (1 - ty) + b * ty;
             // Inside OSM ocean: sea level (blended across the coastline pixel).
             // Without OSM ocean data, the elevation itself marks the sea, so the tile matches its neighbours.
-            out[r * SIZE + c] = oceanKnown ? h * (1 - sea(fx, fy)) : h < SEA_BELOW_M ? 0 : h;
+            out[r * SIZE + c] = strict ? h : oceanKnown ? h * (1 - sea(fx, fy)) : h < SEA_BELOW_M ? 0 : h;
           }
         }
         profAdd('terrain.resample', performance.now() - tRes);
@@ -293,7 +305,7 @@ export function createTerrariumTerrain(): { provider: CustomHeightmapTerrainProv
             any |= v;
             all &= v === 255 ? 255 : 0;
           }
-        seaStats.maskedTiles++;
+        if (!strict) seaStats.maskedTiles++; // ground sampling applies no ocean mask
         return { heights: out, water: any === 0 ? new Uint8Array([0]) : all === 255 ? new Uint8Array([255]) : water };
       });
     },

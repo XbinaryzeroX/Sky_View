@@ -172,11 +172,11 @@ export const LAYERS: Record<LayerId, LayerMeta> = {
     group: 'Cameras',
     temporal: 'periodic',
     temporalNote: 'Still images published by transportation agencies, refreshed by the publisher every few minutes. Camera aim and image time are the publisher’s.',
-    source: 'Caltrans CCTV with live video (California) · NYC DOT (New York City) · Fintraffic weather cameras (Finland)',
+    source: 'Caltrans CCTV with live video (California) · NYC DOT (New York City) · Fintraffic weather cameras (Finland) · TfL JamCams (London) · Hong Kong Transport Department · DriveBC (British Columbia) · Québec 511',
     sourceUrl: 'https://cwwp2.dot.ca.gov/documentation/cctv/cctv.htm',
-    license: 'Caltrans: public agency data · Fintraffic: CC BY 4.0',
-    coverage: 'California state highways; Finnish road network',
-    auth: 'None',
+    license: 'Caltrans: public agency data · Fintraffic: CC BY 4.0 · Powered by TfL Open Data · Hong Kong: DATA.GOV.HK terms · DriveBC: Open Government Licence – British Columbia · Québec 511: CC BY 4.0',
+    coverage: 'California state highways; New York City; Finnish road network; London; Hong Kong; British Columbia; Québec. More US states, Canadian provinces, New South Wales and Sweden with your own free keys (Provider settings → Camera keys)',
+    auth: 'None (optional free keys add more systems)',
     pollSeconds: 21600,
     viewport: false,
   },
@@ -267,4 +267,6 @@ export interface TrackPoint {
   lon: number;
   altM: number | null;
   heading: number | null;
+  /** Aircraft reported on the ground at this point; null when unknown (older recordings, other layers). */
+  onGround: boolean | null;
 }

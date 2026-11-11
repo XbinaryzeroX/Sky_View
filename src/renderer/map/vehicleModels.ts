@@ -6,12 +6,16 @@
 import { Cartesian3, Color, HeightReference, Matrix4, Model, ShadowMode, Transforms, type CesiumWidget } from 'cesium';
 import { writeGlb } from './glb';
 import type { TextureSlot, VehicleModelSpec } from './vehicleMeshes';
+import { clearShownModels, setShownModel } from './shownModels';
 
 export interface ModelCandidate {
   /** 'rec|layer|id': also the pick id, so clicking a model selects the vehicle. */
   key: string;
   variant: string;
-  spec: () => VehicleModelSpec;
+  /** App-built model (generated on first use); ignored when `url` is set. */
+  spec?: () => VehicleModelSpec;
+  /** A ready model file instead (model pack), already oriented like the built models. */
+  url?: string;
   position: Cartesian3;
   /** Radians clockwise from north. */
   heading: number;
@@ -188,6 +192,7 @@ export class VehicleModelLayer {
       if (!want.has(key) || want.get(key)!.variant !== l.variant) {
         if (l.model) this.widget.scene.primitives.remove(l.model);
         this.live.delete(key);
+        setShownModel(key, null);
         modelStats.removed++;
         // Flip diagnostics only track models that were actually displayed.
         if (l.ready) {
@@ -216,7 +221,8 @@ export class VehicleModelLayer {
     return shown;
   }
 
-  private fail(entry: Live, variant: string, error: unknown): void {
+  private fail(key: string, entry: Live, variant: string, error: unknown): void {
+    setShownModel(key, null);
     modelStats.failed++;
     modelStats.lastError = String((error as Error)?.message ?? error).slice(0, 300);
     this.failedVariants.add(variant);
@@ -235,7 +241,8 @@ export class VehicleModelLayer {
     this.live.set(c.key, entry);
     void (async () => {
       try {
-        const url = await modelUrl(c.variant, c.spec);
+        const url = c.url ?? (c.spec ? await modelUrl(c.variant, c.spec) : null);
+        if (!url) throw new Error('model candidate without a model');
         const model = await Model.fromGltfAsync({
           url,
           id: c.key,
@@ -256,21 +263,27 @@ export class VehicleModelLayer {
         model.readyEvent.addEventListener(() => {
           if (this.live.get(c.key) !== entry || entry.failed) return;
           entry.ready = true;
+          setShownModel(c.key, c.variant);
           modelStats.loaded++;
           // A flip: this vehicle showed a model, lost it, and shows one again within 5 s.
           if (performance.now() - (this.removedAt.get(c.key) ?? -1e9) < 5000) modelStats.flips++;
           this.onReadyChange();
         });
         model.errorEvent.addEventListener((error: unknown) => {
-          if (this.live.get(c.key) === entry) this.fail(entry, c.variant, error);
+          if (this.live.get(c.key) === entry) this.fail(c.key, entry, c.variant, error);
         });
         entry.model = this.widget.scene.primitives.add(model) as Model;
         this.widget.scene.requestRender();
       } catch (error) {
         // Building or loading failed: the vehicle keeps its icon.
-        if (this.live.get(c.key) === entry) this.fail(entry, c.variant, error);
+        if (this.live.get(c.key) === entry) this.fail(c.key, entry, c.variant, error);
       }
     })();
+  }
+
+  /** Whether a model variant failed this session (callers fall back to another variant). */
+  variantFailed(variant: string): boolean {
+    return this.failedVariants.has(variant);
   }
 
   /** Whether this vehicle currently has a model (ready or still loading). */
@@ -281,6 +294,7 @@ export class VehicleModelLayer {
 
   clear(): void {
     for (const l of this.live.values()) if (l.model) this.widget.scene.primitives.remove(l.model);
+    clearShownModels(this.live.keys());
     this.live.clear();
   }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AisStreamClient } from '../src/main/layers/aisstream';
-import { aircraftClass, altitudeColor, classifyAircraftQuery, deadReckon, DEFAULT_AIRCRAFT_FILTER, elevationAngleDeg, passesFilter, specialCode, trackState } from '../src/shared/aircraft';
+import { aircraftClass, altitudeColor, classifyAircraftQuery, deadReckon, DEFAULT_AIRCRAFT_FILTER, drawnPosition, elevationAngleDeg, passesFilter, specialCode, trackState } from '../src/shared/aircraft';
 import { answerQuestion } from '../src/shared/analyst';
 import { geodesicDistanceKm } from '../src/shared/geo';
 import { DEFAULT_SETTINGS } from '../src/shared/ipc';
@@ -85,6 +85,19 @@ describe('aircraft', () => {
     // 450 kt for 45 s ≈ 10.4 km
     expect(geodesicDistanceKm(r.lat, r.lon, p.lat, p.lon)).toBeCloseTo(10.4, 0);
     expect(deadReckon(ac({ props: { onGround: true } }), now).estimatedS).toBe(0);
+  });
+  it('re-places a moving aircraft where it is drawn, not back at its last report', () => {
+    const now = Date.now();
+    const r = ac({ observedAt: new Date(now - 30_000).toISOString() });
+    const on = { aircraft: true, smooth: true, snapshotsStay: true };
+    const p = drawnPosition(r, now, on);
+    expect(p).toEqual({ lat: deadReckon(r, now).lat, lon: deadReckon(r, now).lon });
+    expect(geodesicDistanceKm(r.lat, r.lon, p.lat, p.lon)).toBeGreaterThan(6);
+    // Smoothing off, ships and other layers, and history snapshots on the bulk layer stay at their report.
+    expect(drawnPosition(r, now, { ...on, smooth: false })).toEqual({ lat: r.lat, lon: r.lon });
+    expect(drawnPosition(r, now, { ...on, aircraft: false })).toEqual({ lat: r.lat, lon: r.lon });
+    expect(drawnPosition(ac({ ...r, props: { snapshot: true } }), now, on)).toEqual({ lat: r.lat, lon: r.lon });
+    expect(drawnPosition(ac({ ...r, props: { snapshot: true } }), now, { ...on, snapshotsStay: false })).not.toEqual({ lat: r.lat, lon: r.lon });
   });
   it('computes elevation angles and validates lookup queries', () => {
     expect(elevationAngleDeg(10, 10000)).toBeGreaterThan(44);
@@ -331,5 +344,18 @@ describe('OpenSky worldwide snapshot', () => {
     expect(trackState(r, obs + 5_000)).toBe('stale');
     expect(trackState(r, obs + 1000 * 1000)).toBe('stale');
     expect(trackState(r, obs + 1100 * 1000)).toBe('expired');
+  });
+  it('converts a geometric-only OpenSky altitude (above the ellipsoid) to above sea level', async () => {
+    const { normalizeOpenSky } = await import('../src/shared/opensky');
+    const t0 = 1794212000;
+    const row = (baro: number | null, geo: number | null, ground = false) => ['abc123', 'TEST1   ', 'X', t0 - 5, t0 - 5, -74.04, 40.69, baro, ground, 100, 90, 0, null, geo, '1234', false, 0, 3];
+    const nyc = () => -33;
+    const out = normalizeOpenSky({ time: t0, states: [row(null, 1000)] }, 1080, nyc).records[0];
+    expect(out.altM).toBeCloseTo(1033, 6);
+    expect(out.props.altitudeFt).toBe(Math.round(1033 / 0.3048));
+    expect(normalizeOpenSky({ time: t0, states: [row(900, 1000)] }, 1080, nyc).records[0].altM).toBe(900); // barometric: unchanged
+    expect(normalizeOpenSky({ time: t0, states: [row(null, 1000, true)] }, 1080, nyc).records[0].altM).toBe(0); // on the ground
+    expect(normalizeOpenSky({ time: t0, states: [row(null, null)] }, 1080, nyc).records[0].altM).toBeNull();
+    expect(normalizeOpenSky({ time: t0, states: [row(null, 1000)] }, 1080).records[0].altM).toBe(1000); // no grid: as reported
   });
 });

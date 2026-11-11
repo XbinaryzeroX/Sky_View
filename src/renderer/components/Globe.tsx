@@ -1,6 +1,7 @@
 import { redactCredentialText } from '../../shared/sanitize';
 import { profAdd } from '../lib/prof';
 import { buildImageryLayers, type ImageryState } from '../map/imageryOverlay';
+import { expireFrames, fetchLatestFrame, frameLabel, frameUsable, GEO_SAT_LOOKUP_TIMEOUT_MS, GEO_SAT_MAX_LAT, GEO_SAT_REFRESH_MS, GEO_SATS, tileTemplate, type GeoFrames, type GeoSatId, type GeoSatProduct } from '../../shared/geoSatellite';
 import type { RouteInfo } from '../../shared/route';
 import '../lib/cesiumBase';
 import {
@@ -39,6 +40,8 @@ import {
   WebMapServiceImageryProvider,
   PolylineDashMaterialProperty,
   WebMercatorTilingScheme,
+  UrlTemplateImageryProvider,
+  Credit,
   createGooglePhotorealistic3DTileset,
   GoogleMaps,
   SceneMode,
@@ -58,6 +61,9 @@ import { BASEMAPS, isBasemapId, labelsOverlayLayer, needsContextFills, oceanVeil
 import { BuildingManager, BUILDINGS_MAX_CAMERA_M, type BuildingStats } from '../map/buildings';
 import { usgsStats } from '../map/usgsProvider';
 import { modelStats } from '../map/vehicleModels';
+import { packStats } from '../map/modelPack';
+import { geoidStats } from '../map/geoid';
+import type { TrailKind, TrailPoint } from '../map/trailHeights';
 import { vectorStats, type VectorStats } from '../map/vectorTiles';
 import { createTerrariumTerrain, seaStats, TERRAIN_INFO, type TerrainStats } from '../map/terrain';
 import { LayerRenderer } from '../map/layerRender';
@@ -74,7 +80,7 @@ export type ToolMode = 'none' | 'measure-line' | 'measure-area' | 'draw-pin' | '
 
 export interface PlaybackFrame {
   t: string;
-  points: { layer: LayerId; rid: string; lat: number; lon: number; altM: number | null; heading: number | null }[];
+  points: { layer: LayerId; rid: string; lat: number; lon: number; altM: number | null; heading: number | null; onGround: boolean | null }[];
 }
 
 export interface GlobeLayers {
@@ -113,7 +119,9 @@ export interface GlobeDiagnostics {
   terrain: (TerrainStats & typeof TERRAIN_INFO) | null;
   vector: VectorStats & { overlayOn: boolean };
   usgs: { noDataTiles: number; blankTiles: number; imageryTiles: number };
+  models: typeof modelStats & { pack: typeof packStats; geoid: typeof geoidStats };
   buildings: BuildingStats & { enabled: boolean; maxCameraM: number };
+  geoSat: { enabled: boolean; product: GeoSatProduct; frames: Partial<Record<GeoSatId, string | null>>; checks: number; failedChecks: number; lastError: string | null; layers: number };
   missingRequirement: string | null;
 }
 
@@ -142,8 +150,9 @@ interface Props {
   onReady(ok: boolean, error?: string): void;
   layerSnaps: Partial<Record<LayerId, LayerSnapshot>>;
   layersOn: LayerId[];
-  trail: { lat: number; lon: number; altM: number | null }[] | null;
-  trailAirborne: boolean;
+  trail: TrailPoint[] | null;
+  /** Whose trail it is (sets its vertical reference). */
+  trailKind: TrailKind;
   trackedRecord: { layer: LayerId; id: string } | null;
   showOrbitFor: string | null;
   onViewChange(v: ViewState): void;
@@ -257,11 +266,49 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   const tilesPendingRef = useRef(0);
   const layerRendererRef = useRef<LayerRenderer | null>(null);
   const radarLayerRef = useRef<ImageryLayer | null>(null);
+  // Place names drawn over imagery (the last basemap layer when on): weather-satellite frames go below it.
+  const labelsLayerRef = useRef<ImageryLayer | null>(null);
+  /** Drawn weather-satellite frame per satellite (key = layer id + frame time). */
+  const geoLayersRef = useRef(new Map<GeoSatId, { key: string; layer: ImageryLayer }>());
+  /** Previous frames kept on screen until the new frame's tiles have loaded (no blink every 10 minutes). */
+  const geoRetiringRef = useRef(new Set<ImageryLayer>());
+  /** Timer and listener of each retiring frame, cancelled when it goes or when the globe is torn down. */
+  const geoRetireCancelRef = useRef(new Map<ImageryLayer, () => void>());
+  const geoStatsRef = useRef({ checks: 0, failedChecks: 0, lastError: null as string | null });
+  /** Weather-satellite frames sit above the basemap imagery and below place names and radar. */
+  const placeGeoSatLayers = () => {
+    const w = widgetRef.current;
+    if (!w || w.isDestroyed()) return;
+    const c = w.imageryLayers;
+    // Layers are only moved (raise/lower), never removed and re-added: removing a layer frees its loaded tiles,
+    // which would reload frames already on screen and empty the old frame that covers a swap.
+    const retiring = [...geoRetiringRef.current].filter((l) => c.contains(l));
+    const current = [...geoLayersRef.current.values()].map((g) => g.layer).filter((l) => c.contains(l) && !geoRetiringRef.current.has(l));
+    const order = [...current, ...retiring]; // bottom → top: new frames lowest, retiring frames over them until they go
+    const anchor = () => {
+      const present = [labelsLayerRef.current, radarLayerRef.current].filter((l): l is ImageryLayer => !!l && c.contains(l));
+      return present.length ? present.reduce((lo, l) => (c.indexOf(l) < c.indexOf(lo) ? l : lo)) : null;
+    };
+    // From the top of the block down, each layer goes directly below the one that should be above it
+    // (place names / radar for the top one, or the top of the stack when neither is shown).
+    for (let i = order.length - 1; i >= 0; i--) {
+      const l = order[i];
+      const above = i === order.length - 1 ? anchor() : order[i + 1];
+      if (!above) {
+        if (c.indexOf(l) !== c.length - 1) c.raiseToTop(l);
+        continue;
+      }
+      while (c.indexOf(l) > c.indexOf(above)) c.lower(l);
+      while (c.indexOf(l) < c.indexOf(above) - 1) c.raise(l);
+    }
+  };
   const postStageRef = useRef<PostProcessStage | null>(null);
   const annoSourceRef = useRef<CustomDataSource | null>(null);
   const playbackSourceRef = useRef<CustomDataSource | null>(null);
   const tilesetRef = useRef<Cesium3DTileset | null>(null);
   const [photorealOn, setPhotorealOn] = useState(false);
+  /** Bumped when vehicle heights change (Photoreal on/off, sea-level grid or terrain samples arrive), to re-place playback markers. */
+  const [heightsVersion, setHeightsVersion] = useState(0);
   const photorealCleanupRef = useRef<(() => void) | null>(null);
   const reportViewRef = useRef<(() => void) | null>(null);
   const renderErrorsRef = useRef<{ count: number; last: string | null }>({ count: 0, last: null });
@@ -380,6 +427,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     void widget.dataSources.add(sources.locations);
     sourcesRef.current = sources;
     layerRendererRef.current = new LayerRenderer(widget);
+    layerRendererRef.current.onSurfaceHeightsChanged = () => setHeightsVersion((v) => v + 1);
     placeLabelsRef.current = new PlaceLabelManager(widget);
     buildingsRef.current = new BuildingManager(widget);
     annoSourceRef.current = new CustomDataSource('annotations');
@@ -482,7 +530,11 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     const layers = def.build({ date, keys: props.imageryKeys, eoxLicensed: props.eoxLicensed });
     // Worldwide place names, roads and boundaries over imagery (OpenStreetMap via OpenFreeMap).
     if (props.settings.evenOcean && isCustomerImagery(def.id, props.imageryKeys, props.eoxLicensed)) layers.push(oceanVeilLayer());
-    if (props.settings.labelsOverlay && def.id !== 'streets' && def.id !== 'neutral') layers.push(labelsOverlayLayer(needsContextFills(def.id, props.imageryKeys, props.eoxLicensed)));
+    labelsLayerRef.current = null;
+    if (props.settings.labelsOverlay && def.id !== 'streets' && def.id !== 'neutral') {
+      labelsLayerRef.current = labelsOverlayLayer(needsContextFills(def.id, props.imageryKeys, props.eoxLicensed));
+      layers.push(labelsLayerRef.current);
+    }
     imageryErrorsRef.current = { count: 0, last: null };
     if (def.id === 'google2d' && props.imageryKeys.google)
       for (const l of layers) l.errorEvent.addEventListener((e: unknown) => propsRef.current.onProviderError?.(googleRefusal('Satellite', e)));
@@ -497,6 +549,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       else layer.readyEvent.addEventListener((prov) => hook(prov as never));
     });
     basemapLayersRef.current = layers;
+    placeGeoSatLayers();
     w.scene.requestRender();
   }, [props.settings.basemap, props.settings.labelsOverlay, props.settings.evenOcean, props.imageryKeys.esri, props.imageryKeys.mapbox, props.imageryKeys.google, props.eoxLicensed, failed]);
 
@@ -505,6 +558,11 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     // OSM block buildings are hidden only while Google's photoreal city is actually on screen.
     buildingsRef.current?.setEnabled(props.settings.buildings3d && !photorealOn);
   }, [props.settings.buildings3d, photorealOn, ready]);
+
+  // Ships and parked aircraft are placed for the app's own globe; tell the vehicle layer when Google's 3D surface is showing.
+  useEffect(() => {
+    layerRendererRef.current?.setPhotoreal(photorealOn);
+  }, [photorealOn, ready]);
   useEffect(() => {
     buildingsRef.current?.setFacades(props.settings.buildingFacades);
   }, [props.settings.buildingFacades, ready]);
@@ -790,8 +848,8 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   }, [props.showOrbitFor, props.layerSnaps.satellites]);
 
   useEffect(() => {
-    layerRendererRef.current?.showTrail(props.trail, props.trailAirborne);
-  }, [props.trail, props.trailAirborne]);
+    layerRendererRef.current?.showTrail(props.trail, props.trailKind);
+  }, [props.trail, props.trailKind]);
 
   // ----- camera follow (tracking) -----
   useEffect(() => {
@@ -802,6 +860,142 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     w.trackedEntity = ent ?? undefined;
     w.scene.requestRender();
   }, [props.trackedRecord?.layer, props.trackedRecord?.id, props.layerSnaps]);
+
+  // ----- geostationary weather satellites (NASA GIBS): the newest frame is looked up every 10 minutes -----
+  const geoOn = props.settings.geoSatEnabled;
+  const geoProduct: GeoSatProduct = props.settings.geoSatProduct === 'color' ? 'color' : 'infrared';
+  const [geoFrames, setGeoFrames] = useState<{ product: GeoSatProduct; times: GeoFrames }>({ product: 'infrared', times: {} });
+  useEffect(() => {
+    if (!geoOn) return;
+    // Frames kept from an earlier session of the layer are judged again now, before any lookup answers.
+    setGeoFrames((prev) => {
+      const times = expireFrames(prev.times, Date.now());
+      return times === prev.times ? prev : { ...prev, times };
+    });
+    const stop = new AbortController();
+    // Each satellite is looked up on its own: a slow answer never holds back the others, and an answer older
+    // than the newest request for that satellite is ignored.
+    const latestRequest: Partial<Record<GeoSatId, number>> = {};
+    const lookup = async (s: (typeof GEO_SATS)[number]) => {
+      const mine = (latestRequest[s.id] = (latestRequest[s.id] ?? 0) + 1);
+      let time: string | null | undefined;
+      let error: string | null = null;
+      try {
+        time = await fetchLatestFrame(s.layers[geoProduct], Date.now(), { signal: AbortSignal.any([stop.signal, AbortSignal.timeout(GEO_SAT_LOOKUP_TIMEOUT_MS)]) });
+      } catch (e) {
+        time = undefined;
+        error = `${s.name}: ${e instanceof Error ? (e.name === 'TimeoutError' ? 'timed out' : e.message) : 'lookup failed'}`;
+      }
+      if (stop.signal.aborted || latestRequest[s.id] !== mine) return;
+      const st = geoStatsRef.current;
+      st.checks++;
+      if (error) {
+        st.failedChecks++;
+        st.lastError = error.slice(0, 300);
+      }
+      setGeoFrames((prev) => {
+        const base = prev.product === geoProduct ? prev.times : {};
+        // A failed lookup keeps the frame on screen while it is recent enough; a frame too old is dropped, never stretched.
+        const t = time === undefined ? (base[s.id] ?? null) : time;
+        return { product: geoProduct, times: { ...base, [s.id]: frameUsable(t, Date.now()) ? t : null } };
+      });
+    };
+    const checkAll = () => {
+      for (const s of GEO_SATS) void lookup(s);
+    };
+    checkAll();
+    const poll = setInterval(checkAll, GEO_SAT_REFRESH_MS);
+    // Frames expire on their own clock, whatever the network is doing.
+    const expiry = setInterval(() => setGeoFrames((prev) => {
+      const times = expireFrames(prev.times, Date.now());
+      return times === prev.times ? prev : { ...prev, times };
+    }), 60_000);
+    return () => {
+      stop.abort();
+      clearInterval(poll);
+      clearInterval(expiry);
+    };
+  }, [geoOn, geoProduct]);
+  useEffect(() => {
+    const w = widgetRef.current;
+    if (!w || !ready) return;
+    // The ocean's specular glare is drawn over imagery: over cloud frames it would look like a bright cloud that
+    // is not there, so it is off while weather-satellite frames are shown.
+    w.scene.globe.showWaterEffect = !geoOn;
+    const want = new Map<GeoSatId, { key: string; make: () => ImageryLayer }>();
+    if (geoOn && geoFrames.product === geoProduct)
+      for (const s of GEO_SATS) {
+        const time = geoFrames.times[s.id] ?? null;
+        // Checked at draw time too: frames kept while the layer was off must not come back once they are too old.
+        if (!frameUsable(time, Date.now())) continue;
+        const L = s.layers[geoProduct];
+        want.set(s.id, {
+          key: `${L.id}|${time}`,
+          make: () =>
+            new ImageryLayer(
+              new UrlTemplateImageryProvider({
+                url: tileTemplate(L, time),
+                tilingScheme: new WebMercatorTilingScheme(),
+                maximumLevel: L.maxLevel,
+                credit: new Credit(`${s.name} ${L.title}, ${frameLabel(time)} (${s.agency} via NASA GIBS)`),
+              }),
+              { alpha: 0.85, rectangle: Rectangle.fromDegrees(s.west, -GEO_SAT_MAX_LAT, s.east, GEO_SAT_MAX_LAT) },
+            ),
+        });
+      }
+    const retire = (old: ImageryLayer) => {
+      // Keep the previous frame over the new one until the new tiles have loaded (or 20 s at most).
+      geoRetiringRef.current.add(old);
+      let sawLoading = false;
+      const cancel = () => {
+        off();
+        clearTimeout(timer);
+        geoRetireCancelRef.current.delete(old);
+      };
+      const finish = () => {
+        cancel();
+        if (!geoRetiringRef.current.delete(old) || w.isDestroyed()) return;
+        if (w.imageryLayers.contains(old)) w.imageryLayers.remove(old, true);
+        w.scene.requestRender();
+      };
+      const off = w.scene.globe.tileLoadProgressEvent.addEventListener((n: number) => {
+        if (n > 0) sawLoading = true;
+        else if (sawLoading) finish();
+      });
+      const timer = setTimeout(finish, 20_000);
+      geoRetireCancelRef.current.set(old, cancel);
+    };
+    const cur = geoLayersRef.current;
+    for (const [id, g] of [...cur]) {
+      if (want.has(id)) continue;
+      if (w.imageryLayers.contains(g.layer)) w.imageryLayers.remove(g.layer, true);
+      cur.delete(id);
+    }
+    for (const [id, next] of want) {
+      const had = cur.get(id);
+      if (had?.key === next.key && w.imageryLayers.contains(had.layer)) continue;
+      const layer = next.make();
+      w.imageryLayers.add(layer);
+      cur.set(id, { key: next.key, layer });
+      if (had && w.imageryLayers.contains(had.layer)) retire(had.layer);
+    }
+    if (!geoOn) {
+      for (const c of [...geoRetireCancelRef.current.values()]) c();
+      for (const l of geoRetiringRef.current) if (w.imageryLayers.contains(l)) w.imageryLayers.remove(l, true);
+      geoRetiringRef.current.clear();
+    }
+    placeGeoSatLayers();
+    w.scene.requestRender();
+  }, [geoOn, geoProduct, geoFrames, ready]);
+  // On unmount the widget (and its layers) is destroyed elsewhere: only stop pending frame swaps and forget the layers.
+  useEffect(
+    () => () => {
+      for (const c of [...geoRetireCancelRef.current.values()]) c();
+      geoRetiringRef.current.clear();
+      geoLayersRef.current.clear();
+    },
+    [],
+  );
 
   // ----- radar overlay (NOAA nowCOAST WMS), refreshed every 5 minutes -----
   const [radarTick, setRadarTick] = useState(0);
@@ -880,13 +1074,24 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       for (const p of props.playback.points) {
         src.entities.add({
           id: 'pb|' + p.layer + '|' + p.rid,
-          position: Cartesian3.fromDegrees(p.lon, p.lat, p.layer.startsWith('aircraft') ? Math.max(0, p.altM ?? 0) : 0),
+          // Same vertical reference as live vehicles (sea level / ground on Google 3D tiles).
+          position: Cartesian3.fromDegrees(p.lon, p.lat, layerRendererRef.current?.recordedHeight(p.layer, p) ?? (p.layer.startsWith('aircraft') ? Math.max(0, p.altM ?? 0) : 0)),
           point: { pixelSize: 7, color: Color.TRANSPARENT, outlineColor: Color.fromCssColorString(p.layer === 'vessels' ? '#7fc48d' : p.layer === 'transit' ? '#f2d24a' : '#e9f3fb'), outlineWidth: 2, disableDepthTestDistance: Number.POSITIVE_INFINITY },
         });
       }
     }
     w.scene.requestRender();
-  }, [props.playback]);
+  }, [props.playback, heightsVersion]);
+
+  // During playback the live layers are hidden, so re-place markers when the camera settles somewhere new
+  // (their ground heights are only requested near the camera).
+  useEffect(() => {
+    const w = widgetRef.current;
+    if (!w || !ready) return;
+    return w.camera.moveEnd.addEventListener(() => {
+      if (propsRef.current.playback) setHeightsVersion((v) => v + 1);
+    });
+  }, [ready]);
 
   // ----- optional Google Photorealistic 3D Tiles (customer key, metered) -----
   useEffect(() => {
@@ -1013,9 +1218,10 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
           terrain: ts ? { ...TERRAIN_INFO, ...ts } : null,
           vector: { ...vectorStats, overlayOn: propsRef.current.settings.labelsOverlay || def.id === 'streets' },
           usgs: { ...usgsStats },
-          models: { ...modelStats, textureBytes: [...modelStats.textureBytes] },
+          models: { ...modelStats, textureBytes: [...modelStats.textureBytes], pack: { ...packStats }, geoid: { ...geoidStats } },
           sea: { ...seaStats, unavailableTiles: [...seaStats.unavailableTiles].slice(-20) },
           buildings: { ...(buildingsRef.current?.stats ?? { tilesLoaded: 0, buildingsDrawn: 0, lastError: null, visible: false }), enabled: propsRef.current.settings.buildings3d, maxCameraM: BUILDINGS_MAX_CAMERA_M },
+          geoSat: { enabled: propsRef.current.settings.geoSatEnabled, product: propsRef.current.settings.geoSatProduct, frames: Object.fromEntries([...geoLayersRef.current].map(([id, g]) => [id, g.key.split('|')[1] ?? null])), ...geoStatsRef.current, layers: geoLayersRef.current.size },
           missingRequirement:
             def.requires === 'esri' && !propsRef.current.imageryKeys.esri
               ? 'Esri World Imagery needs your ArcGIS key (Providers). Showing keyless imagery.'

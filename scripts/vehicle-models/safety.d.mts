@@ -1,0 +1,13 @@
+export function allowedDownloadHost(host: string): boolean;
+export function allowedDownloadUrl(raw: string): boolean;
+export const ZIP_LIMITS: { maxEntries: number; maxEntryBytes: number; maxTotalBytes: number };
+export function extractZip(bytes: Uint8Array, dir: string, limits?: { maxEntries: number; maxEntryBytes: number; maxTotalBytes: number }, stats?: { inflated?: number }): number;
+export function resourcePath(dir: string, uri: string): string;
+export function readConfined(io: unknown, file: string, dir: string, maxBytes?: number): Promise<unknown>;
+export function sourceUrlFor(uid: string, viewerUrl: unknown): string;
+export function safeEntryPath(dir: string, name: string): string | null;
+export function cleanAuthor(user: { displayName?: string; username?: string } | null | undefined): string;
+export function hostOf(raw: string): string;
+export function downloadCapped(url: string, opts: { maxBytes: number; userAgent?: string; fetchImpl?: (url: string, init: unknown) => Promise<Response>; maxHops?: number }): Promise<Uint8Array>;
+export function validToken(raw: unknown): string | null;
+export function redactSecret(text: unknown, secret: string | null | undefined): string;

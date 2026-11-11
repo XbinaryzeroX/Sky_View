@@ -31,6 +31,8 @@ import { HistoryDrawer } from './components/HistoryDrawer';
 import { LeftPanel } from './components/LeftPanel';
 import { LocationForm } from './components/LocationForm';
 import { SettingsDialog } from './components/SettingsDialog';
+import { ModelCredits } from './components/ModelCredits';
+import type { TrailPoint } from './map/trailHeights';
 import { api, errorText } from './lib/api';
 import { quakeClass, SEVERITY_META, SEVERITY_ORDER } from './lib/format';
 
@@ -73,7 +75,7 @@ export function App() {
   const [layerSnaps, setLayerSnaps] = useState<Partial<Record<LayerId, LayerSnapshot>>>({});
   const [recordSel, setRecordSel] = useState<{ layer: LayerId; id: string } | null>(null);
   const [tracked, setTracked] = useState<{ layer: LayerId; id: string } | null>(null);
-  const [trail, setTrail] = useState<{ lat: number; lon: number; altM: number | null }[] | null>(null);
+  const [trail, setTrail] = useState<TrailPoint[] | null>(null);
   const [orbitFor, setOrbitFor] = useState<string | null>(null);
   const [tool, setTool] = useState<ToolMode>('none');
   const [draft, setDraft] = useState<[number, number][]>([]);
@@ -212,7 +214,7 @@ export function App() {
       setImagery: (s: Partial<ImageryState>) => setImagery((x) => ({ ...x, ...s })),
       select: (layer: LayerId, id: string) => setRecordSel({ layer, id }),
       track: (layer: LayerId, id: string) => setTracked({ layer, id }),
-      records: (layer: LayerId) => (layerSnapsRef.current[layer]?.records ?? []).slice(0, 2000).map((r) => ({ id: r.id, lat: r.lat, lon: r.lon, label: r.label, imageUrl: r.imageUrl ?? null })),
+      records: (layer: LayerId) => (layerSnapsRef.current[layer]?.records ?? []).slice(0, 2000).map((r) => ({ id: r.id, lat: r.lat, lon: r.lon, label: r.label, imageUrl: r.imageUrl ?? null, heading: r.heading, type: typeof r.props.type === 'string' ? r.props.type : null, shipType: typeof r.props.shipType === 'number' ? r.props.shipType : null, onGround: r.props.onGround === true })),
     };
   }, []);
   const globeRef = useRef<GlobeHandle>(null);
@@ -255,7 +257,7 @@ export function App() {
       setTrail(null);
       return;
     }
-    void api.trackTrail(tracked.layer, tracked.id).then((pts) => setTrail(pts.map((p) => ({ lat: p.lat, lon: p.lon, altM: p.altM }))));
+    void api.trackTrail(tracked.layer, tracked.id).then((pts) => setTrail(pts.map((p) => ({ lat: p.lat, lon: p.lon, altM: p.altM, onGround: p.onGround ?? null }))));
   }, [tracked, tracked ? layerSnaps[tracked.layer]?.status.lastSuccessAt : null]);
 
   useEffect(() => {
@@ -453,12 +455,12 @@ export function App() {
     firePerimeters: 'Perimeters: NIFC WFIGS',
     metar: 'METAR: NOAA AWC',
     cyclones: 'Cyclones: NOAA NHC',
-    cameras: 'Cameras: Caltrans; Fintraffic / digitraffic.fi, CC BY 4.0',
+    cameras: 'Cameras: Caltrans; NYC DOT; Fintraffic / digitraffic.fi, CC BY 4.0; Powered by TfL Open Data; Transport Department, Hong Kong SAR (DATA.GOV.HK); DriveBC, Open Government Licence – British Columbia; Québec 511, MTMD, CC BY 4.0',
     transit: 'Transit: MBTA',
     airspace: 'Airspace: FAA',
   };
   const layerCredits = snap
-    ? [...(snap.settings.layersEnabled as string[]).map((l) => LAYER_CREDIT[l]).filter(Boolean), ...(snap.settings.radarEnabled ? ['Radar: NOAA nowCOAST'] : [])].join(' · ')
+    ? [...(snap.settings.layersEnabled as string[]).map((l) => LAYER_CREDIT[l]).filter(Boolean), ...(snap.settings.radarEnabled ? ['Radar: NOAA nowCOAST'] : []), ...(snap.settings.geoSatEnabled ? ['Weather satellites: NOAA GOES, JMA Himawari; imagery from NASA GIBS (ESDIS)'] : [])].join(' · ')
     : '';
   const allAircraftLoaded = [...new Map([...(layerSnaps.aircraft?.records ?? []), ...(layerSnaps.aircraftMil?.records ?? [])].map((r) => [r.id, r])).values()];
   const notifications = (() => {
@@ -592,7 +594,9 @@ export function App() {
     + (snap.settings.labelsOverlay && snap.settings.basemap !== 'streets' ? ' · Labels/roads: © OpenStreetMap contributors, © OpenMapTiles (OpenFreeMap)' : '')
     + (snap.settings.buildings3d ? ' · Buildings: OpenStreetMap (heights may be estimated)' : '')
     + (snap.settings.terrainEnabled ? ' · Terrain: Mapzen Terrain Tiles (AWS Open Data; 3DEP, SRTM, GMTED, ETOPO1, EU-DEM)' : '')
-    + ' · Boundaries: U.S. Census Bureau, Natural Earth · Globe: CesiumJS' + (layerCredits ? ' · ' + layerCredits : '');
+    + ' · Boundaries: U.S. Census Bureau, Natural Earth · Globe: CesiumJS'
+    + (snap.settings.basemap === ('google3d' as never) ? ' · Sea level on Photoreal 3D: EGM96 geoid, NGA (public domain)' : '')
+    + (layerCredits ? ' · ' + layerCredits : '');
   return (
     <div className={`app ${historyOpen ? 'history-open' : ''} ${kiosk ? 'kiosk' : ''} ${snap.settings.reducedMotion ? 'reduced-motion' : ''} ${playbackOn ? 'playback-active' : ''}`}>
       <header className="topbar">
@@ -741,7 +745,7 @@ export function App() {
             routeLine={routeLine}
             imagery={imagery}
             onImagerySplit={(split) => setImagery((s) => ({ ...s, split }))}
-            trailAirborne={tracked?.layer === 'aircraft' || tracked?.layer === 'aircraftMil'}
+            trailKind={tracked?.layer === 'aircraft' || tracked?.layer === 'aircraftMil' ? 'aircraft' : tracked?.layer === 'vessels' ? 'vessel' : 'other'}
             trackedRecord={tracked}
             showOrbitFor={orbitFor}
             onViewChange={onViewChange}
@@ -815,7 +819,7 @@ export function App() {
             }} keyboardOpen={keyboardOpen} onKeyboard={() => { setKeyboardOpen(!keyboardOpen); setDataOpen(false); setToolsOpen(false); }}
           />}
           {page === 'globe' && leftFloat === 'layers' && !diagOpen && (
-            <FloatingPanel className="floating-left floating-layers" title={'Layers \u00b7 ' + (snap.settings.layersEnabled.length + (snap.settings.radarEnabled ? 1 : 0)) + ' on'}
+            <FloatingPanel className="floating-left floating-layers" title={'Layers \u00b7 ' + (snap.settings.layersEnabled.length + (snap.settings.radarEnabled ? 1 : 0) + (snap.settings.geoSatEnabled ? 1 : 0)) + ' on'}
               onClose={() => setLeftFloat(null)}>
               <LayersPanel settings={snap.settings} snaps={layerSnaps} onPatch={patch => void patchSettings(patch)} imagery={imagery}
                 onImagery={setImagery} airportsOn={showAirports} onAirports={() => setShowAirports(!showAirports)} alertsContent={locationPanel} />
@@ -1024,7 +1028,12 @@ export function App() {
             <span tabIndex={0} title={credits}>{credits}</span>
             <button className="link-btn" aria-expanded={creditsOpen} onClick={() => { setCreditsOpen(!creditsOpen); setLeftFloat(null); setDiagOpen(false); setHistoryOpen(false); setPage('globe'); }}>Credits</button>
           </footer>
-          {creditsOpen && <FloatingPanel className="credits-panel" title="Credits" onClose={() => setCreditsOpen(false)}><p>{credits}</p></FloatingPanel>}
+          {creditsOpen && (
+            <FloatingPanel className="credits-panel" title="Credits" onClose={() => setCreditsOpen(false)}>
+              <p>{credits}</p>
+              <ModelCredits />
+            </FloatingPanel>
+          )}
 
         </section>
 

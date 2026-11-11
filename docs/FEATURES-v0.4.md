@@ -192,3 +192,110 @@ Review: four focused Codex reviews of the v0.6.0 change found 13 issues (VR-001�
 ### v0.6.1 fix: icon / 3D model flicker
 
 Vehicles near the cut-off (budget, range, screen edge) could swap between icon and model as positions changed. Now a vehicle that has a model keeps it unless another is clearly closer (30 % margin), with 30 % extra range and a 3 km screen-edge margin before it reverts; new models load 800 m before a vehicle enters the screen; an aircraft report without type data keeps the last reported type. Measured on a busy view with 60 models: 2 swaps in 25 s before, 0 after. Codex review R1–R2 fixed; R3–R4 (type-cache recency for untyped reports, flip diagnostics) fixed afterwards and covered by the next review.
+
+## v0.7.0 — real 3D models from Sketchfab
+
+| Feature | Now | Status |
+|---|---|---|
+| Real models | 27 downloadable Sketchfab models (CC BY 4.0) chosen per type: A320 family, 737, 777, 787, A330, A350, A380, 747, 767, 757, E-Jets, ERJ-145, CRJ, ATR 42/72, Dash 8, Cessna 150–182, Gulfstream, Citation X, SH-60 (military only); container ship, tanker, ferry, fishing boat, tug, sailboat, motorboat, pilot boat. Airline liveries included by the owner's decision | Shortlist ready; download waits for the owner's Sketchfab token |
+| Matching | Aircraft by ICAO type code (paint must match: civil models for civil aircraft, military for military); ships by AIS category. Each instance is scaled to the type's length and span (aircraft) or the ship's AIS length and beam. Anything without a match, military ships and unknown types keep the app-built models | ✅ unit-tested; verified in the app with a synthetic pack |
+| Download (`node scripts/fetch-models.mjs`) | Uses the owner's own token from `%USERPROFILE%\.atlas-watch\sketchfab-token.txt` (or `SKETCHFAB_TOKEN`), sent only to api.sketchfab.com and never printed. Re-checks each licence (CC0 / CC BY only) before downloading. Files go to `%USERPROFILE%\.atlas-watch\models\raw\` (outside the repo), with path checks on every archive entry | Waiting for the token |
+| Import (`node scripts/import-models.mjs`) | Strips animations and lights, bakes transforms, detects nose/bow and up, scales to real size, puts aircraft on their wheels and ships at their waterline, simplifies to about 30k triangles, shrinks textures to 1024 px, converts triangle strips and fans, and writes `public/vehicle-models/` (packed into the app, not committed) plus a preview image of each model. The detected orientation is only a suggestion: a model ships once its shortlist entry confirms `forward` and `up` after the preview has been checked; until then it is held back | ✅ on synthetic Sketchfab-style files (Z-up centimetre export, mirrored parts, 2048 px texture, 192k → 30k triangles) |
+| Credits | Details panel: model title, author, licence and links. Credits panel: every model with its Sketchfab page and licence, and a note that models were converted and stand for the type, not the individual vehicle. `ATTRIBUTION.txt` ships next to the models | ✅ verified in the app |
+| Diagnostics | "Vehicle 3D models": pack state (real models / not installed / failed to load), shown, loaded, failed | ✅ |
+
+Review: seven Codex review rounds of the v0.7.0 pipeline raised 15 issues (AW-701…AW-715): glTF resource paths confined to the model folder (a downloaded file could otherwise reference the token file), redirect and host checks on every download hop, streamed byte limits and bounded unzip, token format checks and redacted errors, strict pack-index validation and error reporting, civil/military model indexing, Z-up and upside-down ships (orientation is now always confirmed by hand), strip/fan geometry, stale-output cleanup, renderer teardown, and the details-panel credit following the drawn model. All are fixed; the final round approved with no findings. Not yet verified: real Sketchfab downloads and the 27 real models (waiting for the owner's token).
+
+### Ships and parked aircraft in Photoreal 3D
+
+Reported: "not all the ships are showing up". Two causes:
+- Coverage. Without an AISStream key, ships come only from Fintraffic (Finnish and northern Baltic waters). This installation has no AISStream key. A free key from aisstream.io (Providers) adds ships in the view area, from community receivers, so coverage is still not complete.
+- Photoreal 3D height mismatch. Ships and parked aircraft are placed at height 0 on the WGS84 ellipsoid. Google's 3D tiles are at true height, and the local sea level differs from 0 by up to about 100 m (about +18 m at Helsinki, −33 m at New York). Nearby ships' 3D models sat under the 3D water while their icons were hidden, and depth-tested icons in tilted views sank under it too.
+
+Fix:
+- Sea-level grid. `public/geoid/egm96-30.bin` (508 KB, shipped with the app) is built by `scripts/make-geoid.mjs` from NGA's public-domain EGM96 15′ grid (`us_nga_egm96_15.tif` from cdn.proj.org, downloaded with the owner's approval and kept outside the repo). It matches NGA's published test points to within 0.25 m.
+- On Photoreal 3D: ships sit at local sea level. Parked aircraft sit at terrain height plus sea level; terrain comes from the app's own Terrarium source, whatever the Terrain setting, sampled once per ~200 m cell and only near the camera. Airborne aircraft, flight trails and history playback markers get the same offset. Aircraft trail points use the recorded on-ground flag (new database column; older points count as "unknown"), and airborne points with no altitude are left out.
+- Fallbacks: a vehicle gets its 3D model only once its height is known; until then it shows its icon. Ship and parked-aircraft icons are never hidden by the 3D water or ground.
+- Culling: vehicles below the ellipsoid (sea level is up to 107 m under it) still pass the far-side-of-the-earth test.
+- On the app's own globe nothing changes; its sea is at 0.
+- Credits name EGM96 when Photoreal 3D is selected, and Diagnostics shows the grid's state.
+
+Verified on the app's globe at Helsinki: the grid loads, ship models show as before (about 37, none failed), and performance is unchanged. Not verified: Photoreal 3D itself (it needs the owner's Google key) and history playback in the app.
+
+Review of the sea-level work: 17 Codex rounds raised 23 issues (AW-716…AW-738). They covered:
+- far-side culling below the ellipsoid;
+- terrain sampling independent of the Terrain setting, strict about missing data and sea flattening, and limited to the terrain source's ±85° coverage;
+- parked aircraft at high airports;
+- a strict parser for the grid file;
+- non-vehicle layers keeping height 0;
+- trail and playback heights, including the recorded on-ground flag, transit trails and altitudes below sea level;
+- GNSS-only altitudes (ADS-B and OpenSky) converted to height above sea level;
+- retry scheduling for failed ground samples;
+- importer robustness (parts scaled to zero, non-numeric vertices, unused vertices, final origin check);
+- unique ids in the model index.
+
+All are fixed. The final round approved. Its one low finding (sea-mask statistics counted ground samples) was then fixed in one line exactly as suggested, and that line was not re-reviewed.
+
+### More public cameras (8,780, up from 5,222)
+
+Four official open-data camera catalogs added, each checked for terms that allow use in a sold app:
+
+| Publisher | Cameras | Terms | In the app |
+|---|---|---|---|
+| Transport for London JamCams | ~820 | TfL open data (based on the UK Open Government Licence), "Powered by TfL Open Data" | Still image, refreshed every 5 min |
+| Hong Kong Transport Department | ~1,010 | DATA.GOV.HK terms (commercial use with attribution) | Still image, every 2 min |
+| DriveBC (British Columbia) | ~1,040 | Open Government Licence – British Columbia; per-camera credit shown | Still image, at the camera's own rate |
+| Québec 511 (MTMD) | ~680 | CC BY 4.0 (Données Québec) | The catalog links each camera to the Québec 511 viewer page, so the app shows an "Open in Québec 511" button instead of an image (the viewer's internals are not used) |
+
+Images come straight from each publisher's own image host (allow-listed; nothing proxied or stored). Credits list every publisher.
+
+Not added:
+- Unclear or personal-use terms: NZTA New Zealand, Maryland CHART, Delaware DelDOT.
+- Singapore LTA: its image links change every minute, which needs a per-camera refresh.
+- Systems that need a free key: now supported with each customer's own key (next section).
+
+Verified in the app: each new source's cameras load. Opening one of each shows its image (TfL 352×288, Hong Kong 320×240, DriveBC 800×468) or, for Québec, the viewer button.
+
+### Cameras with your own free key (22 systems)
+
+Some publishers only hand out their camera catalog to registered developers. The key is free, but each customer registers for their own and accepts that publisher's terms. **Provider settings → Camera keys** lists them, each with a link to the publisher's developer page:
+
+| Systems | Where the key goes | Terms |
+|---|---|---|
+| 19 sites on the "511" platform: Ontario, Alberta, Saskatchewan, New Brunswick, Nova Scotia, Newfoundland and Labrador, Yukon, Georgia, Florida, Arizona, Wisconsin, Idaho, Utah, Louisiana, Nevada, Alaska, Connecticut, Pennsylvania, New England (Maine, New Hampshire, Vermont) | In the catalog request to that site only. Camera images load without the key. | Each publisher's developer terms. 511PA: PennDOT's own video-sharing agreement applies, so confirm the use is covered first. |
+| WSDOT (Washington State) | Access code in the catalog request | No published licence; the provider entry says so |
+| Transport for NSW (Australia) | `Authorization` header | CC BY |
+| Trafikverket (Sweden) | Inside the XML query | CC0 |
+
+How it behaves:
+- Nothing is requested from a system until its key is saved. Built-in keys are never used for these.
+- Keys are stored encrypted and sent only to that system's own address. A redirect to any other address is refused before anything is sent there.
+- **Test** loads the catalog with the saved key and reports how many camera views it lists.
+- Saving or removing a key takes effect straight away, and only that system's catalog is fetched. If a reload was already underway with the old key, its result is thrown away and one more reload runs with the new key.
+- Every camera catalog, open or keyed, is fetched at most once every 6 hours; a reload in between reuses it. Images load only when you open a camera.
+- If a publisher asks the app to slow down (HTTP 429 or 503), nothing more is sent to that host until the wait it asked for is over (at least a minute, and longer each time it happens again). Then only that catalog is fetched again. Meanwhile its last catalog, if less than a day old, stays on the map, and the layer status says so. The same applies when a source is simply unreachable. After a day the catalog is removed, as are the cameras of a rejected or removed key, even when no other camera source is answering.
+- Error messages name the system ("key rejected" for HTTP 400/401/403) and never include the key or the request address.
+
+Not included: New York (511NY), which wasn't confirmed to work the same way.
+
+Not verified yet: no real keys were available. The response parsing is tested against the publishers' documented formats, not live responses. 511 camera images were checked to load without a key on 5 of the sites. Image loading for WSDOT, TfNSW and Trafikverket is untested.
+
+### Weather satellite overlay (10-minute frames)
+
+**Layers → Weather → Weather satellite (10-min)** draws the newest full-disk frame from three geostationary weather satellites, served free by NASA GIBS (no key, no account):
+
+| Satellite | Operator | Drawn for | Infrared | True colour |
+|---|---|---|---|---|
+| GOES-West | NOAA | 180°W – 106.2°W (Pacific, western Americas) | Band 13 clean IR, ≈2.4 km | GeoColor, ≈1.2 km |
+| GOES-East | NOAA | 106.2°W – 10°E (Americas, Atlantic) | Band 13 clean IR | GeoColor |
+| Himawari-9 | JMA | 60°E – 180° (East Asia, Australia, western Pacific) | Band 13 clean IR | Red visible band (daylight only, grey; GIBS has no Himawari GeoColor) |
+
+- Infrared shows clouds day and night, coloured by cloud-top temperature. True colour is what the eye would see by day, with city lights at night (GOES GeoColor).
+- The app asks GIBS for each satellite's newest frame every 10 minutes (a few hundred bytes each) and draws exactly that frame; it never guesses a time. Frames are usually 30–60 minutes old. The frame time of each satellite is in the credits.
+- A satellite whose newest frame is more than 3 hours old is not drawn, so an outage shows as missing imagery rather than old weather. If a lookup fails, the current frame stays until it reaches that age.
+- A new frame replaces the old one only after its tiles have loaded, so the overlay doesn't blink every 10 minutes.
+- Frames sit above the basemap and below place names and radar. The ocean's glare effect is switched off while the layer is on, because over cloud imagery it looks like a cloud that isn't there.
+- Not covered: Europe, Africa and the Indian Ocean (Meteosat is not in NASA GIBS). Not drawn over Google Photoreal 3D, like the radar overlay.
+- Terms: NASA GIBS data is "full and open" with an acknowledgement requested; the credits name NOAA GOES, JMA Himawari and NASA GIBS (ESDIS).
+
+Verified in the app (2026-11-11, isolated profile): all three satellites loaded the 13:30 UTC infrared frame and the 12:50–13:20 UTC true-colour frames, switching products replaced all three layers, turning the layer off removed them, and no tile errors were logged.

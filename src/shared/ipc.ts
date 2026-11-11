@@ -1,6 +1,7 @@
 // IPC contract: channel names and runtime validation of every renderer
 // request. The main process rejects anything that does not match.
 
+import { KEYED_CAMERA_IDS } from './keyedCameras';
 import { z } from 'zod';
 import { validateInstance } from './lemmy';
 import { MAX_IMPORT_ROWS, MAX_RADIUS_KM } from './csv';
@@ -50,6 +51,8 @@ export const DEFAULT_SETTINGS: Settings = {
   satelliteGroups: ['stations', 'visual'],
   trackRetentionHours: 6,
   radarEnabled: false,
+  geoSatEnabled: false,
+  geoSatProduct: 'infrared',
   visualMode: 'normal',
   reducedMotion: false,
   aiEnabled: false,
@@ -120,7 +123,7 @@ export const watchItemSchema = z
   .strict();
 const docKind = z.enum(['boards', 'people']);
 
-const providerId = z.enum(['twelvedata', 'alphavantage', 'opensky', 'openfreemap', 'esri-imagery', 'mapbox', 'eox', 'ourairports', 'nws', 'usgs-quakes', 'usgs-basemap', 'nasa-gibs', 'terrain-tiles', 'adsblol', 'local-adsb', 'digitraffic', 'aisstream', 'celestrak', 'firms', 'nifc', 'awc', 'nhc', 'nowcoast', 'caltrans', 'fintraffic-cams', 'mbta', 'faa-sua', 'census-geocoder', 'google3d', 'ollama']);
+const providerId = z.enum(['twelvedata', 'alphavantage', 'opensky', 'openfreemap', 'esri-imagery', 'mapbox', 'eox', 'ourairports', 'nws', 'usgs-quakes', 'usgs-basemap', 'nasa-gibs', 'terrain-tiles', 'adsblol', 'local-adsb', 'digitraffic', 'aisstream', 'celestrak', 'firms', 'nifc', 'awc', 'nhc', 'nowcoast', 'caltrans', 'fintraffic-cams', 'mbta', 'faa-sua', 'census-geocoder', 'google3d', 'ollama', ...KEYED_CAMERA_IDS]);
 
 export const locationInputSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -183,6 +186,8 @@ export const settingsPatchSchema = z
     satelliteGroups: z.array(z.enum(['stations', 'visual', 'gnss', 'weather', 'science', 'starlink'])).max(6),
     trackRetentionHours: z.number().int().min(1).max(72),
     radarEnabled: z.boolean(),
+    geoSatEnabled: z.boolean(),
+    geoSatProduct: z.enum(['infrared', 'color']),
     visualMode: z.enum(['normal', 'crt', 'nvg', 'thermal', 'anime', 'noir', 'snow']),
     reducedMotion: z.boolean(),
     aiEnabled: z.boolean(),

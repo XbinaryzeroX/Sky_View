@@ -213,6 +213,9 @@ export interface Settings {
   satelliteGroups: string[];
   trackRetentionHours: number;
   radarEnabled: boolean;
+  /** Geostationary weather-satellite overlay (NASA GIBS, newest 10-minute frame). */
+  geoSatEnabled: boolean;
+  geoSatProduct: 'infrared' | 'color';
   visualMode: 'normal' | 'crt' | 'nvg' | 'thermal' | 'anime' | 'noir' | 'snow';
   reducedMotion: boolean;
   aiEnabled: boolean;

@@ -1,4 +1,4 @@
-import { Camera, Cloud, MapPin, Orbit, Plane, TriangleAlert } from 'lucide-react';
+import { Camera, Cloud, CloudSun, MapPin, Orbit, Plane, TriangleAlert } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { LAYER_IDS, LAYERS, TEMPORAL_LABEL, type LayerGroup, type LayerId, type LayerSnapshot } from '../../shared/layers';
 import type { Settings } from '../../shared/types';
@@ -24,7 +24,7 @@ type Tab = 'live' | 'imagery' | 'style';
 
 export function LayersPanel(p: Props) {
   const [tab, setTab] = useState<Tab>('live');
-  const activeCount = p.settings.layersEnabled.length + (p.settings.radarEnabled ? 1 : 0);
+  const activeCount = p.settings.layersEnabled.length + (p.settings.radarEnabled ? 1 : 0) + (p.settings.geoSatEnabled ? 1 : 0);
   return (
     <section className="panel-section">
       <div className="section-head">
@@ -79,14 +79,15 @@ function LiveTab({ settings, snaps, onPatch, alertsContent, airportsOn, onAirpor
           <input className="layer-switch" role="switch" type="checkbox" checked={!!airportsOn} onChange={onAirports} />
         </label>
       )}
-      {(on.size > 0 || settings.radarEnabled) && (
-        <button className="link-btn small" onClick={() => onPatch({ layersEnabled: [], radarEnabled: false })}>Turn all live feeds off</button>
+      {(on.size > 0 || settings.radarEnabled || settings.geoSatEnabled) && (
+        <button className="link-btn small" onClick={() => onPatch({ layersEnabled: [], radarEnabled: false, geoSatEnabled: false })}>Turn all live feeds off</button>
       )}
       <p className="muted small">Counts describe the loaded area or catalog, not the whole world.</p>
       {GROUPS.map(group => {
         const ids = LAYER_IDS.filter(id => LAYERS[id].group === group && matches(id));
         const radar = group === 'Weather' && (!needle || 'weather radar nowcoast'.includes(needle));
-        if (!ids.length && !radar) return null;
+        const geoSat = group === 'Weather' && (!needle || 'weather satellite clouds goes himawari infrared geocolor'.includes(needle));
+        if (!ids.length && !radar && !geoSat) return null;
         const isClosed = closed.has(group) && !needle;
         const Icon = icons[group];
         return (
@@ -151,6 +152,23 @@ function LiveTab({ settings, snaps, onPatch, alertsContent, airportsOn, onAirpor
                 </label>
                 <details className="layer-info"><summary>Observed · NOAA nowCOAST</summary>
                   <p className="small muted">U.S. radar reflectivity, typically 5–10 minutes old; refreshed every 5 minutes while on. Public domain.</p>
+                </details>
+              </div>
+            )}
+            {!isClosed && geoSat && (
+              <div className="layer-row">
+                <label className="layer-toggle"><CloudSun size={16} aria-hidden="true" /><span className="layer-name">Weather satellite (10-min)</span>
+                  <input className="layer-switch" role="switch" type="checkbox" checked={settings.geoSatEnabled}
+                    onChange={event => onPatch({ geoSatEnabled: event.target.checked })} />
+                </label>
+                {settings.geoSatEnabled && (
+                  <select aria-label="Weather satellite imagery" value={settings.geoSatProduct} onChange={event => onPatch({ geoSatProduct: event.target.value === 'color' ? 'color' : 'infrared' })}>
+                    <option value="infrared">Infrared clouds (day and night)</option>
+                    <option value="color">True colour (GOES GeoColor; Himawari visible, daylight)</option>
+                  </select>
+                )}
+                <details className="layer-info"><summary>Observed · NOAA GOES, JMA Himawari via NASA GIBS</summary>
+                  <p className="small muted">The newest full-disk frame from GOES-West, GOES-East and Himawari-9, checked every 10 minutes; frames are usually 30–60 minutes old (the time is in the credits). About 2 km per pixel (infrared) or 1 km (true colour): clouds, storms, smoke and dust, not ground detail. Covers the Americas, the Pacific, East Asia and Australia; Europe, Africa and the Indian Ocean are not covered (Meteosat is not in NASA GIBS). Not drawn over Google Photoreal 3D.</p>
                 </details>
               </div>
             )}

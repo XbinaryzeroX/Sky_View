@@ -36,7 +36,12 @@ export const EMITTER_CATEGORY: Record<string, string> = {
 };
 
 /** adsb.lol / readsb aircraft JSON (`ac` array, readsb `aircraft` array). */
-export function normalizeAdsb(body: unknown, source: string, nowMs: number): Normalized {
+/**
+ * `geoid` (optional): height of sea level above the WGS84 ellipsoid at a position. Altitudes are kept above sea
+ * level (the reference of barometric alt_baro); a report with only alt_geom (GNSS height above the ellipsoid) is
+ * converted with it. Without it, alt_geom is used as reported.
+ */
+export function normalizeAdsb(body: unknown, source: string, nowMs: number, geoid?: (lat: number, lon: number) => number | null): Normalized {
   const b = body as { ac?: unknown; aircraft?: unknown; now?: unknown };
   const list = Array.isArray(b?.ac) ? b.ac : Array.isArray(b?.aircraft) ? b.aircraft : null;
   if (!list) throw new Error('Aircraft response has no aircraft list');
@@ -58,7 +63,9 @@ export function normalizeAdsb(body: unknown, source: string, nowMs: number): Nor
     seen.add(hex);
     const seenPos = num(a.seen_pos) ?? num(a.seen) ?? 0;
     const onGround = a.alt_baro === 'ground';
-    const altFt = onGround ? 0 : (num(a.alt_baro) ?? num(a.alt_geom));
+    const baroFt = num(a.alt_baro);
+    const geomFt = num(a.alt_geom);
+    const altM = onGround ? 0 : baroFt !== null ? baroFt * FT : geomFt !== null ? geomFt * FT - (geoid?.(lat, lon) ?? 0) : null;
     const flight = cleanText(a.flight, 12);
     const cat = cleanText(a.category, 3);
     const dbFlags = num(a.dbFlags) ?? 0;
@@ -66,7 +73,7 @@ export function normalizeAdsb(body: unknown, source: string, nowMs: number): Nor
       id: hex,
       lat,
       lon,
-      altM: altFt === null ? null : altFt * FT,
+      altM,
       heading: num(a.track) ?? num(a.true_heading),
       speedKts: num(a.gs),
       label: flight ?? cleanText(a.r, 12) ?? hex.toUpperCase(),
@@ -81,7 +88,7 @@ export function normalizeAdsb(body: unknown, source: string, nowMs: number): Nor
         type: cleanText(a.t, 8),
         description: cleanText(a.desc, 60),
         emitterCategory: cat,
-        altitudeFt: altFt,
+        altitudeFt: onGround ? 0 : baroFt ?? (altM === null ? null : Math.round(altM / FT)),
         onGround,
         squawk: cleanText(a.squawk, 4),
         emergency: cleanText(a.emergency, 20),

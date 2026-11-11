@@ -105,11 +105,14 @@ export class AtlasStore {
       CREATE TABLE IF NOT EXISTS people (id TEXT PRIMARY KEY, data TEXT NOT NULL, created_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS track_points (
         layer TEXT NOT NULL, rid TEXT NOT NULL, t TEXT NOT NULL,
-        lat REAL NOT NULL, lon REAL NOT NULL, alt REAL, heading REAL,
+        lat REAL NOT NULL, lon REAL NOT NULL, alt REAL, heading REAL, ground INTEGER,
         PRIMARY KEY (layer, rid, t)
       );
       CREATE INDEX IF NOT EXISTS idx_track_t ON track_points(t);
     `);
+    // Added later: whether an aircraft was reported on the ground (1/0); NULL for older rows and other layers.
+    const cols = this.db.prepare('PRAGMA table_info(track_points)').all() as Row[];
+    if (!cols.some((c) => c.name === 'ground')) this.db.exec('ALTER TABLE track_points ADD COLUMN ground INTEGER');
     this.db.prepare('INSERT OR IGNORE INTO meta(key, value) VALUES (?, ?)').run('schema_version', String(SCHEMA_VERSION));
   }
 
@@ -153,19 +156,19 @@ export class AtlasStore {
   }
 
   // ---------- recorded track points (observed positions only) ----------
-  addTrackPoints(layer: string, pts: { rid: string; t: string; lat: number; lon: number; alt: number | null; heading: number | null }[]): number {
+  addTrackPoints(layer: string, pts: { rid: string; t: string; lat: number; lon: number; alt: number | null; heading: number | null; ground?: boolean | null }[]): number {
     if (pts.length === 0) return 0;
     return this.tx(() => {
-      const ins = this.db.prepare('INSERT OR IGNORE INTO track_points(layer, rid, t, lat, lon, alt, heading) VALUES (?, ?, ?, ?, ?, ?, ?)');
+      const ins = this.db.prepare('INSERT OR IGNORE INTO track_points(layer, rid, t, lat, lon, alt, heading, ground) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
       let n = 0;
-      for (const p of pts) n += Number(ins.run(layer, p.rid, p.t, p.lat, p.lon, p.alt, p.heading).changes);
+      for (const p of pts) n += Number(ins.run(layer, p.rid, p.t, p.lat, p.lon, p.alt, p.heading, typeof p.ground === 'boolean' ? (p.ground ? 1 : 0) : null).changes);
       return n;
     });
   }
 
-  trackFor(layer: string, rid: string, limit = 2000): { t: string; lat: number; lon: number; altM: number | null; heading: number | null }[] {
-    return (this.db.prepare('SELECT t, lat, lon, alt, heading FROM track_points WHERE layer = ? AND rid = ? ORDER BY t DESC LIMIT ?').all(layer, rid, limit) as Row[])
-      .map((r) => ({ t: String(r.t), lat: Number(r.lat), lon: Number(r.lon), altM: (r.alt as number | null) ?? null, heading: (r.heading as number | null) ?? null }))
+  trackFor(layer: string, rid: string, limit = 2000): { t: string; lat: number; lon: number; altM: number | null; heading: number | null; onGround: boolean | null }[] {
+    return (this.db.prepare('SELECT t, lat, lon, alt, heading, ground FROM track_points WHERE layer = ? AND rid = ? ORDER BY t DESC LIMIT ?').all(layer, rid, limit) as Row[])
+      .map((r) => ({ t: String(r.t), lat: Number(r.lat), lon: Number(r.lon), altM: (r.alt as number | null) ?? null, heading: (r.heading as number | null) ?? null, onGround: r.ground === 1 ? true : r.ground === 0 ? false : null }))
       .reverse();
   }
 
@@ -175,16 +178,16 @@ export class AtlasStore {
   }
 
   /** Latest recorded fix per object at or before `t`, no older than `windowMs`. */
-  trackSnapshot(layer: string, t: string, windowMs: number): { rid: string; t: string; lat: number; lon: number; altM: number | null; heading: number | null }[] {
+  trackSnapshot(layer: string, t: string, windowMs: number): { rid: string; t: string; lat: number; lon: number; altM: number | null; heading: number | null; onGround: boolean | null }[] {
     const from = new Date(Date.parse(t) - windowMs).toISOString();
     const rows = this.db
       .prepare(
-        `SELECT p.rid, p.t, p.lat, p.lon, p.alt, p.heading FROM track_points p
+        `SELECT p.rid, p.t, p.lat, p.lon, p.alt, p.heading, p.ground FROM track_points p
          JOIN (SELECT rid, MAX(t) AS mt FROM track_points WHERE layer = ? AND t <= ? AND t >= ? GROUP BY rid) m
          ON p.rid = m.rid AND p.t = m.mt WHERE p.layer = ?`,
       )
       .all(layer, t, from, layer) as Row[];
-    return rows.map((r) => ({ rid: String(r.rid), t: String(r.t), lat: Number(r.lat), lon: Number(r.lon), altM: (r.alt as number | null) ?? null, heading: (r.heading as number | null) ?? null }));
+    return rows.map((r) => ({ rid: String(r.rid), t: String(r.t), lat: Number(r.lat), lon: Number(r.lon), altM: (r.alt as number | null) ?? null, heading: (r.heading as number | null) ?? null, onGround: r.ground === 1 ? true : r.ground === 0 ? false : null }));
   }
 
   pruneTracks(retentionHours: number, maxPoints: number, now: Date): number {

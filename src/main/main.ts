@@ -29,6 +29,7 @@ import {
   setRendererRemoteOptions,
 } from './security';
 import { AtlasStore } from './store';
+import { loadMainGeoid } from './geoid';
 
 const log = (m: string) => console.log(redactSecrets(m, []));
 
@@ -192,6 +193,7 @@ app.commandLine.appendSwitch('enable-zero-copy');
 app.whenReady().then(async () => {
   const rendererRoot = join(__dirname, '../renderer');
   serveAppProtocol(rendererRoot);
+  loadMainGeoid(rendererRoot, log);
   lockDownSession(log);
   app.on('web-contents-created', (_e, contents) => hardenWebContents(contents));
 
@@ -238,6 +240,7 @@ app.whenReady().then(async () => {
     userAgent: ua,
     localReceiverUrl: () => providers.localReceiverUrl(),
     openskyClient: () => secrets.get('opensky'),
+    cameraKey: (id) => (secrets.has(id) ? secrets.get(id) : null),
     ais,
     aisConfigured: () => secrets.has('aisstream'),
     emit: scheduleLayerEmit,
