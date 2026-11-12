@@ -41,7 +41,9 @@ export async function regionalWater(pixels: Pixel[]): Promise<boolean | null> {
     const ctx = await tile;
     return ctx.canvas.width === 1 || ctx.getImageData(x % 1024, y % 1024, 1, 1).data[3] < 192;
   }));
-  return results.some(Boolean);
+  // Keep the city mesh for mixed coastal views. Switch to imagery only when
+  // every sampled point is water.
+  return results.every(Boolean);
 }
 
 export async function isMappedWater(pixel: { x: number; y: number }): Promise<boolean | null> {

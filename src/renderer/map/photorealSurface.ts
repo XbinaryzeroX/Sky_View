@@ -72,13 +72,22 @@ export function watchPhotorealSurface(widget: CesiumWidget, tiles: Cesium3DTiles
     const pixel = focus && oceanFocusPixel(focus);
     if (pixel) {
       const samples = new Map([[pixel.x + '/' + pixel.y, pixel]]);
-      const columns = regional ? [0.04, 0.26, 0.5, 0.74, 0.96] : [0.1, 0.5, 0.9];
-      const rows = regional ? [0.05, 0.3, 0.55, 0.8, 0.97] : [0.38, 0.68, 0.92];
+      const columns = [0.04, 0.26, 0.5, 0.74, 0.96];
+      const rows = [0.05, 0.2, 0.38, 0.68, 0.92];
       for (const fy of rows) for (const fx of columns) {
         screen.x = canvas.clientWidth * fx; screen.y = canvas.clientHeight * fy;
         const point = camera.pickEllipsoid(screen, scene.globe.ellipsoid);
         const sample = point && oceanFocusPixel(scene.globe.ellipsoid.cartesianToCartographic(point));
         if (sample) samples.set(sample.x + '/' + sample.y, sample);
+      }
+      // Shallow views can meet the ellipsoid in the harbor before the center ray
+      // reaches an island city. Check the surrounding coast as well as the rays.
+      if (!regional) {
+        for (const dx of [-384, -192, 0, 192, 384]) for (const dy of [-384, -192, 0, 192, 384]) {
+          const size = 256 * 2 ** 14;
+          const nearby = { x: ((pixel.x + dx) % size + size) % size, y: Math.max(0, Math.min(size - 1, pixel.y + dy)) };
+          samples.set(nearby.x + '/' + nearby.y, nearby);
+        }
       }
       const footprint = [...samples.values()];
       const precision = regional ? 9 : 2;
@@ -86,16 +95,22 @@ export function watchPhotorealSurface(widget: CesiumWidget, tiles: Cesium3DTiles
       if (key !== oceanKey) {
         oceanKey = key;
         const request = ++oceanRequest;
-        if (regional) { ocean = true; tiles.show = false; setCovered(false); }
         const local = async () => {
           const results = await Promise.all(footprint.map(p => readWater(p).catch(() => null)));
-          if (results.some(value => value === true)) return true;
-          return results.includes(null) ? readRegion(footprint) : false;
+          if (results.some(value => value === false)) return false;
+          return results.includes(null) ? null : true;
         };
-        void (regional ? readRegion(footprint) : local()).catch(() => null).then(value => {
+        // The packaged regional outline is coarse and can miss narrow islands such
+        // as Manhattan. Confirm an all-water result with the detailed OSM masks.
+        const classify = async () => {
+          if (!regional) return local();
+          const overview = await readRegion(footprint);
+          return overview === true ? local() : overview;
+        };
+        void classify().catch(() => null).then(value => {
           if (disposed || request !== oceanRequest) return;
           const previouslyOcean = ocean;
-          ocean = value !== false;
+          ocean = value === true;
           tiles.show = near && !ocean;
           // Drop a failed lookup so a later camera or tile event can retry.
           if (value === null) oceanKey = '';

@@ -1,0 +1,80 @@
+{
+  "result": "PASS",
+  "at": "2026-11-12T14:20:23.261Z",
+  "installer": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\photoreal-v3\\Atlas-Watch-Setup-0.7.0.exe",
+  "unpacked": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\photoreal-v3\\win-unpacked",
+  "boundary": "Current dist bytes and extra resources versus unpacked ASAR/resources and the installer-embedded app payload. No installer execution, installation or upgrade verification.",
+  "installedOrUpgraded": false,
+  "bytes": 184847809,
+  "sha256": "A9509245DB0A5337AAFC6FAB344C86A8AE4786361D4BDC2DF5258453F51E6778",
+  "signatureStatus": "NotSigned",
+  "signed": false,
+  "excludedSourceMaps": 0,
+  "archiveEntries": 806,
+  "archiveFiles": 681,
+  "unpackedAsar": {
+    "bytes": 121778717,
+    "sha256": "D2035BABC0CB7B86B1035FE5221D84CB723450FFC67658A78348710D604FF668"
+  },
+  "dist": {
+    "source": {
+      "files": 680,
+      "bytes": 121600767,
+      "manifestSha256": "1857C704DC7A9236A3E8F4FD4AE6C73E8EA934CD8B827377C2F6B1611981A9E7"
+    },
+    "packed": {
+      "files": 680,
+      "bytes": 121600767,
+      "manifestSha256": "1857C704DC7A9236A3E8F4FD4AE6C73E8EA934CD8B827377C2F6B1611981A9E7"
+    },
+    "missing": [],
+    "unexpected": [],
+    "mismatched": [],
+    "allBytesMatch": true
+  },
+  "packageMetadata": {
+    "versionMatches": true,
+    "mainMatches": true
+  },
+  "excludedQaSource": true,
+  "unexpectedQaPaths": [],
+  "archiveTool": "C:\\Users\\infob\\AppData\\Local\\electron-builder\\Cache\\7zip@1.0.0\\7zip-win-x64-a34pt\\bin\\7za.exe",
+  "installerArchive": {
+    "type": "7z",
+    "offset": 209735,
+    "physicalBytes": 184215024,
+    "tailBytes": 423050,
+    "entries": 76
+  },
+  "installerAsar": {
+    "bytes": 121778717,
+    "sha256": "D2035BABC0CB7B86B1035FE5221D84CB723450FFC67658A78348710D604FF668",
+    "matchesUnpacked": true
+  },
+  "extraResources": [
+    {
+      "file": "THIRD_PARTY_NOTICES.md",
+      "bytes": 266672,
+      "sha256": "A6B7246CC0A54056ABD3F0688C532B2C617F6466F9EDA8052780310C0EB12BAF",
+      "matchesUnpacked": true,
+      "matchesInstaller": true
+    },
+    {
+      "file": "samples/sample-locations.csv",
+      "bytes": 541,
+      "sha256": "40B4488BF0463692D35B571A8082FE9926EA87131FFEBE517D8AF49E0F87AE1C",
+      "matchesUnpacked": true,
+      "matchesInstaller": true
+    },
+    {
+      "file": "samples/README.md",
+      "bytes": 1390,
+      "sha256": "2199C51FCEF4F88C411AF9D2408DFF3ED09DFC1EE66FFED2C3509FD8E0A588F6",
+      "matchesUnpacked": true,
+      "matchesInstaller": true
+    }
+  ],
+  "installerExcludedQaSource": true,
+  "inputsStableDuringAudit": true,
+  "problems": []
+}

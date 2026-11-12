@@ -663,9 +663,9 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
 
   // ----- 3D buildings (OSM extrusions) -----
   useEffect(() => {
-    // OSM block buildings are hidden only while Google's photoreal city is actually on screen.
-    buildingsRef.current?.setEnabled(props.settings.buildings3d && !photorealOn);
-  }, [props.settings.buildings3d, photorealOn, ready]);
+    // The selected photoreal mode owns its buildings, including while its mesh loads.
+    buildingsRef.current?.setEnabled(props.settings.buildings3d && props.settings.basemap !== 'google3d');
+  }, [props.settings.buildings3d, props.settings.basemap, ready]);
 
   // Ships and parked aircraft are placed for the app's own globe; tell the vehicle layer when Google's 3D surface is showing.
   useEffect(() => {

@@ -75,7 +75,7 @@ export const GLOBAL_BASE: ImagerySourceInfo = {
   coverage: 'Global',
   maxLevel: 8,
   bestResolution: '≈ 500 m/pixel on land; the bundled ocean overview is sampled at 1/12°',
-  captureDate: '2021 ocean-colour composite and MODIS observations; NASA Blue Marble 2004 land',
+  captureDate: '2021 ocean-colour composite and MODIS observations; NASA Blue Marble July 2004 land and polar reference',
   terms: 'ESA Climate Change Initiative Ocean Colour, PML, and NASA Earthdata',
   host: 'gibs.earthdata.nasa.gov',
 };
@@ -166,20 +166,23 @@ export function oceanColourLayer(year: 2020 | 2021 = 2021, rectangle?: Rectangle
 
 function globalBase(): ImageryLayer[] {
   const temperate = Rectangle.fromDegrees(-180, -POLAR_CAP_LAT, 180, POLAR_CAP_LAT);
-  const landCaps = [Rectangle.fromDegrees(-180, POLAR_CAP_LAT, 180, 90), Rectangle.fromDegrees(-180, -90, 180, -POLAR_CAP_LAT)];
+  const polar = [Rectangle.fromDegrees(-180, 60, 180, 90), Rectangle.fromDegrees(-180, -90, 180, -74)];
   return [
     oceanColourLayer(),
+    new ImageryLayer(new SingleTileImageryProvider({
+      url: '/basemap-overview/geographic-land.webp', tileWidth: 4096, tileHeight: 2048,
+      credit: new Credit('Land reference: NASA Blue Marble July 2004 / Natural Earth'),
+    })),
     new ImageryLayer(new GibsBaseProvider({
       url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg',
       tilingScheme: MERC, rectangle: temperate, maximumLevel: 8, credit: new Credit('Land reference: NASA Blue Marble (2004)'),
     }), { rectangle: temperate, minimumTerrainLevel: 5 }),
-    // Cesium can stretch the edge of Mercator tiles across the last polar terrain
-    // triangles even with a layer rectangle. The geographic observations cover it.
-    ...landCaps.map(rectangle => oceanColourLayer(2021, rectangle)),
-    ...landCaps.map((rectangle, index) => new ImageryLayer(new SingleTileImageryProvider({
-      url: `/basemap-overview/polar/${index === 0 ? 'north' : 'south'}-land.webp`,
-      rectangle, tileWidth: 2048, tileHeight: 128,
-      credit: new Credit('Polar land reference: NASA Blue Marble (2004); Natural Earth land outline'),
+    // The geographic reference covers both poles and fades into the existing
+    // imagery at its outer edge, avoiding stretched Mercator tiles.
+    ...polar.map((rectangle, index) => new ImageryLayer(new SingleTileImageryProvider({
+      url: `/basemap-overview/polar/${index === 0 ? 'north' : 'south'}-geographic.webp`,
+      rectangle, tileWidth: 4096, tileHeight: index === 0 ? 341 : 182,
+      credit: new Credit('Polar reference: NASA Blue Marble, July 2004'),
     }), { rectangle })),
   ];
 }

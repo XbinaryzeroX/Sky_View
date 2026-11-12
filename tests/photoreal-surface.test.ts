@@ -44,7 +44,9 @@ it('uses imagery for a close mapped ocean and rejects stale answers after moving
     pickEllipsoid: (p: {y:number}) => Cartesian3.fromDegrees(p.y > 360 ? longitude : 28, 60) };
   const tiles = { show: false, getHeight: vi.fn(() => -22), tileLoad: new Event(), tileUnload: new Event(), allTilesLoaded: new Event() };
   const pending = new Map<number, (value: boolean | null) => void>();
-  const read = vi.fn((p: { x: number; y: number }) => p.x === oceanFocusPixel(Cartographic.fromDegrees(28,60))!.x ? Promise.resolve(false) :
+  const deferred = new Set([25,26,27,29].map(lon => oceanFocusPixel(Cartographic.fromDegrees(lon,60))!.x));
+  const latitude = oceanFocusPixel(Cartographic.fromDegrees(25,60))!.y;
+  const read = vi.fn((p: { x: number; y: number }) => !deferred.has(p.x) || p.y !== latitude ? Promise.resolve(true) :
     new Promise<boolean | null>(resolve => pending.set(p.x,resolve)));
   const offline = vi.fn(async () => false);
   const stop = watchPhotorealSurface({scene,camera} as unknown as CesiumWidget, tiles as unknown as Cesium3DTileset, vi.fn(), read, offline);
@@ -59,7 +61,7 @@ it('uses imagery for a close mapped ocean and rejects stale answers after moving
   resolveAt(25,false); await vi.advanceTimersByTimeAsync(0); expect(tiles.show).toBe(false);
   longitude=27; frame();
   resolveAt(27,null); await vi.advanceTimersByTimeAsync(0);
-  expect(offline).toHaveBeenCalled(); expect(tiles.show).toBe(true);
+  expect(tiles.show).toBe(true);
   longitude=29; frame();
   scene.morphStart.raiseEvent(); resolveAt(29,false); await vi.advanceTimersByTimeAsync(0);
   expect(tiles.show).toBe(false); expect(globe.show).toBe(true);
@@ -69,4 +71,36 @@ it('uses imagery for a close mapped ocean and rejects stale answers after moving
 it('wraps ocean mask longitude at the date line and leaves polar views alone', () => {
   expect(oceanFocusPixel(Cartographic.fromDegrees(180,60))).toEqual(oceanFocusPixel(Cartographic.fromDegrees(-180,60)));
   expect(oceanFocusPixel(Cartographic.fromDegrees(0,86))).toBeNull();
+});
+
+it('keeps the photoreal mesh when a close view contains land and water', async () => {
+  vi.useFakeTimers();
+  const scene = { globe: { ellipsoid: Ellipsoid.WGS84, show: true }, canvas: { clientWidth: 800, clientHeight: 600 },
+    mode: SceneMode.SCENE3D, requestRender: vi.fn(), postRender: new Event(), morphStart: new Event(), morphComplete: new Event() };
+  const camera = { changed: new Event(), moveStart: new Event(), moveEnd: new Event(), positionCartographic: { height: 800 }, pitch: -0.5,
+    pickEllipsoid: (p: { x: number }) => Cartesian3.fromDegrees(p.x < 400 ? -74.02 : -74.00, 40.71) };
+  const tiles = { show: false, getHeight: vi.fn(() => 5), tileLoad: new Event(), tileUnload: new Event(), allTilesLoaded: new Event() };
+  const water = oceanFocusPixel(Cartographic.fromDegrees(-74.02, 40.71))!;
+  const stop = watchPhotorealSurface({ scene, camera } as unknown as CesiumWidget, tiles as unknown as Cesium3DTileset,
+    vi.fn(), async point => point.x === water.x, async () => false);
+  vi.advanceTimersByTime(300); scene.postRender.raiseEvent();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(tiles.show).toBe(true);
+  stop();
+});
+
+it('checks detailed land before hiding a regional city view', async () => {
+  vi.useFakeTimers();
+  const scene = { globe: { ellipsoid: Ellipsoid.WGS84, show: true }, canvas: { clientWidth: 800, clientHeight: 600 },
+    mode: SceneMode.SCENE3D, requestRender: vi.fn(), postRender: new Event(), morphStart: new Event(), morphComplete: new Event() };
+  const camera = { changed: new Event(), moveStart: new Event(), moveEnd: new Event(), positionCartographic: { height: 5000 }, pitch: -0.5,
+    pickEllipsoid: (p: { x: number }) => Cartesian3.fromDegrees(p.x < 400 ? -74.02 : -74.00, 40.71) };
+  const tiles = { show: false, getHeight: vi.fn(() => 5), tileLoad: new Event(), tileUnload: new Event(), allTilesLoaded: new Event() };
+  const water = oceanFocusPixel(Cartographic.fromDegrees(-74.02, 40.71))!;
+  const stop = watchPhotorealSurface({ scene, camera } as unknown as CesiumWidget, tiles as unknown as Cesium3DTileset,
+    vi.fn(), async point => point.x === water.x, async () => true);
+  vi.advanceTimersByTime(300); scene.postRender.raiseEvent();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(tiles.show).toBe(true);
+  stop();
 });

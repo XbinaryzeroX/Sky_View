@@ -18,9 +18,29 @@ try {
   await page.waitForFunction(() => window.__atlasDebug?.setView);
   await page.waitForTimeout(10000);
   await mkdir('docs/screenshots/auto-poles',{recursive:true});
-  for (const [name,lat,lon,height] of [['north',89,0,3500000],['north-close',89,0,350000],['south',-89,0,3500000]]) {
+  for (const [name,lat,lon,height] of [['north-wide',89,0,8000000],['north',89,0,3500000],['north-close',89,0,350000],['south',-89,0,3500000]]) {
     await page.evaluate(([lat,lon,height]) => window.__atlasDebug.setView(lat,lon,height,-90),[lat,lon,height]);
-    await page.waitForTimeout(12000);
+    await page.waitForFunction(({lat,height}) => {
+      const view = window.__atlasDebug.diag();
+      return Math.abs(view.cameraLat-lat) < 0.1 && Math.abs(view.cameraHeightM-height) < height * 0.1;
+    }, {lat,height}, {timeout:30000});
+    await page.waitForTimeout(6000);
+    await page.evaluate(() => {
+      const canvas = document.querySelector('.cesium-widget canvas');
+      let widget;
+      for (let el = canvas; el && !widget; el = el.parentElement) {
+        const key = Object.keys(el).find(k => k.startsWith('__reactFiber$'));
+        for (let fiber = el[key]; fiber && !widget; fiber = fiber.return) for (let hook = fiber.memoizedState; hook; hook = hook.next) {
+          const candidate = hook.memoizedState?.current;
+          if (candidate?.canvas === canvas && candidate?.scene?.postRender) { widget = candidate; break; }
+        }
+      }
+      if (!widget) throw new Error('Map widget unavailable');
+      return new Promise(resolve => {
+        const remove = widget.scene.postRender.addEventListener(() => { remove(); resolve(); });
+        widget.scene.requestRender();
+      });
+    });
     await page.screenshot({path:`docs/screenshots/auto-poles/${name}.png`});
     console.log(name, await page.evaluate(() => window.__atlasDebug.diag().tilesPending));
   }

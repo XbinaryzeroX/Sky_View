@@ -1,0 +1,28 @@
+{
+  "errors": [],
+  "atlas": {
+    "tilesLoaded": 9,
+    "buildingsDrawn": 34190,
+    "lastError": null,
+    "visible": true,
+    "enabled": true,
+    "maxCameraM": 4000
+  },
+  "photoreal": {
+    "tilesLoaded": 0,
+    "buildingsDrawn": 0,
+    "lastError": null,
+    "visible": false,
+    "enabled": true,
+    "maxCameraM": 4000
+  },
+  "restored": {
+    "tilesLoaded": 9,
+    "buildingsDrawn": 34190,
+    "lastError": null,
+    "visible": true,
+    "enabled": true,
+    "maxCameraM": 4000
+  },
+  "result": "PASS"
+}

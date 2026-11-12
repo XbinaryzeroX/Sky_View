@@ -1,8 +1,8 @@
 {
   "tag": "after",
-  "utc": "2026-11-12T05:51:46.304Z",
+  "utc": "2026-11-12T14:14:52.024Z",
   "result": "PASS",
-  "asar": "03bafa005199fc31acfcf055934308bd7b71a75412fe7c243802cb6fb1c339b8",
+  "asar": "f986b9af4391bd60146aac28b1e46d1e30129c3da46bccd47af89ebbfa504d52",
   "source": "Synthetic slotted 3D mesh, public OSM mask. All Google requests intercepted.",
   "stages": [
     {
@@ -14,7 +14,7 @@
       "meshVisible": true,
       "meshHeight": -22.000000000451237,
       "cameraAltitude": 67.19684693451035,
-      "pitch": -3.0152348599220784,
+      "pitch": -3.015234859922091,
       "pixels": 408856,
       "skyThroughGround": 0,
       "rustMeshPixels": 209822
@@ -27,8 +27,8 @@
       "globe": true,
       "meshVisible": false,
       "meshHeight": null,
-      "cameraAltitude": 94.19687205040512,
-      "pitch": -3.0152351398199486,
+      "cameraAltitude": 99.98984208952629,
+      "pitch": -3.2107635715809475,
       "pixels": 408856,
       "skyThroughGround": 0,
       "rustMeshPixels": 0
@@ -41,11 +41,11 @@
       "globe": true,
       "meshVisible": true,
       "meshHeight": -22.000000000451237,
-      "cameraAltitude": 67.19684693451035,
-      "pitch": -3.015234859922091,
+      "cameraAltitude": 99.99786377487904,
+      "pitch": -4.122886984733848,
       "pixels": 408856,
       "skyThroughGround": 0,
-      "rustMeshPixels": 226928
+      "rustMeshPixels": 268804
     },
     {
       "place": "sea with public terrain",
@@ -55,90 +55,90 @@
       "globe": true,
       "meshVisible": false,
       "meshHeight": null,
-      "cameraAltitude": 99.99989781927034,
-      "pitch": -3.21110301139374,
+      "cameraAltitude": 117.2337727357648,
+      "pitch": -3.7930224625726554,
       "pixels": 408856,
       "skyThroughGround": 0,
       "rustMeshPixels": 0,
       "refinement": [
         {
-          "pending": 95,
-          "level": 14
-        },
-        {
-          "pending": 40,
+          "pending": 262,
           "level": 15
         },
         {
-          "pending": 9,
+          "pending": 18,
+          "level": 8
+        },
+        {
+          "pending": 94,
+          "level": 10
+        },
+        {
+          "pending": 121,
+          "level": 11
+        },
+        {
+          "pending": 136,
+          "level": 11
+        },
+        {
+          "pending": 177,
+          "level": 12
+        },
+        {
+          "pending": 224,
+          "level": 14
+        },
+        {
+          "pending": 286,
+          "level": 15
+        },
+        {
+          "pending": 386,
           "level": 18
         },
         {
-          "pending": 9,
+          "pending": 386,
           "level": 18
         },
         {
-          "pending": 9,
+          "pending": 384,
           "level": 18
         },
         {
-          "pending": 9,
+          "pending": 384,
           "level": 18
         },
         {
-          "pending": 7,
+          "pending": 187,
           "level": 18
         },
         {
-          "pending": 7,
+          "pending": 171,
           "level": 18
         },
         {
-          "pending": 7,
+          "pending": 161,
           "level": 18
         },
         {
-          "pending": 7,
+          "pending": 151,
           "level": 18
         },
         {
-          "pending": 7,
+          "pending": 133,
           "level": 18
         },
         {
-          "pending": 7,
+          "pending": 107,
           "level": 18
         },
         {
-          "pending": 7,
+          "pending": 88,
           "level": 18
         },
         {
-          "pending": 7,
-          "level": 18
-        },
-        {
-          "pending": 7,
-          "level": 18
-        },
-        {
-          "pending": 7,
-          "level": 18
-        },
-        {
-          "pending": 7,
-          "level": 18
-        },
-        {
-          "pending": 7,
-          "level": 18
-        },
-        {
-          "pending": 7,
-          "level": 18
-        },
-        {
-          "pending": 7,
+          "pending": 80,
           "level": 18
         }
       ]

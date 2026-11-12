@@ -1,5 +1,51 @@
 # Atlas Watch audit and upgrade progress
 
+## Close-up North Pole streak
+
+The prior edge repair did not cover the bright pixels in the top rows of the polar reference. At close range those pixels stretched from the date line toward the pole. The generator now joins the near-pole ocean edges and gently smooths the first four rows toward an observed ocean sample so longitude values converge at the pole. This is a visual repair of the 2004 composite, not a measurement of current sea ice. [Generator](../scripts/build-geographic-overview.mjs) · [Asset regression](../tests/geographic-overview.test.ts).
+
+The packaged Windows app was checked at 89.8° N and 350 km, where the reported streak was reproduced before the repair, and at 89.99° N and 20 km afterward. The streak was absent in both repaired views. All 1,107 tests passed. The executable and matching installer are in `release/arctic-close`, selected by the launcher. [Before close view](screenshots/arctic-line/pole-before.png) · [After close view](screenshots/arctic-line/pole-after.png) · [Package check](arctic-close-package.log).
+
+## Arctic ocean date-line seam
+
+The faint line near the North Pole came from bright pixels at the right edge of the bundled NASA polar image, where it wraps at the date line. Its neighboring pixels on both sides are dark ocean. The asset generator now joins six edge pixels only when both adjoining areas are dark and opaque, preserving brighter land and ice. [Generator](../scripts/build-geographic-overview.mjs) · [Seam regression](../tests/geographic-overview.test.ts).
+
+In isolated desktop views at the same camera position, a 210-pixel ocean sample had 32 pixels with a visible difference from the adjacent ocean before the repair and zero afterward. The Windows app and matching installer are in `release/arctic-edge`. The polar reference remains NASA's July 2004 composite and does not show current sea-ice extent. [Before](screenshots/arctic-line/before.png) · [After](screenshots/arctic-line/baseline.png) · [Package check](arctic-edge-package.log).
+
+## Arctic coastline mask lines
+
+The faint curved lines were caused by Natural Earth coastline rings crossing the ±180° date line. The geographic mask generator connected the opposite map edges across the image at about 65°, 69° and 71° N. The generator now unwraps each polygon ring and renders shifted copies at the date line. It regenerates both the global land mask and the Arctic reference mask, so neither reintroduces those lines. [Generator](../scripts/build-geographic-overview.mjs) · [Alignment regression](../tests/geographic-overview.test.ts).
+
+At the three affected latitudes, six sampled Siberian land points now retain opaque land imagery. The rebuilt app was visually checked at the wide and close Arctic views and over Antarctica. All 1,106 tests passed. The matching Windows executable and installer are in `release/arctic-lines`, selected by the launcher. The polar reference still uses the July 2004 NASA composite and does not depict current sea-ice extent. [Arctic view](screenshots/auto-poles/north-wide.png) · [Antarctic view](screenshots/auto-poles/south.png) · [Package check](arctic-lines-package.log).
+
+## Arctic imagery transition correction
+
+The previous 74° N transition left the 2021 MODIS observation swath visible just outside the 2004 polar reference. The northern geographic reference now extends to 60° N and fades at its outer edge. Between 60° and 74° N it covers water only, leaving detailed land imagery available. The south reference is unchanged. This broadens the area using the historical July 2004 NASA ocean reference. The Arctic image does not represent current sea-ice extent and the coarser reference has limited open-water detail. [Generator](../scripts/build-geographic-overview.mjs) · [NASA source](https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/base-map/).
+
+The final packaged Windows app was inspected at the north pole from 8,000 km, 3,500 km and 350 km, and at the south pole from 3,500 km. Camera location and a rendered frame were checked before each screenshot. The reported Arctic band is absent in the wide view, and Antarctica remained visible. The app and matching installer are in `release/arctic-update`. All 1,106 tests passed. [Wide Arctic view](screenshots/auto-poles/north-wide.png) · [South view](screenshots/auto-poles/south.png) · [Package check](arctic-imagery-package.log).
+
+## Polar imagery follow-up
+
+The polar rings returned when the older Mercator land layer was enabled at globe scale. The square Arctic artifact was baked into the 2021 MODIS overview. Auto now uses a geographic, land-masked NASA Blue Marble July 2004 overview and separate 2004 geographic polar references, with a two-degree fade at each polar edge. The finer Mercator land layer still activates closer in. The 2004 polar reference is a historical composite, and its Arctic view does not depict current sea-ice extent. The credit identifies its date. Other selected imagery years keep their existing sources. The NASA source SHA-256 is `f55226d46d27e05511f2118dc6aa24f5dbf9b6b2cddc87cc6e0e7dd067c00b11`. [NASA source](https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/base-map/) · [Asset generator](../scripts/build-geographic-overview.mjs).
+
+An initial asset generation attempt misaligned the land mask and was corrected by applying the mask before resizing. The new regression samples North American land, Lake Superior and the Atlantic. Desktop checks waited for the requested camera positions and a rendered frame at both poles. The screenshots show the blue rings and square removed in Auto. [North view](screenshots/auto-poles/north.png) · [South view](screenshots/auto-poles/south.png) · [Alignment regression](../tests/geographic-overview.test.ts). The Windows installer payload matches the rebuilt app. Google 3D requests were not exercised for this imagery repair. [Package verification](polar-imagery-package.log).
+
+## Photoreal 3D in coastal cities
+
+The photoreal surface selector previously hid the entire Google tileset as soon as any sample was mapped as water. At shallow angles its sampling could see only the harbor in front of Manhattan. It now keeps the tileset visible in mixed views, confirms regional all-water results with detailed OSM masks, treats unavailable masks as uncertain, and checks the nearby coast at close range. [Surface selector](../src/renderer/map/photorealSurface.ts) · [Regression tests](../tests/photoreal-surface.test.ts).
+
+The packaged desktop test aimed a controlled 3D mesh at Manhattan with a 67 m camera height and −3° pitch. The mesh remained visible with no foreground holes. Google requests were intercepted, so actual Google tiles, coverage and the user's credential were not exercised. [Manhattan desktop check](new-york-mesh-after.log) · [Fixture screenshot](screenshots/new-york-mesh/after-land.png).
+
+The wider nearby-land check changes the ship-scale tradeoff. At the earlier Gulf of Finland coastal-water fixture, land in the surrounding area now keeps the mesh visible rather than exposing the photographic water. Open-water-only behavior remains covered by the regression tests. The Windows app and installer are in `release/photoreal-v3`, and the launcher selects the newest build. Type checking and all 1,105 tests passed. [Package check](photoreal-city-package.log).
+
+## Photoreal buildings and restored satellite overview
+
+Selecting Photoreal 3D now disables the application's OSM building extrusions for the whole time that mode is selected, including while Google's tiles are loading, hidden over water, or unavailable. The existing building preference is retained and extrusions return on other basemaps. An isolated packaged desktop check rendered 34,190 OSM buildings in Atlas mode, none in Photoreal mode, and restored them on returning to Atlas. The test blocked Google requests, so live Google tile coverage and billing credentials were not exercised. [Desktop check](photoreal-buildings-check.log) · [Building selection](../src/renderer/components/Globe.tsx).
+
+The older 2004 NASA Blue Marble land reference now appears at global overview scale again. The observed ESA/NASA ocean remains below it, and the detailed Sentinel and USGS layers remain available closer in. Blue Marble reduces the clouds and seasonal snow visible in the user's North American overview; Greenland and polar ice remain white. The observed overview can still show imagery artifacts near the poles, and historical years still show their own dated imagery. [Restored global view](screenshots/imagery-restored.png) · [NASA Blue Marble](https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/).
+
+The updated Windows executable and installer are in `release/imagery-update`. The start launcher selects the most recently built release. Type checking and all 1,103 automated tests passed. [Package verification](imagery-restored-package.log).
+
 The final imagery repair is packaged in `release/flight-card/win-unpacked`, which the project launcher selects as the newer build. Type checking and all 1,103 tests across 74 files passed. The installer payload matches the tested app archive (`b5d44038945a54e17c274b92b37b0d33d94564c70474add9bd0b0e006b3a2cad`), though installation and upgrades were not exercised. Live public imagery checks used isolated profiles and blocked Google requests. [Package verification](imagery-repair-package.log).
 
 ## Auto polar imagery repair

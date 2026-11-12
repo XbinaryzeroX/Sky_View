@@ -1,0 +1,24 @@
+{
+  "tag": "after",
+  "utc": "2026-11-12T14:20:48.810Z",
+  "result": "PASS",
+  "asar": "d2035babc0cb7b86b1035fe5221d84cb723450ffc67658a78348710d604ff668",
+  "source": "Synthetic slotted 3D mesh, public OSM mask. All Google requests intercepted.",
+  "stages": [
+    {
+      "place": "land",
+      "lon": -74.006,
+      "lat": 40.7128,
+      "z": -22,
+      "globe": true,
+      "meshVisible": true,
+      "meshHeight": -22.00000001007841,
+      "cameraAltitude": 67.19759020967943,
+      "pitch": -3.015284858755101,
+      "pixels": 408856,
+      "skyThroughGround": 0,
+      "rustMeshPixels": 98057
+    }
+  ],
+  "errors": []
+}
