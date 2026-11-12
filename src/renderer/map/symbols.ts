@@ -32,12 +32,17 @@ const AIRCRAFT: Record<AircraftSymbol, Draw> = {
   narrowbody: jet(24, 10, 50, 9),
   regional: jet(19, 7, 44, 8, true),
   bizjet: jet(15, 7, 34, 7, true),
+  jet: jet(21, 9, 44, 8),
   turboprop: (g) => {
     poly(g, mirror([0, -22, 2.5, -17, 3, -5, 22, -5, 22, -1, 3, 0, 2.5, 15, 8, 18, 8, 21, 0, 21]));
     g.rect(6, -11, 2.5, 8);
     g.rect(-8.5, -11, 2.5, 8);
   },
   light: (g) => poly(g, mirror([0, -15, 2, -12, 2, -7, 17, -7, 17, -3, 2, -3, 1.5, 10, 6, 11, 6, 14, 0, 14])),
+  propeller: jet(23, 2, 38, 9),
+  seaplane: (g) => { jet(20, 1, 34, 8)(g); g.rect(6, -11, 2, 23); g.rect(-8, -11, 2, 23); },
+  poweredlift: (g) => { jet(17, 2, 33, 7)(g); for (const x of [-15,15]) { g.moveTo(x + 8, -3); g.arc(x, -3, 8, 0, Math.PI * 2); } },
+  gyroplane: (g) => { g.ellipse(0, -1, 4, 8, 0, 0, Math.PI * 2); g.rect(-15, -3, 30, 2); g.rect(-1, 4, 2, 11); g.rect(-4, 13, 8, 2); },
   glider: (g) => poly(g, mirror([0, -13, 1.5, -10, 1.5, -6, 30, -5, 30, -3, 1.5, -2, 1, 14, 5, 15, 5, 17, 0, 17])),
   helicopter: (g) => {
     g.ellipse(0, -2, 5.5, 9, 0, 0, Math.PI * 2);
@@ -50,6 +55,8 @@ const AIRCRAFT: Record<AircraftSymbol, Draw> = {
     g.arc(0, -3, 11, 0, Math.PI * 2);
     g.rect(-3, 10, 6, 5);
   },
+  airship: (g) => { g.ellipse(0, -1, 8, 22, 0, 0, Math.PI * 2); poly(g, [-11, 20, 0, 13, 11, 20]); },
+  parachute: (g) => { poly(g, [-20, 0, -14, -9, 0, -13, 14, -9, 20, 0, 0, 10]); g.rect(-2, 9, 4, 6); },
   drone: (g) => {
     poly(g, [0, -6, 6, 0, 0, 6, -6, 0]);
     for (const [x, y] of [[-12, -12], [12, -12], [-12, 12], [12, 12]]) {
@@ -94,6 +101,9 @@ const VESSELS: Record<VesselSymbol, Draw> = {
     poly(g, [0, -10, 9, 6, 0, 6]);
   },
   pleasure: hull(18, 4.5, 6),
+  workboat: (g) => { hull(34, 8, 8)(g); g.rect(-5, -8, 10, 6); g.rect(-5, 10, 10, 2); },
+  wingInGround: jet(20, 6, 42, 6),
+  pilot: (g) => { hull(28, 6, 9)(g); g.rect(-3, -5, 6, 12); },
   service: (g) => {
     hull(26, 6, 8)(g);
     g.rect(-2, -6, 4, 10);

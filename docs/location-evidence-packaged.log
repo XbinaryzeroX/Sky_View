@@ -1,0 +1,1067 @@
+{
+  "result": "PASS",
+  "startedAt": "2026-11-12T01:05:21.832Z",
+  "executable": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\Atlas Watch.exe",
+  "archive": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+  "archiveSha256": "bd9a8cd5cfaa5786b0145f13441c73ba73a5ffae2b9cfe54152da5145893a7c4",
+  "framework": "playwright-core 1.62.1",
+  "temporary": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-location-evidence-package-Z1BdK2",
+  "profile": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-location-evidence-package-Z1BdK2\\profile",
+  "database": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-location-evidence-package-Z1BdK2\\qa.sqlite",
+  "instrumentedPackagedProcess": true,
+  "syntheticProviderData": false,
+  "providerResponsesReplaced": false,
+  "chromiumSandbox": true,
+  "genuineProfileAccessed": false,
+  "installerExecuted": false,
+  "nativePickerOperated": false,
+  "defaultBrowserOpened": false,
+  "phases": [
+    {
+      "phase": "live",
+      "result": "PASS",
+      "startedAt": "2026-11-12T01:05:21.833Z",
+      "errors": [],
+      "screenshots": [
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\audit-location-packaged-live-quake-source.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\audit-location-packaged-live-alert-source.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\audit-location-packaged-live-summary.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\audit-location-packaged-live-analyst.png"
+      ],
+      "pid": 27344,
+      "security": {
+        "isPackaged": true,
+        "appPath": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+        "version": "0.7.0",
+        "userData": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-location-evidence-package-Z1BdK2\\profile",
+        "noSandbox": false,
+        "disableWebSecurity": false,
+        "ignoreCertificateErrors": false,
+        "windows": [
+          {
+            "contextIsolation": true,
+            "sandbox": true,
+            "nodeIntegration": false,
+            "webSecurity": true
+          }
+        ]
+      },
+      "sourceAudit": [
+        {
+          "feed": "usgs",
+          "url": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+          "status": 200,
+          "date": "Thu, 12 Nov 2026 01:04:32 GMT",
+          "receivedAt": "2026-11-12T01:05:23.431Z",
+          "featureCount": 209,
+          "sha256": "2747d236f002ed61160bec9c4418cd3ea51dadda1758808947eb5405744ee865"
+        },
+        {
+          "feed": "nws",
+          "url": "https://api.weather.gov/alerts/active?status=actual",
+          "status": 200,
+          "date": "Thu, 12 Nov 2026 01:05:21 GMT",
+          "receivedAt": "2026-11-12T01:05:23.446Z",
+          "featureCount": 541,
+          "sha256": "ec72bb1f18a9c3bec4f01c1b9f5c61e026abd1f244a62111043f48aba2b3717a"
+        }
+      ],
+      "providerCredentialStatus": [
+        {
+          "id": "twelvedata",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "alphavantage",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "openfreemap",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "esri-imagery",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "mapbox",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "eox",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "ourairports",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "nws",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "usgs-quakes",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "usgs-basemap",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "nasa-gibs",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "terrain-tiles",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "adsblol",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "local-adsb",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "digitraffic",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "opensky",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "aisstream",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "celestrak",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "firms",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "nifc",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "awc",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "nhc",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "nowcoast",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "caltrans",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "fintraffic-cams",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "mbta",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "faa-sua",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "census-geocoder",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "google3d",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "ollama",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-on",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-ab",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-sk",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-nb",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-ns",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-nl",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-yt",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-ga",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-fl",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-az",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-wi",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-id",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-ut",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-la",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-nv",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-ak",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-ct",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-pa",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-ne",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-wsdot",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-nsw",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-se",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        }
+      ],
+      "rawRecordChecks": 750,
+      "manualLocations": [
+        {
+          "id": "94f412e7-9f21-43f0-a014-91738daa1be8",
+          "name": "QA live USGS epicenter place",
+          "lat": 38.8173332214355,
+          "lon": -122.778167724609,
+          "radiusKm": 25
+        },
+        {
+          "id": "742964ac-1b76-45a6-8f76-7e32dca5a5d9",
+          "name": "QA live NWS polygon place",
+          "lat": 39.218,
+          "lon": -85.13,
+          "radiusKm": 25
+        }
+      ],
+      "feeds": {
+        "nws": {
+          "feed": "nws",
+          "state": "ok",
+          "lastAttemptAt": "2026-11-12T01:05:23.412Z",
+          "lastSuccessAt": "2026-11-12T01:05:23.465Z",
+          "sourceUpdatedAt": "2026-11-12T01:05:06.000Z",
+          "fromCache": false,
+          "error": null,
+          "consecutiveFailures": 0,
+          "nextAttemptAt": "2026-11-12T02:05:23.498Z",
+          "recordCount": 541,
+          "skippedRecords": 0,
+          "coverage": {
+            "completeness": "complete",
+            "skippedRecords": 0,
+            "note": null
+          },
+          "scope": "active-US"
+        },
+        "usgs": {
+          "feed": "usgs",
+          "state": "ok",
+          "lastAttemptAt": "2026-11-12T01:05:23.413Z",
+          "lastSuccessAt": "2026-11-12T01:05:23.434Z",
+          "sourceUpdatedAt": "2026-11-12T01:04:32.000Z",
+          "fromCache": false,
+          "error": null,
+          "consecutiveFailures": 0,
+          "nextAttemptAt": "2026-11-12T02:05:23.445Z",
+          "recordCount": 209,
+          "skippedRecords": 0,
+          "coverage": {
+            "completeness": "complete",
+            "skippedRecords": 0,
+            "note": null
+          },
+          "scope": "all_day"
+        }
+      },
+      "positiveControl": {
+        "quake": {
+          "id": "nc75465542",
+          "lat": 38.8173332214355,
+          "lon": -122.778167724609,
+          "mag": 0.73
+        },
+        "polygon": {
+          "alertId": "urn:oid:2.49.0.1.840.0.bdc529f0472b9dee7d97d57844ca6bc5ff0aacc8.001.1",
+          "event": "Special Weather Statement",
+          "point": [
+            -85.13,
+            39.218
+          ]
+        }
+      },
+      "selectedSourceIds": [
+        {
+          "kind": "quake",
+          "id": "nc75465542"
+        },
+        {
+          "kind": "alert",
+          "id": "urn:oid:2.49.0.1.840.0.bdc529f0472b9dee7d97d57844ca6bc5ff0aacc8.001.1"
+        }
+      ],
+      "previewText": "Atlas Watch location briefing\nGenerated Nov 11, 2026, 8:05 PM EST (2026-11-12 01:05 UTC) · 2 location(s) · Atlas Watch 0.7.0\nThis briefing summarizes public data retrieved by Atlas Watch. It is not an official warning product and may be incomplete or delayed. For emergencies, follow official alerts from the National Weather Service and local authorities.\nDATA SOURCES AND FRESHNESS\nSource\tStatus\tLast successful retrieval\tSource-reported update\tRecords\nNational Weather Service — active alerts (api.weather.gov)\tCurrent\nCurrent complete reply for the selected source scope.\n\tNov 11, 2026, 8:05 PM EST (2026-11-12 01:05 UTC)\tNov 11, 2026, 8:05 PM EST (2026-11-12 01:05 UTC)\t541\nUSGS Earthquake Hazards Program — GeoJSON summary feed\tCurrent\nCurrent complete reply for the selected source scope.\n\tNov 11, 2026, 8:05 PM EST (2026-11-12 01:05 UTC)\tNov 11, 2026, 8:04 PM EST (2026-11-12 01:04 UTC)\t209\nSUMMARY\nLocation\tWeather alerts (confirmed)\tAlerts not determinable\tEarthquakes within radius\nQA live USGS epicenter place\tUnknown\t≥525 in retrieved subset\t28 (≤ 25 km)\nQA live NWS polygon place\t≥1 in retrieved subset\t≥525 in retrieved subset\t0 (≤ 25 km)\nQA LIVE USGS EPICENTER PLACE\n38.81733, -122.77817 · Manual isolated acceptance location · Monitoring radius 25 km · Evaluated Nov 11, 2026, 8:05 PM EST (2026-11-12 01:05 UTC)\nNotes: Coordinates selected from actual source evidence for this test\nWeather alerts\n\nNWS: Partial evidence · retrieved Nov 11, 2026, 8:05 PM EST (2026-11-12 01:05 UTC) · scope active-US. Some alert intersections at this point cannot be determined.\n\nNWS zone lookup is turned off; alerts without polygons cannot be evaluated.\n\nWeather alert status unknown. This evidence does not establish that no alerts apply.\n\nEarthquakes within 25 km (distance to epicenter)\n\nUSGS: Current · retrieved Nov 11, 2026, 8:05 PM EST (2026-11-12 01:05 UTC) · scope all_day. Current complete reply for the selected source scope.\n\nMagnitude\tLocation\tTime\tDepth\tDistance to epicenter\tSource\nM0.7 md\t5 km W of Cobb, CA\tNov 11, 2026, 7:47 PM EST (2026-11-12 00:47 UTC)\t4.1 km\t0.0 km\tUSGS event page\nnc75465542\n\nM1.6 md\t4 km W of Cobb, CA\tNov 11, 2026, 4:30 PM EST (2026-11-11 21:30 UTC)\t2.1 km\t1.2 km\tUSGS event page\nnc75465482\n\nM1.0 md\t6 km NNW of The Geysers, CA\tNov 11, 2026, 5:11 AM EST (2026-11-11 10:11 UTC)\t2.5 km\t1.8 km\tUSGS event page\nnc75465202\n\nM0.8 md\t6 km NW of The Geysers, CA\tNov 11, 2026, 1:56 PM EST (2026-11-11 18:56 UTC)\t2.8 km\t2.0 km\tUSGS event page\nnc75465422\n\nM1.3 md\t6 km WNW of Cobb, CA\tNov 11, 2026, 4:08 PM EST (2026-11-11 21:08 UTC)\t1.4 km\t2.2 km\tUSGS event page\nnc75465467\n\nM0.7 md\t7 km NW of The Geysers, CA\tNov 11, 2026, 11:11 AM EST (2026-11-11 16:11 UTC)\t3.4 km\t2.6 km\tUSGS event page\nnc75465337\n\nM0.7 md\t7 km WNW of Cobb, CA\tNov 11, 2026, 12:03 PM EST (2026-11-11 17:03 UTC)\t2.3 km\t2.7 km\tUSGS event page\nnc75465377\n\nM1.0 md\t6 km NW of The Geysers, CA\tNov 11, 2026, 6:23 PM EST (2026-11-11 23:23 UTC)\t3.0 km\t2.8 km\tUSGS event page\nnc75465517\n\nM0.7 md\t2 km NW of The Geysers, CA\tNov 11, 2026, 11:53 AM EST (2026-11-11 16:53 UTC)\t1.7 km\t3.2 km\tUSGS event page\nnc75465362\n\nM0.7 md\t7 km NW of The Geysers, CA\tNov 11, 2026, 10:55 AM EST (2026-11-11 15:55 UTC)\t2.5 km\t3.3 km\tUSGS event page\nnc75465312\n\nM0.8 md\t1 km NNW of The Geysers, CA\tNov 11, 2026, 5:24 AM EST (2026-11-11 10:24 UTC)\t1.7 km\t3.5 km\tUSGS event page\nnc75465212\n\nM0.7 md\t8 km NW of The Geysers, CA\tNov 11, 2026, 2:01 AM EST (2026-11-11 07:01 UTC)\t2.0 km\t3.5 km\tUSGS event page\nnc75465182\n\nM1.1 md\t2 km NNE of The Geysers, CA\tNov 10, 2026, 8:05 PM EST (2026-11-11 01:05 UTC)\t2.4 km\t3.7 km\tUSGS event page\nnc75465087\n\nM0.5 md\t8 km W of Cobb, CA\tNov 11, 2026, 5:45 AM EST (2026-11-11 10:45 UTC)\t1.5 km\t3.8 km\tUSGS event page\nnc75465222\n\nM0.8 md\t1 km N of The Geysers, CA\tNov 11, 2026, 5:26 PM EST (2026-11-11 22:26 UTC)\t2.4 km\t4.0 km\tUSGS event page\nnc75465507\n\nM0.9 md\t8 km NW of The Geysers, CA\tNov 11, 2026, 12:44 AM EST (2026-11-11 05:44 UTC)\t2.0 km\t4.0 km\tUSGS event page\nnc75465172\n\nM0.5 md\t0 km N of The Geysers, CA\tNov 11, 2026, 11:29 AM EST (2026-11-11 16:29 UTC)\t1.5 km\t4.5 km\tUSGS event page\nnc75465357\n\nM0.9 md\t9 km WNW of Cobb, CA\tNov 11, 2026, 11:06 AM EST (2026-11-11 16:06 UTC)\t-0.2 km\t4.9 km\tUSGS event page\nnc75465327\n\nM0.7 md\t2 km ENE of The Geysers, CA\tNov 10, 2026, 10:53 PM EST (2026-11-11 03:53 UTC)\t1.6 km\t5.0 km\tUSGS event page\nnc75465147\n\nM0.8 md\t2 km ENE of The Geysers, CA\tNov 10, 2026, 10:12 PM EST (2026-11-11 03:12 UTC)\t1.7 km\t5.2 km\tUSGS event page\nnc75465132\n\nM0.9 md\t9 km WNW of The Geysers, CA\tNov 11, 2026, 7:40 AM EST (2026-11-11 12:40 UTC)\t2.4 km\t5.6 km\tUSGS event page\nnc75465247\n\nM1.1 md\t9 km WNW of The Geysers, CA\tNov 11, 2026, 7:40 AM EST (2026-11-11 12:40 UTC)\t2.5 km\t5.7 km\tUSGS event page\nnc75465252\n\nM0.5 md\t9 km WNW of The Geysers, CA\tNov 11, 2026, 3:17 AM EST (2026-11-11 08:17 UTC)\t2.3 km\t5.7 km\tUSGS event page\nnc75465187\n\nM0.7 md\t2 km SE of The Geysers, CA\tNov 11, 2026, 3:47 AM EST (2026-11-11 08:47 UTC)\t1.8 km\t6.4 km\tUSGS event page\nnc75465192\n\nM1.1 md\t13 km ENE of Cloverdale, CA\tNov 10, 2026, 8:30 PM EST (2026-11-11 01:30 UTC)\t2.3 km\t9.1 km\tUSGS event page\nnc75465097\n\nM1.1 md\t3 km SSW of Anderson Springs, CA\tNov 10, 2026, 11:07 PM EST (2026-11-11 04:07 UTC)\t1.9 km\t9.7 km\tUSGS event page\nnc75465152\n\nM1.2 md\t3 km S of Anderson Springs, CA\tNov 11, 2026, 8:09 AM EST (2026-11-11 13:09 UTC)\t1.4 km\t11.1 km\tUSGS event page\nnc75465262\n\nM1.4 md\t4 km S of Anderson Springs, CA\tNov 11, 2026, 8:06 AM EST (2026-11-11 13:06 UTC)\t1.2 km\t11.1 km\tUSGS event page\nnc75465257\nQA LIVE NWS POLYGON PLACE\n39.21800, -85.13000 · Manual isolated acceptance location · Monitoring radius 25 km · Evaluated Nov 11, 2026, 8:05 PM EST (2026-11-12 01:05 UTC)\nNotes: Coordinates selected from actual source evidence for this test\nWeather alerts\n\nNWS: Partial evidence · retrieved Nov 11, 2026, 8:05 PM EST (2026-11-12 01:05 UTC) · scope active-US. Some alert intersections at this point cannot be determined.\n\nNWS zone lookup is turned off; alerts without polygons cannot be evaluated.\nEvent\tSeverity / urgency\tOnset → ends\tBasis\tSource\nSpecial Weather Statement\nSpecial Weather Statement issued November 11 at 8:02PM EST by NWS Wilmington OH\nFayette; Franklin; Ripley; Dearborn\n\tModerate Expected\tNov 11, 2026, 8:02 PM EST (2026-11-12 01:02 UTC)\n→ Nov 11, 2026, 8:30 PM EST (2026-11-12 01:30 UTC)\tPoint inside alert polygon\tNWS Wilmington OH\nurn:oid:2.49.0.1.840.0.bdc529f0472b9dee7d97d57844ca6bc5ff0aacc8.001.1\n\nInstructions: To report hazardous weather conditions, go to our website at weather.gov/iln and submit your report via social media, when you can do so safely.\nEarthquakes within 25 km (distance to epicenter)\n\nUSGS: Current · retrieved Nov 11, 2026, 8:05 PM EST (2026-11-12 01:05 UTC) · scope all_day. Current complete reply for the selected source scope.\n\nNo earthquakes in the selected feed window within 25 km.\n\nCOVERAGE LIMITATIONS\nWeather alert intersection uses the alert polygon when NWS supplies one. Alerts without a polygon are matched using the NWS forecast, county, and fire-weather zones reported for the location. If zones are unknown, the alert is reported as not determinable rather than as not affecting the location.\nEarthquake distance is the geodesic distance from the location to the reported epicenter. It is not an estimate of shaking, damage, or personal danger.\nEarthquakes are limited to the selected USGS summary feed window and minimum magnitude.\nData reflects the last successful retrieval shown above and may be delayed, revised, or incomplete. Atlas Watch only observes records while it is running.\nA point outside the NWS zone service has unknown overall NWS alert coverage. Supplied polygons are still tested and confirmed intersections are retained; a missing zone match is not evidence of no alerts.\nATTRIBUTION\n\nWeather alerts: National Weather Service / NOAA (public domain). Earthquakes: U.S. Geological Survey Earthquake Hazards Program (public domain). Generated by Atlas Watch from deterministic templates; no AI was used to produce this document.",
+      "summaryRows": [
+        "LocationWeather alerts (confirmed)Alerts not determinableEarthquakes within radius",
+        "QA live USGS epicenter placeUnknown≥525 in retrieved subset28 (≤ 25 km)",
+        "QA live NWS polygon place≥1 in retrieved subset≥525 in retrieved subset0 (≤ 25 km)"
+      ],
+      "exports": [
+        {
+          "format": "html",
+          "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-packaged-live-1.html",
+          "bytes": 17962,
+          "sha256": "76654edd2d33a52affc8015d76076e89bd9b4d0dd682a4d43767325a250e1354"
+        },
+        {
+          "format": "pdf",
+          "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-packaged-live-2.pdf",
+          "bytes": 67527,
+          "sha256": "b9ecea4e4e6c983f659672ce8804eb1325331c0130c4cc094f19efd4d8bf9746"
+        }
+      ],
+      "analystText": "Analyst\nAnalyst\n\nQuestions are answered by ordinary code over loaded data. Every row links to a real record. Say “in this area” to limit to the current view.\n\nAsk\nWhich aircraft are above 30,000 feet?\nShow cargo vessels in this area\nWhich of my saved places intersect an active alert?\nAny emergency squawks?\nEarthquakes above magnitude 4.5\nWhat changed since the last refresh?\nWhat changed since my last visit?\nAT LEAST 1 SAVED PLACE WITH ALERTS IN THE NWS REPLY\n\nCurrent complete reply for the selected source scope. Reply received at 2026-11-12T01:05:23.465Z. Coverage is incomplete or out of date for 2 of 2 saved places.\n\nQA live NWS polygon place\nSpecial Weather Statement (Moderate) · inside polygon · urn:oid:2.49.0.1.840.0.bdc529f0472b9dee7d97d57844ca6bc5ff0aacc8.001.1",
+      "closedByRunner": true,
+      "finishedAt": "2026-11-12T01:05:26.374Z"
+    },
+    {
+      "phase": "restart",
+      "result": "PASS",
+      "startedAt": "2026-11-12T01:05:26.375Z",
+      "errors": [],
+      "screenshots": [
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\audit-location-packaged-restart-quake-source.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\audit-location-packaged-restart-alert-source.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\audit-location-packaged-restart-summary.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\audit-location-packaged-restart-analyst.png"
+      ],
+      "pid": 43072,
+      "security": {
+        "isPackaged": true,
+        "appPath": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+        "version": "0.7.0",
+        "userData": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-location-evidence-package-Z1BdK2\\profile",
+        "noSandbox": false,
+        "disableWebSecurity": false,
+        "ignoreCertificateErrors": false,
+        "windows": [
+          {
+            "contextIsolation": true,
+            "sandbox": true,
+            "nodeIntegration": false,
+            "webSecurity": true
+          }
+        ]
+      },
+      "sourceAudit": [
+        {
+          "feed": "usgs",
+          "url": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+          "status": 200,
+          "date": "Thu, 12 Nov 2026 01:04:32 GMT",
+          "receivedAt": "2026-11-12T01:05:27.567Z",
+          "featureCount": 209,
+          "sha256": "2747d236f002ed61160bec9c4418cd3ea51dadda1758808947eb5405744ee865"
+        },
+        {
+          "feed": "nws",
+          "url": "https://api.weather.gov/alerts/active?status=actual",
+          "status": 200,
+          "date": "Thu, 12 Nov 2026 01:05:25 GMT",
+          "receivedAt": "2026-11-12T01:05:27.583Z",
+          "featureCount": 541,
+          "sha256": "ec72bb1f18a9c3bec4f01c1b9f5c61e026abd1f244a62111043f48aba2b3717a"
+        }
+      ],
+      "providerCredentialStatus": [
+        {
+          "id": "twelvedata",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "alphavantage",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "openfreemap",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "esri-imagery",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "mapbox",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "eox",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "ourairports",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "nws",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "usgs-quakes",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "usgs-basemap",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "nasa-gibs",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "terrain-tiles",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "adsblol",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "local-adsb",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "digitraffic",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "opensky",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "aisstream",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "celestrak",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "firms",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "nifc",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "awc",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "nhc",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "nowcoast",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "caltrans",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "fintraffic-cams",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "mbta",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "faa-sua",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "census-geocoder",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "google3d",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "ollama",
+          "configured": true,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-on",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-ab",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-sk",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-nb",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-ns",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-nl",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-yt",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-ga",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-fl",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-az",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-wi",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-id",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-ut",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-la",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-nv",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-ak",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-ct",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-pa",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-ne",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-wsdot",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-nsw",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        },
+        {
+          "id": "cam-se",
+          "configured": false,
+          "credentialSource": null,
+          "userConfigured": false,
+          "credentialError": false
+        }
+      ],
+      "rawRecordChecks": 750,
+      "manualLocations": [
+        {
+          "id": "94f412e7-9f21-43f0-a014-91738daa1be8",
+          "name": "QA live USGS epicenter place",
+          "lat": 38.8173332214355,
+          "lon": -122.778167724609,
+          "radiusKm": 25
+        },
+        {
+          "id": "742964ac-1b76-45a6-8f76-7e32dca5a5d9",
+          "name": "QA live NWS polygon place",
+          "lat": 39.218,
+          "lon": -85.13,
+          "radiusKm": 25
+        }
+      ],
+      "feeds": {
+        "nws": {
+          "feed": "nws",
+          "state": "ok",
+          "lastAttemptAt": "2026-11-12T01:05:27.546Z",
+          "lastSuccessAt": "2026-11-12T01:05:27.599Z",
+          "sourceUpdatedAt": "2026-11-12T01:05:06.000Z",
+          "fromCache": false,
+          "error": null,
+          "consecutiveFailures": 0,
+          "nextAttemptAt": "2026-11-12T02:05:27.680Z",
+          "recordCount": 541,
+          "skippedRecords": 0,
+          "coverage": {
+            "completeness": "complete",
+            "skippedRecords": 0,
+            "note": null
+          },
+          "scope": "active-US"
+        },
+        "usgs": {
+          "feed": "usgs",
+          "state": "ok",
+          "lastAttemptAt": "2026-11-12T01:05:27.547Z",
+          "lastSuccessAt": "2026-11-12T01:05:27.570Z",
+          "sourceUpdatedAt": "2026-11-12T01:04:32.000Z",
+          "fromCache": false,
+          "error": null,
+          "consecutiveFailures": 0,
+          "nextAttemptAt": "2026-11-12T02:05:27.581Z",
+          "recordCount": 209,
+          "skippedRecords": 0,
+          "coverage": {
+            "completeness": "complete",
+            "skippedRecords": 0,
+            "note": null
+          },
+          "scope": "all_day"
+        }
+      },
+      "positiveControl": {
+        "quake": {
+          "id": "nc75465542",
+          "lat": 38.8173332214355,
+          "lon": -122.778167724609,
+          "mag": 0.73
+        },
+        "polygon": {
+          "alertId": "urn:oid:2.49.0.1.840.0.bdc529f0472b9dee7d97d57844ca6bc5ff0aacc8.001.1",
+          "event": "Special Weather Statement",
+          "point": [
+            -85.13,
+            39.218
+          ]
+        }
+      },
+      "selectedSourceIds": [
+        {
+          "kind": "quake",
+          "id": "nc75465542"
+        },
+        {
+          "kind": "alert",
+          "id": "urn:oid:2.49.0.1.840.0.bdc529f0472b9dee7d97d57844ca6bc5ff0aacc8.001.1"
+        }
+      ],
+      "previewText": "Atlas Watch location briefing\nGenerated Nov 11, 2026, 8:05 PM EST (2026-11-12 01:05 UTC) · 2 location(s) · Atlas Watch 0.7.0\nThis briefing summarizes public data retrieved by Atlas Watch. It is not an official warning product and may be incomplete or delayed. For emergencies, follow official alerts from the National Weather Service and local authorities.\nDATA SOURCES AND FRESHNESS\nSource\tStatus\tLast successful retrieval\tSource-reported update\tRecords\nNational Weather Service — active alerts (api.weather.gov)\tCurrent\nCurrent complete reply for the selected source scope.\n\tNov 11, 2026, 8:05 PM EST (2026-11-12 01:05 UTC)\tNov 11, 2026, 8:05 PM EST (2026-11-12 01:05 UTC)\t541\nUSGS Earthquake Hazards Program — GeoJSON summary feed\tCurrent\nCurrent complete reply for the selected source scope.\n\tNov 11, 2026, 8:05 PM EST (2026-11-12 01:05 UTC)\tNov 11, 2026, 8:04 PM EST (2026-11-12 01:04 UTC)\t209\nSUMMARY\nLocation\tWeather alerts (confirmed)\tAlerts not determinable\tEarthquakes within radius\nQA live USGS epicenter place\tUnknown\t≥525 in retrieved subset\t28 (≤ 25 km)\nQA live NWS polygon place\t≥1 in retrieved subset\t≥525 in retrieved subset\t0 (≤ 25 km)\nQA LIVE USGS EPICENTER PLACE\n38.81733, -122.77817 · Manual isolated acceptance location · Monitoring radius 25 km · Evaluated Nov 11, 2026, 8:05 PM EST (2026-11-12 01:05 UTC)\nNotes: Coordinates selected from actual source evidence for this test\nWeather alerts\n\nNWS: Partial evidence · retrieved Nov 11, 2026, 8:05 PM EST (2026-11-12 01:05 UTC) · scope active-US. Some alert intersections at this point cannot be determined.\n\nNWS zone lookup is turned off; alerts without polygons cannot be evaluated.\n\nWeather alert status unknown. This evidence does not establish that no alerts apply.\n\nEarthquakes within 25 km (distance to epicenter)\n\nUSGS: Current · retrieved Nov 11, 2026, 8:05 PM EST (2026-11-12 01:05 UTC) · scope all_day. Current complete reply for the selected source scope.\n\nMagnitude\tLocation\tTime\tDepth\tDistance to epicenter\tSource\nM0.7 md\t5 km W of Cobb, CA\tNov 11, 2026, 7:47 PM EST (2026-11-12 00:47 UTC)\t4.1 km\t0.0 km\tUSGS event page\nnc75465542\n\nM1.6 md\t4 km W of Cobb, CA\tNov 11, 2026, 4:30 PM EST (2026-11-11 21:30 UTC)\t2.1 km\t1.2 km\tUSGS event page\nnc75465482\n\nM1.0 md\t6 km NNW of The Geysers, CA\tNov 11, 2026, 5:11 AM EST (2026-11-11 10:11 UTC)\t2.5 km\t1.8 km\tUSGS event page\nnc75465202\n\nM0.8 md\t6 km NW of The Geysers, CA\tNov 11, 2026, 1:56 PM EST (2026-11-11 18:56 UTC)\t2.8 km\t2.0 km\tUSGS event page\nnc75465422\n\nM1.3 md\t6 km WNW of Cobb, CA\tNov 11, 2026, 4:08 PM EST (2026-11-11 21:08 UTC)\t1.4 km\t2.2 km\tUSGS event page\nnc75465467\n\nM0.7 md\t7 km NW of The Geysers, CA\tNov 11, 2026, 11:11 AM EST (2026-11-11 16:11 UTC)\t3.4 km\t2.6 km\tUSGS event page\nnc75465337\n\nM0.7 md\t7 km WNW of Cobb, CA\tNov 11, 2026, 12:03 PM EST (2026-11-11 17:03 UTC)\t2.3 km\t2.7 km\tUSGS event page\nnc75465377\n\nM1.0 md\t6 km NW of The Geysers, CA\tNov 11, 2026, 6:23 PM EST (2026-11-11 23:23 UTC)\t3.0 km\t2.8 km\tUSGS event page\nnc75465517\n\nM0.7 md\t2 km NW of The Geysers, CA\tNov 11, 2026, 11:53 AM EST (2026-11-11 16:53 UTC)\t1.7 km\t3.2 km\tUSGS event page\nnc75465362\n\nM0.7 md\t7 km NW of The Geysers, CA\tNov 11, 2026, 10:55 AM EST (2026-11-11 15:55 UTC)\t2.5 km\t3.3 km\tUSGS event page\nnc75465312\n\nM0.8 md\t1 km NNW of The Geysers, CA\tNov 11, 2026, 5:24 AM EST (2026-11-11 10:24 UTC)\t1.7 km\t3.5 km\tUSGS event page\nnc75465212\n\nM0.7 md\t8 km NW of The Geysers, CA\tNov 11, 2026, 2:01 AM EST (2026-11-11 07:01 UTC)\t2.0 km\t3.5 km\tUSGS event page\nnc75465182\n\nM1.1 md\t2 km NNE of The Geysers, CA\tNov 10, 2026, 8:05 PM EST (2026-11-11 01:05 UTC)\t2.4 km\t3.7 km\tUSGS event page\nnc75465087\n\nM0.5 md\t8 km W of Cobb, CA\tNov 11, 2026, 5:45 AM EST (2026-11-11 10:45 UTC)\t1.5 km\t3.8 km\tUSGS event page\nnc75465222\n\nM0.8 md\t1 km N of The Geysers, CA\tNov 11, 2026, 5:26 PM EST (2026-11-11 22:26 UTC)\t2.4 km\t4.0 km\tUSGS event page\nnc75465507\n\nM0.9 md\t8 km NW of The Geysers, CA\tNov 11, 2026, 12:44 AM EST (2026-11-11 05:44 UTC)\t2.0 km\t4.0 km\tUSGS event page\nnc75465172\n\nM0.5 md\t0 km N of The Geysers, CA\tNov 11, 2026, 11:29 AM EST (2026-11-11 16:29 UTC)\t1.5 km\t4.5 km\tUSGS event page\nnc75465357\n\nM0.9 md\t9 km WNW of Cobb, CA\tNov 11, 2026, 11:06 AM EST (2026-11-11 16:06 UTC)\t-0.2 km\t4.9 km\tUSGS event page\nnc75465327\n\nM0.7 md\t2 km ENE of The Geysers, CA\tNov 10, 2026, 10:53 PM EST (2026-11-11 03:53 UTC)\t1.6 km\t5.0 km\tUSGS event page\nnc75465147\n\nM0.8 md\t2 km ENE of The Geysers, CA\tNov 10, 2026, 10:12 PM EST (2026-11-11 03:12 UTC)\t1.7 km\t5.2 km\tUSGS event page\nnc75465132\n\nM0.9 md\t9 km WNW of The Geysers, CA\tNov 11, 2026, 7:40 AM EST (2026-11-11 12:40 UTC)\t2.4 km\t5.6 km\tUSGS event page\nnc75465247\n\nM1.1 md\t9 km WNW of The Geysers, CA\tNov 11, 2026, 7:40 AM EST (2026-11-11 12:40 UTC)\t2.5 km\t5.7 km\tUSGS event page\nnc75465252\n\nM0.5 md\t9 km WNW of The Geysers, CA\tNov 11, 2026, 3:17 AM EST (2026-11-11 08:17 UTC)\t2.3 km\t5.7 km\tUSGS event page\nnc75465187\n\nM0.7 md\t2 km SE of The Geysers, CA\tNov 11, 2026, 3:47 AM EST (2026-11-11 08:47 UTC)\t1.8 km\t6.4 km\tUSGS event page\nnc75465192\n\nM1.1 md\t13 km ENE of Cloverdale, CA\tNov 10, 2026, 8:30 PM EST (2026-11-11 01:30 UTC)\t2.3 km\t9.1 km\tUSGS event page\nnc75465097\n\nM1.1 md\t3 km SSW of Anderson Springs, CA\tNov 10, 2026, 11:07 PM EST (2026-11-11 04:07 UTC)\t1.9 km\t9.7 km\tUSGS event page\nnc75465152\n\nM1.2 md\t3 km S of Anderson Springs, CA\tNov 11, 2026, 8:09 AM EST (2026-11-11 13:09 UTC)\t1.4 km\t11.1 km\tUSGS event page\nnc75465262\n\nM1.4 md\t4 km S of Anderson Springs, CA\tNov 11, 2026, 8:06 AM EST (2026-11-11 13:06 UTC)\t1.2 km\t11.1 km\tUSGS event page\nnc75465257\nQA LIVE NWS POLYGON PLACE\n39.21800, -85.13000 · Manual isolated acceptance location · Monitoring radius 25 km · Evaluated Nov 11, 2026, 8:05 PM EST (2026-11-12 01:05 UTC)\nNotes: Coordinates selected from actual source evidence for this test\nWeather alerts\n\nNWS: Partial evidence · retrieved Nov 11, 2026, 8:05 PM EST (2026-11-12 01:05 UTC) · scope active-US. Some alert intersections at this point cannot be determined.\n\nNWS zone lookup is turned off; alerts without polygons cannot be evaluated.\nEvent\tSeverity / urgency\tOnset → ends\tBasis\tSource\nSpecial Weather Statement\nSpecial Weather Statement issued November 11 at 8:02PM EST by NWS Wilmington OH\nFayette; Franklin; Ripley; Dearborn\n\tModerate Expected\tNov 11, 2026, 8:02 PM EST (2026-11-12 01:02 UTC)\n→ Nov 11, 2026, 8:30 PM EST (2026-11-12 01:30 UTC)\tPoint inside alert polygon\tNWS Wilmington OH\nurn:oid:2.49.0.1.840.0.bdc529f0472b9dee7d97d57844ca6bc5ff0aacc8.001.1\n\nInstructions: To report hazardous weather conditions, go to our website at weather.gov/iln and submit your report via social media, when you can do so safely.\nEarthquakes within 25 km (distance to epicenter)\n\nUSGS: Current · retrieved Nov 11, 2026, 8:05 PM EST (2026-11-12 01:05 UTC) · scope all_day. Current complete reply for the selected source scope.\n\nNo earthquakes in the selected feed window within 25 km.\n\nCOVERAGE LIMITATIONS\nWeather alert intersection uses the alert polygon when NWS supplies one. Alerts without a polygon are matched using the NWS forecast, county, and fire-weather zones reported for the location. If zones are unknown, the alert is reported as not determinable rather than as not affecting the location.\nEarthquake distance is the geodesic distance from the location to the reported epicenter. It is not an estimate of shaking, damage, or personal danger.\nEarthquakes are limited to the selected USGS summary feed window and minimum magnitude.\nData reflects the last successful retrieval shown above and may be delayed, revised, or incomplete. Atlas Watch only observes records while it is running.\nA point outside the NWS zone service has unknown overall NWS alert coverage. Supplied polygons are still tested and confirmed intersections are retained; a missing zone match is not evidence of no alerts.\nATTRIBUTION\n\nWeather alerts: National Weather Service / NOAA (public domain). Earthquakes: U.S. Geological Survey Earthquake Hazards Program (public domain). Generated by Atlas Watch from deterministic templates; no AI was used to produce this document.",
+      "summaryRows": [
+        "LocationWeather alerts (confirmed)Alerts not determinableEarthquakes within radius",
+        "QA live USGS epicenter placeUnknown≥525 in retrieved subset28 (≤ 25 km)",
+        "QA live NWS polygon place≥1 in retrieved subset≥525 in retrieved subset0 (≤ 25 km)"
+      ],
+      "exports": [
+        {
+          "format": "html",
+          "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-packaged-restart-1.html",
+          "bytes": 17962,
+          "sha256": "76654edd2d33a52affc8015d76076e89bd9b4d0dd682a4d43767325a250e1354"
+        },
+        {
+          "format": "pdf",
+          "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-packaged-restart-2.pdf",
+          "bytes": 67527,
+          "sha256": "bb23e1df8e11e937decc48a51410ca35775ddde668012c9b781195227122d3b6"
+        }
+      ],
+      "analystText": "Analyst\nAnalyst\n\nQuestions are answered by ordinary code over loaded data. Every row links to a real record. Say “in this area” to limit to the current view.\n\nAsk\nWhich aircraft are above 30,000 feet?\nShow cargo vessels in this area\nWhich of my saved places intersect an active alert?\nAny emergency squawks?\nEarthquakes above magnitude 4.5\nWhat changed since the last refresh?\nWhat changed since my last visit?\nAT LEAST 1 SAVED PLACE WITH ALERTS IN THE NWS REPLY\n\nCurrent complete reply for the selected source scope. Reply received at 2026-11-12T01:05:27.599Z. Coverage is incomplete or out of date for 2 of 2 saved places.\n\nQA live NWS polygon place\nSpecial Weather Statement (Moderate) · inside polygon · urn:oid:2.49.0.1.840.0.bdc529f0472b9dee7d97d57844ca6bc5ff0aacc8.001.1",
+      "closedByRunner": true,
+      "finishedAt": "2026-11-12T01:05:30.618Z"
+    }
+  ],
+  "archiveStableDuringRun": true,
+  "finishedAt": "2026-11-12T01:05:30.628Z"
+}

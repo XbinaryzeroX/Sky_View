@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+  <identifier>2.49.0.0.276.0.DWD.PVW.1794416340000.e7ea374c-30d6-441d-b5c6-b400a5ebca2d.DEU</identifier>
+  <sender>opendata@dwd.de</sender>
+  <sent>2026-11-11T17:59:00+01:00</sent>
+  <status>Actual</status>
+  <msgType>Alert</msgType>
+  <source>PVW</source>
+  <scope>Public</scope>
+  <code>id:2.49.0.0.276.0.DWD.PVW.1794416340000.e7ea374c-30d6-441d-b5c6-b400a5ebca2d</code>
+  <info>
+    <language>de-DE</language>
+    <category>Met</category>
+    <event>STURMBÖEN</event>
+    <responseType>Prepare</responseType>
+    <urgency>Immediate</urgency>
+    <severity>Moderate</severity>
+    <certainty>Likely</certainty>
+    <eventCode>
+      <valueName>PROFILE_VERSION</valueName>
+      <value>2.1.14</value>
+    </eventCode>
+    <eventCode>
+      <valueName>LICENSE</valueName>
+      <value>© GeoBasis-DE / BKG 2021 (Daten modifiziert)</value>
+    </eventCode>
+    <eventCode>
+      <valueName>II</valueName>
+      <value>52</value>
+    </eventCode>
+    <eventCode>
+      <valueName>GROUP</valueName>
+      <value>WIND</value>
+    </eventCode>
+    <eventCode>
+      <valueName>AREA_COLOR</valueName>
+      <value>251 140 0</value>
+    </eventCode>
+    <effective>2026-11-11T17:59:00+01:00</effective>
+    <onset>2026-11-12T12:00:00+01:00</onset>
+    <expires>2026-11-13T18:00:00+01:00</expires>
+    <senderName>Deutscher Wetterdienst</senderName>
+    <headline>Amtliche WARNUNG vor STURMBÖEN</headline>
+    <description>Es treten Sturmböen mit Geschwindigkeiten um 65 km/h (18 m/s, 35 kn, Bft 8) anfangs aus westlicher, später aus nordwestlicher Richtung auf. In exponierten Lagen muss mit Sturmböen bis 85 km/h (24 m/s, 47 kn, Bft 9) gerechnet werden.</description>
+    <instruction>Gefahr durch: einzelne herabstürzende Äste; umherfliegende Gegenstände. 
+Handlungsempfehlungen: 
+frei stehende Objekte sichern (z.B. Leinwände und Möbel); z.B. Zelte und Abdeckungen befestigen; im Freien auf herabfallende Gegenstände (z.B. Äste) achten</instruction>
+    <web>https://dwd.de/warnungen</web>
+    <contact>Deutscher Wetterdienst</contact>
+    <parameter>
+      <valueName>gusts</valueName>
+      <value>~65 [km/h]</value>
+    </parameter>
+    <parameter>
+      <valueName>exposed gusts</valueName>
+      <value>&lt;85 [km/h]</value>
+    </parameter>
+    <parameter>
+      <valueName>wind direction</valueName>
+      <value>west</value>
+    </parameter>
+    <parameter>
+      <valueName>subsequent wind direction</valueName>
+      <value>north-west</value>
+    </parameter>
+    <parameter>
+      <valueName>wind direction</valueName>
+      <value>west</value>
+    </parameter>
+    <parameter>
+      <valueName>wind direction</valueName>
+      <value>north-west</value>
+    </parameter>
+    <area>
+      <areaDesc>polygonal event area</areaDesc>
+      <polygon>54.499638,11.232679 54.432294,11.296931 54.402208,11.31233 54.412123,11.246468 54.409726,11.197825 54.41777,11.210241 54.420149,11.174482 54.413581,11.167404 54.40474,11.181153 54.401224,11.174799 54.402991,11.119164 54.410313,11.09417 54.435464,11.100721 54.448103,11.085693 54.45198,11.064254 54.444385,11.024782 54.437505,11.021103 54.442841,11.007234 54.491962,11.014648 54.518173,11.03655 54.535625,11.065219 54.520597,11.171651 54.499638,11.232679 54.499638,11.232679</polygon>
+      <altitude>0.0</altitude>
+      <ceiling>9842.5197</ceiling>
+    </area>
+    <area>
+      <areaDesc>polygonal event area</areaDesc>
+      <polygon>54.350823,10.998601 54.348997,10.934197 54.360468,10.937756 54.37785,10.921985 54.384668,10.94934 54.381008,11.020579 54.376176,11.018894 54.373937,10.990128 54.368166,11.021713 54.376113,11.071758 54.39201,11.091555 54.396196,11.109576 54.389233,11.110459 54.393769,11.11958 54.387469,11.131478 54.374269,11.126163 54.352967,11.081985 54.358241,11.069052 54.355493,11.060235 54.34406,11.063075 54.346232,11.073509 54.30194,11.076901 54.294383,11.029122 54.308836,11.021208 54.314117,10.97798 54.332462,10.970549 54.334159,10.994486 54.343209,11.007717 54.350823,10.998601 54.350823,10.998601</polygon>
+      <altitude>0.0</altitude>
+      <ceiling>9842.5197</ceiling>
+    </area>
+    <area>
+      <areaDesc>Stadt Heiligenhafen</areaDesc>
+      <geocode>
+        <valueName>WARNCELLID</valueName>
+        <value>801055021</value>
+      </geocode>
+      <altitude>0.0</altitude>
+      <ceiling>9842.5197</ceiling>
+    </area>
+    <area>
+      <areaDesc>Gemeinde Großenbrode</areaDesc>
+      <geocode>
+        <valueName>WARNCELLID</valueName>
+        <value>801055017</value>
+      </geocode>
+      <altitude>0.0</altitude>
+      <ceiling>9842.5197</ceiling>
+    </area>
+    <area>
+      <areaDesc>Gemeinde Neukirchen</areaDesc>
+      <geocode>
+        <valueName>WARNCELLID</valueName>
+        <value>801055031</value>
+      </geocode>
+      <altitude>0.0</altitude>
+      <ceiling>9842.5197</ceiling>
+    </area>
+    <area>
+      <areaDesc>Stadt Fehmarn</areaDesc>
+      <geocode>
+        <valueName>WARNCELLID</valueName>
+        <value>801055046</value>
+      </geocode>
+      <altitude>0.0</altitude>
+      <ceiling>9842.5197</ceiling>
+    </area>
+  </info>
+</alert>

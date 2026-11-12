@@ -7,6 +7,11 @@ import { MarketsPage } from './MarketsPage';
 import { CommunityPage } from './CommunityPage';
 import { useEffect, useMemo, useState } from 'react';
 import { CameraPlayer, cameraMedia } from './CameraPlayer';
+import { CameraBoard } from './CameraBoard';
+import { DwdSourceStatus, dwdView, dwdWarningTiming } from './DwdWarnings';
+import { ConflictUpdates } from './ConflictUpdates';
+import { boardCameraIds, CAMERA_BOARD_LIMITS, pinBoardCameras, type BoardDocument } from '../../shared/cameraBoards';
+import { filterCameras, type CameraMediaFilter } from '../../shared/cameraDirectory';
 import { aircraftClass, classifyAircraftQuery, elevationAngleDeg, specialCode, trackState } from '../../shared/aircraft';
 import { answerQuestion, ANALYST_EXAMPLES, type AnalystAnswer } from '../../shared/analyst';
 import { isAlertCountable } from '../../shared/dedupe';
@@ -14,7 +19,8 @@ import { geodesicDistanceKm } from '../../shared/geo';
 import { LAYER_IDS, LAYERS, type GeoRecord, type LayerId, type LayerSnapshot } from '../../shared/layers';
 import type { AppSnapshot, Settings } from '../../shared/types';
 import { fmtAltitudeM, fmtDistanceKm, fmtSpeedKts } from '../../shared/units';
-import airportsData from '../data/airports.json';
+import { AIRPORTS } from '../data/airports';
+export { AIRPORTS } from '../data/airports';
 import { api, errorText, type WatchItem } from '../lib/api';
 import { FRESHNESS_META, relativeTime } from '../lib/format';
 import { Empty, ExternalLink, SeverityTag, Time } from './common';
@@ -62,6 +68,7 @@ export const NAV: { id: PageId; label: string; short: string; icon: LucideIcon; 
 ];
 
 export interface PageCtx {
+  playbackActive?: boolean;
   snap: AppSnapshot;
   layerSnaps: Partial<Record<LayerId, LayerSnapshot>>;
   patch(p: Partial<Settings>): void;
@@ -74,18 +81,17 @@ export interface PageCtx {
   setWatchlist(items: WatchItem[]): void;
   openPlayback(): void;
   openAi(): void;
+  openVisitBriefing(): void;
   openSettings(): void;
   openProviders(): void;
   toast(msg: string): void;
   enableLayers(ids: LayerId[]): void;
 }
 
-type Airport = [string, string, string, number, number, number | null, string, string, 'L' | 'M'];
-export const AIRPORTS = (airportsData as unknown as { airports: Airport[] }).airports;
 
-function Row({ onClick, tag, title, meta }: { onClick?: () => void; tag?: React.ReactNode; title: React.ReactNode; meta?: React.ReactNode }) {
+function Row({ onClick, tag, title, meta, warningId }: { onClick?: () => void; tag?: React.ReactNode; title: React.ReactNode; meta?: React.ReactNode; warningId?: string }) {
   return (
-    <li>
+    <li data-dwd-warning-id={warningId}>
       <button className="rec-item" onClick={onClick} disabled={!onClick}>
         {tag ?? <span />}
         <span className="rec-title">{title}</span>
@@ -366,26 +372,41 @@ function OpsPage({ ctx }: { ctx: PageCtx }) {
 
 // ---------------- Events ----------------
 function EventsPage({ ctx }: { ctx: PageCtx }) {
-  const [kind, setKind] = useState<'all' | 'alert' | 'quake' | 'fire' | 'cyclone' | 'squawk'>('all');
+  const [section, setSection] = useState<'incidents' | 'conflicts'>('incidents');
+  const [kind, setKind] = useState<'all' | 'alert' | 'dwd' | 'quake' | 'fire' | 'cyclone' | 'squawk'>('all');
+  const [limit, setLimit] = useState(300);
   const { snap } = ctx;
-  const sup = new Set(snap.supersededAlertIds);
   const items = useMemo(() => {
-    const out: { t: string; kind: string; title: string; meta: string; go(): void }[] = [];
+    const out: { t: string; kind: string; title: string; meta: string; dwdId?: string; go(): void }[] = [];
+    if (section === 'conflicts') return out;
+    const sup = new Set(snap.supersededAlertIds);
     for (const a of snap.alerts.filter((x) => isAlertCountable(x, sup, Date.now())).slice(0, 300))
-      out.push({ t: a.sent ?? '', kind: 'alert', title: `${a.event}`, meta: `${a.severity} · ${a.areaDesc?.slice(0, 80) ?? ''}`, go: () => ctx.selectEvent('alert', a.id) });
+      out.push({ t: a.sent ?? '', kind: 'alert', title: `${a.event}`, meta: `NWS · ${a.severity} · ${a.areaDesc?.slice(0, 80) ?? ''}`, go: () => ctx.selectEvent('alert', a.id) });
     for (const q of snap.quakes.slice(0, 200)) out.push({ t: q.time, kind: 'quake', title: `M${q.mag?.toFixed(1) ?? '?'} ${q.place ?? ''}`, meta: 'USGS', go: () => ctx.selectEvent('quake', q.id) });
+    for (const warning of dwdView(ctx.layerSnaps.dwd, snap.settings.layersEnabled.includes('dwd'), ctx.playbackActive).warnings)
+      out.push({ t: warning.sent, kind: 'dwd', dwdId: warning.id, title: warning.headline ?? warning.event, meta: `DWD · Germany · ${warning.severity} · ${warning.areaDesc} · ${dwdWarningTiming(warning)}${!warning.geometry ? ' · no supplied map geometry' : warning.geometryStatus === 'partial' ? ' · partial map geometry' : ''}`, go: () => ctx.selectRecord('dwd', warning.id) });
     for (const c of ctx.layerSnaps.cyclones?.records ?? []) out.push({ t: c.observedAt ?? '', kind: 'cyclone', title: c.label, meta: 'NHC advisory', go: () => ctx.selectRecord('cyclones', c.id) });
     for (const f of [...(ctx.layerSnaps.fires?.records ?? [])].sort((a, b) => Number(b.props.frpMW ?? 0) - Number(a.props.frpMW ?? 0)).slice(0, 50))
       out.push({ t: f.observedAt ?? '', kind: 'fire', title: f.label, meta: `${f.lat.toFixed(2)}, ${f.lon.toFixed(2)} · FIRMS`, go: () => ctx.selectRecord('fires', f.id) });
     for (const r of allAircraft(ctx).filter((x) => specialCode(x))) out.push({ t: r.observedAt ?? '', kind: 'squawk', title: `${r.label}: ${specialCode(r)!.label}`, meta: 'Transponder report (not a confirmed incident)', go: () => ctx.selectRecord('aircraft', r.id) });
     return out.filter((i) => kind === 'all' || i.kind === kind).sort((a, b) => b.t.localeCompare(a.t));
-  }, [snap, ctx.layerSnaps, kind]);
+  }, [snap, ctx.layerSnaps, kind, ctx.playbackActive, section]);
   return (
     <>
-      <Head title="Events" sub="Current alerts, earthquakes, cyclones, strongest fire detections and special squawks from loaded feeds. Turn layers on to include them." />
+      <Head title="Events" sub={section === 'incidents' ? 'Current alerts, earthquakes, cyclones, strongest fire detections and special squawks from loaded feeds. Turn layers on to include them.' : 'Published updates on how armed conflicts affect civilians.'} />
+      <div className="btn-row" role="group" aria-label="Event coverage">
+        <button type="button" className={`btn ${section === 'incidents' ? 'primary' : ''}`} aria-pressed={section === 'incidents'} onClick={() => setSection('incidents')}>Incident feeds</button>
+        <button type="button" className={`btn ${section === 'conflicts' ? 'primary' : ''}`} aria-pressed={section === 'conflicts'} onClick={() => setSection('conflicts')}>Conflict updates</button>
+      </div>
+      {section === 'conflicts' ? (
+        ctx.playbackActive ? <Empty>Conflict updates cover the latest published reports. Exit Replay to read them.</Empty> : <ConflictUpdates />
+      ) : <>
+      <button className="link-btn" onClick={ctx.openPlayback}>Replay recorded alerts and earthquakes</button>
+      {(kind === 'dwd' || (kind === 'all' && snap.settings.layersEnabled.includes('dwd'))) && <DwdSourceStatus snapshot={ctx.layerSnaps.dwd} enabled={snap.settings.layersEnabled.includes('dwd')} replayActive={ctx.playbackActive} onEnable={() => ctx.enableLayers(['dwd'])} compact />}
       <select value={kind} onChange={(e) => setKind(e.target.value as typeof kind)} aria-label="Event type">
         <option value="all">All types</option>
         <option value="alert">Weather alerts (U.S.)</option>
+        <option value="dwd">DWD warnings (Germany)</option>
         <option value="quake">Earthquakes</option>
         <option value="cyclone">Cyclones</option>
         <option value="fire">Fire detections</option>
@@ -395,16 +416,36 @@ function EventsPage({ ctx }: { ctx: PageCtx }) {
         <Empty>No events of this type in the loaded data.</Empty>
       ) : (
         <ul className="rec-list">
-          {items.slice(0, 300).map((i, k) => (
-            <Row key={k} onClick={i.go} tag={<span className="tag">{i.kind}</span>} title={i.title} meta={<>{i.t ? <Time iso={i.t} relative /> : '—'} · {i.meta}</>} />
+          {items.slice(0, limit).map((i, k) => (
+            <Row key={k} warningId={i.dwdId} onClick={i.go} tag={<span className="tag">{i.kind === 'dwd' ? 'DWD' : i.kind}</span>} title={i.dwdId ? <span lang="de">{i.title}</span> : i.title} meta={<>{i.t ? <Time iso={i.t} relative /> : '—'} · {i.meta}</>} />
           ))}
         </ul>
       )}
+      {items.length > limit && <button className="btn small-btn" onClick={() => setLimit(value => value + 300)}>Show more events ({limit} of {items.length})</button>}
+      </>}
     </>
   );
 }
 
 // ---------------- Discover ----------------
+function largestPerimeterCard(ctx: PageCtx) {
+  const snapshot = ctx.layerSnaps.firePerimeters;
+  if (ctx.playbackActive || !ctx.snap.settings.layersEnabled.includes('firePerimeters') || !snapshot?.status.lastSuccessAt) return null;
+  let largest: { record: GeoRecord; acres: number } | null = null;
+  for (const record of snapshot.records) {
+    const acres = record.props.gisAcres;
+    if (typeof acres === 'number' && Number.isFinite(acres) && acres >= 0 && (!largest || acres > largest.acres)) largest = { record, acres };
+  }
+  if (!largest) return null;
+  const { record, acres } = largest;
+  const lastObserved = snapshot.status.state === 'error' || snapshot.status.freshness !== 'fresh';
+  return {
+    title: `Largest reported map area among loaded NIFC perimeters · ${lastObserved ? 'last successful refresh' : 'fetched'} ${relativeTime(snapshot.status.lastSuccessAt)}`,
+    value: `${record.label} · ${acres.toLocaleString(undefined, { maximumSignificantDigits: 8 })} acres`,
+    go: () => ctx.selectRecord('firePerimeters', record.id),
+  };
+}
+
 function DiscoverPage({ ctx }: { ctx: PageCtx }) {
   const { snap } = ctx;
   const ac = allAircraft(ctx);
@@ -412,14 +453,13 @@ function DiscoverPage({ ctx }: { ctx: PageCtx }) {
   const fastest = [...ac].filter((r) => r.speedKts !== null).sort((a, b) => (b.speedKts ?? 0) - (a.speedKts ?? 0))[0];
   const biggestQuake = [...snap.quakes].sort((a, b) => (b.mag ?? 0) - (a.mag ?? 0))[0];
   const fire = [...(ctx.layerSnaps.fires?.records ?? [])].sort((a, b) => Number(b.props.frpMW ?? 0) - Number(a.props.frpMW ?? 0))[0];
-  const perim = [...(ctx.layerSnaps.firePerimeters?.records ?? [])].sort((a, b) => Number(b.props.acres ?? 0) - Number(a.props.acres ?? 0))[0];
   const ves = ctx.layerSnaps.vessels?.records ?? [];
   const cards: { title: string; value: string; go?: () => void }[] = [
     biggestQuake && { title: 'Largest earthquake in feed', value: `M${biggestQuake.mag?.toFixed(1)} ${biggestQuake.place ?? ''}`, go: () => ctx.selectEvent('quake', biggestQuake.id) },
     highest && { title: 'Highest loaded aircraft', value: `${highest.label} · ${Number(highest.props.altitudeFt).toLocaleString()} ft`, go: () => ctx.selectRecord('aircraft', highest.id) },
     fastest && { title: 'Fastest loaded aircraft (ground speed)', value: `${fastest.label} · ${Math.round(fastest.speedKts ?? 0)} kt`, go: () => ctx.selectRecord('aircraft', fastest.id) },
     fire && { title: 'Strongest fire detection', value: fire.label, go: () => ctx.selectRecord('fires', fire.id) },
-    perim && { title: 'Largest wildfire perimeter', value: `${perim.label} · ${Number(perim.props.acres ?? 0).toLocaleString()} acres`, go: () => ctx.selectRecord('firePerimeters', perim.id) },
+    largestPerimeterCard(ctx),
     ves.length > 0 && { title: 'Vessels by type (loaded)', value: Object.entries(ves.reduce<Record<string, number>>((m, v) => ({ ...m, [v.category ?? 'Unknown']: (m[v.category ?? 'Unknown'] ?? 0) + 1 }), {})).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, n]) => `${k} ${n}`).join(' · ') },
   ].filter(Boolean) as { title: string; value: string; go?: () => void }[];
   return (
@@ -690,23 +730,46 @@ function CamerasPage({ ctx }: { ctx: PageCtx }) {
   const favs = ctx.snap.settings.favoriteCameras;
   const [q, setQ] = useState('');
   const [pub, setPub] = useState('all');
-  const [media, setMedia] = useState<'all' | 'hls' | 'still' | 'fav'>('all');
+  const [media, setMedia] = useState<CameraMediaFilter>('all');
   const [inView, setInView] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [boards, setBoards] = useState<BoardDocument[]>([]);
+  const [boardId, setBoardId] = useState('');
+  const [boardName, setBoardName] = useState('');
+  const [boardError, setBoardError] = useState<string | null>(null);
+  const [boardBusy, setBoardBusy] = useState(false);
+  const [cameraBoard, setCameraBoard] = useState<{ title: string; ids: string[]; labels?: Record<string, string> } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void api.listDocs<BoardDocument>('boards').then((docs) => { if (!cancelled) setBoards(docs); }).catch((e) => { if (!cancelled) setBoardError(errorText(e)); });
+    return () => { cancelled = true; };
+  }, []);
   const bbox = inView ? ctx.viewBbox() : null;
-  const needle = q.trim().toLocaleLowerCase();
-  const list = cams.filter(
-    (c) =>
-      (pub === 'all' || String(c.props.country) === pub) &&
-      (media === 'all' || (media === 'fav' ? favs.includes(c.id) : c.props.mediaType === media)) &&
-      (!bbox || (c.lon >= bbox[0] && c.lon <= bbox[2] && c.lat >= bbox[1] && c.lat <= bbox[3])) &&
-      (!needle || `${c.label} ${c.props.locality ?? ''} ${c.props.county ?? ''} ${c.props.route ?? ''} ${c.props.country ?? ''}`.toLocaleLowerCase().includes(needle)),
-  );
+  const list = filterCameras(cams, { country: pub, media, favorites: favs, query: q, bbox });
   const countries = [...new Set(cams.map((c) => String(c.props.country ?? 'Unknown')))].sort();
   const videoCount = cams.filter((c) => c.props.mediaType === 'hls').length;
+  const stillCount = cams.filter((c) => c.props.mediaType === 'still').length;
+  const viewerCount = cams.filter((c) => c.props.mediaType === 'viewer').length;
+  const publishers = [...new Set(cams.map((c) => c.source))].sort();
   const idx = openId ? list.findIndex((c) => c.id === openId) : -1;
   const open = idx >= 0 ? list[idx] : openId ? cams.find((c) => c.id === openId) : undefined;
   const toggleFav = (id: string) => ctx.patch({ favoriteCameras: favs.includes(id) ? favs.filter((x) => x !== id) : [...favs, id].slice(-500) });
+  const chosenBoard = boards.find((b) => b.id === boardId);
+  const saveBoard = async (board: BoardDocument) => {
+    setBoardBusy(true);
+    setBoardError(null);
+    try {
+      await api.putDoc('boards', { ...board });
+      setBoards((prev) => prev.some((b) => b.id === board.id) ? prev.map((b) => b.id === board.id ? board : b) : [...prev, board]);
+      setBoardId(board.id);
+      setBoardName('');
+    } catch (e) { setBoardError(`Board was not saved: ${errorText(e)}`); }
+    finally { setBoardBusy(false); }
+  };
+  const openBoard = (title: string, ids: string[], labels?: Record<string, string>) => {
+    setOpenId(null); // A board never runs alongside the single-camera player.
+    setCameraBoard({ title, ids, labels });
+  };
   if (!on)
     return (
       <>
@@ -720,8 +783,27 @@ function CamerasPage({ ctx }: { ctx: PageCtx }) {
     <>
       <Head
         title="Cameras"
-        sub={`${cams.length.toLocaleString()} published cameras in ${countries.length} countries: ${videoCount.toLocaleString()} list a live video stream (availability is checked when played), the rest publish still images.`}
+        sub={`${cams.length.toLocaleString()} published cameras in ${countries.length} countries/regions: ${videoCount.toLocaleString()} list video streams, ${stillCount.toLocaleString()} publish still images, ${viewerCount.toLocaleString()} link to official viewers. Stream availability is checked when played.`}
       />
+      <details className="board" aria-label="Camera boards">
+        <summary>Camera boards{chosenBoard ? ` · ${chosenBoard.name}` : ''}</summary>
+        <p className="muted small">Group up to {CAMERA_BOARD_LIMITS.cameras} cameras in an existing local board. Four cameras and two video streams run at once.</p>
+        <div className="btn-row">
+          <select aria-label="Camera board" value={boardId} onChange={(e) => setBoardId(e.target.value)}>
+            <option value="">Choose a board</option>
+            {boards.map((b) => <option key={b.id} value={b.id}>{b.name} ({boardCameraIds(b).length} cameras)</option>)}
+          </select>
+          <button className="btn small-btn" disabled={!chosenBoard || boardCameraIds(chosenBoard).length === 0} onClick={() => chosenBoard && openBoard(chosenBoard.name, boardCameraIds(chosenBoard), Object.fromEntries(chosenBoard.items.filter((i) => i.kind === 'camera').map((i) => [i.id, i.label])))}>Open camera board</button>
+          <button className="btn small-btn" disabled={!chosenBoard || !favs.length || boardBusy} onClick={() => chosenBoard && void saveBoard(pinBoardCameras(chosenBoard, favs.map((id) => ({ id, label: cams.find((c) => c.id === id)?.label ?? id }))))}>Pin favorites to board</button>
+        </div>
+        <div className="btn-row">
+          <input className="view-name" aria-label="New camera board name" maxLength={80} value={boardName} onChange={(e) => setBoardName(e.target.value)} placeholder="New camera board name" />
+          <button className="btn small-btn" disabled={!boardName.trim() || boardBusy} onClick={() => void saveBoard({ id: crypto.randomUUID().replace(/-/g, ''), name: boardName.trim(), notes: '', items: [], createdAt: new Date().toISOString() })}>Create camera board</button>
+        </div>
+        {chosenBoard && boardCameraIds(chosenBoard).length >= CAMERA_BOARD_LIMITS.cameras && <p className="small muted">This board has reached its {CAMERA_BOARD_LIMITS.cameras}-camera limit. Remove cameras from Boards to make room.</p>}
+        {boardError && <p className="error" role="alert">{boardError}</p>}
+      </details>
+      <div className="btn-row"><button className="btn small-btn" disabled={!favs.length} onClick={() => openBoard('Favorites', favs, Object.fromEntries(cams.map((c) => [c.id, c.label])))}>Open favorite cameras</button></div>
       {open && (
         <section className="cam-open">
           <div className="cam-open-head">
@@ -748,6 +830,7 @@ function CamerasPage({ ctx }: { ctx: PageCtx }) {
             <button className="btn" onClick={() => toggleFav(open.id)} aria-pressed={favs.includes(open.id)}>
               {favs.includes(open.id) ? '★ Favorite' : '☆ Favorite'}
             </button>
+            <button className="btn" disabled={!chosenBoard || boardBusy} onClick={() => chosenBoard && void saveBoard(pinBoardCameras(chosenBoard, [open]))}>Pin camera to board</button>
             <button className="btn" onClick={() => setOpenId(null)}>
               Close
             </button>
@@ -765,9 +848,10 @@ function CamerasPage({ ctx }: { ctx: PageCtx }) {
           ))}
         </select>
         <select value={media} onChange={(e) => setMedia(e.target.value as typeof media)} aria-label="Media type">
-          <option value="all">Video and stills</option>
+          <option value="all">All media types</option>
           <option value="hls">Live video listed</option>
           <option value="still">Still images</option>
+          <option value="viewer">Official viewer links</option>
           <option value="fav">Favorites ({favs.length})</option>
         </select>
         <label className="check small">
@@ -777,6 +861,7 @@ function CamerasPage({ ctx }: { ctx: PageCtx }) {
       <p className="muted small">
         {list.length.toLocaleString()} match{list.length > 200 ? ' (first 200 shown)' : ''}.
       </p>
+      {cameraBoard && <CameraBoard title={cameraBoard.title} ids={cameraBoard.ids} labels={cameraBoard.labels} records={cams} onClose={() => setCameraBoard(null)} onMap={(c) => { ctx.focus(c.lat, c.lon, 2); ctx.selectRecord('cameras', c.id); }} />}
       {list.length === 0 ? (
         <Empty>{cams.length === 0 ? 'Camera catalogs are loading or unavailable.' : 'No cameras match.'}</Empty>
       ) : (
@@ -788,7 +873,7 @@ function CamerasPage({ ctx }: { ctx: PageCtx }) {
                 setOpenId(c.id);
                 ctx.focus(c.lat, c.lon, 2);
               }}
-              tag={<span className={`tag ${c.props.mediaType === 'hls' ? 'tag-live' : ''}`}>{c.props.mediaType === 'hls' ? 'VIDEO' : 'STILL'}</span>}
+              tag={<span className={`tag ${c.props.mediaType === 'hls' ? 'tag-live' : ''}`}>{c.props.mediaType === 'hls' ? 'VIDEO' : c.props.mediaType === 'viewer' ? 'VIEWER' : 'STILL'}</span>}
               title={`${favs.includes(c.id) ? '★ ' : ''}${c.label}`}
               meta={[c.props.locality, c.props.country, c.props.publisher].filter(Boolean).join(' · ')}
             />
@@ -796,7 +881,7 @@ function CamerasPage({ ctx }: { ctx: PageCtx }) {
         </ul>
       )}
       <p className="muted small">
-        Publishers: Caltrans (California; live video and stills), NYC DOT (New York City; stills), Fintraffic (Finland; weather-camera stills, CC BY 4.0). No camera catalog is connected for other countries yet.
+        {publishers.length ? `Loaded publishers: ${publishers.join('; ')}.` : 'No camera catalogs loaded. Check the Cameras layer status for source errors and Providers → Camera keys for optional systems.'}
       </p>
     </>
   );
@@ -848,26 +933,23 @@ function WatchlistPage({ ctx }: { ctx: PageCtx }) {
 }
 
 // ---------------- Boards & people (local documents) ----------------
-interface Board {
-  id: string;
-  name: string;
-  notes: string;
-  items: { kind: string; id: string; label: string }[];
-  createdAt: string;
-}
+type Board = BoardDocument;
 function BoardsPage({ ctx }: { ctx: PageCtx }) {
   const [boards, setBoards] = useState<Board[]>([]);
   const [name, setName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [openBoard, setOpenBoard] = useState<Board | null>(null);
   useEffect(() => {
-    void api.listDocs<Board>('boards').then(setBoards);
+    void api.listDocs<Board>('boards').then(setBoards).catch((e) => setError(errorText(e)));
   }, []);
   const save = (b: Board) => {
     setBoards((prev) => (prev.some((x) => x.id === b.id) ? prev.map((x) => (x.id === b.id ? b : x)) : [...prev, b]));
-    void api.putDoc('boards', b as never);
+    void api.putDoc('boards', { ...b }).catch((e) => setError(`Board was not saved: ${errorText(e)}`));
   };
   return (
     <>
-      <Head title="Boards" sub="Local working boards: notes plus pinned watchlist items. Stored on this computer only." />
+      <Head title="Boards" sub="Local working boards: notes, pinned watchlist items and camera groups. Stored on this computer only." />
+      {error && <p className="error" role="alert">{error}</p>}
       <div className="btn-row">
         <input className="view-name" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} placeholder="New board name" />
         <button className="btn small-btn primary" disabled={!name.trim()} onClick={() => (save({ id: crypto.randomUUID().replace(/-/g, ''), name: name.trim(), notes: '', items: [], createdAt: new Date().toISOString() }), setName(''))}>
@@ -891,15 +973,16 @@ function BoardsPage({ ctx }: { ctx: PageCtx }) {
           </div>
           <textarea className="board-notes" value={b.notes} maxLength={5000} onChange={(e) => save({ ...b, notes: e.target.value })} placeholder="Notes" rows={3} />
           <div className="btn-row">
-            <button className="btn small-btn" disabled={ctx.watchlist.length === 0} onClick={() => save({ ...b, items: [...b.items, ...ctx.watchlist.filter((w) => !b.items.some((i) => i.id === w.id)).map((w) => ({ kind: w.kind, id: w.id, label: w.label }))] })}>
+            <button className="btn small-btn" disabled={ctx.watchlist.length === 0} onClick={() => save({ ...b, items: [...b.items, ...ctx.watchlist.filter((w) => !b.items.some((i) => i.id === w.id && i.kind === w.kind)).map((w) => ({ kind: w.kind, id: w.id, label: w.label }))] })}>
               Pin watchlist items
             </button>
+            {boardCameraIds(b).length > 0 && <button className="btn small-btn" onClick={() => { if (!ctx.snap.settings.layersEnabled.includes('cameras')) ctx.enableLayers(['cameras']); setOpenBoard(b); }}>Open cameras ({boardCameraIds(b).length})</button>}
           </div>
           <ul className="small">
             {b.items.map((i) => (
-              <li key={i.id}>
+              <li key={`${i.kind}:${i.id}`}>
                 {i.kind}: {i.label}{' '}
-                <button className="link-btn small" onClick={() => save({ ...b, items: b.items.filter((x) => x.id !== i.id) })}>
+                <button className="link-btn small" onClick={() => save({ ...b, items: b.items.filter((x) => x.id !== i.id || x.kind !== i.kind) })}>
                   remove
                 </button>
               </li>
@@ -907,6 +990,7 @@ function BoardsPage({ ctx }: { ctx: PageCtx }) {
           </ul>
         </div>
       ))}
+      {openBoard && <CameraBoard title={openBoard.name} ids={boardCameraIds(openBoard)} labels={Object.fromEntries(openBoard.items.filter((i) => i.kind === 'camera').map((i) => [i.id, i.label]))} records={ctx.layerSnaps.cameras?.records ?? []} onClose={() => setOpenBoard(null)} onMap={(c) => { ctx.focus(c.lat, c.lon, 2); ctx.selectRecord('cameras', c.id); }} />}
     </>
   );
 }
@@ -1014,12 +1098,13 @@ function AnalystPage({ ctx }: { ctx: PageCtx }) {
         <>
           <h3 className="sub">{ans.title}</h3>
           <p className="muted small">{ans.note}</p>
+          {ans.openVisitBriefing && <button className="btn" onClick={ctx.openVisitBriefing}>Open visit briefing</button>}
           <ul className="rec-list">
             {ans.rows.map((r) => (
               <Row
-                key={`${r.layer}-${r.id}`}
+                key={JSON.stringify([r.layer, r.id, r.sourceId])}
                 onClick={() => {
-                  ctx.focus(r.lat, r.lon, 30);
+                  if (r.lat !== null && r.lon !== null) ctx.focus(r.lat, r.lon, 30);
                   if (r.layer === 'alert' || r.layer === 'quake' || r.layer === 'location') ctx.selectEvent(r.layer, r.id);
                   else ctx.selectRecord(r.layer, r.id);
                 }}
@@ -1036,18 +1121,24 @@ function AnalystPage({ ctx }: { ctx: PageCtx }) {
 
 // ---------------- Official bulletins (news alternative) ----------------
 function BulletinsPage({ ctx }: { ctx: PageCtx }) {
+  const [dwdLimit, setDwdLimit] = useState(50);
+  const dwd = dwdView(ctx.layerSnaps.dwd, ctx.snap.settings.layersEnabled.includes('dwd'), ctx.playbackActive);
   const sup = new Set(ctx.snap.supersededAlertIds);
   const severe = ctx.snap.alerts.filter((a) => isAlertCountable(a, sup, Date.now()) && (a.severity === 'Extreme' || a.severity === 'Severe')).sort((a, b) => (b.sent ?? '').localeCompare(a.sent ?? ''));
   const sig = ctx.snap.quakes.filter((q) => (q.mag ?? 0) >= 5).sort((a, b) => b.time.localeCompare(a.time));
   return (
     <>
-      <Head title="Official bulletins" sub="Breaking news needs a licensed news source, which is not included. This page lists official government bulletins already loaded: severe NWS warnings, M5+ USGS earthquakes and NHC cyclone advisories, each linked to its source." />
+      <Head title="Official bulletins" sub="Official government bulletins already loaded: severe NWS warnings, optional DWD German weather warnings, M5+ USGS earthquakes and NHC cyclone advisories. Each retains its own source and coverage." />
       <h3 className="sub">Severe / extreme NWS alerts ({severe.length})</h3>
       <ul className="rec-list">
         {severe.slice(0, 50).map((a) => (
           <Row key={a.id} onClick={() => ctx.selectEvent('alert', a.id)} tag={<SeverityTag severity={a.severity} />} title={a.headline ?? a.event} meta={<Time iso={a.sent} relative />} />
         ))}
       </ul>
+      <h3 className="sub">DWD warnings — Germany</h3>
+      <DwdSourceStatus snapshot={ctx.layerSnaps.dwd} enabled={ctx.snap.settings.layersEnabled.includes('dwd')} replayActive={ctx.playbackActive} onEnable={() => ctx.enableLayers(['dwd'])} compact />
+      <ul className="rec-list">{dwd.warnings.slice(0, dwdLimit).map(warning => <Row key={warning.id} warningId={warning.id} onClick={() => ctx.selectRecord('dwd', warning.id)} tag={<SeverityTag severity={warning.severity} />} title={<span lang={warning.language}>{warning.headline ?? warning.event}</span>} meta={<>{warning.areaDesc} · {dwdWarningTiming(warning)} · {!warning.geometry ? 'No supplied map geometry' : warning.geometryStatus === 'partial' ? 'Partial map geometry' : 'Supplied map geometry'}</>} />)}</ul>
+      {dwd.warnings.length > dwdLimit && <button className="btn small-btn" onClick={() => setDwdLimit(value => value + 50)}>Show more DWD warnings ({dwdLimit} of {dwd.warnings.length})</button>}
       <h3 className="sub">M5+ earthquakes ({sig.length})</h3>
       <ul className="rec-list">
         {sig.map((q) => (
@@ -1094,7 +1185,7 @@ function OrgPage({ ctx }: { ctx: PageCtx }) {
         </label>
       </div>
       <h3 className="sub">Data providers</h3>
-      <p className="muted small">Optional and metered providers stay off until configured with your organization’s own credentials. Atlas Watch never falls back to the vendor’s keys.</p>
+      <p className="muted small">Providers shows whether a credential comes from your organization or this build's optional included allowance. Your saved key takes priority; a failed saved key is never retried using an included key. Check the provider's billing and redistribution terms before use.</p>
       <button className="btn small-btn" onClick={ctx.openProviders}>
         Open provider settings
       </button>
@@ -1139,11 +1230,11 @@ function HelpPage({ ctx }: { ctx: PageCtx }) {
 function ReplaysPage({ ctx }: { ctx: PageCtx }) {
   return (
     <>
-      <Head title="Flight & vessel replays" sub="Replays use only positions this app recorded while running (aircraft, vessels, transit). Nothing is reconstructed, and nothing was recorded while the app was closed." />
+      <Head title="Recorded replays" sub="Review recorded NWS alerts, USGS earthquakes and movement fixes on the same timeline. Coverage depends on what Atlas Watch retrieved and retained." />
       <button className="btn primary" onClick={ctx.openPlayback}>
         Open playback timeline
       </button>
-      <p className="muted small">To build history for an area, turn on Aircraft or Vessels and leave Atlas Watch running. Retention: {ctx.snap.settings.trackRetentionHours} hours (change in Organization).</p>
+      <p className="muted small">Atlas Watch records successful NWS and USGS refreshes while running. Open Data during playback to inspect the recorded alerts and earthquakes. History keeps up to {ctx.snap.settings.historyRetentionDays} days. Enabled movement layers retain fixes for {ctx.snap.settings.trackRetentionHours} hours.</p>
     </>
   );
 }

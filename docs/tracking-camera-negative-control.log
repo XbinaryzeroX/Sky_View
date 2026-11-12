@@ -1,0 +1,1 @@
+TRACKING_CAMERA_NEGATIVE_CONTROL {"ok":true,"fixtureOnly":true,"temporaryGuardBypass":true,"expectedDefectDetected":true,"errors":[],"error":"Error: Actual Cesium render loop stopped: An error occurred while rendering.  Rendering has stopped.DeveloperError: lookAtTransform is not supported while morphing.See more...OK"}

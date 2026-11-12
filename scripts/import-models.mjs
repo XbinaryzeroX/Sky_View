@@ -34,7 +34,7 @@ const previewDir = path.join(home, 'preview');
 const outDir = process.env.ATLAS_MODELS_OUT || path.join(repo, 'public', 'vehicle-models');
 const TARGET_TRIS = 30000;
 // Bump when the conversion changes, so earlier output is re-imported rather than kept.
-const IMPORTER_VERSION = 2;
+const IMPORTER_VERSION = 3;
 // Extensions Cesium can render; a model that requires anything else is skipped.
 const RENDERABLE = new Set(['KHR_texture_transform', 'KHR_materials_unlit', 'KHR_mesh_quantization', 'KHR_materials_pbrSpecularGlossiness', 'EXT_texture_webp']);
 
@@ -145,7 +145,12 @@ function bakeScene(doc, extra, drop, stats = { dropped: 0, converted: 0, collaps
   scene.traverse((node) => {
     const mesh = node.getMesh();
     if (!mesh) return;
-    if (drop && (drop.test(node.getName()) || drop.test(mesh.getName()))) return;
+    if (drop) {
+      if (drop.test(mesh.getName())) return;
+      for (let ancestor = node; ancestor; ancestor = ancestor.getParentNode()) {
+        if (drop.test(ancestor.getName())) return;
+      }
+    }
     const m = mul(extra, node.getWorldMatrix());
     // A part scaled to nothing (exporters hide parts this way) has no surface and no valid normals: skip it.
     const det = det3(m);
@@ -395,6 +400,19 @@ async function importOne(io, m) {
   if (before > TARGET_TRIS) {
     await MeshoptSimplifier.ready;
     await doc.transform(simplify({ simplifier: MeshoptSimplifier, ratio: TARGET_TRIS / before, error: 0.004 }));
+    // Hard normal/UV seams can lock most triangles on detailed aircraft exports. Permit edge
+    // collapses across those seams on a second pass, retaining each primitive's material and
+    // the same spatial error bound used for the first pass.
+    const remaining = triangleCount(doc);
+    if (remaining > 2 * TARGET_TRIS) {
+      const acrossSeams = {
+        ...MeshoptSimplifier,
+        simplify(indices, positions, stride, target, error, flags) {
+          return MeshoptSimplifier.simplify(indices, positions, stride, target, error, [...flags, 'Permissive']);
+        },
+      };
+      await doc.transform(simplify({ simplifier: acrossSeams, ratio: TARGET_TRIS / remaining, error: 0.004 }));
+    }
   }
   // Lighting needs normals; a few exports leave them out. normals() unwelds the whole document,
   // so it runs only when needed and the geometry is re-indexed afterwards (existing normals are kept).

@@ -1,0 +1,24 @@
+{
+  "at": "2026-11-12T05:32:04.727Z",
+  "result": "PASS",
+  "errors": [],
+  "archive": "6e29aad3576da0f6a3ce1d650b6a83ffcb471b3cb908227db6dc204cfc94b486",
+  "sky": {
+    "size": 1024,
+    "files": [
+      "app://atlas/cesium/Assets/Textures/SkyBox/tycho2t3_80_px.jpg",
+      "app://atlas/cesium/Assets/Textures/SkyBox/tycho2t3_80_mx.jpg",
+      "app://atlas/cesium/Assets/Textures/SkyBox/tycho2t3_80_py.jpg",
+      "app://atlas/cesium/Assets/Textures/SkyBox/tycho2t3_80_my.jpg",
+      "app://atlas/cesium/Assets/Textures/SkyBox/tycho2t3_80_pz.jpg",
+      "app://atlas/cesium/Assets/Textures/SkyBox/tycho2t3_80_mz.jpg"
+    ],
+    "height": 39000000
+  },
+  "skyCrop": {
+    "pixels": 63800,
+    "backgroundLevel": 1,
+    "backgroundFraction": 0.5317241379310345,
+    "starPixels": 11
+  }
+}

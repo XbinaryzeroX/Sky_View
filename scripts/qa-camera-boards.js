@@ -1,0 +1,88 @@
+// Run only in the isolated development smoke profile. Uses real public catalog records/media.
+(async () => {
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const waitFor = async (fn, timeout = 15000) => {
+    const until = Date.now() + timeout;
+    while (Date.now() < until) { const value = await fn(); if (value) return value; await sleep(150); }
+    throw new Error('Camera board QA condition timed out');
+  };
+  const button = (text, scope = document) => [...scope.querySelectorAll('button')].find((b) => b.textContent.trim() === text);
+  const check = (value, message) => { if (!value) throw new Error(message); return true; };
+  await window.atlas.updateSettings({ layersEnabled: ['cameras'] });
+  const records = await waitFor(async () => {
+    const cameras = (await window.atlas.getLayers()).find((s) => s.status.id === 'cameras');
+    return cameras?.status.state !== 'loading' && cameras?.records.length ? cameras.records : null;
+  }, 70000);
+  const video = records.filter((r) => r.props.mediaType === 'hls' && r.props.streamUrl).slice(0, 3);
+  const still = records.filter((r) => r.props.mediaType === 'still' && r.imageUrl).slice(0, 2);
+  const viewer = records.find((r) => r.props.mediaType === 'viewer');
+  check(video.length === 3 && still.length === 2 && !!viewer, 'Required real publisher media types unavailable');
+  const selected = [video[0], video[1], video[2], still[0], viewer, still[1]];
+  await window.atlas.updateSettings({ favoriteCameras: selected.map((r) => r.id) });
+  // Keep a real normal Data-panel player selected behind the board modal.
+  window.__atlasDebug.select('cameras', video[2].id);
+  await waitFor(() => document.querySelector('.data-panel video'));
+  window.__atlasDebug.setPage('cameras');
+  const name = `Camera board QA ${Date.now()}`;
+  const field = await waitFor(() => document.querySelector('input[aria-label="New camera board name"]'));
+  field.closest('details').open = true;
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(field, name);
+  field.dispatchEvent(new Event('input', { bubbles: true }));
+  await sleep(150);
+  button('Create camera board').click();
+  await waitFor(() => document.querySelector('select[aria-label="Camera board"]')?.value);
+  button('Pin favorites to board').click();
+  const saved = await waitFor(async () => {
+    const board = (await window.atlas.listDocs('boards')).find((b) => b.name === name);
+    return board?.items?.length === selected.length ? board : null;
+  });
+  const result = { savedReferences: saved.items.length, urlsStored: JSON.stringify(saved).includes('https://'), backgroundSingleWasMounted: !!document.querySelector('.data-panel video') };
+  check(result.backgroundSingleWasMounted, 'Background Data player was not present for the resource test');
+  check(!result.urlsStored, 'Board copied source URLs instead of references');
+  await waitFor(() => { const b = button('Open camera board'); return b && !b.disabled ? b : null; });
+  button('Open camera board').click();
+  await waitFor(() => document.querySelector('[data-camera-board]'));
+  await sleep(8000);
+  const board = () => document.querySelector('[data-camera-board]');
+  result.firstPage = { cards: board().querySelectorAll('.camera-board-card').length, video: board().querySelectorAll('video').length, players: board().querySelectorAll('.cam-player').length, globalVideo: document.querySelectorAll('video').length };
+  check(result.firstPage.cards === 4 && result.firstPage.video <= 2 && result.firstPage.players <= 4, 'Board resource cap exceeded');
+  result.backgroundSingleSuspended = !!document.querySelector('.data-panel [data-camera-suspended="true"]') && document.querySelectorAll('.data-panel video,.data-panel .cam-player img').length === 0;
+  check(result.backgroundSingleSuspended && result.firstPage.globalVideo <= 2, 'Background normal player bypassed the board video limit');
+  result.observedPlayback = [...board().querySelectorAll('video')].map((v) => ({ currentTime: v.currentTime, width: v.videoWidth, readyState: v.readyState }));
+  button('Pause board', board()).click(); await sleep(200);
+  result.pauseReleasedMedia = board().querySelectorAll('video,img,.cam-player').length === 0;
+  check(result.pauseReleasedMedia && document.querySelectorAll('video').length === 0, 'Paused board or background retained media players');
+  button('Resume board', board()).click(); await sleep(300);
+  Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+  document.dispatchEvent(new Event('visibilitychange')); await sleep(200);
+  result.hiddenReleasedMedia = board().querySelectorAll('video,img,.cam-player').length === 0;
+  delete document.hidden;
+  document.dispatchEvent(new Event('visibilitychange')); await sleep(300);
+  check(result.hiddenReleasedMedia, 'Hidden window retained media players');
+  button('Next cameras', board()).click(); await sleep(500);
+  result.officialViewer = !![...board().querySelectorAll('.cam-badge')].find((badge) => badge.textContent === 'PUBLISHER VIEWER') && !!board().querySelector('a');
+  check(result.officialViewer, 'Official viewer was not kept as a publisher link');
+  document.querySelector('[role="dialog"][aria-label^="Camera board:"] button[aria-label="Close"]').click(); await sleep(200);
+  result.closeReleasedMedia = document.querySelectorAll('[data-camera-board],.camera-board-card video,.camera-board-card img').length === 0;
+  check(result.closeReleasedMedia, 'Closed board retained media');
+  result.backgroundSingleRestored = !!(await waitFor(() => document.querySelector('.data-panel video')));
+  Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+  document.dispatchEvent(new Event('visibilitychange')); await sleep(200);
+  result.hiddenSingleReleasedMedia = document.querySelectorAll('.data-panel video,.data-panel .cam-player img').length === 0;
+  delete document.hidden;
+  document.dispatchEvent(new Event('visibilitychange'));
+  await waitFor(() => document.querySelector('.data-panel video'));
+  check(result.hiddenSingleReleasedMedia, 'Hidden ordinary player retained media');
+  window.__atlasDebug.setPage('boards');
+  await waitFor(() => button(`Open cameras (${selected.length})`));
+  button(`Open cameras (${selected.length})`).click();
+  await waitFor(() => document.querySelector('[data-camera-board]'));
+  result.reopenedFromBoards = document.querySelector('[role="dialog"][aria-label^="Camera board:"]')?.getAttribute('aria-label').includes(name);
+  check(result.reopenedFromBoards, 'Saved camera group could not reopen from existing Boards page');
+  await sleep(5000);
+  result.reopenedGlobalVideoCount = document.querySelectorAll('video').length;
+  check(result.reopenedGlobalVideoCount <= 2 && !!document.querySelector('.data-panel [data-camera-suspended="true"]'), 'Reopened board resumed a background player');
+  result.rendererErrors = window.__atlasSmoke?.errors ?? [];
+  check(result.rendererErrors.length === 0, 'Renderer errors occurred');
+  return result;
+})();

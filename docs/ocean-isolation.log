@@ -1,0 +1,15 @@
+
+> atlas-watch@0.7.0 smoke
+> node scripts/smoke.mjs docs/screenshots/audit-ocean.png 250000
+
+SMOKE_VIEW cape-normal settledMs=5207 {"h":19999.99999999751,"level":12,"maxHere":8,"atLimit":true,"pending":0,"errors":0,"lastErr":null,"renderErrors":0,"lastRenderError":null,"terrain":{"loaded":293,"failed":0,"deepest":12}}
+SMOKE_VIEWJS cape-no-terrain "terrain off"
+SMOKE_VIEW cape-no-terrain settledMs=7036 {"h":19999.99999999751,"level":12,"maxHere":8,"atLimit":true,"pending":0,"errors":0,"lastErr":null,"renderErrors":0,"lastRenderError":null,"terrain":{"loaded":293,"failed":0,"deepest":12}}
+SMOKE_VIEWJS cape-no-label-overlay "overlay off"
+SMOKE_VIEW cape-no-label-overlay settledMs=9059 {"h":19999.99999999751,"level":12,"maxHere":8,"atLimit":true,"pending":0,"errors":0,"lastErr":null,"renderErrors":0,"lastRenderError":null,"terrain":null}
+SMOKE_VIEWJS cape-imagery-only "imagery only"
+SMOKE_VIEW cape-imagery-only settledMs=7021 {"h":19999.99999999751,"level":12,"maxHere":8,"atLimit":true,"pending":0,"errors":0,"lastErr":null,"renderErrors":0,"lastRenderError":null,"terrain":{"loaded":188,"failed":0,"deepest":12}}
+SMOKE_NET [{"host":"tiles.openfreemap.org","requests":343,"ok":343,"failed":0,"cancelled":0,"lastStatus":200,"lastError":null,"lastSuccessAt":"2026-11-11T14:54:20.979Z","lastFailureAt":null},{"host":"s3.amazonaws.com","requests":481,"ok":481,"failed":0,"cancelled":0,"lastStatus":200,"lastError":null,"lastSuccessAt":"2026-11-11T14:54:34.037Z","lastFailureAt":null},{"host":"gibs.earthdata.nasa.gov","requests":381,"ok":381,"failed":0,"cancelled":0,"lastStatus":200,"lastError":null,"lastSuccessAt":"2026-11-11T14:54:43.352Z","lastFailureAt":null}]
+SMOKE_PROF {"cesium.frame":{"ms":3118.9,"n":1602},"labels.layout":{"ms":2.2,"n":21},"labels.parse":{"ms":7.6,"n":25},"labels.sync":{"ms":15,"n":9},"terrain.resample":{"ms":494.8,"n":274},"vector.draw":{"ms":184.5,"n":258},"gibs.smoothParent":{"ms":91.2,"n":12}}
+SMOKE_PERF {"cpuSeconds":{"Browser":1.9,"GPU":7.9,"Utility":1.5,"Tab":13},"longTasks":{"count":13,"totalMs":1357,"maxMs":232},"gpu":{"gpu_compositing":"enabled","rasterization":"enabled_force","video_decode":"enabled"}}
+exit=0 screenshot=C:\Users\infob\Documents\Claude\Sky_View\docs\screenshots\audit-ocean.png

@@ -12,6 +12,7 @@ export type ProviderId =
   | 'eox'
   | 'ourairports'
   | 'nws'
+  | 'dwd'
   | 'usgs-quakes'
   | 'usgs-basemap'
   | 'nasa-gibs'
@@ -31,6 +32,7 @@ export type ProviderId =
   | 'mbta'
   | 'faa-sua'
   | 'census-geocoder'
+  | 'aerodatabox'
   | 'google3d'
   | 'opensky'
   | 'ollama'
@@ -57,6 +59,16 @@ export interface ProviderInfo {
 export const CAMERA_KEY_PROVIDER_IDS: ReadonlySet<string> = new Set(KEYED_CAMERA_SYSTEMS.map((s) => s.id));
 
 export const PROVIDERS: ProviderInfo[] = [
+  { id: 'aerodatabox', name: 'AeroDataBox', purpose: 'Dated status and times for a selected passenger flight', status: 'metered',
+    statusNote: 'A direct AeroDataBox subscription is required. Use and billing follow your subscription.',
+    docsUrl: 'https://aerodatabox.com/api-spec', signupUrl: 'https://aerodatabox.com/pricing',
+    credential: { kind: 'secret', label: 'Direct API key', placeholder: 'Paste your AeroDataBox direct API key' },
+    capabilities: ['Passenger flight status', 'Scheduled and revised times', 'Airports, terminals and gates'],
+    limits: 'One Tier 2 status request per explicit lookup. Coverage and available fields vary.', testable: false },
+  { id: 'dwd', name: 'Deutscher Wetterdienst (DWD)', purpose: 'Official weather warnings for Germany and DWD marine areas', status: 'free',
+    statusNote: '© Deutscher Wetterdienst, CC BY 4.0. Atlas Watch converts published CAP polygons to GeoJSON.',
+    docsUrl: 'https://opendata.dwd.de/weather/alerts/cap/COMMUNEUNION_DWD_STAT/', signupUrl: null, credential: null,
+    capabilities: ['German-language warnings', 'Published warning areas'], limits: 'One complete status check every five minutes while enabled. The connection test shares this cache.', testable: true },
   { id: 'twelvedata', name: 'Twelve Data', purpose: 'Stock, forex and crypto prices', status: 'free-key', statusNote: 'Included key when supplied by the publisher, or your own key. Delayed or EOD depending on exchange and plan; check your data rights.', docsUrl: 'https://twelvedata.com/docs', signupUrl: 'https://twelvedata.com/register', credential: { kind: 'secret', label: 'API key', placeholder: 'Paste your Twelve Data key' }, capabilities: ['Quotes', 'Charts', 'Symbol search'], limits: '800 API credits/day, 8/minute; cached on demand', testable: true },
   { id: 'alphavantage', name: 'Alpha Vantage', purpose: 'Market prices', status: 'free-key', statusNote: 'Included key when supplied by the publisher, or your own key. Some intervals require a premium plan; provider errors are displayed.', docsUrl: 'https://www.alphavantage.co/documentation/', signupUrl: 'https://www.alphavantage.co/support/#api-key', credential: { kind: 'secret', label: 'API key', placeholder: 'Paste your Alpha Vantage key' }, capabilities: ['Quotes', 'Charts', 'Symbol search'], limits: '25 requests/day, app caps at 5/minute; cached on demand', testable: true },
   { id: 'openfreemap', name: 'OpenFreeMap (OpenStreetMap vector tiles)', purpose: 'Worldwide streets, water, place names, building footprints and heights', status: 'free', statusNote: 'Free, commercial use allowed, no key, no request limits (OpenFreeMap FAQ). Data ODbL © OpenStreetMap contributors, © OpenMapTiles; attribution required.', docsUrl: 'https://openfreemap.org/', signupUrl: null, credential: null, capabilities: ['Street map (worldwide)', 'Label overlay', '3D buildings (extruded)'], limits: 'Bulk/offline downloads limited by OpenFreeMap terms; tiles fetched only for the view', testable: true },
@@ -76,7 +88,7 @@ export const PROVIDERS: ProviderInfo[] = [
   { id: 'aisstream', name: 'AISStream.io', purpose: 'AIS vessels in your view area', status: 'restricted', statusNote: 'Free beta with no formal terms of service. Review before commercial use.', docsUrl: 'https://aisstream.io/documentation', signupUrl: 'https://aisstream.io/authenticate', credential: { kind: 'secret', label: 'API key', placeholder: 'Paste your AISStream API key' }, capabilities: ['Vessels (view area, worldwide)'], limits: 'One WebSocket per key; bounding box updated as you move', testable: true },
   { id: 'celestrak', name: 'CelesTrak', purpose: 'Satellite orbital elements', status: 'free', statusNote: 'No published license; usage policy limits downloads to once per 2 hours per dataset', docsUrl: 'https://celestrak.org/NORAD/documentation/gp-data-formats.php', signupUrl: null, credential: null, capabilities: ['Satellites (calculated positions)'], limits: 'Cached locally; refreshed at most every 2 hours', testable: false },
   { id: 'firms', name: 'NASA FIRMS', purpose: 'Satellite fire detections', status: 'free', statusNote: 'NASA open data (citation requested)', docsUrl: 'https://firms.modaps.eosdis.nasa.gov/active_fire/', signupUrl: null, credential: null, capabilities: ['Fire detections (24 h)'], limits: 'Refreshed every 30 minutes', testable: true },
-  { id: 'nifc', name: 'NIFC WFIGS', purpose: 'Wildfire perimeters', status: 'free', statusNote: 'Public domain', docsUrl: 'https://data-nifc.opendata.arcgis.com/', signupUrl: null, credential: null, capabilities: ['Fire perimeters'], limits: 'Refreshed every 15 minutes', testable: true },
+  { id: 'nifc', name: 'NIFC WFIGS', purpose: 'Wildfire perimeters', status: 'free', statusNote: 'Public data · NIFC terms apply', docsUrl: 'https://www.arcgis.com/home/item.html?id=d1c32af3212341869b3c810f1a215824', signupUrl: null, credential: null, capabilities: ['Fire perimeters'], limits: 'The app checks every 15 minutes while the layer is enabled', testable: true },
   { id: 'awc', name: 'NOAA Aviation Weather Center', purpose: 'METAR observations', status: 'free', statusNote: 'Public domain', docsUrl: 'https://aviationweather.gov/data/api/', signupUrl: null, credential: null, capabilities: ['Weather observations'], limits: '100 requests/minute; 400 stations per request', testable: true },
   { id: 'nhc', name: 'NOAA National Hurricane Center', purpose: 'Active tropical cyclones', status: 'free', statusNote: 'Public domain', docsUrl: 'https://www.nhc.noaa.gov/', signupUrl: null, credential: null, capabilities: ['Cyclone advisories'], limits: 'Refreshed every 30 minutes', testable: true },
   { id: 'nowcoast', name: 'NOAA nowCOAST', purpose: 'Observed weather radar mosaic', status: 'free', statusNote: 'Public domain', docsUrl: 'https://nowcoast.noaa.gov/', signupUrl: null, credential: null, capabilities: ['Radar (U.S.)'], limits: 'Refreshed every 5 minutes while on', testable: false },

@@ -1,0 +1,148 @@
+{
+  "tag": "after",
+  "utc": "2026-11-12T05:51:46.304Z",
+  "result": "PASS",
+  "asar": "03bafa005199fc31acfcf055934308bd7b71a75412fe7c243802cb6fb1c339b8",
+  "source": "Synthetic slotted 3D mesh, public OSM mask. All Google requests intercepted.",
+  "stages": [
+    {
+      "place": "land",
+      "lon": 24.938,
+      "lat": 60.173,
+      "z": -22,
+      "globe": true,
+      "meshVisible": true,
+      "meshHeight": -22.000000000451237,
+      "cameraAltitude": 67.19684693451035,
+      "pitch": -3.0152348599220784,
+      "pixels": 408856,
+      "skyThroughGround": 0,
+      "rustMeshPixels": 209822
+    },
+    {
+      "place": "sea",
+      "lon": 26.9797,
+      "lat": 60.0214,
+      "z": 5,
+      "globe": true,
+      "meshVisible": false,
+      "meshHeight": null,
+      "cameraAltitude": 94.19687205040512,
+      "pitch": -3.0152351398199486,
+      "pixels": 408856,
+      "skyThroughGround": 0,
+      "rustMeshPixels": 0
+    },
+    {
+      "place": "back on land",
+      "lon": 24.938,
+      "lat": 60.173,
+      "z": -22,
+      "globe": true,
+      "meshVisible": true,
+      "meshHeight": -22.000000000451237,
+      "cameraAltitude": 67.19684693451035,
+      "pitch": -3.015234859922091,
+      "pixels": 408856,
+      "skyThroughGround": 0,
+      "rustMeshPixels": 226928
+    },
+    {
+      "place": "sea with public terrain",
+      "lon": 26.9797,
+      "lat": 60.0214,
+      "z": 5,
+      "globe": true,
+      "meshVisible": false,
+      "meshHeight": null,
+      "cameraAltitude": 99.99989781927034,
+      "pitch": -3.21110301139374,
+      "pixels": 408856,
+      "skyThroughGround": 0,
+      "rustMeshPixels": 0,
+      "refinement": [
+        {
+          "pending": 95,
+          "level": 14
+        },
+        {
+          "pending": 40,
+          "level": 15
+        },
+        {
+          "pending": 9,
+          "level": 18
+        },
+        {
+          "pending": 9,
+          "level": 18
+        },
+        {
+          "pending": 9,
+          "level": 18
+        },
+        {
+          "pending": 9,
+          "level": 18
+        },
+        {
+          "pending": 7,
+          "level": 18
+        },
+        {
+          "pending": 7,
+          "level": 18
+        },
+        {
+          "pending": 7,
+          "level": 18
+        },
+        {
+          "pending": 7,
+          "level": 18
+        },
+        {
+          "pending": 7,
+          "level": 18
+        },
+        {
+          "pending": 7,
+          "level": 18
+        },
+        {
+          "pending": 7,
+          "level": 18
+        },
+        {
+          "pending": 7,
+          "level": 18
+        },
+        {
+          "pending": 7,
+          "level": 18
+        },
+        {
+          "pending": 7,
+          "level": 18
+        },
+        {
+          "pending": 7,
+          "level": 18
+        },
+        {
+          "pending": 7,
+          "level": 18
+        },
+        {
+          "pending": 7,
+          "level": 18
+        },
+        {
+          "pending": 7,
+          "level": 18
+        }
+      ]
+    }
+  ],
+  "errors": []
+}

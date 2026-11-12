@@ -1,10 +1,11 @@
 // Floating map chrome uses only existing Atlas Watch actions.
-import { Activity, Camera, ChartNoAxesCombined, Crosshair, History, Keyboard, Layers, MapPin, Maximize, Minus, Navigation, Plus, RotateCcw, Share2, SlidersHorizontal, Sparkles, Star, View, X, type LucideIcon } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Activity, Camera, ChartNoAxesCombined, Crosshair, History, Keyboard, Layers, MapPin, Maximize, Minus, Navigation, Plus, RotateCcw, Share2, SlidersHorizontal, Sparkles, Star, SunMoon, View, X, type LucideIcon } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
-export type LeftMapPanel = 'layers' | 'places' | 'scenes' | null;
+export type LeftMapPanel = 'layers' | 'places' | 'scenes' | 'lighting' | null;
 interface Props {
   left: LeftMapPanel;
+  solarLighting: boolean;
   onLeft(panel: LeftMapPanel): void;
   dataOpen: boolean;
   onData(): void;
@@ -46,10 +47,12 @@ function Action({ icon: Icon, label, onClick, active, expanded, iconOnly = false
   );
 }
 
-export function FloatingPanel({ title, onClose, children, className = '', headerAction }: {
-  title: string; onClose(): void; children: ReactNode; className?: string; headerAction?: ReactNode;
+export function FloatingPanel({ title, onClose, children, className = '', headerAction, scrollResetKey }: {
+  title: string; onClose(): void; children: ReactNode; className?: string; headerAction?: ReactNode; scrollResetKey?: unknown;
 }) {
   const panel = useRef<HTMLElement>(null);
+  const body = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => { if (scrollResetKey !== undefined && body.current) body.current.scrollTop = 0; }, [scrollResetKey]);
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
     const surface = panel.current;
@@ -66,7 +69,7 @@ export function FloatingPanel({ title, onClose, children, className = '', header
           <X size={18} strokeWidth={1.75} aria-hidden="true" />
         </button>
       </header>
-      <div className="floating-panel-body">{children}</div>
+      <div className="floating-panel-body" ref={body}>{children}</div>
     </section>
   );
 }
@@ -83,6 +86,7 @@ export function FloatingMapControls(p: Props) {
     <>
       <div className="map-top-left float-pill">
         <Action icon={Layers} label="Layers" onClick={() => p.onLeft('layers')} expanded={p.left === 'layers'} active={p.left === 'layers'} />
+        <Action icon={SunMoon} label="Day/night" onClick={() => p.onLeft('lighting')} expanded={p.left === 'lighting'} active={p.solarLighting} />
       </div>
       <div className="map-top-right float-pill">
         <Action icon={Sparkles} label="Ask AI" onClick={p.onAi} iconOnly />

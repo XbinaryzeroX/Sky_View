@@ -1,5 +1,9 @@
 # Atlas Watch v0.4 — feature, coverage and status matrix (2026-11-09)
 
+> These are dated implementation notes with later appendices. The November 11 continuation adds satellite passes,
+> cockpit perspective, camera boards and live imagery-date/raster health. Check [PROGRESS.md](PROGRESS.md),
+> [REQUIREMENTS_AUDIT.md](REQUIREMENTS_AUDIT.md) and current source before treating an older missing row as a gap.
+
 **Status key:** ✅ working, verified in the running app with live data · 🟨 built, configured but not verified (needs your credential, or the service returned nothing during testing) · ⛔ blocked or not built (reason given)
 
 Screenshots: `docs/screenshots/v0.4/`.
@@ -194,6 +198,8 @@ Review: four focused Codex reviews of the v0.6.0 change found 13 issues (VR-001�
 Vehicles near the cut-off (budget, range, screen edge) could swap between icon and model as positions changed. Now a vehicle that has a model keeps it unless another is clearly closer (30 % margin), with 30 % extra range and a 3 km screen-edge margin before it reverts; new models load 800 m before a vehicle enters the screen; an aircraft report without type data keeps the last reported type. Measured on a busy view with 60 models: 2 swaps in 25 s before, 0 after. Codex review R1–R2 fixed; R3–R4 (type-cache recency for untyped reports, flip diagnostics) fixed afterwards and covered by the next review.
 
 ## v0.7.0 — real 3D models from Sketchfab
+
+This table describes the original model-pack implementation. Later builds added licensed civil aircraft and vessel models and rotatable previews for other reported types. [Vehicle model coverage](PROGRESS.md#vehicle-model-coverage) · [Aircraft selection](PROGRESS.md#aircraft-selection).
 
 | Feature | Now | Status |
 |---|---|---|

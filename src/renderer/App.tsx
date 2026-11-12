@@ -1,23 +1,33 @@
 import { FileText, KeyRound, Settings as SettingsIcon, Bell } from 'lucide-react';
+import { EarthLightingPanel } from './components/EarthLightingPanel';
+import { loadEarthLighting, type EarthLighting } from './map/earthLighting';
 import { FloatingMapControls, FloatingPanel, type LeftMapPanel } from './components/FloatingMapControls';
-import type { ImageryState } from './map/imageryOverlay';
+import { clampDate, gibsProduct, imageryDates, type ImageryState } from './map/imageryOverlay';
 import type { RouteInfo } from '../shared/route';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { isAlertCountable } from '../shared/dedupe';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { describeFeedDiff, isAlertCountable, supersededAlertIds } from '../shared/dedupe';
+import { monitoringEvidence, severityRank } from '../shared/monitoring';
+import { replayDisplayRecords } from '../shared/timeline';
 import type { AlertSeverity, AppSnapshot, SavedLocation, Settings } from '../shared/types';
+import type { AreaWatchEvent } from '../shared/areaWatch';
 import { AiDialog } from './components/AiDialog';
 import { BriefingDialog } from './components/BriefingDialog';
 import { FreshnessChip, Modal } from './components/common';
 import { CsvImportDialog } from './components/CsvImportDialog';
-import { DetailsPanel, type Selection } from './components/DetailsPanel';
+import { DetailsPanel, ReplayDetails, type ReplaySelection, type Selection } from './components/DetailsPanel';
 import { Globe, type GlobeHandle, type GlobeLayers, type GlobeSelection } from './components/Globe';
 import { DiagnosticsPanel } from './components/DiagnosticsPanel';
 import { Hud } from './components/Hud';
 import { LayersPanel } from './components/LayersPanel';
+import { archiveImage, archiveYears } from '../shared/satelliteYears';
+import { archiveCaption, archiveProduct } from './map/historicalImagery';
 import { PlaybackBar } from './components/PlaybackBar';
 import { ProvidersDialog } from './components/ProvidersDialog';
 import { RecordDetails } from './components/RecordDetails';
+import { TrackingControls } from './components/TrackingControls';
+import type { TrackingMode } from '../shared/trackingCamera';
 import { SearchBox } from './components/SearchBox';
+import { placeSearchMode } from '../shared/geocoding';
 import { ToolsPanel, measurementText } from './components/ToolsPanel';
 import { AIRPORTS, NAV, PageView, type PageCtx, type PageId } from './components/Pages';
 import { TrafficBar } from './components/TrafficBar';
@@ -26,7 +36,9 @@ import type { SearchResult } from './components/SearchBox';
 import type { WatchItem } from './lib/api';
 import type { PlaybackFrame, ToolMode } from './components/Globe';
 import type { LayerId, LayerSnapshot } from '../shared/layers';
-import type { Annotation, SavedView, Scene } from './lib/api';
+import type { Annotation, Camera, SavedView } from './lib/api';
+import type { Investigation } from '../shared/investigation';
+import { useScenes } from './lib/useScenes';
 import { HistoryDrawer } from './components/HistoryDrawer';
 import { LeftPanel } from './components/LeftPanel';
 import { LocationForm } from './components/LocationForm';
@@ -34,10 +46,10 @@ import { SettingsDialog } from './components/SettingsDialog';
 import { ModelCredits } from './components/ModelCredits';
 import type { TrailPoint } from './map/trailHeights';
 import { api, errorText } from './lib/api';
-import { quakeClass, SEVERITY_META, SEVERITY_ORDER } from './lib/format';
+import { localTime, quakeClass, SEVERITY_META, SEVERITY_ORDER } from './lib/format';
 
 const BASEMAP_CREDIT: Record<string, string> = {
-  atlas: 'NASA Blue Marble (2004 composite) + USGS The National Map orthoimagery (U.S.); imagery is not live',
+  atlas: 'ESA Ocean Colour CCI and Terra MODIS (2021), ESA WorldCover Sentinel-2 (2021), NASA Blue Marble land (2004), USGS aerial imagery',
   usgsImageryTopo: 'USGS orthoimagery + US Topo (U.S.), NASA Blue Marble elsewhere; not live',
   usgsTopo: 'USGS topographic map (U.S.), NASA Blue Marble elsewhere',
   gibsDaily: 'NASA VIIRS NOAA-20 true color, previous UTC day (GIBS)',
@@ -47,10 +59,11 @@ const BASEMAP_CREDIT: Record<string, string> = {
   esri: 'Esri World Imagery (Esri, Maxar, Earthstar Geographics) via your ArcGIS key; not live',
   mapbox: '© Mapbox © Maxar via your token; not live',
   eox: 'EOxCloudless 2024 by EOX IT Services GmbH (contains modified Copernicus Sentinel data 2024), your license',
-  google3d: 'Google Photorealistic 3D Tiles (your key) over NASA/USGS imagery; not live',
+  google3d: 'Google Photorealistic 3D and Atlas satellite imagery (ESA Ocean Colour CCI, WorldCover, NASA and USGS)',
+  google2d: 'Google satellite imagery (Google Maps Platform)',
 };
 
-type Dialog = { kind: 'providers' } | { kind: 'import' } | { kind: 'settings' } | { kind: 'briefing'; ids: string[] } | { kind: 'ai' } | { kind: 'delete'; loc: SavedLocation } | null;
+type Dialog = { kind: 'providers' } | { kind: 'import' } | { kind: 'settings' } | { kind: 'briefing'; ids: string[]; mode?: 'visit' | 'locations' } | { kind: 'ai' } | { kind: 'delete'; loc: SavedLocation } | null;
 
 export function App() {
   const [snap, setSnap] = useState<AppSnapshot | null>(null);
@@ -74,7 +87,12 @@ export function App() {
   const [diagOpen, setDiagOpen] = useState(false);
   const [layerSnaps, setLayerSnaps] = useState<Partial<Record<LayerId, LayerSnapshot>>>({});
   const [recordSel, setRecordSel] = useState<{ layer: LayerId; id: string } | null>(null);
+  const selectCoreSelection = useCallback((next: Selection | null) => {
+    setRecordSel(null);
+    setSelection(next);
+  }, []);
   const [tracked, setTracked] = useState<{ layer: LayerId; id: string } | null>(null);
+  const [trackingMode, setTrackingMode] = useState<TrackingMode>('follow');
   const [trail, setTrail] = useState<TrailPoint[] | null>(null);
   const [orbitFor, setOrbitFor] = useState<string | null>(null);
   const [tool, setTool] = useState<ToolMode>('none');
@@ -83,6 +101,10 @@ export function App() {
   const [views, setViews] = useState<SavedView[]>([]);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [leftFloat, setLeftFloat] = useState<LeftMapPanel>('layers');
+  const [lighting, setLighting] = useState<EarthLighting>(loadEarthLighting);
+  useEffect(() => {
+    try { localStorage.setItem('atlas.earthLighting', JSON.stringify(lighting)); } catch { /* Session lighting still works. */ }
+  }, [lighting]);
   const [dataOpen, setDataOpen] = useState(false);
   const [hudOn, setHudOn] = useState(true);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
@@ -90,6 +112,7 @@ export function App() {
   const [playbackMenu, setPlaybackMenu] = useState(false);
   const floatingStack = useRef<string[]>([]);
   const toggleLeft = (panel: LeftMapPanel) => {
+    if (playbackOn && panel !== 'scenes' && panel !== 'lighting') exitPlayback();
     setDiagOpen(false);
     setHistoryOpen(false);
     setCreditsOpen(false);
@@ -98,16 +121,52 @@ export function App() {
     setLeftFloat(current => current === panel ? null : panel);
   };
   const [playbackOn, setPlaybackOn] = useState(false);
-  const [playbackFrame, setPlaybackFrame] = useState<PlaybackFrame | null>(null);
+  const [rawPlaybackFrame, setPlaybackFrame] = useState<PlaybackFrame | null>(null);
+  const playbackFrame = useMemo(() => rawPlaybackFrame && ({
+    ...rawPlaybackFrame,
+    nws: { ...rawPlaybackFrame.nws, records: replayDisplayRecords(rawPlaybackFrame.nws.records, a => a.sent) },
+    usgs: { ...rawPlaybackFrame.usgs, records: replayDisplayRecords(rawPlaybackFrame.usgs.records, q => q.updated) },
+  }), [rawPlaybackFrame]);
+  const [initialCursor, setInitialCursor] = useState<string | null>(null);
+  const [replaySession, setReplaySession] = useState(0);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [replayQuery, setReplayQuery] = useState<Pick<Settings, 'quakeWindow' | 'quakeMinMagnitude'> | null>(null);
+  const restoredSelection = useRef<Selection | null>(null);
+  const userCameraRestore = useRef(false);
+  const [replaySelection, setReplaySelection] = useState<ReplaySelection | null>(null);
   const [google3dKey, setGoogle3dKey] = useState<string | null>(null);
   // Bumped when the Google credential changes in Providers, so the active Photoreal tileset is rebuilt with the newly resolved key.
   const [google3dKeyVersion, setGoogle3dKeyVersion] = useState(0);
+  const loadedGoogleVersion = useRef<number | null>(null);
   const [routeLine, setRouteLine] = useState<RouteInfo | null>(null);
   const [imagery, setImagery] = useState<ImageryState>(() => {
     const y = new Date(Date.now() - 86400_000).toISOString().slice(0, 10);
     return { product: null, date: y, compare: false, compareDate: new Date(Date.now() - 31 * 86400_000).toISOString().slice(0, 10), opacity: 1, split: 0.5 };
   });
   const [imageryKeys, setImageryKeys] = useState<{ esri: string | null; mapbox: string | null; google: string | null }>({ esri: null, mapbox: null, google: null });
+  const [preserveImageryDates, setPreserveImageryDates] = useState(false);
+  const catalogRevision = useSyncExternalStore(imageryDates.subscribe, imageryDates.revision);
+  const selectedYear = snap?.settings.imageryYear ?? null;
+  const archiveDomain = imageryDates.snapshot(archiveProduct).data;
+  const archived = useMemo(() => selectedYear === null ? null : archiveImage(selectedYear, archiveDomain), [selectedYear, archiveDomain]);
+  const years = useMemo(() => archiveYears(archiveDomain), [archiveDomain]);
+  useEffect(() => {
+    if (selectedYear !== null) void imageryDates.load(archiveProduct).catch(() => {});
+  }, [selectedYear]);
+  const unavailableImageryDates = useMemo(() => {
+    const product = preserveImageryDates && gibsProduct(imagery.product);
+    if (!product) return [];
+    const dates = imagery.compare ? [imagery.date, imagery.compareDate] : [imagery.date];
+    return [...new Set(dates.filter(date => !date || clampDate(product, date) !== date))];
+  }, [imagery, preserveImageryDates, catalogRevision]);
+  useEffect(() => {
+    const product = preserveImageryDates && !playbackOn && gibsProduct(imagery.product);
+    if (product) void imageryDates.load(product).catch(() => {});
+  }, [imagery.product, preserveImageryDates, playbackOn]);
+  const changeImagery = (next: ImageryState) => {
+    if (next.product !== imagery.product || next.date !== imagery.date || next.compareDate !== imagery.compareDate) setPreserveImageryDates(false);
+    setImagery(next);
+  };
   const [googleConfigured, setGoogleConfigured] = useState(false);
   // Satellite (Google 2D) and Google geocoding need the user's own key; the included key covers Photoreal 3D only.
   const [googleOwnKey, setGoogleOwnKey] = useState(false);
@@ -120,9 +179,11 @@ export function App() {
   const [vesselClasses, setVesselClasses] = useState<string[]>(['cargo', 'tanker', 'passenger', 'fishing', 'other']);
   const [showAirports, setShowAirports] = useState(true);
   const [sceneMode, setSceneMode] = useState<'3d' | '2d'>('3d');
+  useEffect(() => { if (sceneMode !== '3d' || playbackOn) setTrackingMode('follow'); }, [sceneMode, playbackOn]);
   const [watchlist, setWatchlistState] = useState<WatchItem[]>([]);
   const [kiosk, setKiosk] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
+  const [areaMatchLimit, setAreaMatchLimit] = useState(20);
   const lastViewRef = useRef<{ lat: number; lon: number; bbox: [number, number, number, number] } | null>(null);
   useEffect(() => {
     void api.getWatchlist().then(setWatchlistState);
@@ -145,6 +206,7 @@ export function App() {
   const layerSnapsRef = useRef(layerSnaps);
   layerSnapsRef.current = layerSnaps;
   useEffect(() => {
+    if (selection && restoredSelection.current === selection && !recordSel) { restoredSelection.current = null; return; }
     if (selection || recordSel) { setDataOpen(true); setToolsOpen(false); setKeyboardOpen(false); }
   }, [selection, recordSel]);
   useEffect(() => { if (diagOpen) { setLeftFloat(null); setPage('globe'); setHistoryOpen(false); } }, [diagOpen]);
@@ -155,14 +217,38 @@ export function App() {
       setCreditsOpen(false);
     }
   }, [page]);
+  const exitPlayback = () => {
+    setPlaybackOn(false);
+    setPlaybackFrame(null);
+    setReplaySelection(null);
+    setInitialCursor(null);
+    setCursor(null);
+    setReplayQuery(null);
+    setDataOpen(false);
+  };
+  const startPlayback = (cursor: string | null = null, selected: ReplaySelection | null = null,
+    savedQuery?: Pick<Settings, 'quakeWindow' | 'quakeMinMagnitude'>) => {
+    setInitialCursor(cursor);
+    setCursor(cursor);
+    setReplaySession(n => n + 1);
+    setReplayQuery(savedQuery ?? (snap ? { quakeWindow: snap.settings.quakeWindow, quakeMinMagnitude: snap.settings.quakeMinMagnitude } : null));
+    setPlaybackFrame(null);
+    setReplaySelection(selected);
+    setPlaybackOn(true);
+    setPage('globe');
+    setLeftFloat(null);
+    setDataOpen(!!selected);
+    setToolsOpen(false);
+    setDiagOpen(false);
+    setPlaybackMenu(false);
+    setBellOpen(false);
+    setHistoryOpen(false);
+    setPickMode(false);
+    setTool('none');
+  };
   useEffect(() => {
-    if (playbackOn) {
-      setLeftFloat(null);
-      setDataOpen(false);
-      setToolsOpen(false);
-      setDiagOpen(false);
-    }
-  }, [playbackOn]);
+    if (page !== 'globe' && playbackOn) exitPlayback();
+  }, [page, playbackOn]);
   useEffect(() => {
     const open = [leftFloat, dataOpen && 'data', toolsOpen && 'tools', diagOpen && 'diagnostics',
       creditsOpen && 'credits', keyboardOpen && 'keyboard', playbackMenu && 'playback-menu', historyOpen && 'history',
@@ -208,12 +294,18 @@ export function App() {
     // Renderer-only camera hooks used by automated smoke tests (no privileged access).
     (window as unknown as { __atlasDebug: unknown }).__atlasDebug = {
       setView: (lat: number, lon: number, h: number, pitch?: number) => globeRef.current?.setView(lat, lon, h, pitch),
+      setWaterEffect: (enabled: boolean) => globeRef.current?.setWaterEffect(enabled),
       diag: () => globeRef.current?.getDiagnostics() ?? null,
+      replayMap: (kind?: 'alert' | 'quake', id?: string) => globeRef.current?.replayMap(kind, id) ?? null,
+      camera: () => globeRef.current?.getCamera() ?? null,
+      viewCenter: () => globeRef.current?.getMapCenter() ?? null,
       setSceneMode: (m: '2d' | '3d') => setSceneMode(m),
       setPage: (p: PageId) => setPage(p),
       setImagery: (s: Partial<ImageryState>) => setImagery((x) => ({ ...x, ...s })),
       select: (layer: LayerId, id: string) => setRecordSel({ layer, id }),
       track: (layer: LayerId, id: string) => setTracked({ layer, id }),
+      trackingMode: (mode: TrackingMode) => setTrackingMode(mode),
+      stopTracking: () => { setTracked(null); setTrackingMode('follow'); },
       records: (layer: LayerId) => (layerSnapsRef.current[layer]?.records ?? []).slice(0, 2000).map((r) => ({ id: r.id, lat: r.lat, lon: r.lon, label: r.label, imageUrl: r.imageUrl ?? null, heading: r.heading, type: typeof r.props.type === 'string' ? r.props.type : null, shipType: typeof r.props.shipType === 'number' ? r.props.shipType : null, onGround: r.props.onGround === true })),
     };
   }, []);
@@ -222,17 +314,22 @@ export function App() {
   const smoke = useRef<Record<string, unknown>>({ globeReady: false, errors: [] as string[] });
 
   useEffect(() => {
-    let unsub = () => {};
-    api
-      .getState()
-      .then((s) => {
-        setSnap(s);
-        unsub = api.onState(setSnap);
-      })
-      .catch((e) => setLoadError(errorText(e)));
+    let mounted = true;
+    let receivedUpdate = false;
+    const unsub = api.onState((state) => {
+      receivedUpdate = true;
+      setLoadError(null);
+      setSnap(state);
+    });
+    void api.getState().then((state) => {
+      if (mounted && !receivedUpdate) setSnap(state);
+    }).catch((error) => {
+      if (mounted && !receivedUpdate) setLoadError(errorText(error));
+    });
     const onErr = (e: ErrorEvent) => (smoke.current.errors as string[]).push(e.message);
     window.addEventListener('error', onErr);
     return () => {
+      mounted = false;
       unsub();
       window.removeEventListener('error', onErr);
     };
@@ -257,48 +354,69 @@ export function App() {
       setTrail(null);
       return;
     }
-    void api.trackTrail(tracked.layer, tracked.id).then((pts) => setTrail(pts.map((p) => ({ lat: p.lat, lon: p.lon, altM: p.altM, onGround: p.onGround ?? null }))));
+    let current = true;
+    void api.trackTrail(tracked.layer, tracked.id).then(pts => {
+      if (current) setTrail(pts.map(p => ({ lat: p.lat, lon: p.lon, altM: p.altM, onGround: p.onGround ?? null })));
+    }).catch(error => { if (current) { setTrail(null); setToast(errorText(error)); } });
+    return () => { current = false; };
   }, [tracked, tracked ? layerSnaps[tracked.layer]?.status.lastSuccessAt : null]);
 
   useEffect(() => {
     const onChange = (e: Event) => {
-      if ((e as CustomEvent).detail === 'google3d') setGoogle3dKeyVersion((v) => v + 1);
+      if ((e as CustomEvent).detail === 'google3d') {
+        loadedGoogleVersion.current = null;
+        setGoogle3dKey(null);
+        setGoogle3dKeyVersion((v) => v + 1);
+      }
     };
     window.addEventListener('atlas-providers-changed', onChange);
     return () => window.removeEventListener('atlas-providers-changed', onChange);
   }, []);
 
   // Google Photorealistic 3D: only when chosen, with the user's key or the included key (one allowance per request).
+  const photorealParked = selectedYear !== null || lighting.mode !== 'day';
   useEffect(() => {
     if (snap?.settings.basemap !== ('google3d' as never)) {
       setGoogle3dKey(null);
+      loadedGoogleVersion.current = null;
       return;
     }
+    if (photorealParked || loadedGoogleVersion.current === google3dKeyVersion) return;
+    let current = true;
     void api.providerBrowserKey('google3d').then((k) => {
+      if (!current) return;
+      if (k) loadedGoogleVersion.current = google3dKeyVersion;
       setGoogle3dKey(k);
       if (!k) setToast('Google Photorealistic 3D needs an included or saved Google Maps key in Providers.');
     }).catch(error => {
+      if (!current) return;
       setGoogle3dKey(null);
       setToast(errorText(error));
     });
-  }, [snap?.settings.basemap, google3dKeyVersion]);
+    return () => { current = false; };
+  }, [snap?.settings.basemap, photorealParked, google3dKeyVersion]);
 
   // Customer imagery credentials are fetched only when the chosen surface needs them (and again after Provider settings closes).
   useEffect(() => {
-    const b = snap?.settings.basemap;
+    const b = selectedYear === null ? snap?.settings.basemap : undefined;
+    let current = true;
     void (async () => {
       const esri = b === 'esri' ? await api.providerBrowserKey('esri-imagery') : null;
       const mapbox = b === 'mapbox' ? await api.providerBrowserKey('mapbox') : null;
       const google = b === 'google2d' ? await api.providerBrowserKey('google2d') : null;
       const list = await api.listProviders();
+      if (!current) return;
       const eox = b === 'eox' ? list.some((p) => p.id === 'eox' && p.configured) : false;
       setGoogleConfigured(list.some((p) => p.id === 'google3d' && p.configured));
       setGoogleOwnKey(list.some((p) => p.id === 'google3d' && p.credentialSource === 'user'));
       setImageryKeys({ esri, mapbox, google });
       setEoxLicensed(eox);
       if ((b === 'esri' && !esri) || (b === 'mapbox' && !mapbox) || (b === 'eox' && !eox) || (b === 'google2d' && !google)) setToast('That imagery source needs setup in Providers. Showing keyless imagery meanwhile.');
-    })().catch(error => { setImageryKeys({ esri: null, mapbox: null, google: null }); setToast(errorText(error)); });
-  }, [snap?.settings.basemap, dialog === null]);
+    })().catch(error => {
+      if (current) { setImageryKeys({ esri: null, mapbox: null, google: null }); setToast(errorText(error)); }
+    });
+    return () => { current = false; };
+  }, [snap?.settings.basemap, selectedYear, dialog === null]);
 
   // Restore the last camera view (per-viewer convenience; falls back to the U.S. view).
   const restoredRef = useRef(false);
@@ -382,22 +500,36 @@ export function App() {
   }, [snap]);
 
   const globeSelection: GlobeSelection | null = useMemo(() => {
+    if (playbackOn) return replaySelection;
     if (recordSel) return { kind: 'record', layer: recordSel.layer, id: recordSel.id };
     if (!selection) return null;
+    if (selection.kind === 'areaMatch') return null;
     if (selection.kind === 'history') return { kind: selection.record.kind === 'alert' ? 'alert' : 'quake', id: selection.record.sourceId };
     return selection;
-  }, [selection, recordSel]);
+  }, [selection, recordSel, playbackOn, replaySelection]);
+  const replayAlerts = useMemo(() => {
+    if (!playbackFrame) return [];
+    const records = playbackFrame.nws.records;
+    const replaced = supersededAlertIds(records);
+    const at = Date.parse(playbackFrame.t);
+    return records.filter(alert => isAlertCountable(alert, replaced, at) && severityFilter.has(alert.severity));
+  }, [playbackFrame, severityFilter]);
+  const globeSettings = useMemo(() => {
+    if (!snap) return undefined;
+    if (archived) return { ...snap.settings, basemap: 'atlas' as const, radarEnabled: false, geoSatEnabled: false, buildings3d: false };
+    return playbackOn ? { ...snap.settings, radarEnabled: false, geoSatEnabled: false } : snap.settings;
+  }, [playbackOn, snap?.settings, archived]);
 
   const focusSelection = useCallback(
     (sel: Selection | null) => {
-      setSelection(sel);
+      selectCoreSelection(sel);
       if (!snap || !sel) return;
       if (sel.kind === 'location') {
         const l = snap.locations.find((x) => x.id === sel.id);
         if (l) globeRef.current?.focus(l.lat, l.lon, l.radiusKm);
       }
     },
-    [snap],
+    [snap, selectCoreSelection],
   );
 
   const finishTool = async (pts: [number, number][], t: ToolMode) => {
@@ -422,30 +554,81 @@ export function App() {
     setAnnotations((prev) => prev.map((x) => (x.id === a.id ? a : x)));
     void api.putAnnotation(a).catch((e) => setToast(errorText(e)));
   };
-  const currentScene = (): Scene | null => {
-    const cam = globeRef.current?.getCamera();
-    if (!cam || !snap) return null;
+  const markAreaMatchesRead = (ids: string[]) => {
+    if (ids.length) void api.readAreaWatchEvents(ids).catch((error) => setToast(errorText(error)));
+  };
+  const openAreaMatch = (event: AreaWatchEvent) => {
+    setPage('globe');
+    selectCoreSelection({ kind: 'areaMatch', id: event.id });
+    globeRef.current?.focus(event.lat, event.lon, 50);
+    setBellOpen(false);
+    if (!event.read) markAreaMatchesRead([event.id]);
+  };
+  const captureInvestigation = () => {
+    const camera = globeRef.current?.getCamera();
+    if (!camera || !snap) throw new Error('Wait for the map to finish changing modes, then save the view.');
+    if (playbackOn && !cursor) throw new Error('Choose a time on the replay timeline before saving.');
+    const hazard = playbackOn ? replaySelection : selection?.kind === 'alert' || selection?.kind === 'quake' ? selection : null;
+    const investigation: Investigation = {
+      version: 1, clock: playbackOn && cursor ? { mode: 'recorded', t: cursor } : { mode: 'live' },
+      selection: hazard ? { kind: hazard.kind, id: hazard.id } : null,
+      severityFilter: SEVERITY_ORDER.filter(severity => severityFilter.has(severity)),
+      alertsAffectingOnly, quakesNearLocationsOnly: snap.settings.quakesNearLocationsOnly,
+      quakeMinMagnitude: replayQuery?.quakeMinMagnitude ?? snap.settings.quakeMinMagnitude,
+      quakeWindow: replayQuery?.quakeWindow ?? snap.settings.quakeWindow,
+      layers: { ...layers }, sceneMode, dataOpen, hudOn, showAirports, imagery: { ...imagery }, imageryYear: selectedYear,
+    };
     return {
-      format: 'atlas-watch-scene',
-      version: 1,
-      createdAt: new Date().toISOString(),
-      camera: cam,
-      basemap: snap.settings.basemap,
+      camera, investigation,
+      basemap: archived ? 'atlas' as const : snap.settings.basemap,
       terrainEnabled: snap.settings.terrainEnabled,
       layersEnabled: snap.settings.layersEnabled as LayerId[],
       visualMode: snap.settings.visualMode,
-      annotations,
-      views,
     };
   };
-  const applyScene = async (sc: Scene) => {
-    await patchSettings({ basemap: sc.basemap, terrainEnabled: sc.terrainEnabled, layersEnabled: sc.layersEnabled, visualMode: sc.visualMode });
-    for (const a of sc.annotations) await api.putAnnotation(a);
-    for (const v of sc.views) await api.putView(v);
-    setAnnotations(await api.listAnnotations());
-    setViews(await api.listViews());
-    globeRef.current?.setCamera(sc.camera);
+  const restoreInvestigation = async (camera: Camera, state?: Investigation) => {
+    userCameraRestore.current = true;
+    setTracked(null);
+    setTrackingMode('follow');
+    setOrbitFor(null);
+    setRouteLine(null);
+    setLeftFloat(null);
+    setToolsOpen(false);
+    if (state) {
+      setPage('globe');
+      setDiagOpen(false);
+      setKeyboardOpen(false);
+      setHistoryOpen(false);
+      setBellOpen(false);
+      setPlaybackMenu(false);
+      setCreditsOpen(false);
+      setPickMode(false);
+      setTool('none');
+      setDraft([]);
+      setRecordSel(null);
+      setSelection(null);
+      setSeverityFilter(new Set(state.severityFilter));
+      setAlertsAffectingOnly(state.alertsAffectingOnly);
+      setLayers(state.layers);
+      setHudOn(state.hudOn);
+      setShowAirports(state.showAirports);
+      setSceneMode(state.sceneMode);
+      if (state.imagery) {
+        setImagery(state.imagery);
+        setPreserveImageryDates(true);
+      }
+      if (state.clock.mode === 'recorded') startPlayback(state.clock.t, state.selection, { quakeWindow: state.quakeWindow, quakeMinMagnitude: state.quakeMinMagnitude });
+      else {
+        exitPlayback();
+        restoredSelection.current = state.selection;
+        selectCoreSelection(state.selection);
+      }
+      setDataOpen(state.dataOpen);
+    }
+    return await globeRef.current?.restoreCamera(camera, { mode: state?.sceneMode ?? sceneMode, animate: false }) ?? false;
   };
+  const scenes = useScenes({ basemap: archived ? 'atlas' : snap?.settings.basemap, capture: captureInvestigation,
+    restore: restoreInvestigation, setAnnotations, setViews, notify: setToast });
   const LAYER_CREDIT: Record<string, string> = {
     aircraft: 'Aircraft: adsb.lol (ODbL)',
     aircraftMil: 'Military flags: adsb.lol (ODbL)',
@@ -454,6 +637,7 @@ export function App() {
     fires: 'Fires: NASA FIRMS',
     firePerimeters: 'Perimeters: NIFC WFIGS',
     metar: 'METAR: NOAA AWC',
+    dwd: 'German weather warnings: © Deutscher Wetterdienst, CC BY 4.0; CAP polygons converted to GeoJSON',
     cyclones: 'Cyclones: NOAA NHC',
     cameras: 'Cameras: Caltrans; NYC DOT; Fintraffic / digitraffic.fi, CC BY 4.0; Powered by TfL Open Data; Transport Department, Hong Kong SAR (DATA.GOV.HK); DriveBC, Open Government Licence – British Columbia; Québec 511, MTMD, CC BY 4.0',
     transit: 'Transit: MBTA',
@@ -468,9 +652,18 @@ export function App() {
     const out: { key: string; tag: string; sev: string; title: string; meta: string; go(): void }[] = [];
     for (const r of allAircraftLoaded.filter((x) => specialCode(x)))
       out.push({ key: 'sq-' + r.id, tag: String(r.props.squawk ?? r.props.emergency), sev: 'sev-extreme', title: r.label, meta: specialCode(r)!.label + ' (reported)', go: () => { globeRef.current?.focus(r.lat, r.lon, 30); setRecordSel({ layer: 'aircraft', id: r.id }); } });
-    for (const l of snap.locations) {
-      const n = snap.evaluations[l.id]?.alertsInside.length ?? 0;
-      if (n) out.push({ key: 'loc-' + l.id, tag: 'Alert', sev: 'sev-severe', title: l.name, meta: `${n} active alert(s) at this saved place`, go: () => { setPage('globe'); setSelection({ kind: 'location', id: l.id }); } });
+    const alertsById = new Map(snap.alerts.map((alert) => [alert.id, alert]));
+    for (const place of snap.locations) {
+      const matches = snap.evaluations[place.id]?.alertsInside;
+      if (!matches?.length) continue;
+      const evidence = monitoringEvidence(snap, 'nws', place);
+      if (!evidence.usable) continue;
+      const top = matches.reduce<AlertSeverity>((severity, match) => {
+        const next = alertsById.get(match.alertId)?.severity ?? 'Unknown';
+        return severityRank(next) > severityRank(severity) ? next : severity;
+      }, 'Unknown');
+      const meta = `${matches.length} matched in the ${evidence.current ? 'current' : 'last observed'} NWS reply${evidence.observedAt ? ` · ${evidence.observedAt}` : ''}`;
+      out.push({ key: 'loc-' + place.id, tag: 'Alert', sev: SEVERITY_META[top].cls, title: place.name, meta, go: () => { setPage('globe'); selectCoreSelection({ kind: 'location', id: place.id }); } });
     }
     const loaded = new Set([...allAircraftLoaded.map((r) => r.id), ...(layerSnaps.vessels?.records ?? []).map((r) => r.id)]);
     for (const w of watchlist) if (loaded.has(w.id)) out.push({ key: 'w-' + w.id, tag: '★', sev: 'ok-badge', title: w.label, meta: 'Watched object is in the loaded data', go: () => setPage('watchlist') });
@@ -509,19 +702,23 @@ export function App() {
     ? {
         snap,
         layerSnaps,
+        playbackActive: playbackOn,
         patch: (p) => void patchSettings(p),
-        selectRecord: (layer, id) => setRecordSel({ layer, id }),
+        selectRecord: (layer, id) => {
+          setRecordSel({ layer, id });
+          if ((page === 'track' && layer === 'aircraft') || layer === 'dwd' || layer === 'firePerimeters') setPage('globe');
+        },
         selectEvent: (kind, id) => {
-          setRecordSel(null);
-          setSelection({ kind, id } as never);
+          selectCoreSelection({ kind, id } as never);
         },
         focus: (la, lo, r) => globeRef.current?.focus(la, lo, r),
         viewCenter: () => lastViewRef.current,
         viewBbox: () => lastViewRef.current?.bbox ?? null,
         watchlist,
         setWatchlist,
-        openPlayback: () => { setToolsOpen(true); setPlaybackOn(true); },
+        openPlayback: () => startPlayback(),
         openAi: () => setDialog({ kind: 'ai' }),
+        openVisitBriefing: () => setDialog({ kind: 'briefing', ids: [], mode: 'visit' }),
         openSettings: () => setDialog({ kind: 'settings' }),
         openProviders: () => setDialog({ kind: 'providers' }),
         toast: setToast,
@@ -529,6 +726,9 @@ export function App() {
       }
     : null;
   const selectedRecord = recordSel ? (layerSnaps[recordSel.layer]?.records.find((r) => r.id === recordSel.id) ?? null) : null;
+  const showFlight = recordSel?.layer === 'aircraft' && selectedRecord?.props.militaryFlag !== true;
+  const showRecordFirst = showFlight || recordSel?.layer === 'dwd' || recordSel?.layer === 'firePerimeters';
+  const selectedDwdWarning = recordSel?.layer === 'dwd' ? layerSnaps.dwd?.dwdWarnings?.find(warning => warning.id === recordSel.id) ?? null : null;
 
   if (loadError)
     return (
@@ -544,14 +744,14 @@ export function App() {
     );
 
   const categories = [...new Set(snap.locations.map((l) => l.category).filter(Boolean))].sort();
+  const areaMatches = snap.areaWatches.events;
+  const unreadAreaMatches = areaMatches.filter((event) => !event.read);
+  const bellCount = notifications.length + unreadAreaMatches.length;
   const selectedLocationId = selection?.kind === 'location' ? selection.id : null;
+  const searchMode = placeSearchMode(snap.settings.basemap, googleOwnKey, selectedYear);
   const zoneOnly = globeAlerts.filter((a) => !a.geometry).length;
   const diffText = (['nws', 'usgs'] as const)
-    .map((f) => {
-      const d = snap.diffs[f];
-      if (!d || !d.previousAt) return null;
-      return `${f === 'nws' ? 'Alerts' : 'Quakes'}: +${d.added.length} new, ${d.updated.length} updated, ${d.removed.length} ended`;
-    })
+    .map((f) => describeFeedDiff(snap.diffs[f]))
     .filter(Boolean)
     .join(' · ');
 
@@ -582,21 +782,15 @@ export function App() {
           onSettingsPatch={(p) => void patchSettings(p)}
         >
         </LeftPanel>);
-  const exportCurrentScene = async () => {
-    const scene = currentScene();
-    if (!scene) return;
-    try {
-      const path = await api.exportScene(scene);
-      if (path) setToast('Scene saved to ' + path);
-    } catch (error) { setToast(errorText(error)); }
-  };
-  const credits = 'Alerts: NWS/NOAA · Earthquakes: USGS · Surface: ' + (BASEMAP_CREDIT[snap.settings.basemap] ?? 'neutral')
+  const credits = 'Alerts: NWS/NOAA · Earthquakes: USGS · Surface: ' + (archived ? archiveCaption(archived) : BASEMAP_CREDIT[snap.settings.basemap] ?? 'neutral')
+
+    + (lighting.mode !== 'day' ? ' · City lights: NASA Black Marble, 2016 composite' : '')
     + (snap.settings.labelsOverlay && snap.settings.basemap !== 'streets' ? ' · Labels/roads: © OpenStreetMap contributors, © OpenMapTiles (OpenFreeMap)' : '')
-    + (snap.settings.buildings3d ? ' · Buildings: OpenStreetMap (heights may be estimated)' : '')
+    + (globeSettings?.buildings3d ? ' · Buildings: OpenStreetMap (heights may be estimated)' : '')
     + (snap.settings.terrainEnabled ? ' · Terrain: Mapzen Terrain Tiles (AWS Open Data; 3DEP, SRTM, GMTED, ETOPO1, EU-DEM)' : '')
     + ' · Boundaries: U.S. Census Bureau, Natural Earth · Globe: CesiumJS'
-    + (snap.settings.basemap === ('google3d' as never) ? ' · Sea level on Photoreal 3D: EGM96 geoid, NGA (public domain)' : '')
-    + (layerCredits ? ' · ' + layerCredits : '');
+    + (!archived && snap.settings.basemap === ('google3d' as never) ? ' · Sea level on Photoreal 3D: EGM96 geoid, NGA (public domain)' : '')
+    + (playbackOn ? [...new Set(playbackFrame?.points.map(fix => LAYER_CREDIT[fix.layer]).filter(Boolean))].map(credit => ' · ' + credit).join('') : layerCredits ? ' · ' + layerCredits : '');
   return (
     <div className={`app ${historyOpen ? 'history-open' : ''} ${kiosk ? 'kiosk' : ''} ${snap.settings.reducedMotion ? 'reduced-motion' : ''} ${playbackOn ? 'playback-active' : ''}`}>
       <header className="topbar">
@@ -620,6 +814,7 @@ export function App() {
             className="btn small-btn"
             title="Air-traffic view: aircraft layers, airports and altitude colors (no ATC audio: no authorized audio source is included)"
             onClick={() => {
+              if (playbackOn) exitPlayback();
               void patchSettings({ layersEnabled: [...new Set([...(snap.settings.layersEnabled as LayerId[]), 'aircraft', 'aircraftMil'])] as LayerId[] });
               setShowAirports(true);
               setToast('ATC view: aircraft and airports on. Zoom in to load aircraft for an area.');
@@ -630,56 +825,68 @@ export function App() {
         </div>
         <div className="seg" role="group" aria-label="Google imagery (your key)">
           <button
-            className={`btn small-btn ${snap.settings.basemap === 'google2d' ? 'primary' : ''}`}
-            aria-pressed={snap.settings.basemap === 'google2d'}
+            className={`btn small-btn ${!archived && snap.settings.basemap === 'google2d' ? 'primary' : ''}`}
+            aria-pressed={!archived && snap.settings.basemap === 'google2d'}
             title={googleOwnKey ? 'Google satellite imagery worldwide (your Google key; billed per tile)' : 'Needs your own Google Maps key: opens Providers'}
             onClick={() => {
               if (!googleOwnKey) return setDialog({ kind: 'providers' } as never);
-              void patchSettings({ basemap: snap.settings.basemap === 'google2d' ? 'atlas' : 'google2d' });
+              void patchSettings({ imageryYear: null, basemap: !archived && snap.settings.basemap === 'google2d' ? 'atlas' : 'google2d' });
             }}
           >
             Satellite
           </button>
           <button
-            className={`btn small-btn ${snap.settings.basemap === 'google3d' ? 'primary' : ''}`}
-            aria-pressed={snap.settings.basemap === 'google3d'}
+            className={`btn small-btn ${!photorealParked && snap.settings.basemap === 'google3d' ? 'primary' : ''}`}
+            aria-pressed={!photorealParked && snap.settings.basemap === 'google3d'}
             title={googleConfigured ? 'Google Photorealistic 3D cities (your Google key; billed per session)' : 'Needs your Google Maps key: opens Providers'}
             onClick={() => {
               if (!googleConfigured) return setDialog({ kind: 'providers' } as never);
               setSceneMode('3d');
-              void patchSettings({ basemap: snap.settings.basemap === 'google3d' ? 'atlas' : 'google3d' });
+              if (lighting.mode !== 'day') setLighting({ mode:'day' });
+              void patchSettings({ imageryYear: null, basemap: !photorealParked && snap.settings.basemap === 'google3d' ? 'atlas' : 'google3d' });
             }}
           >
             Photoreal 3D
           </button>
         </div>
+        <label className="archive-year-control" title={archived ? archiveCaption(archived) : 'Choose the acquisition year of the satellite imagery'}>
+          <span>Imagery year</span>
+          <select aria-label="Satellite imagery year" value={selectedYear ?? ''} onFocus={() => void imageryDates.load(archiveProduct).catch(() => {})}
+            onChange={event => void patchSettings({ imageryYear: event.target.value ? Number(event.target.value) : null })}>
+            <option value="">Auto</option>
+            {selectedYear !== null && !years.includes(selectedYear) && <option value={selectedYear}>{selectedYear} · unavailable</option>}
+            {years.map(year => <option key={year} value={year}>{year}</option>)}
+          </select>
+        </label>
         <SearchBox
-          googleGeocoder={googleOwnKey}
+          mode={searchMode}
           inputRef={searchRef}
           value={search}
           onChange={setSearch}
-          extra={searchExtra}
+          extra={playbackOn ? undefined : searchExtra}
           onGo={(lat, lon, label, kind) => {
-            globeRef.current?.focus(lat, lon, kind === 'address' ? 0.4 : kind === 'coords' ? 2 : 6);
+            setPage('globe');
+            setTracked(null);
+            globeRef.current?.focus(lat, lon, kind === 'address' ? 0.4 : kind === 'coords' ? 2 : 6, 1_500);
             setToast(`Flying to ${label}`);
           }}
         />
         <div className="fresh-group" aria-label="Data freshness">
-          <FreshnessChip label="NWS alerts" status={snap.feeds.nws} freshness={snap.freshness.nws} onRefresh={() => void api.refresh('nws')} />
-          <FreshnessChip label="USGS quakes" status={snap.feeds.usgs} freshness={snap.freshness.usgs} onRefresh={() => void api.refresh('usgs')} />
+          <FreshnessChip label={playbackOn ? 'Live NWS' : 'NWS alerts'} status={snap.feeds.nws} freshness={snap.freshness.nws} onRefresh={() => void api.refresh('nws')} />
+          <FreshnessChip label={playbackOn ? 'Live USGS' : 'USGS quakes'} status={snap.feeds.usgs} freshness={snap.freshness.usgs} onRefresh={() => void api.refresh('usgs')} />
         </div>
         <div className="bell-wrap">
-          <button className={`icon-btn ${notifications.length ? 'bell-on' : ''}`} onClick={() => setBellOpen(!bellOpen)} aria-label={`Notifications (${notifications.length})`} title="Notifications">
-            <Bell aria-hidden="true" />{notifications.length ? <span className="bell-count">{notifications.length}</span> : null}
+          <button className={`icon-btn ${bellCount ? 'bell-on' : ''}`} onClick={() => { setAreaMatchLimit(20); setBellOpen(!bellOpen); }} aria-label={`Notifications (${bellCount})`} aria-expanded={bellOpen} title="Notifications">
+            <Bell aria-hidden="true" />{bellCount ? <span className="bell-count">{bellCount}</span> : null}
           </button>
           {bellOpen && (
             <div className="bell-pop">
-              <div className="diag-sub">Notifications</div>
-              {notifications.length === 0 ? <p className="muted small">Nothing needs attention in the loaded data.</p> : null}
+              <div className="diag-sub">{playbackOn ? 'Current notifications' : 'Notifications'}</div>
+              {notifications.length === 0 && !areaMatches.length ? <p className="muted small">Nothing needs attention in the loaded data.</p> : null}
               <ul className="rec-list">
                 {notifications.map((n) => (
                   <li key={n.key}>
-                    <button className="rec-item" onClick={() => { n.go(); setBellOpen(false); }}>
+                    <button className="rec-item" onClick={() => { if (playbackOn) exitPlayback(); n.go(); setBellOpen(false); }}>
                       <span className={`tag ${n.sev}`}>{n.tag}</span>
                       <span className="rec-title">{n.title}</span>
                       <span className="rec-meta">{n.meta}</span>
@@ -687,6 +894,20 @@ export function App() {
                   </li>
                 ))}
               </ul>
+              {areaMatches.length > 0 && <>
+                <div className="diag-sub">Saved area matches</div>
+                {unreadAreaMatches.length > 0 && <button type="button" className="link-btn" onClick={() => markAreaMatchesRead(unreadAreaMatches.map((event) => event.id))}>Mark all area matches read</button>}
+                <ul className="rec-list">
+                  {areaMatches.slice(0, areaMatchLimit).map((event) => <li key={event.id}>
+                    <button className="rec-item" onClick={() => { if (playbackOn) exitPlayback(); openAreaMatch(event); }}>
+                      <span className="tag">{event.read ? 'Seen' : 'New'}</span>
+                      <span className="rec-title">{event.areaName} · M{event.magnitude}</span>
+                      <span className="rec-meta">USGS {event.quakeId} · {localTime(event.quakeTime)}</span>
+                    </button>
+                  </li>)}
+                </ul>
+                {areaMatchLimit < areaMatches.length && <button type="button" className="link-btn" onClick={() => setAreaMatchLimit((limit) => limit + 20)}>Show more area matches</button>}
+              </>}
             </div>
           )}
         </div>
@@ -712,16 +933,23 @@ export function App() {
         <section className="center" aria-label="Globe">
           <Globe
             ref={globeRef}
-            alerts={globeAlerts}
-            quakes={globeQuakes}
+            alerts={playbackOn ? replayAlerts : globeAlerts}
+            quakes={playbackOn ? playbackFrame?.usgs.records ?? [] : globeQuakes}
             locations={snap.locations}
             layers={layers}
-            settings={snap.settings}
+            settings={globeSettings ?? snap.settings}
             selection={globeSelection}
             pickMode={pickMode}
             onSelect={(s) => {
+              if (playbackOn) {
+                const record = s?.kind === 'alert' || s?.kind === 'quake' ? { kind: s.kind, id: s.id } : null;
+                setReplaySelection(record);
+                if (record) setDataOpen(true);
+                return;
+              }
               if (s) setDataOpen(true);
               if (s?.kind === 'airport') {
+                selectCoreSelection(null);
                 setAirportSel(s.id);
                 setPage('airports');
                 return;
@@ -730,8 +958,7 @@ export function App() {
                 setRecordSel({ layer: s.layer, id: s.id });
                 setSelection(null);
               } else {
-                setRecordSel(null);
-                setSelection(s as Selection | null);
+                selectCoreSelection(s as Selection | null);
               }
             }}
             onPick={(lat, lon) => {
@@ -741,13 +968,16 @@ export function App() {
             }}
             layerSnaps={layerSnaps}
             layersOn={snap.settings.layersEnabled as LayerId[]}
-            trail={trail}
-            routeLine={routeLine}
-            imagery={imagery}
+            trail={playbackOn ? null : trail}
+            routeLine={playbackOn ? null : routeLine}
+            archived={archived}
+            imagery={playbackOn || archived || unavailableImageryDates.length ? undefined : imagery}
             onImagerySplit={(split) => setImagery((s) => ({ ...s, split }))}
             trailKind={tracked?.layer === 'aircraft' || tracked?.layer === 'aircraftMil' ? 'aircraft' : tracked?.layer === 'vessels' ? 'vessel' : 'other'}
-            trackedRecord={tracked}
-            showOrbitFor={orbitFor}
+            trackedRecord={playbackOn ? null : tracked}
+            trackingMode={trackingMode}
+            onTrackingUnavailable={(reason) => { setTracked(null); setTrackingMode('follow'); setToast(reason); }}
+            showOrbitFor={playbackOn ? null : orbitFor}
             onViewChange={onViewChange}
             tool={tool}
             draftPoints={draft}
@@ -761,6 +991,7 @@ export function App() {
             }}
             annotations={annotations}
             playback={playbackOn ? playbackFrame : null}
+            playbackActive={playbackOn}
             google3dKey={google3dKey}
             imageryKeys={imageryKeys}
             onProviderError={setToast}
@@ -769,12 +1000,15 @@ export function App() {
             vesselClasses={vesselClasses}
             showAirports={showAirports}
             sceneMode={sceneMode}
+            lighting={lighting}
             onReady={(ok, err) => {
               if (ok) {
                 try {
                   const raw = localStorage.getItem('atlas.lastCamera');
                   const cam = raw ? JSON.parse(raw) : null;
-                  if (cam && typeof cam.lat === 'number') setTimeout(() => globeRef.current?.setCamera(cam, false), 0);
+                  if (cam && typeof cam.lat === 'number') setTimeout(() => {
+                    if (!userCameraRestore.current) globeRef.current?.setCamera(cam, false);
+                  }, 0);
                 } catch {
                   // ignore
                 }
@@ -783,11 +1017,15 @@ export function App() {
               if (err) (smoke.current.errors as string[]).push(err);
             }}
           />
+          {tracked && !widePage && !playbackOn && <TrackingControls target={tracked} record={layerSnaps[tracked.layer]?.records.find((r) => r.id === tracked.id) ?? null}
+            mode={trackingMode} in3d={sceneMode === '3d'} smoothMotion={snap.settings.smoothMotion} blockedReason={playbackOn ? 'Stop recorded playback before using cockpit perspective.' : null}
+            onMode={setTrackingMode} onStop={() => { setTracked(null); setTrackingMode('follow'); }} />}
           {!widePage && <FloatingMapControls
             left={page === 'globe' ? leftFloat : null} onLeft={toggleLeft}
+            solarLighting={lighting.mode !== 'day'}
             dataOpen={dataOpen} onData={() => { setDataOpen(!dataOpen); setToolsOpen(false); setKeyboardOpen(false); }}
             toolsOpen={toolsOpen} onTools={() => { setToolsOpen(!toolsOpen); setDataOpen(false); setKeyboardOpen(false); setHistoryOpen(false); if (leftFloat === 'scenes') setLeftFloat(null); }}
-            onAi={() => setDialog({ kind: 'ai' })}
+            onAi={() => { if (playbackOn) exitPlayback(); setDialog({ kind: 'ai' }); }}
             camerasOn={snap.settings.layersEnabled.includes('cameras')}
             onCameras={() => void patchSettings({ layersEnabled: snap.settings.layersEnabled.includes('cameras')
               ? snap.settings.layersEnabled.filter(id => id !== 'cameras') : [...snap.settings.layersEnabled, 'cameras'] })}
@@ -810,7 +1048,7 @@ export function App() {
               void api.setKiosk(!kiosk);
             }}
             onScreenshot={() => void api.captureScreenshot().then(path => path && setToast('Saved ' + path))}
-            onShare={exportCurrentScene} onWatchlist={() => setPage('watchlist')}
+            onShare={scenes.exportScene} onWatchlist={() => setPage('watchlist')}
             onZoom={direction => globeRef.current?.zoom(direction)} onNorth={() => globeRef.current?.northUp()} getHeading={getHeading}
             onReset={() => globeRef.current?.flyHome()} onHome={() => {
               if (selectedRecord) globeRef.current?.focus(selectedRecord.lat, selectedRecord.lon, 20);
@@ -821,21 +1059,29 @@ export function App() {
           {page === 'globe' && leftFloat === 'layers' && !diagOpen && (
             <FloatingPanel className="floating-left floating-layers" title={'Layers \u00b7 ' + (snap.settings.layersEnabled.length + (snap.settings.radarEnabled ? 1 : 0) + (snap.settings.geoSatEnabled ? 1 : 0)) + ' on'}
               onClose={() => setLeftFloat(null)}>
-              <LayersPanel settings={snap.settings} snaps={layerSnaps} onPatch={patch => void patchSettings(patch)} imagery={imagery}
-                onImagery={setImagery} airportsOn={showAirports} onAirports={() => setShowAirports(!showAirports)} alertsContent={locationPanel} />
+              <LayersPanel settings={snap.settings} snaps={layerSnaps} playbackActive={playbackOn} onPatch={patch => void patchSettings(patch)} imagery={imagery}
+                archived={archived} onImagery={changeImagery} preserveImageryDates={preserveImageryDates} airportsOn={showAirports} onAirports={() => setShowAirports(!showAirports)} alertsContent={locationPanel} />
             </FloatingPanel>
           )}
           {page === 'globe' && leftFloat === 'places' && !diagOpen && (
             <FloatingPanel className="floating-left floating-places" title="Places" onClose={() => setLeftFloat(null)}>{locationPanel}</FloatingPanel>
           )}
+          {page === 'globe' && leftFloat === 'lighting' && !diagOpen && (
+            <FloatingPanel className="floating-left" title="Day/night" onClose={() => setLeftFloat(null)}>
+              <EarthLightingPanel lighting={lighting} onChange={setLighting} />
+            </FloatingPanel>
+          )}
           {dataOpen && !widePage && (
-            <FloatingPanel className="floating-right data-panel" title="Data" onClose={() => setDataOpen(false)}
-              headerAction={<button className="btn" title="Briefing" onClick={() => setDialog({ kind: 'briefing', ids: selectedLocationId ? [selectedLocationId] : [] })}>
+            <FloatingPanel className={`floating-right data-panel${showFlight && !playbackOn ? ' flight-panel' : ''}`} title={playbackOn ? 'Recorded data' : showFlight ? 'Flight details' : 'Data'} onClose={() => setDataOpen(false)}
+              scrollResetKey={showRecordFirst ? recordSel : undefined}
+              headerAction={!playbackOn && !showFlight && <button className="btn" title="Briefing" onClick={() => setDialog({ kind: 'briefing', ids: selectedLocationId ? [selectedLocationId] : [] })}>
                 <FileText size={16} aria-hidden="true" /> Briefing</button>}>
-        {recordSel ? (
+        {playbackOn ? <ReplayDetails frame={playbackFrame} selection={replaySelection} onSelect={setReplaySelection}
+          onFocus={(lat, lon, radius) => globeRef.current?.focus(lat, lon, radius)} /> : recordSel ? (
           <aside className="panel right-panel" aria-label="Details">
-        <DetailsPanel
+        {!showRecordFirst && <DetailsPanel
           snap={snap}
+          dwdSnapshot={layerSnaps.dwd} dwdEnabled={snap.settings.layersEnabled.includes('dwd')} onSelectDwd={id => setRecordSel({ layer: 'dwd', id })}
           selection={null}
           onSelect={focusSelection}
           onEdit={(loc) => {
@@ -845,14 +1091,17 @@ export function App() {
           onDelete={(loc) => setDialog({ kind: 'delete', loc })}
           onFocus={(lat, lon, r) => globeRef.current?.focus(lat, lon, r)}
           onBriefing={(ids) => setDialog({ kind: 'briefing', ids })}
-        />
-            <button className="link-btn back" onClick={() => setRecordSel(null)}>
+        />}
+            {!showFlight && <button className="link-btn back" onClick={() => setRecordSel(null)}>
               ← Overview
-            </button>
+            </button>}
             <RecordDetails
               layer={recordSel.layer}
               record={selectedRecord}
+              dwdWarning={selectedDwdWarning}
+              layerEnabled={snap.settings.layersEnabled.includes(recordSel.layer)}
               snaps={layerSnaps}
+              savedPlaces={snap.locations}
               tracked={tracked?.layer === recordSel.layer && tracked.id === recordSel.id}
               watched={watchlist.some((w) => w.id === recordSel.id && (w.kind === 'vessel') === (recordSel.layer === 'vessels'))}
               onWatch={(on) => {
@@ -861,18 +1110,22 @@ export function App() {
                 else setWatchlist(watchlist.filter((w) => !(w.kind === kind && w.id === recordSel.id)));
               }}
               orbitShown={orbitFor === recordSel.id && recordSel.layer === 'satellites'}
-              onTrack={(on) => setTracked(on ? recordSel : null)}
+              onTrack={(on) => { setTrackingMode('follow'); setTracked(on ? recordSel : null); }}
               onOrbit={(on) => setOrbitFor(on ? recordSel.id : null)}
               onSelect={(layer, id) => setRecordSel({ layer, id })}
               onFocus={(lat, lon, r) => globeRef.current?.focus(lat, lon, r)}
               photosEnabled={snap.settings.aircraftPhotos}
               onEnablePhotos={() => void patchSettings({ aircraftPhotos: true })}
               onShowRoute={setRouteLine}
+              onOpenProviders={() => setDialog({ kind: 'providers' })}
+              onViewRoute={route => { setTracked(null); setTrackingMode('follow'); globeRef.current?.focusAirlineRoute(route); }}
             />
+            {showFlight && <button className="link-btn back" onClick={() => setRecordSel(null)}>← Overview</button>}
           </aside>
         ) : (
         <DetailsPanel includeOverview
           snap={snap}
+          dwdSnapshot={layerSnaps.dwd} dwdEnabled={snap.settings.layersEnabled.includes('dwd')} onSelectDwd={id => setRecordSel({ layer: 'dwd', id })}
           selection={selection}
           onSelect={focusSelection}
           onEdit={(loc) => {
@@ -911,11 +1164,11 @@ export function App() {
             </div>
             <div className="legend-note">
               Marker size scales with magnitude.
-              {zoneOnly > 0 && ` ${zoneOnly} zone-based alert(s) have no polygon and are not drawn; they are still evaluated for saved locations.`}
+              {playbackOn ? ' Recorded alerts without polygons are listed under Recorded data. The basemap, airports, saved places and drawings show current geographic context.' : zoneOnly > 0 && ` ${zoneOnly} zone-based alert(s) have no polygon and are not drawn; they are still evaluated for saved locations.`}
             </div>
           </div>
 </details>
-              {diffText && <p className="muted small">Since previous refresh — {diffText}</p>}
+              {!playbackOn && diffText && <p className="muted small">Since previous refresh — {diffText}</p>}
             </FloatingPanel>
           )}
           {keyboardOpen && !widePage && (
@@ -926,11 +1179,11 @@ export function App() {
           )}
           {playbackMenu && !widePage && (
             <FloatingPanel className="playback-menu" title="Playback / History" onClose={() => setPlaybackMenu(false)}>
-              <button className="btn" onClick={() => { setPlaybackOn(!playbackOn); setPlaybackMenu(false); }}>Replay recorded movement</button>
-              <button className="btn" onClick={() => { setHistoryOpen(!historyOpen); setPlaybackMenu(false); setLeftFloat(null); setDataOpen(false); setToolsOpen(false); setDiagOpen(false); setPage('globe'); }}>Event history</button>
+              <button className="btn" onClick={() => { if (playbackOn) exitPlayback(); else startPlayback(); setPlaybackMenu(false); }}>{playbackOn ? 'Exit playback' : 'Replay recorded data'}</button>
+              <button className="btn" onClick={() => { if (playbackOn) exitPlayback(); setHistoryOpen(!historyOpen); setPlaybackMenu(false); setLeftFloat(null); setDataOpen(false); setToolsOpen(false); setDiagOpen(false); setPage('globe'); }}>Event history</button>
             </FloatingPanel>
           )}
-          <TrafficBar
+          {!playbackOn && <TrafficBar
             aircraftOn={snap.settings.layersEnabled.includes('aircraft') || snap.settings.layersEnabled.includes('aircraftMil')}
             vesselsOn={snap.settings.layersEnabled.includes('vessels')}
             filter={aircraftFilter}
@@ -943,8 +1196,8 @@ export function App() {
               if (r) globeRef.current?.focus(r.lat, r.lon, 30);
               setRecordSel({ layer: 'aircraft', id });
             }}
-          />
-          {hudOn && <Hud get={getDiag} snaps={layerSnaps} layersOn={snap.settings.layersEnabled as LayerId[]} mode={snap.settings.visualMode} playbackTime={playbackOn ? (playbackFrame?.t ?? null) : null} />}
+          />}
+          {hudOn && <Hud get={getDiag} snaps={layerSnaps} layersOn={playbackOn ? [] : snap.settings.layersEnabled as LayerId[]} mode={snap.settings.visualMode} playbackActive={playbackOn} playbackTime={playbackFrame?.t ?? null} />}
           {!widePage && (toolsOpen || (page === 'globe' && leftFloat === 'scenes' && !diagOpen)) && (
             <ToolsPanel
               mode={toolsOpen ? 'tools' : 'scenes'}
@@ -968,47 +1221,28 @@ export function App() {
               onClear={() => setDraft([])}
               annotations={annotations}
               onAnnotationChange={updateAnnotation}
+              areaWatch={{
+                state: snap.areaWatches,
+                usgsStatus: snap.feeds.usgs,
+                freshness: snap.freshness.usgs,
+                onSave: api.putAreaWatch,
+                onRemove: api.deleteAreaWatch,
+              }}
+              onAnnotationsImported={setAnnotations}
+              getStreetViewCenter={() => globeRef.current?.getMapCenter() ?? null}
               onAnnotationDelete={(id) => {
-                setAnnotations((prev) => prev.filter((a) => a.id !== id));
-                void api.deleteAnnotation(id);
+                void api.deleteAnnotation(id).then(() => {
+                  setAnnotations((prev) => prev.filter((a) => a.id !== id));
+                }).catch((error) => setToast(errorText(error)));
               }}
               onFlyTo={(lon, lat) => globeRef.current?.focus(lat, lon, 2)}
               views={views}
-              onSaveView={(name) => {
-                const cam = globeRef.current?.getCamera();
-                if (!cam) return;
-                const v: SavedView = { id: crypto.randomUUID().replace(/[^A-Za-z0-9_-]/g, ''), name, camera: cam, basemap: snap.settings.basemap, layersEnabled: snap.settings.layersEnabled as LayerId[], createdAt: new Date().toISOString() };
-                void api.putView(v).then(() => setViews((prev) => [...prev, v]));
-              }}
-              onRestoreView={(v) => {
-                void patchSettings({ layersEnabled: v.layersEnabled, basemap: v.basemap as never });
-                globeRef.current?.setCamera(v.camera);
-              }}
-              onDeleteView={(id) => {
-                setViews((prev) => prev.filter((v) => v.id !== id));
-                void api.deleteView(id);
-              }}
-              onExportScene={async () => {
-                const sc = currentScene();
-                if (!sc) return;
-                try {
-                  const p = await api.exportScene(sc);
-                  if (p) setToast(`Scene saved to ${p}`);
-                } catch (e) {
-                  setToast(errorText(e));
-                }
-              }}
-              onImportScene={async () => {
-                try {
-                  const sc = await api.importScene();
-                  if (sc) {
-                    await applyScene(sc);
-                    setToast('Scene imported');
-                  }
-                } catch (e) {
-                  setToast(errorText(e));
-                }
-              }}
+              sceneBusy={scenes.busy}
+              onSaveView={scenes.saveView}
+              onRestoreView={scenes.restoreView}
+              onDeleteView={scenes.deleteView}
+              onExportScene={scenes.exportScene}
+              onImportScene={scenes.importScene}
               settings={snap.settings}
               onPatch={(p) => void patchSettings(p)}
               onClose={() => {
@@ -1017,11 +1251,14 @@ export function App() {
                 setTool('none');
                 setDraft([]);
               }}
-              onPlayback={() => setPlaybackOn(!playbackOn)}
+              onPlayback={() => playbackOn ? exitPlayback() : startPlayback()}
               playbackActive={playbackOn}
             />
           )}
-          {playbackOn && <PlaybackBar onFrame={setPlaybackFrame} onExit={() => setPlaybackOn(false)} />}
+          {playbackOn && <PlaybackBar key={replaySession} initialCursor={initialCursor} onCursor={setCursor} onFrame={setPlaybackFrame} onExit={exitPlayback} />}
+          {!playbackOn && unavailableImageryDates.length > 0 && <div className="pick-banner" role="status">
+            Saved imagery date unavailable in the current catalog ({unavailableImageryDates.map(date => date || 'unspecified').join(', ')}). Choose another date in Layers → Imagery.
+          </div>}
           {diagOpen && <DiagnosticsPanel get={getDiag} onClose={() => setDiagOpen(false)} />}
           {pickMode && <div className="pick-banner">Click the globe to choose a point · Esc to cancel</div>}
           <footer className="attribution">
@@ -1051,7 +1288,9 @@ export function App() {
         )}
       </main>
 
-      <HistoryDrawer snap={snap} open={historyOpen} onToggle={() => setHistoryOpen(!historyOpen)} search={search} onOpenRecord={(r) => setSelection({ kind: 'history', record: r })} onOpenSettings={() => setDialog({ kind: 'settings' })} />
+      <HistoryDrawer snap={snap} open={historyOpen} onToggle={() => { if (playbackOn) exitPlayback(); setHistoryOpen(!historyOpen); }}
+        search={search} onOpenRecord={(r) => selectCoreSelection({ kind: 'history', record: r })}
+        onReplay={(r) => startPlayback(r.lastObservedAt, { kind: r.kind, id: r.sourceId })} onOpenSettings={() => setDialog({ kind: 'settings' })} />
 
       {form && (
         <LocationForm
@@ -1068,7 +1307,7 @@ export function App() {
           onSaved={(loc) => {
             setForm(null);
             setPickMode(false);
-            setSelection({ kind: 'location', id: loc.id });
+            selectCoreSelection({ kind: 'location', id: loc.id });
             setToast(`Saved “${loc.name}”`);
           }}
         />
@@ -1076,7 +1315,7 @@ export function App() {
       {dialog?.kind === 'providers' && <ProvidersDialog onClose={() => setDialog(null)} />}
       {dialog?.kind === 'import' && <CsvImportDialog existing={snap.locations} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'settings' && <SettingsDialog settings={snap.settings} onClose={() => setDialog(null)} />}
-      {dialog?.kind === 'briefing' && <BriefingDialog locations={snap.locations} initial={dialog.ids} onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'briefing' && <BriefingDialog locations={snap.locations} initial={dialog.ids} initialMode={dialog.mode} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'ai' && (
         <AiDialog
           snap={snap}
@@ -1085,7 +1324,7 @@ export function App() {
           onOpenSettings={() => setDialog({ kind: 'settings' })}
           onSelectRecord={(id) => {
             setDialog(null);
-            setSelection(snap.alerts.some((a) => a.id === id) ? { kind: 'alert', id } : { kind: 'quake', id });
+            selectCoreSelection(snap.alerts.some((a) => a.id === id) ? { kind: 'alert', id } : { kind: 'quake', id });
           }}
         />
       )}
@@ -1122,6 +1361,12 @@ export function App() {
           </p>
         </Modal>
       )}
+      {scenes.surface && <Modal title="Restore imagery surface" onClose={scenes.cancelSurface}
+        footer={<><button className="btn" onClick={scenes.cancelSurface}>Cancel</button>
+          <button className="btn" onClick={() => scenes.chooseSurface(false)}>Keep current surface</button>
+          <button className="btn primary" onClick={() => scenes.chooseSurface(true)}>Use saved surface</button></>}>
+        <p>This view uses {BASEMAP_CREDIT[scenes.surface] ?? scenes.surface}. Switching to this surface can use your provider account or licensed imagery.</p>
+      </Modal>}
       {toast && (
         <div className="toast" role="status">
           {toast}

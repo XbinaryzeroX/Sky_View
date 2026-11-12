@@ -8,8 +8,10 @@
 // the Content-Security-Policy); nothing is proxied, re-hosted or recorded.
 
 import Hls from 'hls.js';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { relativeTime } from '../lib/format';
+import { CameraRecovery, refreshedImageUrl } from '../lib/cameraRecovery';
+import { cameraFocus, cameraMediaAllowed, useCameraPageVisible } from '../lib/cameraFocus';
 
 export interface CameraMedia {
   streamUrl: string | null;
@@ -23,7 +25,20 @@ export interface CameraMedia {
 
 type State = 'loading' | 'playing' | 'paused' | 'buffering' | 'offline' | 'error' | 'still';
 
-export function CameraPlayer({ media, title }: { media: CameraMedia; title: string }) {
+export function CameraPlayer({ media, title, boardContext = false }: { media: CameraMedia; title: string; boardContext?: boolean }) {
+  const visible = useCameraPageVisible();
+  const boards = useSyncExternalStore(cameraFocus.subscribe, cameraFocus.snapshot);
+  const context = boardContext ? 'board' : 'single';
+  if (!cameraMediaAllowed(visible, boardContext, boards)) {
+    return <div className="cam-player cam-suspended" data-camera-context={context} data-camera-suspended="true" role="status">
+      <div className="cam-empty">{!visible ? 'Window hidden: camera media disconnected.' : 'Camera paused while a camera board is open.'}</div>
+    </div>;
+  }
+  return <CameraPlayback media={media} title={title} context={context} />;
+}
+
+/** The one existing media implementation; suspension unmounts it and runs all player cleanup. */
+function CameraPlayback({ media, title, context }: { media: CameraMedia; title: string; context: 'single' | 'board' }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<State>(media.streamUrl ? 'loading' : 'still');
@@ -37,6 +52,9 @@ export function CameraPlayer({ media, title }: { media: CameraMedia; title: stri
   const [preferStill, setPreferStill] = useState(!media.streamUrl);
 
   useEffect(() => {
+    restartsRef.current = [];
+    lastGoodRef.current = 0;
+    lastRestartRef.current = 0;
     setPreferStill(!media.streamUrl);
     setState(media.streamUrl ? 'loading' : 'still');
     setError(null);
@@ -46,6 +64,7 @@ export function CameraPlayer({ media, title }: { media: CameraMedia; title: stri
     const v = videoRef.current;
     if (!v || !media.streamUrl || preferStill) return;
     let hls: Hls | null = null;
+    const recovery = new CameraRecovery();
     setState('loading');
     setError(null);
     const onPlaying = () => setState('playing');
@@ -69,13 +88,16 @@ export function CameraPlayer({ media, title }: { media: CameraMedia; title: stri
       const n = restartsRef.current.length;
       if (n <= 12) {
         setState('buffering');
-        setTimeout(() => setAttempt((x) => x + 1), Math.min(8000, 400 * 2 ** (n - 1)));
+        recovery.schedule(() => setAttempt((x) => x + 1), Math.min(8000, 400 * 2 ** (n - 1)));
       } else fail('error', 'The publisher’s video keeps failing to decode (damaged frames in the stream). Try again later.');
     };
     v.addEventListener('error', onVideoError);
     const fail = (kind: 'offline' | 'error', msg: string) => {
+      recovery.dispose();
       setState(kind);
       setError(msg);
+      hls?.destroy();
+      hls = null;
     };
     if (Hls.isSupported()) {
       const quick = { maxTimeToFirstByteMs: 10000, maxLoadTimeMs: 15000, timeoutRetry: { maxNumRetry: 1, retryDelayMs: 0, maxRetryDelayMs: 0 }, errorRetry: { maxNumRetry: 1, retryDelayMs: 500, maxRetryDelayMs: 1000 } };
@@ -92,7 +114,7 @@ export function CameraPlayer({ media, title }: { media: CameraMedia; title: stri
         } else if (data.type === Hls.ErrorTypes.NETWORK_ERROR && networkRecoveries < 3) {
           networkRecoveries++;
           setState('buffering');
-          setTimeout(() => hls?.startLoad(), 1500);
+          recovery.schedule(() => hls?.startLoad(), 1500);
           return;
         } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR && restartsRef.current.filter((t) => Date.now() - t < 120_000).length < 30) {
           // Some publisher streams contain damaged frames that Chromium's decoder rejects. Reconnect at the live edge.
@@ -100,7 +122,7 @@ export function CameraPlayer({ media, title }: { media: CameraMedia; title: stri
           setState('buffering');
           hls?.destroy();
           hls = null;
-          setTimeout(() => setAttempt((n) => n + 1), 300);
+          recovery.schedule(() => setAttempt((n) => n + 1), 300);
           return;
         } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) fail('error', 'The publisher’s video keeps failing to decode (damaged frames in the stream). Try again later.');
         else fail('error', `The stream stopped (${data.details}${code ? `, HTTP ${code}` : ''}).`);
@@ -111,10 +133,11 @@ export function CameraPlayer({ media, title }: { media: CameraMedia; title: stri
       hls.attachMedia(v);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         v.muted = true;
-        void v.play().catch(() => setState('paused'));
+        void v.play().catch(() => { if (recovery.active) setState('paused'); });
       });
     } else fail('error', 'This system cannot play HLS video (Media Source Extensions unavailable).');
     return () => {
+      recovery.dispose();
       v.removeEventListener('playing', onPlaying);
       v.removeEventListener('waiting', onWaiting);
       v.removeEventListener('pause', onPause);
@@ -129,16 +152,17 @@ export function CameraPlayer({ media, title }: { media: CameraMedia; title: stri
   const showVideo = !!media.streamUrl && !preferStill && state !== 'offline' && state !== 'error';
   const badge = showVideo ? (state === 'playing' ? 'LIVE VIDEO' : state === 'buffering' ? 'BUFFERING' : state === 'paused' ? 'PAUSED' : 'CONNECTING') : media.viewerName && !media.stillUrl ? 'PUBLISHER VIEWER' : 'STILL IMAGE';
   return (
-    <div className="cam-player" ref={boxRef}>
+    <div className="cam-player" ref={boxRef} data-camera-context={context}>
       <div className="cam-stage">
         <span className={`cam-badge ${showVideo && state === 'playing' ? 'live' : ''}`}>{badge}</span>
-        {showVideo ? (
-          <video ref={videoRef} muted={muted} playsInline aria-label={`Live video: ${title}`} onClick={() => (videoRef.current?.paused ? void videoRef.current.play() : videoRef.current?.pause())} />
-        ) : media.stillUrl ? (
-          <StillImage url={media.stillUrl} refreshMin={media.refreshMin} title={title} />
+        {media.streamUrl && !preferStill && (
+          <video hidden={!showVideo} style={{ display: showVideo ? undefined : 'none' }} ref={videoRef} muted={muted} playsInline aria-label={`Live video: ${title}`} onClick={() => (videoRef.current?.paused ? void videoRef.current.play() : videoRef.current?.pause())} />
+        )}
+        {!showVideo && (media.stillUrl ? (
+          <StillImage key={media.stillUrl} url={media.stillUrl} refreshMin={media.refreshMin} title={title} />
         ) : (
           <div className="cam-empty">{media.viewerName ? `${media.viewerName} shows this camera’s images on its own page: use “Open in ${media.viewerName}” to see them in your browser.` : 'No image or stream is published for this camera.'}</div>
-        )}
+        ))}
       </div>
       {error && (
         <p className="cam-error" role="status">
@@ -163,7 +187,14 @@ export function CameraPlayer({ media, title }: { media: CameraMedia; title: stri
           </>
         )}
         {media.streamUrl && (state === 'offline' || state === 'error') && (
-          <button className="btn" onClick={() => { restartsRef.current = []; setAttempt((n) => n + 1); }}>
+          <button className="btn" onClick={() => {
+            restartsRef.current = [];
+            lastGoodRef.current = 0;
+            lastRestartRef.current = 0;
+            setError(null);
+            setState('loading');
+            setAttempt((n) => n + 1);
+          }}>
             Retry stream
           </button>
         )}
@@ -192,12 +223,19 @@ function StillImage({ url, refreshMin, title }: { url: string; refreshMin: numbe
   const [tick, setTick] = useState(0);
   const [err, setErr] = useState(false);
   const [loadedAt, setLoadedAt] = useState<string | null>(null);
+  const refresh = () => {
+    setErr(false);
+    setTick((n) => n + 1);
+  };
   useEffect(() => {
-    const t = setInterval(() => setTick((n) => n + 1), Math.max(60, (refreshMin ?? 2) * 60) * 1000);
+    const t = setInterval(() => {
+      setErr(false);
+      setTick((n) => n + 1);
+    }, Math.max(60, (refreshMin ?? 2) * 60) * 1000);
     return () => clearInterval(t);
   }, [refreshMin]);
-  const src = `${url}${url.includes('?') ? '&' : '?'}t=${Math.floor(Date.now() / 60000)}-${tick}`;
-  if (err) return <div className="cam-empty">The publisher’s image could not be loaded (camera offline or image unavailable).</div>;
+  const src = useMemo(() => refreshedImageUrl(url, `${Date.now()}-${tick}`), [url, tick]);
+  if (err) return <div className="cam-empty" role="status">The publisher’s image could not be loaded (camera offline or image unavailable).<button className="btn" onClick={refresh}>Retry image</button></div>;
   return (
     <>
       <img

@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { pathLengthKm, polygonAreaKm2 } from '../../shared/geo';
 import type { Settings } from '../../shared/types';
 import type { Annotation, SavedView } from '../lib/api';
 import { VISUAL_MODE_LABEL, type VisualMode } from '../map/visualModes';
 import type { ToolMode } from './Globe';
+import { GeoJsonTools } from './GeoJsonTools';
+import { StreetViewAction } from './StreetViewAction';
+import { AreaWatchControl, AreaWatchStatus, type AreaWatchControls } from './AreaWatchControl';
 
 interface Props {
   mode?: 'tools' | 'scenes';
@@ -17,9 +20,13 @@ interface Props {
   annotations: Annotation[];
   onAnnotationChange(a: Annotation): void;
   onAnnotationDelete(id: string): void;
+  onAnnotationsImported?(annotations: Annotation[]): void;
+  areaWatch?: AreaWatchControls;
+  getStreetViewCenter?(): { lat: number; lon: number } | null;
   onFlyTo(lon: number, lat: number): void;
   views: SavedView[];
-  onSaveView(name: string): void;
+  sceneBusy?: boolean;
+  onSaveView(name: string): Promise<boolean> | void;
   onRestoreView(v: SavedView): void;
   onDeleteView(id: string): void;
   onExportScene(): void;
@@ -49,6 +56,19 @@ const COLORS = ['#ffd166', '#5fd0e6', '#ef476f', '#06d6a0', '#b07be8', '#ffffff'
 
 export function ToolsPanel(p: Props) {
   const [viewName, setViewName] = useState('');
+  const annotationRows = useMemo(() => {
+    if (p.mode === 'scenes') return [];
+    return p.annotations.map((a) => {
+      const info = a.kind === 'line' ? fmtKm(pathLengthKm(a.points)) : a.kind === 'area' ? measurementText('measure-area', a.points)?.replace('Area: ', '') : `${a.points[0][1].toFixed(4)}, ${a.points[0][0].toFixed(4)}`;
+      return { a, info };
+    });
+  }, [p.annotations, p.mode]);
+  const watchRules = useMemo(() => new Map(p.areaWatch?.state.rules.map((rule) => [rule.areaId, rule])), [p.areaWatch?.state.rules]);
+  const matchCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const event of p.areaWatch?.state.events ?? []) counts.set(event.areaId, (counts.get(event.areaId) ?? 0) + 1);
+    return counts;
+  }, [p.areaWatch?.state.events]);
   const m = measurementText(p.tool, p.draft);
   const drawing = p.tool.startsWith('draw');
   const toolBtn = (t: ToolMode, label: string) => (
@@ -97,12 +117,12 @@ export function ToolsPanel(p: Props) {
       )}
       {p.annotations.length > 0 && (
         <ul className="anno-list">
-          {p.annotations.map((a) => {
-            const info = a.kind === 'line' ? fmtKm(pathLengthKm(a.points)) : a.kind === 'area' ? measurementText('measure-area', a.points)?.replace('Area: ', '') : `${a.points[0][1].toFixed(4)}, ${a.points[0][0].toFixed(4)}`;
+          {annotationRows.map(({ a, info }) => {
             return (
               <li key={a.id}>
                 <input type="checkbox" checked={a.visible} onChange={(e) => p.onAnnotationChange({ ...a, visible: e.target.checked })} aria-label={`Show ${a.name}`} />
                 <select value={a.color} onChange={(e) => p.onAnnotationChange({ ...a, color: e.target.value })} aria-label="Color" className="color-select" style={{ color: a.color }}>
+                  {!COLORS.includes(a.color) && <option value={a.color} style={{ color: a.color }}>■ {a.color}</option>}
                   {COLORS.map((c) => (
                     <option key={c} value={c} style={{ color: c }}>
                       ■
@@ -117,22 +137,27 @@ export function ToolsPanel(p: Props) {
                 <button className="link-btn small" onClick={() => p.onAnnotationDelete(a.id)}>
                   Delete
                 </button>
+                {a.kind === 'area' && p.areaWatch && <AreaWatchControl area={a} controls={p.areaWatch} rule={watchRules.get(a.id)} matchCount={matchCounts.get(a.id) ?? 0} quakeMinMagnitude={p.settings.quakeMinMagnitude} />}
               </li>
             );
           })}
         </ul>
       )}
+      {p.areaWatch && p.annotations.some((a) => a.kind === 'area') && <AreaWatchStatus controls={p.areaWatch} quakeWindow={p.settings.quakeWindow} quakeMinMagnitude={p.settings.quakeMinMagnitude} />}
+      <GeoJsonTools count={p.annotations.length} onImported={p.onAnnotationsImported} />
+      {p.getStreetViewCenter && <StreetViewAction getCenter={p.getStreetViewCenter} />}
       </>}
       {p.mode === 'scenes' && <>
       {p.quickViews}
       <div className="diag-sub">Saved views</div>
       <div className="btn-row">
-        <input className="view-name" placeholder="Name this view" value={viewName} maxLength={120} onChange={(e) => setViewName(e.target.value)} />
+        <input className="view-name" aria-label="Name this view" placeholder="Name this view" value={viewName} maxLength={120} onChange={(e) => setViewName(e.target.value)} />
         <button
           className="btn small-btn"
-          onClick={() => {
-            p.onSaveView(viewName.trim() || `View ${p.views.length + 1}`);
-            setViewName('');
+          disabled={p.sceneBusy}
+          onClick={async () => {
+            const saved = await p.onSaveView(viewName.trim() || `View ${p.views.length + 1}`);
+            if (saved !== false) setViewName('');
           }}
         >
           Save view
@@ -142,11 +167,13 @@ export function ToolsPanel(p: Props) {
         <ul className="anno-list">
           {p.views.map((v) => (
             <li key={v.id}>
-              <button className="link-btn" onClick={() => p.onRestoreView(v)}>
+              <button className="link-btn" disabled={p.sceneBusy} onClick={() => p.onRestoreView(v)}>
                 {v.name}
               </button>
-              <span className="muted small">{v.layersEnabled.length} layers</span>
-              <button className="link-btn small" onClick={() => p.onDeleteView(v.id)}>
+              <span className="muted small">{v.investigation?.clock.mode === 'recorded'
+                ? <time dateTime={v.investigation.clock.t} title={v.investigation.clock.t}>Replay · {new Date(v.investigation.clock.t).toLocaleString()}</time>
+                : v.investigation ? 'Live view' : 'Map view'} · {v.layersEnabled.length} layers</span>
+              <button className="link-btn small" disabled={p.sceneBusy} onClick={() => p.onDeleteView(v.id)}>
                 Delete
               </button>
             </li>
@@ -155,14 +182,14 @@ export function ToolsPanel(p: Props) {
       )}
       <div className="diag-sub">Share</div>
       <div className="btn-row">
-        <button className="btn small-btn" onClick={p.onExportScene}>
+        <button className="btn small-btn" disabled={p.sceneBusy} onClick={p.onExportScene}>
           Export scene file…
         </button>
-        <button className="btn small-btn" onClick={p.onImportScene}>
+        <button className="btn small-btn" disabled={p.sceneBusy} onClick={p.onImportScene}>
           Import scene file…
         </button>
       </div>
-      <p className="muted small">Scene files hold the camera, map style, layer switches, annotations and saved views. They never include API keys, saved locations or notes.</p>
+      <p className="muted small">Saved views remember the map, alert and earthquake filters, selected alert or earthquake, Data panel and replay time. Scene files also share your drawings and named views. A recipient needs their own local recordings to replay that time.</p>
       </>}
       {p.mode !== 'scenes' && <>
       <div className="diag-sub">Display style (visual effect only)</div>
@@ -176,9 +203,9 @@ export function ToolsPanel(p: Props) {
       <p className="muted small">These styles recolor the rendered image. “Thermal-style” maps screen brightness to colors. It is not infrared or temperature data.</p>
       <div className="diag-sub">Playback</div>
       <button className={`btn small-btn ${p.playbackActive ? 'primary' : ''}`} onClick={p.onPlayback}>
-        {p.playbackActive ? 'Exit playback' : 'Replay recorded movement…'}
+        {p.playbackActive ? 'Exit playback' : 'Replay recorded data…'}
       </button>
-      <p className="muted small">Replays aircraft, vessel and transit positions this app recorded while running (last {p.settings.trackRetentionHours} h). Nothing was recorded while the app was closed.</p>
+      <p className="muted small">Movement fixes are retained for {p.settings.trackRetentionHours} h. Recorded alerts and earthquakes use your event-history retention settings.</p>
       </>}
     </div>
   );

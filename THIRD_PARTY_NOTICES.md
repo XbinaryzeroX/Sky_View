@@ -11,22 +11,35 @@ CesiumJS bundles additional third-party components, which are listed in the Cesi
 | Content | Source | Terms |
 |---|---|---|
 | Weather alerts | U.S. National Weather Service / NOAA, api.weather.gov | U.S. government work; NWS says the data is free to use for any purpose. Rate limits apply. |
+| German weather warnings (fetched) | [Deutscher Wetterdienst](https://opendata.dwd.de/weather/alerts/cap/COMMUNEUNION_DWD_STAT/) | © Deutscher Wetterdienst, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Original German bulletin text. Atlas Watch converts CAP coordinates and exclusions to GeoJSON and selects unexpired public warnings. |
 | Earthquakes | U.S. Geological Survey Earthquake Hazards Program GeoJSON feeds | U.S. government work in the public domain. Credit: U.S. Geological Survey. |
 | Shaded-relief globe surface | Natural Earth II, bundled with CesiumJS | Natural Earth: public domain |
 | Country boundaries | Natural Earth via `world-atlas` | Data: public domain; package: ISC |
 | U.S. state boundaries | U.S. Census Bureau cartographic boundary files via `us-atlas` | Data: U.S. government work; package: ISC |
-| Global imagery tiles (fetched) | NASA GIBS (Blue Marble Shaded Relief + Bathymetry, VIIRS) | NASA open data; attribution requested |
+| Global imagery tiles (bundled overview and fetched imagery) | [Blue Marble, August 2004, Shaded Relief and Bathymetry](https://gibs.earthdata.nasa.gov/layer-metadata/v1.0/BlueMarble_ShadedRelief_Bathymetry.json), MODIS / NASA Earth Observatory via NASA GIBS. VIIRS imagery is fetched separately. | [NASA imagery usage guidelines](https://www.nasa.gov/nasa-brand-center/images-and-media/). The packaged overview is reprojected, tiled and downsampled for display. |
 | U.S. imagery and topo tiles (fetched) | USGS The National Map | Public domain |
 | Streets, places, buildings (fetched) | OpenFreeMap vector tiles, OpenMapTiles schema | Data © OpenStreetMap contributors (ODbL 1.0); © OpenMapTiles; OpenFreeMap free incl. commercial use; attribution required |
 | Terrain (fetched) | Terrain Tiles on AWS (Mapzen/Tilezen) | Open data; attribution: USGS 3DEP/NED, SRTM, GMTED2010, ETOPO1, Copernicus EU-DEM (produced using Copernicus data funded by the EU), and others per https://github.com/tilezen/joerd/blob/master/docs/attribution.md |
+| Continental terrain (bundled) | [NOAA ETOPO1](https://doi.org/10.7289/V5C8276M) via the [Mapzen Terrain Tiles dataset](https://github.com/tilezen/joerd/blob/master/docs/data-sources.md) | Zoom-2 Terrarium elevations have been decoded and rounded to metres. The original source and checksum are recorded in terrain/ATTRIBUTION.txt. |
+| Coastal satellite imagery (fetched) | [ESA WorldCover Sentinel-2 annual true-colour composites](https://esa-worldcover.org/en/data-access) | © ESA WorldCover project 2020 and 2021. Contains modified Copernicus Sentinel data from the respective year processed by the ESA WorldCover consortium. CC BY 4.0. |
+| Ocean imagery (bundled) | [ESA Ocean Colour Climate Change Initiative](https://www.oceancolour.org/), NASA GIBS Terra/MODIS | Atlas Watch composites the 2020 and 2021 optical observations for display. Source URLs, observation dates, producer acknowledgements and checksums are in optical-water/SOURCES.json. |
+| City lights (bundled and fetched) | [NASA Black Marble, Earth at Night](https://science.nasa.gov/earth/earth-observatory/earth-at-night/) | NASA Earth Observatory, VIIRS on Suomi NPP, 2016 composite. The night view uses the selected time to control illumination. |
+| Star background (bundled) | [Yale Bright Star Catalog, Hoffleit and Warren, via NASA HEASARC](https://heasarc.gsfc.nasa.gov/W3Browse/catalog/bsc5p.html) | Atlas Watch rendered measured positions, magnitudes and approximate colours. See star-sky/ATTRIBUTION.txt. |
 | Aircraft (fetched) | adsb.lol | ODbL 1.0 |
+| Aircraft type designators and geometry categories (bundled) | [FAA Order JO 7360.1K, Appendix A](https://www.faa.gov/documentLibrary/media/Order/FAA_Order_JO_7360.1K_Aircraft_Type_Designators.pdf) | Federal Aviation Administration. The app uses designator and configuration data to select representative geometry. |
+| Aircraft and vessel 3D artwork (bundled) | [Sketchfab](https://sketchfab.com/) | Individual creators and source pages are listed in the renderer’s vehicle-models/ATTRIBUTION.txt and on each licensed preview. The bundled models use CC BY 4.0. |
+| Conflict assessments and humanitarian reports (fetched) | [Council on Foreign Relations](https://www.cfr.org/global-conflict-tracker/dashboard), [ReliefWeb](https://reliefweb.int/) and [UN News](https://news.un.org/) | Assessments and publications are attributed and linked to the publisher. Publication and retrieval times are shown where provided. |
+| Aircraft type photographs (bundled) | [Air Nostrum CRJ1000 EC-MJQ](https://commons.wikimedia.org/wiki/File:EC-MJQ_CRJ1000_Air_Nostrum_MAD.jpg) by Bene Riobó and [Lufthansa A320neo](https://commons.wikimedia.org/wiki/File:Lufthansa_Airbus_A320neo.jpg) by Paul Schmid | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). The included photographs were resized and encoded as WebP. These versions use the same license. |
 | Vessels, Finnish cameras (fetched) | Fintraffic / digitraffic.fi | CC BY 4.0 |
 | Satellite elements (fetched) | CelesTrak | U.S. government-origin; CelesTrak usage policy |
-| Fires, perimeters, airspace, METAR, cyclones, radar, address search (fetched) | NASA FIRMS, NIFC WFIGS, FAA, NOAA AWC/NHC/nowCOAST, U.S. Census | Public domain / NASA open data |
+| Fire perimeters (fetched) | [NIFC WFIGS Current Interagency Fire Perimeters](https://www.arcgis.com/home/item.html?id=d1c32af3212341869b3c810f1a215824). Contributors include DOI/IRWIN, USDA Forest Service, NPS, USFWS, BIA, BLM, NASF, USFA and NWCG. | Public dataset. NIFC identifies limits on accuracy, completeness and legal use. The app requests generalized geometry for display. |
+| Fire detections, airspace, METAR, cyclones, radar, address search (fetched) | NASA FIRMS, FAA, NOAA AWC/NHC/nowCOAST, U.S. Census | Public domain / NASA open data |
 | California cameras (fetched) | Caltrans | Public agency publication |
 | Boston transit (fetched) | MBTA | MassDOT/MBTA developer license |
 | Bundled place names | Natural Earth populated places | Public domain |
 | Bundled airports | OurAirports (ourairports.com) | Public domain |
+| Optional passenger flight status | [AeroDataBox direct API](https://aerodatabox.com/api-spec) | [Subscription terms](https://aerodatabox.com/terms). Customer key, one explicit Tier 2 query. No provider status data is bundled. |
+| Passenger airline callsign routes | [Virtual Radar Server standing data](https://github.com/vradarserver/standing-data/tree/57c9d605a36ef1ec5d6e0f48c2d0700002e582d2/routes) with [OurAirports](https://github.com/davidmegginson/ourairports-data/tree/97afc8b3ee4711d70199fda73bdd66df9fd58cb8) scheduled-service airports | [CC0 1.0](https://github.com/vradarserver/standing-data/blob/57c9d605a36ef1ec5d6e0f48c2d0700002e582d2/LICENSE) (Virtual Radar Server), public domain (OurAirports) |
 | Optional imagery (customer credentials) | Esri World Imagery, Mapbox Satellite, EOX Sentinel-2 cloudless, Google Photorealistic 3D Tiles | Each provider’s terms; metered or licensed; never bundled |
 
 ## Packages
@@ -55,6 +68,7 @@ CesiumJS bundles additional third-party components, which are listed in the Cesi
 | draco3d | 1.5.7 | Apache-2.0 |
 | earcut | 3.0.2 | ISC |
 | fancy-canvas | 2.1.0 | MIT |
+| fflate | 0.8.3 | MIT |
 | geographiclib-geodesic | 2.2.0 | MIT |
 | grapheme-splitter | 1.0.4 | MIT |
 | hls.js | 1.6.15 | Apache-2.0 |
@@ -81,6 +95,7 @@ CesiumJS bundles additional third-party components, which are listed in the Cesi
 | resolve-protobuf-schema | 2.1.0 | MIT |
 | robust-predicates | 3.0.3 | Unlicense |
 | satellite.js | 6.0.2 | MIT |
+| sax | 1.6.1 | BlueOak-1.0.0 |
 | scheduler | 0.28.0 | MIT |
 | topojson-client | 3.1.0 | ISC |
 | tslib | 2.9.1 | 0BSD |
@@ -3831,6 +3846,34 @@ THIS SOFTWARE.
 (no license file shipped in package; see package metadata)
 ```
 
+### fflate@0.8.3 (MIT)
+
+Source: https://101arrowz.github.io/fflate
+
+```
+MIT License
+
+Copyright (c) 2026 Arjun Barrett
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ### geographiclib-geodesic@2.2.0 (MIT)
 
 Source: https://github.com/geographiclib/geographiclib-js#readme
@@ -4921,6 +4964,68 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
+
+### sax@1.6.1 (BlueOak-1.0.0)
+
+Source: git+ssh://git@github.com/isaacs/sax-js.git
+
+```
+# Blue Oak Model License
+
+Version 1.0.0
+
+## Purpose
+
+This license gives everyone as much permission to work with
+this software as possible, while protecting contributors
+from liability.
+
+## Acceptance
+
+In order to receive this license, you must agree to its
+rules.  The rules of this license are both obligations
+under that agreement and conditions to your license.
+You must not do anything with this software that triggers
+a rule that you cannot or will not follow.
+
+## Copyright
+
+Each contributor licenses you to do everything with this
+software that would otherwise infringe that contributor's
+copyright in it.
+
+## Notices
+
+You must ensure that everyone who gets a copy of
+any part of this software from you, with or without
+changes, also gets the text of this license or a link to
+<https://blueoakcouncil.org/license/1.0.0>.
+
+## Excuse
+
+If anyone notifies you in writing that you have not
+complied with [Notices](#notices), you can keep your
+license by taking all practical steps to comply within 30
+days after the notice.  If you do not do so, your license
+ends immediately.
+
+## Patent
+
+Each contributor licenses you to do everything with this
+software that would otherwise infringe any patent claims
+they can license or become able to license.
+
+## Reliability
+
+No contributor can revoke this license.
+
+## No Liability
+
+***As far as the law allows, this software comes as is,
+without any warranty or condition, and no contributor
+will be liable to anyone for any damages related to this
+software or this license, under any kind of legal claim.***
 ```
 
 ### scheduler@0.28.0 (MIT)

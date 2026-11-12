@@ -1,0 +1,368 @@
+{
+  "version": 1,
+  "result": "PASS",
+  "reviewedAt": "2026-11-12T01:08:11.431330+00:00",
+  "scope": "Eight final source-exported PDFs; historical before PDF excluded.",
+  "filesReviewed": 8,
+  "pagesRenderedAndVisuallyInspected": 20,
+  "method": "Independent visual inspection of every existing Poppler-rendered page; pdfplumber character-order comparison against corresponding HTML body, source destinations/IDs/UTC labels, Unknown word boundaries, short note integrity and Letter text bounds.",
+  "originalAutomatedInspectionPreservedSha256": "8fbcc21b04e57c2b5d67565565a457bbf7cd9c644792dd849006cbd9000898a0",
+  "files": [
+    {
+      "case": "missing",
+      "pdf": "location-missing-2.pdf",
+      "html": "location-missing-1.html",
+      "sha256": "136f10362aa9136c6c93988f9ece4f8c8594400abe45f351f0c6adb98633ae89",
+      "bytes": 36636,
+      "pages": 2,
+      "pagesVisuallyInspected": [
+        1,
+        2
+      ],
+      "letterSize": true,
+      "bodyTextExactIgnoringWhitespace": true,
+      "minimumTextMarginsPt": {
+        "left": 39.75,
+        "top": 42.1,
+        "right": 40.69,
+        "bottom": 44.52
+      },
+      "unknownWords": {
+        "expected": 21,
+        "intactInPdf": 21
+      },
+      "shortNotesUnsplit": 3,
+      "sourceEvidence": {
+        "uniqueIds": 0,
+        "allIdsPreserved": true,
+        "allHyperlinkDestinationsPreserved": true,
+        "sampleIds": []
+      },
+      "utcLabels": {
+        "unique": 2,
+        "allPreserved": true,
+        "samples": [
+          "2026-11-12 01:03 UTC",
+          "2026-11-12 01:04 UTC"
+        ]
+      },
+      "visualResult": "PASS",
+      "noncriticalPagination": []
+    },
+    {
+      "case": "mixed",
+      "pdf": "location-mixed-2.pdf",
+      "html": "location-mixed-1.html",
+      "sha256": "324937dd11ae567e617cd005257daa225356df1e23779303e115552388e611e9",
+      "bytes": 49755,
+      "pages": 2,
+      "pagesVisuallyInspected": [
+        1,
+        2
+      ],
+      "letterSize": true,
+      "bodyTextExactIgnoringWhitespace": true,
+      "minimumTextMarginsPt": {
+        "left": 39.75,
+        "top": 42.95,
+        "right": 40.69,
+        "bottom": 56.52
+      },
+      "unknownWords": {
+        "expected": 12,
+        "intactInPdf": 12
+      },
+      "shortNotesUnsplit": 4,
+      "sourceEvidence": {
+        "uniqueIds": 2,
+        "allIdsPreserved": true,
+        "allHyperlinkDestinationsPreserved": true,
+        "sampleIds": [
+          "qa-location-polygon",
+          "qa-location-quake"
+        ]
+      },
+      "utcLabels": {
+        "unique": 4,
+        "allPreserved": true,
+        "samples": [
+          "2026-11-11 21:03 UTC",
+          "2026-11-11 21:04 UTC"
+        ]
+      },
+      "visualResult": "PASS",
+      "noncriticalPagination": []
+    },
+    {
+      "case": "restart",
+      "pdf": "location-restart-2.pdf",
+      "html": "location-restart-1.html",
+      "sha256": "47a78f8748c407e4d94cd97db4da334296d037854cc04f4aa349a3519de93c7f",
+      "bytes": 50057,
+      "pages": 2,
+      "pagesVisuallyInspected": [
+        1,
+        2
+      ],
+      "letterSize": true,
+      "bodyTextExactIgnoringWhitespace": true,
+      "minimumTextMarginsPt": {
+        "left": 39.75,
+        "top": 43.14,
+        "right": 40.69,
+        "bottom": 85.49
+      },
+      "unknownWords": {
+        "expected": 21,
+        "intactInPdf": 21
+      },
+      "shortNotesUnsplit": 4,
+      "sourceEvidence": {
+        "uniqueIds": 2,
+        "allIdsPreserved": true,
+        "allHyperlinkDestinationsPreserved": true,
+        "sampleIds": [
+          "qa-location-polygon",
+          "qa-location-quake"
+        ]
+      },
+      "utcLabels": {
+        "unique": 5,
+        "allPreserved": true,
+        "samples": [
+          "2026-11-11 21:03 UTC",
+          "2026-11-11 21:04 UTC"
+        ]
+      },
+      "visualResult": "PASS",
+      "noncriticalPagination": []
+    },
+    {
+      "case": "expired-cache",
+      "pdf": "location-expired-cache-2.pdf",
+      "html": "location-expired-cache-1.html",
+      "sha256": "a96f2ce1760d9c7d20c65937005c41845dc3d8f94037258334a7af6de2fdedc0",
+      "bytes": 50006,
+      "pages": 2,
+      "pagesVisuallyInspected": [
+        1,
+        2
+      ],
+      "letterSize": true,
+      "bodyTextExactIgnoringWhitespace": true,
+      "minimumTextMarginsPt": {
+        "left": 39.75,
+        "top": 43.14,
+        "right": 40.69,
+        "bottom": 63.74
+      },
+      "unknownWords": {
+        "expected": 21,
+        "intactInPdf": 21
+      },
+      "shortNotesUnsplit": 4,
+      "sourceEvidence": {
+        "uniqueIds": 2,
+        "allIdsPreserved": true,
+        "allHyperlinkDestinationsPreserved": true,
+        "sampleIds": [
+          "qa-location-polygon",
+          "qa-location-quake"
+        ]
+      },
+      "utcLabels": {
+        "unique": 5,
+        "allPreserved": true,
+        "samples": [
+          "2026-11-11 21:03 UTC",
+          "2026-11-11 21:04 UTC"
+        ]
+      },
+      "visualResult": "PASS",
+      "noncriticalPagination": []
+    },
+    {
+      "case": "complete-empty",
+      "pdf": "location-complete-empty-2.pdf",
+      "html": "location-complete-empty-1.html",
+      "sha256": "34973abb297dee31c55115af63dc2896c8aaf3f39e74afb5bd1d2a5e9f03b0fc",
+      "bytes": 36185,
+      "pages": 2,
+      "pagesVisuallyInspected": [
+        1,
+        2
+      ],
+      "letterSize": true,
+      "bodyTextExactIgnoringWhitespace": true,
+      "minimumTextMarginsPt": {
+        "left": 39.75,
+        "top": 43.14,
+        "right": 40.69,
+        "bottom": 63.74
+      },
+      "unknownWords": {
+        "expected": 6,
+        "intactInPdf": 6
+      },
+      "shortNotesUnsplit": 2,
+      "sourceEvidence": {
+        "uniqueIds": 0,
+        "allIdsPreserved": true,
+        "allHyperlinkDestinationsPreserved": true,
+        "sampleIds": []
+      },
+      "utcLabels": {
+        "unique": 1,
+        "allPreserved": true,
+        "samples": [
+          "2026-11-12 01:04 UTC"
+        ]
+      },
+      "visualResult": "PASS",
+      "noncriticalPagination": []
+    },
+    {
+      "case": "partial-zero",
+      "pdf": "location-partial-zero-2.pdf",
+      "html": "location-partial-zero-1.html",
+      "sha256": "497572ff62502e0816164c783aca9c55b84574b2f865394ef5789e3963f8dfa4",
+      "bytes": 36804,
+      "pages": 2,
+      "pagesVisuallyInspected": [
+        1,
+        2
+      ],
+      "letterSize": true,
+      "bodyTextExactIgnoringWhitespace": true,
+      "minimumTextMarginsPt": {
+        "left": 39.75,
+        "top": 43.89,
+        "right": 40.69,
+        "bottom": 76.02
+      },
+      "unknownWords": {
+        "expected": 15,
+        "intactInPdf": 15
+      },
+      "shortNotesUnsplit": 3,
+      "sourceEvidence": {
+        "uniqueIds": 0,
+        "allIdsPreserved": true,
+        "allHyperlinkDestinationsPreserved": true,
+        "sampleIds": []
+      },
+      "utcLabels": {
+        "unique": 1,
+        "allPreserved": true,
+        "samples": [
+          "2026-11-12 01:04 UTC"
+        ]
+      },
+      "visualResult": "PASS",
+      "noncriticalPagination": []
+    },
+    {
+      "case": "packaged-live",
+      "pdf": "location-packaged-live-2.pdf",
+      "html": "location-packaged-live-1.html",
+      "sha256": "b9ecea4e4e6c983f659672ce8804eb1325331c0130c4cc094f19efd4d8bf9746",
+      "bytes": 67527,
+      "pages": 4,
+      "pagesVisuallyInspected": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "letterSize": true,
+      "bodyTextExactIgnoringWhitespace": true,
+      "minimumTextMarginsPt": {
+        "left": 39.75,
+        "top": 43.14,
+        "right": 40.69,
+        "bottom": 60.27
+      },
+      "unknownWords": {
+        "expected": 4,
+        "intactInPdf": 4
+      },
+      "shortNotesUnsplit": 3,
+      "sourceEvidence": {
+        "uniqueIds": 29,
+        "allIdsPreserved": true,
+        "allHyperlinkDestinationsPreserved": true,
+        "sampleIds": [
+          "nc75465087",
+          "nc75465097"
+        ]
+      },
+      "utcLabels": {
+        "unique": 31,
+        "allPreserved": true,
+        "samples": [
+          "2026-11-11 01:05 UTC",
+          "2026-11-11 01:30 UTC"
+        ]
+      },
+      "visualResult": "PASS",
+      "noncriticalPagination": [
+        "Attribution occupies page 4 alone; preceding data and limitations remain complete."
+      ]
+    },
+    {
+      "case": "packaged-restart",
+      "pdf": "location-packaged-restart-2.pdf",
+      "html": "location-packaged-restart-1.html",
+      "sha256": "bb23e1df8e11e937decc48a51410ca35775ddde668012c9b781195227122d3b6",
+      "bytes": 67527,
+      "pages": 4,
+      "pagesVisuallyInspected": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "letterSize": true,
+      "bodyTextExactIgnoringWhitespace": true,
+      "minimumTextMarginsPt": {
+        "left": 39.75,
+        "top": 43.14,
+        "right": 40.69,
+        "bottom": 60.27
+      },
+      "unknownWords": {
+        "expected": 4,
+        "intactInPdf": 4
+      },
+      "shortNotesUnsplit": 3,
+      "sourceEvidence": {
+        "uniqueIds": 29,
+        "allIdsPreserved": true,
+        "allHyperlinkDestinationsPreserved": true,
+        "sampleIds": [
+          "nc75465087",
+          "nc75465097"
+        ]
+      },
+      "utcLabels": {
+        "unique": 31,
+        "allPreserved": true,
+        "samples": [
+          "2026-11-11 01:05 UTC",
+          "2026-11-11 01:30 UTC"
+        ]
+      },
+      "visualResult": "PASS",
+      "noncriticalPagination": [
+        "Attribution occupies page 4 alone; preceding data and limitations remain complete."
+      ]
+    }
+  ],
+  "limits": [
+    "Whitespace is ignored only for body-text equality; word boundaries are checked separately for Unknown.",
+    "This verifies exported content and print appearance, not independent provider data accuracy or emergency coverage.",
+    "Six fixture cases contain explicitly synthetic evidence; packaged-live and packaged-restart contain the recorded public-source evidence supplied by the separate packaged application QA.",
+    "Ordinary paragraphs and long tables may continue onto later pages; no critical loss, clipped source identifiers or split short callouts was observed."
+  ],
+  "sourceOrPackageChanged": false
+}

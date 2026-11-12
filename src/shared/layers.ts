@@ -4,10 +4,11 @@
 
 import type { LineString, MultiPolygon, Polygon } from 'geojson';
 import type { FeedState, Freshness } from './types';
+import type { DwdWarning } from './dwd';
 
-export type LayerId = 'aircraft' | 'aircraftMil' | 'vessels' | 'satellites' | 'fires' | 'firePerimeters' | 'metar' | 'cyclones' | 'cameras' | 'transit' | 'airspace' | 'incidents';
+export type LayerId = 'aircraft' | 'aircraftMil' | 'vessels' | 'satellites' | 'fires' | 'firePerimeters' | 'metar' | 'cyclones' | 'cameras' | 'transit' | 'airspace' | 'incidents' | 'dwd';
 
-export const LAYER_IDS: LayerId[] = ['aircraft', 'aircraftMil', 'vessels', 'satellites', 'fires', 'firePerimeters', 'metar', 'cyclones', 'cameras', 'transit', 'airspace', 'incidents'];
+export const LAYER_IDS: LayerId[] = ['aircraft', 'aircraftMil', 'vessels', 'satellites', 'fires', 'firePerimeters', 'metar', 'cyclones', 'cameras', 'transit', 'airspace', 'incidents', 'dwd'];
 
 export type Temporal = 'live' | 'delayed' | 'periodic' | 'forecast' | 'calculated' | 'interpolated' | 'simulated' | 'static';
 
@@ -115,11 +116,11 @@ export const LAYERS: Record<LayerId, LayerMeta> = {
     name: 'Wildfire perimeters',
     group: 'Hazards',
     temporal: 'periodic',
-    temporalNote: 'Interagency incident perimeters, updated by incident teams at irregular intervals; each shows its perimeter date.',
+    temporalNote: 'Incident teams update perimeters at irregular intervals. Boundaries are simplified for display.',
     source: 'NIFC WFIGS Interagency Perimeters (Current)',
-    sourceUrl: 'https://data-nifc.opendata.arcgis.com/',
-    license: 'U.S. public domain',
-    coverage: 'United States',
+    sourceUrl: 'https://www.arcgis.com/home/item.html?id=d1c32af3212341869b3c810f1a215824',
+    license: 'Public data under NIFC’s published terms',
+    coverage: 'United States. NIFC publishes boundaries for some wildfires and prescribed fires.',
     auth: 'None',
     pollSeconds: 900,
     viewport: false,
@@ -133,10 +134,24 @@ export const LAYERS: Record<LayerId, LayerMeta> = {
     source: 'NOAA Aviation Weather Center Data API',
     sourceUrl: 'https://aviationweather.gov/data/api/',
     license: 'U.S. public domain',
-    coverage: 'Worldwide airports; loaded for the current view when zoomed in (max 400 stations)',
+    coverage: 'Worldwide airports; current view when zoomed in, up to 400 observations per query box (two boxes across the date line)',
     auth: 'None',
     pollSeconds: 600,
     viewport: true,
+  },
+  dwd: {
+    id: 'dwd',
+    name: 'Weather warnings (Germany · DWD)',
+    group: 'Weather',
+    temporal: 'periodic',
+    temporalNote: 'Official warnings in the original German. Each bulletin shows its issue time and the validity supplied by DWD.',
+    source: 'Deutscher Wetterdienst (DWD)',
+    sourceUrl: 'https://opendata.dwd.de/weather/alerts/cap/COMMUNEUNION_DWD_STAT/',
+    license: '© Deutscher Wetterdienst, CC BY 4.0. Warning polygons converted from CAP to GeoJSON.',
+    coverage: 'Germany and the marine warning areas included by DWD. Some warnings identify named areas only.',
+    auth: 'None',
+    pollSeconds: 300,
+    viewport: false,
   },
   cyclones: {
     id: 'cyclones',
@@ -171,7 +186,7 @@ export const LAYERS: Record<LayerId, LayerMeta> = {
     name: 'Public traffic & weather cameras',
     group: 'Cameras',
     temporal: 'periodic',
-    temporalNote: 'Still images published by transportation agencies, refreshed by the publisher every few minutes. Camera aim and image time are the publisher’s.',
+    temporalNote: 'Publisher-listed HLS video, periodically refreshed still images and official viewer links. Availability is checked when opened; camera aim, capture time and delay are the publisher’s.',
     source: 'Caltrans CCTV with live video (California) · NYC DOT (New York City) · Fintraffic weather cameras (Finland) · TfL JamCams (London) · Hong Kong Transport Department · DriveBC (British Columbia) · Québec 511',
     sourceUrl: 'https://cwwp2.dot.ca.gov/documentation/cctv/cctv.htm',
     license: 'Caltrans: public agency data · Fintraffic: CC BY 4.0 · Powered by TfL Open Data · Hong Kong: DATA.GOV.HK terms · DriveBC: Open Government Licence – British Columbia · Québec 511: CC BY 4.0',
@@ -251,6 +266,8 @@ export interface LayerStatus {
 export interface LayerSnapshot {
   status: LayerStatus;
   records: GeoRecord[];
+  /** Includes named areas without a map polygon. Absent until a complete DWD snapshot is available. */
+  dwdWarnings?: DwdWarning[];
 }
 
 export interface ViewState {

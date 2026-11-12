@@ -16,13 +16,14 @@ import { profAdd } from '../lib/prof';
 // the sea was drawn as a bumpy seabed at its true depth. Tilted views showed
 // blurry 500 m imagery draped over underwater ridges. Samples inside
 // OpenStreetMap ocean polygons are now drawn at sea level. Each tile also gets
-// a water mask, so Cesium renders its standard animated water surface (a
-// rendering effect, not observed waves). If the ocean outline is unavailable
+// a water mask. Decorative wave shading is disabled by default for map readability;
+// the sea-level geometry remains. If the ocean outline is unavailable
 // for a tile, its heights are left unchanged.
 
 import { Credit, CustomHeightmapTerrainProvider, GeographicTilingScheme, HeightmapTerrainData, Math as CesiumMath, type Request, type TerrainData } from 'cesium';
 import { oceanMask } from './vectorTiles';
 import { mercatorPixel, MERCATOR_MAX_LAT, sourceZoomFor } from '../../shared/mercator';
+import { LAST_OVERVIEW_LEVEL, loadTerrainOverview, overviewTerrainTile } from './terrainOverview';
 
 export const TERRAIN_INFO = {
   name: 'Terrain Tiles (terrarium)',
@@ -119,6 +120,8 @@ class SeaLevelTerrainProvider extends CustomHeightmapTerrainProvider {
 }
 
 export interface TerrainStats {
+  /** Display meshes sampled from the bundled z2 overview, with no remote terrain or coast requests. */
+  overviewTiles: number;
   requested: number;
   loaded: number;
   failed: number;
@@ -135,7 +138,7 @@ export interface TerrainStats {
  */
 export function createTerrariumTerrain(options: { strict?: boolean } = {}): { provider: CustomHeightmapTerrainProvider; stats: TerrainStats } {
   const strict = options.strict === true;
-  const stats: TerrainStats = { requested: 0, loaded: 0, failed: 0, inFlight: 0, lastSuccessAt: null, lastError: null, deepestLevelRequested: 0 };
+  const stats: TerrainStats = { overviewTiles: 0, requested: 0, loaded: 0, failed: 0, inFlight: 0, lastSuccessAt: null, lastError: null, deepestLevelRequested: 0 };
   const cache = new Map<string, Promise<Float32Array>>(); // decoded 256x256 source tiles
   const queue: (() => void)[] = [];
 
@@ -209,55 +212,57 @@ export function createTerrariumTerrain(options: { strict?: boolean } = {}): { pr
     tilingScheme,
     credit: new Credit('Terrain: Mapzen Terrain Tiles on AWS (3DEP, SRTM, GMTED2010, ETOPO1, Copernicus EU-DEM, others)'),
     callback: () => undefined as never,
-    seaCallback: (x, y, level) => {
+    seaCallback: async (x, y, level) => {
       if (level > stats.deepestLevelRequested) stats.deepestLevelRequested = level;
       const rect = tilingScheme.tileXYToRectangle(x, y, level);
       const west = CesiumMath.toDegrees(rect.west);
       const east = CesiumMath.toDegrees(rect.east);
       const north = CesiumMath.toDegrees(rect.north);
       const south = CesiumMath.toDegrees(rect.south);
+      if (!strict && level <= LAST_OVERVIEW_LEVEL) {
+        const grid = await loadTerrainOverview();
+        if (grid) {
+          stats.overviewTiles++;
+          return overviewTerrainTile(grid, west, east, north, south, SIZE);
+        }
+      }
       const z = Math.min(SOURCE_MAX, sourceZoomFor(level, (north + south) / 2));
       // Pixel positions of every sample, then the set of source tiles they need.
       const lons = Array.from({ length: SIZE }, (_, c) => west + ((east - west) * c) / (SIZE - 1));
       const lats = Array.from({ length: SIZE }, (_, r) => north - ((north - south) * r) / (SIZE - 1));
-      const px = lons.map((lon) => mercatorPixel(lon, 0, z).x);
-      const py = lats.map((lat) => mercatorPixel(0, Math.max(-MERCATOR_MAX_LAT, Math.min(MERCATOR_MAX_LAT, lat)), z).y);
+      // Terrarium samples lie at pixel centers. Both sides of a shared edge need the full
+      // 2×2 interpolation kernel, even when a contributor belongs to the next source tile.
+      const px = lons.map((lon) => mercatorPixel(lon, 0, z).x - 0.5);
+      const py = lats.map((lat) => mercatorPixel(0, Math.max(-MERCATOR_MAX_LAT, Math.min(MERCATOR_MAX_LAT, lat)), z).y - 0.5);
       const n = 1 << z;
-      const need = new Map<string, Promise<Float32Array>>();
-      const tileOf = (v: number) => Math.min(n - 1, Math.max(0, Math.floor(v / 256)));
-      for (const yy of py) for (const xx of px) {
-        const k = `${tileOf(xx)}/${tileOf(yy)}`;
-        if (!need.has(k)) need.set(k, decodeTile(z, tileOf(xx), tileOf(yy)));
-      }
-      const keys = [...need.keys()];
+      const world = n * 256;
+      const wrapX = (p: number) => (p + world) % world;
+      const clampY = (p: number) => Math.max(0, Math.min(world - 1, p));
+      const sourceColumns = new Set(px.flatMap(v => [Math.floor(wrapX(Math.floor(v)) / 256), Math.floor(wrapX(Math.floor(v) + 1) / 256)]));
+      const sourceRows = new Set(py.flatMap(v => [Math.floor(clampY(Math.floor(v)) / 256), Math.floor(clampY(Math.floor(v) + 1) / 256)]));
+      const keys = [...sourceRows].flatMap(row => [...sourceColumns].map(col => ({ col, row, id: row * n + col })));
+      const terrainJobs = keys.map(k => decodeTile(z, k.col, k.row));
       // Ocean coverage for the same source tiles (OSM vector data stops at zoom 14; deeper zooms use a sub-area).
       // Strict (ground-height sampling): no ocean data and no sea flattening, only the source elevations.
       const oceanJobs = strict
         ? []
-        : keys.map((k) => {
-            const [tx, ty] = k.split('/').map(Number);
-            return oceanAlpha(z, tx, ty);
-          });
+        : keys.map(k => oceanAlpha(z, k.col, k.row));
       // Water-mask sample grid (finer than the height grid).
       const mpx = Array.from({ length: MASK }, (_, c) => mercatorPixel(west + ((east - west) * (c + 0.5)) / MASK, 0, z).x);
       const mpy = Array.from({ length: MASK }, (_, r) => mercatorPixel(0, Math.max(-MERCATOR_MAX_LAT, Math.min(MERCATOR_MAX_LAT, north - ((north - south) * (r + 0.5)) / MASK)), z).y);
-      return Promise.all([Promise.all(need.values()), Promise.all(oceanJobs)]).then(([tiles, oceans]) => {
-        const byKey = new Map(keys.map((k, i) => [k, tiles[i]]));
+      return Promise.all([Promise.all(terrainJobs), Promise.all(oceanJobs)]).then(([tiles, oceans]) => {
+        const byKey = new Map(keys.map((k, i) => [k.id, tiles[i]]));
         const oceanKnown = oceans.every((o) => o !== null);
-        const seaByKey = new Map(keys.map((k, i) => [k, oceans[i]]));
+        const seaByKey = new Map(keys.map((k, i) => [k.id, oceans[i]]));
+        const sourceId = (cx: number, cy: number) => Math.floor(cy / 256) * n + Math.floor(cx / 256);
         const sea = (gx: number, gy: number) => {
-          const cx = Math.min(n * 256 - 1, Math.max(0, gx));
-          const cy = Math.min(n * 256 - 1, Math.max(0, gy));
-          const t = seaByKey.get(`${tileOf(cx)}/${tileOf(cy)}`);
-          if (!t) return 0;
-          return t[(Math.floor(cy) % 256) * 256 + (Math.floor(cx) % 256)] / 255;
+          const cx = wrapX(Math.floor(gx)), cy = clampY(Math.floor(gy));
+          const mask = seaByKey.get(sourceId(cx, cy));
+          return mask ? mask[(cy % 256) * 256 + (cx % 256)] / 255 : null;
         };
         const at = (gx: number, gy: number) => {
-          const cx = Math.min(n * 256 - 1, Math.max(0, gx));
-          const cy = Math.min(n * 256 - 1, Math.max(0, gy));
-          const t = byKey.get(`${tileOf(cx)}/${tileOf(cy)}`);
-          if (!t) return 0;
-          return t[(Math.floor(cy) % 256) * 256 + (Math.floor(cx) % 256)];
+          const cx = wrapX(Math.floor(gx)), cy = clampY(Math.floor(gy));
+          return byKey.get(sourceId(cx, cy))![(cy % 256) * 256 + (cx % 256)];
         };
         const tRes = performance.now();
         const out = new Float32Array(SIZE * SIZE);
@@ -269,13 +274,14 @@ export function createTerrariumTerrain(options: { strict?: boolean } = {}): { pr
             const fx = px[c];
             const x0 = Math.floor(fx);
             const tx = fx - x0;
-            // Bilinear within the source; neighbours outside the fetched set fall back to the nearest fetched pixel.
-            const a = at(x0, y0) * (1 - tx) + (byKey.has(`${tileOf(x0 + 1)}/${tileOf(y0)}`) ? at(x0 + 1, y0) : at(x0, y0)) * tx;
-            const b = (byKey.has(`${tileOf(x0)}/${tileOf(y0 + 1)}`) ? at(x0, y0 + 1) : at(x0, y0)) * (1 - tx) + (byKey.has(`${tileOf(x0 + 1)}/${tileOf(y0 + 1)}`) ? at(x0 + 1, y0 + 1) : at(x0, y0)) * tx;
+            const a = at(x0, y0) * (1 - tx) + at(x0 + 1, y0) * tx;
+            const b = at(x0, y0 + 1) * (1 - tx) + at(x0 + 1, y0 + 1) * tx;
             const h = a * (1 - ty) + b * ty;
             // Inside OSM ocean: sea level (blended across the coastline pixel).
             // Without OSM ocean data, the elevation itself marks the sea, so the tile matches its neighbours.
-            out[r * SIZE + c] = strict ? h : oceanKnown ? h * (1 - sea(fx, fy)) : h < SEA_BELOW_M ? 0 : h;
+            // Use mask availability at the point, so an unrelated missing coast tile cannot change a shared edge.
+            const waterFraction = strict ? 0 : sea(fx + 0.5, fy + 0.5) ?? Number(h < SEA_BELOW_M);
+            out[r * SIZE + c] = h * (1 - waterFraction);
           }
         }
         profAdd('terrain.resample', performance.now() - tRes);
@@ -283,29 +289,19 @@ export function createTerrariumTerrain(options: { strict?: boolean } = {}): { pr
           seaStats.maskUnavailable++;
           seaStats.unavailableTiles.push(`${level}/${x}/${y}`);
           if (seaStats.unavailableTiles.length > 50) seaStats.unavailableTiles.shift();
-          const wf = new Uint8Array(MASK * MASK);
-          let anyF = 0;
-          let allF = 255;
-          for (let r = 0; r < MASK; r++)
-            for (let c = 0; c < MASK; c++) {
-              const v = at(mpx[c], mpy[r]) < SEA_BELOW_M ? 255 : 0;
-              wf[r * MASK + c] = v;
-              anyF |= v;
-              allF &= v;
-            }
-          return { heights: out, water: anyF === 0 ? new Uint8Array([0]) : allF === 255 ? new Uint8Array([255]) : wf };
         }
+        if (strict) return { heights: out, water: null };
         const water = new Uint8Array(MASK * MASK);
         let any = 0;
         let all = 255;
         for (let r = 0; r < MASK; r++)
           for (let c = 0; c < MASK; c++) {
-            const v = Math.round(sea(mpx[c], mpy[r]) * 255);
+            const v = Math.round((sea(mpx[c], mpy[r]) ?? Number(at(mpx[c], mpy[r]) < SEA_BELOW_M)) * 255);
             water[r * MASK + c] = v;
             any |= v;
             all &= v === 255 ? 255 : 0;
           }
-        if (!strict) seaStats.maskedTiles++; // ground sampling applies no ocean mask
+        if (oceanKnown) seaStats.maskedTiles++;
         return { heights: out, water: any === 0 ? new Uint8Array([0]) : all === 255 ? new Uint8Array([255]) : water };
       });
     },

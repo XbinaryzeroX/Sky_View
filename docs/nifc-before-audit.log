@@ -1,0 +1,325 @@
+{
+  "result": "BASELINE_CONFIRMED_MISSING_SECOND_PART",
+  "stage": "before",
+  "startedAt": "2026-11-12T01:43:42.081Z",
+  "executable": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\Atlas Watch.exe",
+  "archive": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+  "archiveSha256": "1899faf2b01f54e0371f68b3ef12546666260242344e8b75ae259b9ef248fe97",
+  "temporary": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-nifc-before-WoOaCU",
+  "profile": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-nifc-before-WoOaCU\\profile",
+  "database": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-nifc-before-WoOaCU\\qa.sqlite",
+  "framework": "playwright-core 1.62.1",
+  "sourceKind": "explicit controlled GeoJSON fixture; not a NIFC observation",
+  "sourcePath": "scripts/fixtures/nifc-multipart-qa.geojson",
+  "sourceBytes": 905,
+  "sourceSha256": "a550b62eeb3d3ac1e52e7d4328488895817df2f5d86416018fbf201e99c0ac30",
+  "providerResponsesReplaced": true,
+  "genuineProfileAccessed": false,
+  "installerExecuted": false,
+  "screenshots": [
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\nifc\\audit-nifc-before-same-scene.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\nifc\\audit-nifc-before-first-part.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\nifc\\audit-nifc-before-second-part.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\nifc\\audit-nifc-before-first-hole.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\nifc\\audit-nifc-before-second-hole.png"
+  ],
+  "errors": [],
+  "checks": [
+    {
+      "name": "first-part",
+      "part": 0,
+      "point": [
+        -120.9,
+        39.1
+      ],
+      "expected": true,
+      "polygonContainsPoint": true,
+      "picked": true,
+      "center": {
+        "x": 754,
+        "y": 473
+      }
+    },
+    {
+      "name": "second-part",
+      "part": 1,
+      "point": [
+        -119.7,
+        39.1
+      ],
+      "expected": false,
+      "polygonContainsPoint": true,
+      "picked": false,
+      "center": {
+        "x": 754,
+        "y": 473
+      }
+    },
+    {
+      "name": "first-hole",
+      "part": 0,
+      "point": [
+        -120.7,
+        39.3
+      ],
+      "expected": false,
+      "polygonContainsPoint": false,
+      "picked": false,
+      "center": {
+        "x": 754,
+        "y": 473
+      }
+    },
+    {
+      "name": "second-hole",
+      "part": 1,
+      "point": [
+        -119.5,
+        39.3
+      ],
+      "expected": false,
+      "polygonContainsPoint": false,
+      "picked": false,
+      "center": {
+        "x": 754,
+        "y": 473
+      }
+    }
+  ],
+  "pid": 35376,
+  "security": {
+    "isPackaged": true,
+    "version": "0.7.0",
+    "appPath": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+    "userData": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-nifc-before-WoOaCU\\profile",
+    "noSandbox": false,
+    "ignoreCertificateErrors": false,
+    "windows": [
+      {
+        "contextIsolation": true,
+        "sandbox": true,
+        "nodeIntegration": false,
+        "webSecurity": true
+      }
+    ]
+  },
+  "normalized": {
+    "id": "QA|NIFC|two-parts",
+    "lat": 39.239999999999995,
+    "lon": -120.75999999999999,
+    "altM": null,
+    "heading": null,
+    "speedKts": null,
+    "label": "CONTROLLED QA multipart fire — not a live observation",
+    "category": "Wildfire perimeter",
+    "observedAt": "2026-11-11T22:00:00.000Z",
+    "sourceUrl": "https://data-nifc.opendata.arcgis.com/",
+    "source": "NIFC WFIGS",
+    "props": {
+      "acres": 1234.5,
+      "percentContained": 25,
+      "discovered": null,
+      "state": "US-CA"
+    },
+    "geometry": {
+      "type": "MultiPolygon",
+      "coordinates": [
+        [
+          [
+            [
+              -121,
+              39
+            ],
+            [
+              -120.4,
+              39
+            ],
+            [
+              -120.4,
+              39.6
+            ],
+            [
+              -121,
+              39.6
+            ],
+            [
+              -121,
+              39
+            ]
+          ],
+          [
+            [
+              -120.8,
+              39.2
+            ],
+            [
+              -120.8,
+              39.4
+            ],
+            [
+              -120.6,
+              39.4
+            ],
+            [
+              -120.6,
+              39.2
+            ],
+            [
+              -120.8,
+              39.2
+            ]
+          ]
+        ],
+        [
+          [
+            [
+              -119.8,
+              39
+            ],
+            [
+              -119.2,
+              39
+            ],
+            [
+              -119.2,
+              39.6
+            ],
+            [
+              -119.8,
+              39.6
+            ],
+            [
+              -119.8,
+              39
+            ]
+          ],
+          [
+            [
+              -119.6,
+              39.2
+            ],
+            [
+              -119.6,
+              39.4
+            ],
+            [
+              -119.4,
+              39.4
+            ],
+            [
+              -119.4,
+              39.2
+            ],
+            [
+              -119.6,
+              39.2
+            ]
+          ]
+        ]
+      ]
+    }
+  },
+  "requests": [
+    {
+      "url": "https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query?where=1%3D1&outFields=poly_IncidentName,poly_DateCurrent,poly_PolygonDateTime,poly_GISAcres,poly_IRWINID,attr_IncidentSize,attr_PercentContained,attr_FireDiscoveryDateTime,attr_UniqueFireIdentifier,attr_POOState&outSR=4326&geometryPrecision=5&maxAllowableOffset=0.0005&f=geojson&resultOffset=0&resultRecordCount=1000",
+      "at": "2026-11-12T01:43:43.594Z",
+      "controlled": true
+    }
+  ],
+  "scene": {
+    "point": [
+      -120.1,
+      39.3
+    ],
+    "heightM": 300000,
+    "camera": {
+      "lat": 39.30000000000002,
+      "lon": -120.09999999999998,
+      "heightM": 299999.99999957636,
+      "heading": 6.283185307179586,
+      "pitch": -1.5707963267948966
+    }
+  },
+  "diagnostics": {
+    "cameraHeightM": 119999.99999991384,
+    "cameraLat": 39.300000000000004,
+    "cameraLon": -119.5,
+    "tilesPending": 0,
+    "maxRenderedLevel": 9,
+    "imageryMaxLevelHere": 0,
+    "imageryAtLimit": false,
+    "imageryErrors": 0,
+    "globeShown": true,
+    "renderErrors": 0,
+    "lastRenderError": null,
+    "imageryLayerCount": 0,
+    "photorealLoaded": false,
+    "lastImageryError": null,
+    "basemapSources": [],
+    "terrain": null,
+    "vector": {
+      "requested": 22,
+      "loaded": 22,
+      "failed": 0,
+      "lastError": null,
+      "lastSuccessAt": "2026-11-12T01:43:44.594Z",
+      "overlayOn": false
+    },
+    "usgs": {
+      "noDataTiles": 0,
+      "blankTiles": 0,
+      "imageryTiles": 0,
+      "oceanMasked": 0,
+      "maskUnavailable": 0,
+      "mixedWhiteTiles": 0
+    },
+    "models": {
+      "variants": 0,
+      "loaded": 0,
+      "shown": 0,
+      "created": 0,
+      "removed": 0,
+      "flips": 0,
+      "failed": 0,
+      "textureBytes": [],
+      "lastError": null,
+      "pack": {
+        "state": "none",
+        "models": 0,
+        "rejected": 0,
+        "error": null
+      },
+      "geoid": {
+        "state": "ready",
+        "error": null
+      }
+    },
+    "sea": {
+      "maskedTiles": 0,
+      "maskUnavailable": 0,
+      "unavailableTiles": [],
+      "reasons": {}
+    },
+    "buildings": {
+      "tilesLoaded": 0,
+      "buildingsDrawn": 0,
+      "lastError": null,
+      "visible": false,
+      "enabled": false,
+      "maxCameraM": 4000
+    },
+    "geoSat": {
+      "enabled": false,
+      "product": "infrared",
+      "frames": {},
+      "checks": 0,
+      "failedChecks": 0,
+      "lastError": null,
+      "layers": 0
+    },
+    "missingRequirement": null
+  },
+  "closedByRunner": true,
+  "archiveStableDuringRun": true,
+  "finishedAt": "2026-11-12T01:43:45.853Z"
+}

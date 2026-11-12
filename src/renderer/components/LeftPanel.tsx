@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { AlertSeverity, AppSnapshot, SavedLocation, WeatherAlert } from '../../shared/types';
-import { severityRank } from '../../shared/monitoring';
+import { monitoringCount, monitoringEvidence, severityRank } from '../../shared/monitoring';
 import { SEVERITY_META, SEVERITY_ORDER } from '../lib/format';
 import { Empty } from './common';
 import type { GlobeLayers } from './Globe';
@@ -26,10 +26,12 @@ interface Props {
 
 export function locationSummary(snap: AppSnapshot, loc: SavedLocation, severityFilter: Set<AlertSeverity>, alertsById: Map<string, WeatherAlert>) {
   const ev = snap.evaluations[loc.id];
-  if (!ev) return { inside: 0, top: null as AlertSeverity | null, unknown: 0, quakes: 0, ev };
-  const inside = ev.alertsInside.map((m) => alertsById.get(m.alertId)).filter((a): a is WeatherAlert => !!a && severityFilter.has(a.severity));
+  const nws = monitoringEvidence(snap, 'nws', loc), usgs = monitoringEvidence(snap, 'usgs', loc);
+  const inside = (nws.usable ? ev?.alertsInside ?? [] : []).map((m) => alertsById.get(m.alertId)).filter((a): a is WeatherAlert => !!a && severityFilter.has(a.severity));
   const top = inside.reduce<AlertSeverity | null>((acc, a) => (acc === null || severityRank(a.severity) > severityRank(acc) ? a.severity : acc), null);
-  return { inside: inside.length, top, unknown: ev.alertsUnknown.length, quakes: ev.quakesNearby.length, ev };
+  return { inside: inside.length, top, unknown: nws.usable ? ev?.alertsUnknown.length ?? 0 : 0, quakes: usgs.usable ? ev?.quakesNearby.length ?? 0 : 0, ev, nws, usgs,
+    hidden: nws.usable ? (ev?.alertsInside.length ?? 0) - inside.length : 0,
+    alertCount: monitoringCount(nws, inside.length), quakeCount: monitoringCount(usgs, ev?.quakesNearby.length ?? 0) };
 }
 
 export function LeftPanel(p: Props) {
@@ -91,10 +93,10 @@ export function LeftPanel(p: Props) {
           <div className="muted small summary-line">
             {affected > 0 ? (
               <>
-                <strong className="warn-text">{affected}</strong> of {rows.length} shown with confirmed alerts
+                <strong className="warn-text">{affected}</strong> of {rows.length} shown with known NWS matches
               </>
             ) : (
-              <>{rows.length} shown · none with confirmed alerts</>
+              <>{rows.length} shown · {rows.some(row => row.s.hidden > 0) ? 'matches hidden by severity filter' : rows.every(row => row.s.ev && row.s.nws.canAssertZero) ? 'no active NWS matches' : 'NWS status unknown or incomplete'}</>
             )}
           </div>
         )}
@@ -114,14 +116,16 @@ export function LeftPanel(p: Props) {
                   {loc.category || 'Uncategorized'} · {loc.radiusKm} km
                 </span>
                 <span className="loc-badges">
-                  {s.ev?.nwsFreshness === 'unavailable' ? (
-                    <span className="badge muted-badge" title="Weather alert data unavailable">
-                      Alerts ?
+                  {!s.ev || !s.nws.usable || (s.inside === 0 && !s.nws.canAssertZero && s.hidden === 0) ? (
+                    <span className="badge muted-badge" title={`NWS: ${s.nws.reason}`}>
+                      NWS alerts ?
                     </span>
                   ) : s.inside > 0 && s.top ? (
-                    <span className={`badge ${SEVERITY_META[s.top].cls}`} title={`${s.inside} confirmed alert(s); highest severity ${s.top}`}>
-                      <span aria-hidden="true">{SEVERITY_META[s.top].icon}</span> {s.inside} alert{s.inside === 1 ? '' : 's'}
+                    <span className={`badge ${SEVERITY_META[s.top].cls}`} title={`NWS: ${s.alertCount.label}; highest severity ${s.top}. ${s.nws.reason}`}>
+                      <span aria-hidden="true">{SEVERITY_META[s.top].icon}</span> NWS alerts: {s.alertCount.label}
                     </span>
+                  ) : s.hidden > 0 ? (
+                    <span className="badge muted-badge" title={`${s.hidden} known NWS match(es) hidden by the severity filter`}>Alerts hidden</span>
                   ) : (
                     <span className="badge ok-badge" title="No confirmed alerts at this point">
                       No alerts
@@ -132,16 +136,10 @@ export function LeftPanel(p: Props) {
                       ? {s.unknown}
                     </span>
                   )}
-                  {s.ev?.usgsFreshness !== 'unavailable' && s.quakes > 0 && (
-                    <span className="badge quake-badge" title={`${s.quakes} earthquake epicenter(s) within ${loc.radiusKm} km`}>
-                      ◎ {s.quakes}
-                    </span>
-                  )}
-                  {(s.ev?.nwsFreshness === 'stale' || s.ev?.usgsFreshness === 'stale') && (
-                    <span className="badge stale-badge" title="Based on stale data">
-                      stale
-                    </span>
-                  )}
+                  <span className={`badge ${s.quakeCount.state === 'unknown' ? 'muted-badge' : 'quake-badge'}`} title={`USGS: ${s.usgs.reason} Epicenters within ${loc.radiusKm} km.`}>
+                    ◎ USGS: {s.ev ? s.quakeCount.label : 'Unknown'}
+                  </span>
+                  {(!s.nws.current || !s.nws.complete) && <span className="badge muted-badge" title={s.nws.reason}>NWS {s.nws.state === 'last-observed' ? 'last observed' : s.nws.state}</span>}
                 </span>
               </button>
             </li>

@@ -23,6 +23,10 @@ describe('IPC argument validation', () => {
     [IPC.locationCreate, []],
     [IPC.locationUpdate, ['../../etc', good]],
     [IPC.locationDelete, [{ id: 'x' }]],
+    [IPC.areaWatchPut, [{ areaId: 'a', minMagnitude: 3, enabled: true, armedAt: '2020-01-01T00:00:00.000Z' }]],
+    [IPC.areaWatchDelete, ['../../other']],
+    [IPC.areaWatchRead, [[]]],
+    [IPC.areaWatchRead, [Array(501).fill('match')]],
     [IPC.locationImport, [[{ input: good, action: 'drop', targetId: null }]]],
     [IPC.feedsRefresh, ['https://evil.example']],
     [IPC.settingsUpdate, [{ nwsPollSeconds: 5 }]],
@@ -31,6 +35,11 @@ describe('IPC argument validation', () => {
     [IPC.settingsUpdate, [{ unknownKey: true }]],
     [IPC.historyQuery, [{ limit: 100000 }]],
     [IPC.historyQuery, [{ text: 'x', sql: 'DROP TABLE' }]],
+    [IPC.timelineRange, ['usgs']],
+    [IPC.timelineFrame, []],
+    [IPC.timelineFrame, ['2026-11-11T00:00:00Z']],
+    [IPC.timelineFrame, ['2026-11-11T00:00:00.000+01:00']],
+    [IPC.timelineFrame, [{ t: '2026-11-11T00:00:00.000Z' }]],
     [IPC.briefingExport, [[], 'html']],
     [IPC.briefingExport, [['a'], 'docx']],
     [IPC.aiAsk, [{ question: '', locationIds: [] }]],
@@ -42,6 +51,7 @@ describe('IPC argument validation', () => {
 
   it('accepts valid arguments', () => {
     expect(validateIpcArgs(IPC.locationCreate, [good])).toEqual([good]);
+    expect(validateIpcArgs(IPC.areaWatchRead, [['saved-match']])).toEqual([['saved-match']]);
     expect(validateIpcArgs(IPC.settingsUpdate, [{ quakeWindow: 'day' }])).toEqual([{ quakeWindow: 'day' }]);
   });
 
@@ -54,6 +64,11 @@ describe('IPC argument validation', () => {
     core.init();
     const platform: PlatformServices = { saveTextFile: async () => null, savePdfFromHtml: async () => null, openExternal: (u) => isAllowedExternalUrl(u), getNetStats: () => [], openTextFile: async () => null, setKiosk: () => true, captureScreenshot: async () => null, appVersion: 't' };
     const h = createHandlers(core, store, noFetch, platform);
+    const cursor = '2026-01-01T12:00:00.001Z';
+    await expect(dispatch(h, IPC.timelineRange, [])).resolves.toMatchObject({ points: 0, nwsFrames: 0, usgsFrames: 0 });
+    await expect(dispatch(h, IPC.timelineFrame, [cursor])).resolves.toMatchObject({
+      t: cursor, points: [], nws: { state: 'unknown', records: [] }, usgs: { state: 'unknown', records: [] },
+    });
     await expect(dispatch(h, 'shell:exec', ['calc'])).rejects.toThrow(/unknown channel/);
     await expect(dispatch(h, IPC.locationCreate, [{ ...good, lat: 500 }])).rejects.toThrow(IpcValidationError);
     expect(store.listLocations()).toHaveLength(0);

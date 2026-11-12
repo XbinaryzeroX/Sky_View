@@ -1,0 +1,1331 @@
+{
+  "startedAt": "2026-11-12T04:38:58.441Z",
+  "mode": "Live public network",
+  "result": "PASS",
+  "asar": "c7a61a99bef1b217e37c5300b98a9c28ff1b9e5d8384dfd29875b6f61dd33718",
+  "views": [
+    {
+      "label": "us",
+      "lat": 38.4,
+      "lon": -99,
+      "heightM": 5200000,
+      "samples": [
+        {
+          "elapsedMs": 53,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 2,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 0,
+            "loaded": 0,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 1112,
+          "terrainLevel": 0,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 1,
+              "x": 0,
+              "y": 0,
+              "textureWidth": 1024,
+              "textureHeight": 1024,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            }
+          ],
+          "visible": 2,
+          "pending": 18,
+          "renderedMax": 0,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 0,
+            "loaded": 0,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 1305,
+          "terrainLevel": 1,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 2,
+              "x": 0,
+              "y": 1,
+              "textureWidth": 1024,
+              "textureHeight": 1024,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            }
+          ],
+          "visible": 5,
+          "pending": 60,
+          "renderedMax": 1,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 0,
+            "loaded": 0,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 2295,
+          "terrainLevel": 4,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 5,
+              "x": 7,
+              "y": 12,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 9,
+              "level": 5,
+              "x": 7,
+              "y": 12,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 39,
+          "pending": 0,
+          "renderedMax": 4,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 0,
+            "loaded": 0,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 5393,
+          "terrainLevel": 4,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 5,
+              "x": 7,
+              "y": 12,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 9,
+              "level": 5,
+              "x": 7,
+              "y": 12,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 39,
+          "pending": 0,
+          "renderedMax": 4,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 0,
+            "loaded": 0,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 8496,
+          "terrainLevel": 4,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 5,
+              "x": 7,
+              "y": 12,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 9,
+              "level": 5,
+              "x": 7,
+              "y": 12,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 39,
+          "pending": 0,
+          "renderedMax": 4,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 0,
+            "loaded": 0,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 11597,
+          "terrainLevel": 4,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 5,
+              "x": 7,
+              "y": 12,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 9,
+              "level": 5,
+              "x": 7,
+              "y": 12,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 39,
+          "pending": 0,
+          "renderedMax": 4,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 0,
+            "loaded": 0,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 14694,
+          "terrainLevel": 4,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 5,
+              "x": 7,
+              "y": 12,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 9,
+              "level": 5,
+              "x": 7,
+              "y": 12,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 39,
+          "pending": 0,
+          "renderedMax": 4,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 0,
+            "loaded": 0,
+            "failed": 0
+          }
+        }
+      ],
+      "earlyScreenshotStartMs": 1485,
+      "earlyScreenshotEndMs": 2127,
+      "final": {
+        "terrainLevel": 4,
+        "layers": [
+          {
+            "slot": 0,
+            "level": 5,
+            "x": 7,
+            "y": 12,
+            "textureWidth": 256,
+            "textureHeight": 256,
+            "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+          },
+          {
+            "slot": 9,
+            "level": 5,
+            "x": 7,
+            "y": 12,
+            "textureWidth": 256,
+            "textureHeight": 256,
+            "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+          }
+        ],
+        "visible": 39,
+        "pending": 0,
+        "renderedMax": 4,
+        "imageryErrors": 0,
+        "lastError": null,
+        "renderErrors": 0,
+        "terrain": {
+          "requested": 0,
+          "loaded": 0,
+          "failed": 0
+        }
+      },
+      "bundledOverviewResources": 0,
+      "responses": {
+        "tiles.openfreemap.org 200": 85,
+        "atlas 200": 55
+      },
+      "localOverviewResponses": 55,
+      "firstLocalOverviewMs": 976,
+      "firstResponses": [
+        {
+          "atMs": 41,
+          "path": "/planet/20261101_080013_pt/1/0/0.pbf",
+          "status": 200
+        },
+        {
+          "atMs": 976,
+          "path": "/basemap-overview/1/0/0.jpg",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "label": "regional",
+      "lat": 39,
+      "lon": -106,
+      "heightM": 350000,
+      "samples": [
+        {
+          "elapsedMs": 1,
+          "terrainLevel": 4,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 5,
+              "x": 6,
+              "y": 12,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 9,
+              "level": 5,
+              "x": 6,
+              "y": 12,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 1,
+          "pending": 4,
+          "renderedMax": 4,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 0,
+            "loaded": 0,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 164,
+          "terrainLevel": 5,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 5,
+              "x": 6,
+              "y": 12,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 9,
+              "level": 6,
+              "x": 13,
+              "y": 24,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 4,
+          "pending": 10,
+          "renderedMax": 5,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 12,
+            "loaded": 0,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 371,
+          "terrainLevel": 5,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 6,
+              "x": 13,
+              "y": 24,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 0,
+              "level": 5,
+              "x": 6,
+              "y": 12,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 9,
+              "level": 6,
+              "x": 13,
+              "y": 24,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 4,
+          "pending": 10,
+          "renderedMax": 5,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 22,
+            "loaded": 10,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 539,
+          "terrainLevel": 6,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 6,
+              "x": 13,
+              "y": 24,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 9,
+              "level": 7,
+              "x": 26,
+              "y": 48,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 6,
+          "pending": 21,
+          "renderedMax": 6,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 44,
+            "loaded": 32,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 706,
+          "terrainLevel": 6,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 7,
+              "x": 26,
+              "y": 48,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 9,
+              "level": 7,
+              "x": 26,
+              "y": 48,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 6,
+          "pending": 15,
+          "renderedMax": 6,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 62,
+            "loaded": 50,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 1535,
+          "terrainLevel": 7,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 8,
+              "x": 52,
+              "y": 97,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 9,
+              "level": 8,
+              "x": 52,
+              "y": 97,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 9,
+          "pending": 27,
+          "renderedMax": 7,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 152,
+            "loaded": 140,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 2329,
+          "terrainLevel": 8,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 9,
+              "x": 105,
+              "y": 195,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 9,
+              "level": 9,
+              "x": 105,
+              "y": 195,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 18,
+          "pending": 13,
+          "renderedMax": 8,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 191,
+            "loaded": 179,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 5406,
+          "terrainLevel": 8,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 9,
+              "x": 105,
+              "y": 195,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 9,
+              "level": 9,
+              "x": 105,
+              "y": 195,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 30,
+          "pending": 0,
+          "renderedMax": 8,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 199,
+            "loaded": 199,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 8565,
+          "terrainLevel": 8,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 9,
+              "x": 105,
+              "y": 195,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 9,
+              "level": 9,
+              "x": 105,
+              "y": 195,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 30,
+          "pending": 0,
+          "renderedMax": 8,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 199,
+            "loaded": 199,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 11649,
+          "terrainLevel": 8,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 9,
+              "x": 105,
+              "y": 195,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 9,
+              "level": 9,
+              "x": 105,
+              "y": 195,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 30,
+          "pending": 0,
+          "renderedMax": 8,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 199,
+            "loaded": 199,
+            "failed": 0
+          }
+        }
+      ],
+      "earlyScreenshotStartMs": 1535,
+      "earlyScreenshotEndMs": 1819,
+      "final": {
+        "terrainLevel": 8,
+        "layers": [
+          {
+            "slot": 0,
+            "level": 9,
+            "x": 105,
+            "y": 195,
+            "textureWidth": 256,
+            "textureHeight": 256,
+            "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+          },
+          {
+            "slot": 9,
+            "level": 9,
+            "x": 105,
+            "y": 195,
+            "textureWidth": 256,
+            "textureHeight": 256,
+            "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+          }
+        ],
+        "visible": 30,
+        "pending": 0,
+        "renderedMax": 8,
+        "imageryErrors": 0,
+        "lastError": null,
+        "renderErrors": 0,
+        "terrain": {
+          "requested": 199,
+          "loaded": 199,
+          "failed": 0
+        }
+      },
+      "bundledOverviewResources": 0,
+      "responses": {
+        "tiles.openfreemap.org 200": 205,
+        "gibs.earthdata.nasa.gov 200": 43,
+        "s3.amazonaws.com 200": 199
+      },
+      "localOverviewResponses": 0,
+      "firstLocalOverviewMs": null,
+      "firstResponses": [
+        {
+          "atMs": 24,
+          "path": "/planet/20261101_080013_pt/6/12/24.pbf",
+          "status": 200
+        },
+        {
+          "atMs": 195,
+          "path": "/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/6/24/13.jpeg",
+          "status": 200
+        },
+        {
+          "atMs": 198,
+          "path": "/elevation-tiles-prod/terrarium/7/27/49.png",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "label": "city",
+      "lat": 39.74,
+      "lon": -104.99,
+      "heightM": 18000,
+      "samples": [
+        {
+          "elapsedMs": 8,
+          "terrainLevel": 8,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 9,
+              "x": 106,
+              "y": 194,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 9,
+              "level": 9,
+              "x": 106,
+              "y": 194,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 1,
+          "pending": 2,
+          "renderedMax": 8,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 208,
+            "loaded": 199,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 3110,
+          "terrainLevel": 8,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 9,
+              "x": 106,
+              "y": 194,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 9,
+              "level": 9,
+              "x": 106,
+              "y": 194,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 1,
+          "pending": 2,
+          "renderedMax": 8,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 211,
+            "loaded": 199,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 3279,
+          "terrainLevel": 9,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 10,
+              "x": 213,
+              "y": 388,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 9,
+              "level": 10,
+              "x": 213,
+              "y": 388,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 2,
+          "pending": 6,
+          "renderedMax": 9,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 225,
+            "loaded": 213,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 3592,
+          "terrainLevel": 10,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 11,
+              "x": 426,
+              "y": 777,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 5,
+              "level": 10,
+              "x": 213,
+              "y": 388,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}"
+            },
+            {
+              "slot": 9,
+              "level": 11,
+              "x": 426,
+              "y": 777,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 3,
+          "pending": 9,
+          "renderedMax": 10,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 240,
+            "loaded": 228,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 3756,
+          "terrainLevel": 10,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 11,
+              "x": 426,
+              "y": 777,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 5,
+              "level": 11,
+              "x": 426,
+              "y": 777,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}"
+            },
+            {
+              "slot": 9,
+              "level": 11,
+              "x": 426,
+              "y": 777,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 3,
+          "pending": 7,
+          "renderedMax": 10,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 255,
+            "loaded": 243,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 4285,
+          "terrainLevel": 11,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 11,
+              "x": 426,
+              "y": 777,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 5,
+              "level": 11,
+              "x": 426,
+              "y": 777,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}"
+            },
+            {
+              "slot": 9,
+              "level": 12,
+              "x": 853,
+              "y": 1554,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 5,
+          "pending": 18,
+          "renderedMax": 11,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 312,
+            "loaded": 300,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 4450,
+          "terrainLevel": 11,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 11,
+              "x": 426,
+              "y": 777,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 5,
+              "level": 12,
+              "x": 853,
+              "y": 1554,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}"
+            },
+            {
+              "slot": 9,
+              "level": 12,
+              "x": 853,
+              "y": 1554,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            }
+          ],
+          "visible": 6,
+          "pending": 23,
+          "renderedMax": 11,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 335,
+            "loaded": 323,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 4722,
+          "terrainLevel": 12,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 11,
+              "x": 426,
+              "y": 777,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 5,
+              "level": 13,
+              "x": 1706,
+              "y": 3109,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}"
+            },
+            {
+              "slot": 9,
+              "level": 13,
+              "x": 1706,
+              "y": 3109,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            },
+            {
+              "slot": 10,
+              "level": 13,
+              "x": 1706,
+              "y": 3109,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "Simulated water ripples · © OpenStreetMap contributors, OpenMapTiles"
+            }
+          ],
+          "visible": 9,
+          "pending": 21,
+          "renderedMax": 12,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 350,
+            "loaded": 347,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 7821,
+          "terrainLevel": 12,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 11,
+              "x": 426,
+              "y": 777,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 5,
+              "level": 13,
+              "x": 1706,
+              "y": 3109,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}"
+            },
+            {
+              "slot": 9,
+              "level": 13,
+              "x": 1706,
+              "y": 3109,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            },
+            {
+              "slot": 10,
+              "level": 13,
+              "x": 1706,
+              "y": 3109,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "Simulated water ripples · © OpenStreetMap contributors, OpenMapTiles"
+            }
+          ],
+          "visible": 18,
+          "pending": 0,
+          "renderedMax": 12,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 350,
+            "loaded": 350,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 10928,
+          "terrainLevel": 12,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 11,
+              "x": 426,
+              "y": 777,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 5,
+              "level": 13,
+              "x": 1706,
+              "y": 3109,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}"
+            },
+            {
+              "slot": 9,
+              "level": 13,
+              "x": 1706,
+              "y": 3109,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            },
+            {
+              "slot": 10,
+              "level": 13,
+              "x": 1706,
+              "y": 3109,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "Simulated water ripples · © OpenStreetMap contributors, OpenMapTiles"
+            }
+          ],
+          "visible": 18,
+          "pending": 0,
+          "renderedMax": 12,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 350,
+            "loaded": 350,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 14036,
+          "terrainLevel": 12,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 11,
+              "x": 426,
+              "y": 777,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            },
+            {
+              "slot": 5,
+              "level": 13,
+              "x": 1706,
+              "y": 3109,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}"
+            },
+            {
+              "slot": 9,
+              "level": 13,
+              "x": 1706,
+              "y": 3109,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+            },
+            {
+              "slot": 10,
+              "level": 13,
+              "x": 1706,
+              "y": 3109,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "Simulated water ripples · © OpenStreetMap contributors, OpenMapTiles"
+            }
+          ],
+          "visible": 18,
+          "pending": 0,
+          "renderedMax": 12,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 350,
+            "loaded": 350,
+            "failed": 0
+          }
+        }
+      ],
+      "earlyScreenshotStartMs": 1559,
+      "earlyScreenshotEndMs": 1738,
+      "final": {
+        "terrainLevel": 12,
+        "layers": [
+          {
+            "slot": 0,
+            "level": 11,
+            "x": 426,
+            "y": 777,
+            "textureWidth": 256,
+            "textureHeight": 256,
+            "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+          },
+          {
+            "slot": 5,
+            "level": 13,
+            "x": 1706,
+            "y": 3109,
+            "textureWidth": 256,
+            "textureHeight": 256,
+            "source": "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}"
+          },
+          {
+            "slot": 9,
+            "level": 13,
+            "x": 1706,
+            "y": 3109,
+            "textureWidth": 256,
+            "textureHeight": 256,
+            "source": "© OpenMapTiles © OpenStreetMap contributors (OpenFreeMap)"
+          },
+          {
+            "slot": 10,
+            "level": 13,
+            "x": 1706,
+            "y": 3109,
+            "textureWidth": 256,
+            "textureHeight": 256,
+            "source": "Simulated water ripples · © OpenStreetMap contributors, OpenMapTiles"
+          }
+        ],
+        "visible": 18,
+        "pending": 0,
+        "renderedMax": 12,
+        "imageryErrors": 0,
+        "lastError": null,
+        "renderErrors": 0,
+        "terrain": {
+          "requested": 350,
+          "loaded": 350,
+          "failed": 0
+        }
+      },
+      "bundledOverviewResources": 0,
+      "responses": {
+        "tiles.openfreemap.org 200": 157,
+        "s3.amazonaws.com 200": 151,
+        "basemap.nationalmap.gov 200": 51
+      },
+      "localOverviewResponses": 0,
+      "firstLocalOverviewMs": null,
+      "firstResponses": [
+        {
+          "atMs": 2620,
+          "path": "/planet/20261101_080013_pt/10/213/387.pbf",
+          "status": 200
+        },
+        {
+          "atMs": 3128,
+          "path": "/elevation-tiles-prod/terrarium/10/212/389.png",
+          "status": 200
+        },
+        {
+          "atMs": 3278,
+          "path": "/arcgis/rest/services/USGSImageryOnly/MapServer/tile/10/387/213",
+          "status": 200
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "globeReadyMs": 1679,
+  "settings": {
+    "basemap": "atlas",
+    "renderQuality": "balanced",
+    "terrainEnabled": true,
+    "labelsOverlay": true,
+    "radarEnabled": false
+  }
+}

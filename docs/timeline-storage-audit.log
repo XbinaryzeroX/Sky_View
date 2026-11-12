@@ -1,0 +1,44 @@
+{
+  "input": "synthetic local fixtures; no provider verification",
+  "node": "v24.22.1",
+  "records": {
+    "nws": 500,
+    "usgs": 10000
+  },
+  "serializedReplyBytes": 4694672,
+  "coldWriteMs": 111.21,
+  "stableTwoFeedWriteMs": [
+    61.64,
+    64.28,
+    54.63,
+    57.22,
+    62.57
+  ],
+  "oneRevisionWriteMs": 50.55,
+  "oldFrameMs": 34.05,
+  "latestFrameMs": 27.63,
+  "firstStats": {
+    "epochs": 2,
+    "revisions": 10500,
+    "payloadBytes": 4684170,
+    "intervals": 10500
+  },
+  "stableStats": {
+    "epochs": 12,
+    "revisions": 10500,
+    "payloadBytes": 4684170,
+    "intervals": 10500
+  },
+  "finalStats": {
+    "epochs": 13,
+    "revisions": 10501,
+    "payloadBytes": 4684585,
+    "intervals": 10501
+  },
+  "sqliteBytes": {
+    "database": 7413760,
+    "-wal": 7712672,
+    "-shm": 32768
+  },
+  "outputDirectory": "C:\\Users\\infob\\AppData\\Local\\Packages\\openai.codex_2p2nqsd0c76g0\\AC\\#!sandbox.{3b159022-8c5d-4afc-a3a3-d8a012039969}\\Temp\\atlas-timeline-benchmark-XuMpqE"
+}

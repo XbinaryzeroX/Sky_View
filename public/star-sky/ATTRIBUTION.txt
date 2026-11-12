@@ -1,0 +1,5 @@
+Yale Bright Star Catalog, 5th Revised Edition (preliminary), D. Hoffleit and W. H. Warren Jr. (1991).
+NASA HEASARC BSC5P archive: https://heasarc.gsfc.nasa.gov/W3Browse/catalog/bsc5p.html
+https://heasarc.gsfc.nasa.gov/FTP/heasarc/dbase/tdat_files/heasarc_bsc5p.tdat.gz
+Archive SHA-256: 122628cde2d8bedf7e16ddf5f888167ac58c04b5592d6155408ce297f3073931
+9096 entries with J2000 coordinates and visual magnitudes. Atlas Watch plotted the positions, scaled the points by visual magnitude and approximated their colour from B−V when available.

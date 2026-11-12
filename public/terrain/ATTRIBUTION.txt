@@ -1,0 +1,15 @@
+Atlas Watch world elevation overview
+
+Mapzen Terrain Tiles, accessed November 12, 2026 (UTC) through the Registry of Open Data on AWS.
+The source for both land and bathymetry at zoom 2 is NOAA's ETOPO1 Global Relief Model.
+ETOPO1: Amante, C. and B. W. Eakins, 2009, NOAA National Geophysical Data Center.
+https://doi.org/10.7289/V5C8276M
+https://registry.opendata.aws/terrain-tiles/
+https://github.com/tilezen/joerd/blob/master/docs/data-sources.md
+https://github.com/tilezen/joerd/blob/master/docs/attribution.md
+
+Atlas Watch joins the 16 Terrarium zoom-2 PNG tiles into a 1024 by 1024 Web Mercator grid,
+rounds elevations to whole metres, and draws ocean depths at sea level in the overview.
+Geographic LODs 0 through 5 can use the grid offline. More detailed terrain uses the remote source.
+Rebuild with scripts/build-terrain-overview.mjs. Source grid SHA-256 after conversion:
+0d7f019a0b16cc0a1786a846bd2a7013f839fbb192c6022bc956fb06ab93efdd

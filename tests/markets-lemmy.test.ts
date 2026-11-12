@@ -6,7 +6,8 @@ import { IPC, validateIpcArgs, settingsPatchSchema, type InvokeChannel, DEFAULT_
 import { buildCsp } from "../src/shared/remoteHosts";
 import { assertAllowedUrl, setLemmyInstance, fetchJson } from "../src/main/feeds/http";
 import { registerFeedLinks, isAllowedExternalUrl } from "../src/shared/sanitize";
-import { MarketService } from "../src/main/markets";
+import { MarketService, parseEquityNews } from "../src/main/markets";
+import { equityNewsUrl, MOST_ACTIVE_URL, normalizeMostActive } from "../src/shared/markets";
 import { LemmyService } from "../src/main/lemmy";
 import { SecretStore } from "../src/main/secrets";
 import type { AtlasStore } from "../src/main/store";
@@ -28,6 +29,60 @@ afterEach(() => {
   vi.useRealTimers();
 });
 describe("market fixtures", () => {
+  const screen = (quotes: unknown[]) => ({finance: {error: null, result: [{canonicalName: "MOST_ACTIVES", quotes}]}});
+  const equity = {symbol: "AAA", longName: "Alpha Engines, Inc.", quoteType: "EQUITY", market: "us_market",
+    regularMarketPrice: 21, regularMarketVolume: 11000, regularMarketChangePercent: -1, regularMarketTime: 1794430800, currency: "USD"};
+  const story = (title: string, description: string, day: number, link: string) => (
+    `<item><title>${title}</title><description><![CDATA[${description}]]></description><link>${link}</link><pubDate>2026-11-${day}T09:00:00Z</pubDate></item>`);
+  const rss = (items: string) => `<rss><channel><title>Yahoo! Finance: AAA News</title>${items}</channel></rss>`;
+  it("selects ten unique US equities by trading volume and keeps missing quote fields unknown", () => {
+    const quotes = Array.from({length: 15}, (_, i) => ({...equity, symbol: "SYM" + i, regularMarketVolume: i + 1}));
+    const ranked = normalizeMostActive(screen([...quotes, {...equity, regularMarketPrice: null, regularMarketTime: null},
+      {...equity, symbol: "NOT-EQUITY", quoteType: "ETF"}, {...equity, symbol: "FOREIGN", market: "fi_market"}, equity]));
+    expect(ranked).toHaveLength(10);
+    expect(ranked[0]).toMatchObject({symbol: "AAA", price: null, asOf: null, volume: 11000});
+    expect(ranked[1]).toMatchObject({symbol: "SYM14", price: 21, asOf: "2026-11-11T21:00:00.000Z"});
+    expect(ranked[9].symbol).toBe("SYM6");
+    expect(normalizeMostActive(screen([]))).toEqual([]);
+    expect(() => normalizeMostActive(screen([{bad: "schema"}]))).toThrow();
+    expect(() => normalizeMostActive({finance: {error: {code: "Unauthorized"}, result: null}})).toThrow();
+  });
+  it("shows issuer-specific stories first with plain-text previews; rejects wrong channels, bad links and duplicate stories", () => {
+    const xml = rss(story("Markets roundup", "Broad market update.", 12, "https://publisher.example/b") +
+      story("Alpha Engines announces results", "<b>Sales</b> rose &amp; margins improved.", 11, "https://publisher.example/a") +
+      story("Duplicate", "Text", 10, "https://publisher.example/a") +
+      story("Bad link", "Text", 10, "javascript:alert(1)") +
+      story("Headline only", "Headline only", 10, "https://publisher.example/c"));
+    const rows = parseEquityNews(xml, "AAA", "Alpha Engines, Inc.");
+    expect(rows.map(r => r.url)).toEqual(["https://publisher.example/a", "https://publisher.example/b", "https://publisher.example/c"]);
+    expect(rows[0].summary).toBe("Sales rose & margins improved.");
+    expect(rows[2].summary).toBeNull();
+    expect(() => parseEquityNews(xml, "BBB", null)).toThrow(/expected RSS channel/);
+    expect(() => parseEquityNews('<!DOCTYPE rss>' + xml, "AAA", null)).toThrow();
+  });
+  it("loads and coalesces real-provider rankings and news through separate fixed endpoints without any key", async () => {
+    const fetcher = vi.fn(async (url: URL) => {
+      if (url.href === MOST_ACTIVE_URL) return new Response(JSON.stringify(screen([equity])));
+      if (url.href === equityNewsUrl("AAA")) return new Response(rss(story("AAA results", "Revenue grew.", 11, "https://publisher.example/matched")));
+      throw new Error("Unexpected destination");
+    });
+    vi.stubGlobal("fetch", fetcher);
+    const svc = new MarketService(secretMock(), () => DEFAULT_SETTINGS, storeMock());
+    const [a, b] = await Promise.all([svc.trending(), svc.trending()]);
+    expect(a.items[0].symbol).toBe("AAA");
+    expect(a).toEqual(b);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    const row = a.items[0];
+    const news = await svc.news(row.symbol, row.name, "trending");
+    expect(await svc.news(row.symbol, row.name, "trending")).toEqual(news);
+    expect(news.articles[0].summary).toBe("Revenue grew.");
+    expect(isAllowedExternalUrl(news.articles[0].url)).toBe(true);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    await expect(svc.news("BTC/USD", null, "trending")).rejects.toThrow(/ticker/);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(() => assertAllowedUrl(equityNewsUrl("AAA") + "&url=https://outside.example")).toThrow(/Blocked/);
+    expect(() => assertAllowedUrl(MOST_ACTIVE_URL.replace("most_actives", "other"))).toThrow(/Blocked/);
+  });
   it.each(["twelvedata", "alphavantage"] as MarketProvider[])("%s parses numeric strings and sorts candles", (p) => {
     const c = normalizeCandles(p === "twelvedata" ? fixture.twelveCandles : fixture.alphaCandles, p);
     expect(c).toHaveLength(2);
@@ -247,10 +302,12 @@ describe("Lemmy helpers and validation", () => {
 });
 describe("new IPC boundaries", () => {
   const valid: [InvokeChannel, unknown[]][] = [
+    [IPC.marketsTrending, []],
     [IPC.marketsSearch, ["Apple"]],
     [IPC.marketsQuote, ["BTC/USD"]],
     [IPC.marketsCandles, ["AAPL", "5D"]],
     [IPC.marketsNews, ["AAPL", "Apple"]],
+    [IPC.marketsNews, ["AAPL", "Apple", "trending"]],
     [IPC.marketsExplain, [
       "AAPL",
       ["Headline"],
@@ -283,6 +340,8 @@ describe("new IPC boundaries", () => {
     expect(() => validateIpcArgs(c, [...args, "extra"])).toThrow();
   });
   it.each([
+    [IPC.marketsTrending, ["url"]],
+    [IPC.marketsNews, ["AAPL", "Apple", "arbitrary"]],
     [IPC.marketsSearch, [""]],
     [IPC.marketsQuote, ["bad?key=secret"]],
     [IPC.marketsCandles, ["AAPL", "ALL"]],

@@ -1,0 +1,5 @@
+
+Error occurred in handler for 'briefing:preview': Error: Explicit visit QA preview failure (not a provider failure)
+    at C:\Users\infob\AppData\Local\Temp\atlas-visit-ui-Yz0H1q\live\bootstrap-first.cjs:43:30
+SMOKE_SCRIPT {"result":"PASS","phase":"first","sourceMode":"real public NWS/USGS; offline phase uses genuine prior cache","noSavedPlacesRequired":true,"actualPreviewHeadingsAndTablesVisible":true,"frozenHtmlMatchesVisiblePreview":true,"exportedHtmlPaths":["C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\visit\\visit-first-1.html"],"pendingProviderObserved":true,"controlledPreviewRaceAndRetry":true,"originalLocationBriefingAndIdempotentControls":false,"analystLastVisitRoute":false,"rendererErrors":[]}
+SMOKE_RESULT {"globeReady":true,"errors":[],"locations":0,"alerts":516,"quakes":211,"nws":"ok","usgs":"ok"}

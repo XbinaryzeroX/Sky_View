@@ -2,6 +2,12 @@
 
 import type { AlertSeverity, Freshness } from '../../shared/types';
 
+/** Flight categories as supplied by the AWC station observation. */
+export const METAR_COLORS = new Map([
+  ['VFR', '#4fc36b'], ['MVFR', '#4f8fe0'], ['IFR', '#e5534b'], ['LIFR', '#c45ad6'],
+]);
+export const METAR_UNKNOWN_COLOR = '#9aa7b4';
+
 export function localTime(iso: string | null | undefined): string {
   if (!iso) return '—';
   const d = new Date(iso);

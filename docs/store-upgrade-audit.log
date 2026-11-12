@@ -1,0 +1,42 @@
+{
+  "result": "PASS",
+  "baseline": "a22dcb09ea6144d4899a373ab25c4f70931cd129",
+  "method": "Prior v0.7.0 source wrote synthetic local data. Current source opened a closed-file copy three times; no provider requests.",
+  "preservedRows": {
+    "meta": 3,
+    "locations": 1,
+    "feed_cache": 2,
+    "events": 6,
+    "annotations": 1,
+    "saved_views": 1,
+    "boards": 1,
+    "people": 1,
+    "track_points": 1
+  },
+  "migratedWatchPersisted": true,
+  "foreignKeyErrors": 0,
+  "originalFeedCacheColumnsPreserved": true,
+  "legacyFeedCacheCompletenessUnknown": true,
+  "legacyFeedCachesNotBackfilled": true,
+  "legacyEventHistoryNotBackfilled": true,
+  "legacyMovementStillReplayable": true,
+  "timelineAfterMigrationAndCachedCoreInit": {
+    "epochs": 0,
+    "revisions": 0,
+    "intervals": 0,
+    "payloadBytes": 0
+  },
+  "timelineAfterExplicitObservation": {
+    "epochs": 1,
+    "revisions": 3,
+    "payloadBytes": 1137,
+    "intervals": 3
+  },
+  "explicitNewObservationPersisted": true,
+  "earlierFeedFramesRemainUnknown": true,
+  "firstUpgradedVisitUsesNoLegacyBaseline": true,
+  "secondVisitBaselineIsExplicitObservation": true,
+  "cachedOnlyRestartYieldsUnknownChanges": true,
+  "userProfileAccessed": false,
+  "installerExecuted": false
+}

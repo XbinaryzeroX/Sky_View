@@ -1,0 +1,127 @@
+{
+  "result": "PASS",
+  "startedAt": "2026-11-12T01:11:45.095Z",
+  "archiveSha256": "bd9a8cd5cfaa5786b0145f13441c73ba73a5ffae2b9cfe54152da5145893a7c4",
+  "executable": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\Atlas Watch.exe",
+  "temporary": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-before-6RLKFZ",
+  "database": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-before-6RLKFZ\\qa.sqlite",
+  "profile": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-before-6RLKFZ\\profile",
+  "framework": "playwright-core 1.62.1",
+  "syntheticProviderData": false,
+  "genuineProfileAccessed": false,
+  "installerExecuted": false,
+  "screenshots": [
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-before-layers-dwd.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-before-layers-germany.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-before-layers-weather.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-before-events.png"
+  ],
+  "errors": [],
+  "security": {
+    "isPackaged": true,
+    "version": "0.7.0",
+    "appPath": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+    "userData": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-before-6RLKFZ\\profile",
+    "windows": [
+      {
+        "contextIsolation": true,
+        "sandbox": true,
+        "nodeIntegration": false,
+        "webSecurity": true
+      }
+    ]
+  },
+  "layerIds": [
+    "aircraft",
+    "aircraftMil",
+    "vessels",
+    "satellites",
+    "fires",
+    "firePerimeters",
+    "metar",
+    "cyclones",
+    "cameras",
+    "transit",
+    "airspace",
+    "incidents"
+  ],
+  "layerSearches": [
+    {
+      "query": "DWD",
+      "names": []
+    },
+    {
+      "query": "Germany",
+      "names": []
+    },
+    {
+      "query": "weather",
+      "names": [
+        "Weather observations (METAR)",
+        "Tropical cyclones",
+        "Weather radar (U.S.)",
+        "Weather satellite (10-min)",
+        "Public traffic & weather cameras"
+      ]
+    }
+  ],
+  "eventTypeOptions": [
+    "All types",
+    "Weather alerts (U.S.)",
+    "Earthquakes",
+    "Cyclones",
+    "Fire detections",
+    "Special squawks"
+  ],
+  "eventsText": "Events\nEvents\n\nCurrent alerts, earthquakes, cyclones, strongest fire detections and special squawks from loaded feeds. Turn layers on to include them.\n\nReplay recorded alerts and earthquakes\nAll types\nWeather alerts (U.S.)\nEarthquakes\nCyclones\nFire detections\nSpecial squawks\nalert\nSpecial Weather Statement\n1 min ago · Moderate · Breckinridge; Hardin\nalert\nWind Advisory\n5 min ago · Moderate · Lanai Mauka; Kahoolawe; Maui Leeward West; Kohala; Molokai Windward; Molokai Sou\nalert\nFlood Warning\n7 min ago · Severe · DeSoto, FL\nalert\nSpecial Weather Statement\n10 min ago · Moderate · Fayette; Franklin; Ripley; Dearborn\nalert\nSevere Thunderstorm Watch\n12 min ago · Severe · Daviess, KY; Hopkins, KY; McLean, KY; Muhlenberg, KY\nalert\nSpecial Weather Statement\n13 min ago · Moderate · Bullitt; Jefferson; Shelby; Spencer; Nelson\nalert\nSevere Thunderstorm Warning\n14 min ago · Severe · Daviess, KY\nalert\nSevere Thunderstorm Warning\n16 min ago · Severe · Hancock, KY; Ohio, KY\nalert\nSpecial Weather Statement\n16 min ago · Moderate · Hopkins; Daviess; McLean; Muhlenberg\nalert\nSevere Thunderstorm Watch\n18 min ago · Severe · Decatur, IN; Jackson, IN; Jennings, IN\nalert\nAir Quality Alert\n20 min ago · Unknown · Bonner, ID; Shoshone, ID\nalert\nSevere Thunderstorm Warning\n21 min ago · Severe · Perry, IN; Breckinridge, KY; Hancock, KY\nalert\nDense Fog Advisory\n22 min ago · Moderate · Kittitas Valley\nalert\nDense Fog Advisory\n22 min ago · Moderate · Foothills of the Northern Blue Mountains of Oregon; Foothills of the Blue Mounta\nalert\nSmall Craft Advisory\n23 min ago · Minor · Southwest of Saint Lawrence Island from 15 to 100 NM\nalert\nSmall Craft Advisory\n24 min ago · Minor · Cape Beaufort to Point Franklin out to 15 NM\nalert\nHeavy Freezing Spray Warning\n24 min ago · Severe · Cape Halkett to Flaxman Island out to 15 NM\nalert\nHeavy Freezing Spray Warning\n24 min ago · Severe · Point Franklin to Cape Halkett from 15 to 75 NM\nalert\nGale Warning\n24 min ago · Moderate · Cape Thompson to Cape Beaufort out to 15 NM\nalert\nGale Warning\n24 min ago · Moderate · Cape Halkett to Flaxman Island out to 15 NM\nalert\nGale Warning\n24 min ago · Moderate · Point Franklin to Cape Halkett out to 15 NM\nalert\nHeavy Freezing Spray Warning\n24 min ago · Severe · Point Franklin to Cape Halkett out to 15 NM\nalert\nGale Warning\n24 min ago · Moderate · Cape Beaufort to Point Franklin from 15 to 85 NM\nalert\nHeavy Freezing Spray Warning\n24 min ago · Severe · Flaxman Island to Demarcation Point out to 15 NM\nalert\nHeavy Freezing Spray Warning\n24 min ago · Severe · Cape Beaufort to Point Franklin from 15 to 85 NM\nalert\nGale Warning\n24 min ago · Moderate · Cape Thompson to Cape Beaufort from 15 to 85 NM\nalert\nGale Warning\n24 min ago · Moderate · Point Franklin to Cape Halkett from 15 to 75 NM\nalert\nGale Warning\n24 min ago · Moderate · Cape Halkett to Flaxman Island from 15 to 80 NM\nalert\nHeavy Freezing Spray Warning\n24 min ago · Severe · Cape Halkett to Flaxman Island from 15 to 80 NM\nalert\nHeavy Freezing Spray Warning\n24 min ago · Severe · Cape Beaufort to Point Franklin out to 15 NM\nalert\nBrisk Wind Advisory\n24 min ago · Minor · Flaxman Island to Demarcation Point from 15 to 75 NM\nalert\nHeavy Freezing Spray Warning\n27 min ago · Severe · Western US Arctic Offshore\nalert\nGale Warning\n27 min ago · Moderate · Western US Arctic Offshore\nalert\nMarine Weather Statement\n27 min ago · Minor · Volusia-Brevard County Line to Sebastian Inlet 20-60 nm\nalert\nSmall Craft Advisory\n28 min ago · Minor · Calumet Harbor IL to Gary IN; Gary to Burns Harbor IN; Burns Harbor to Michigan\nalert\nSmall Craft Advisory\n28 min ago · Minor · Winthrop Harbor to Wilmette Harbor IL; Wilmette Harbor to Northerly Island IL; N\nalert\nGale Warning\n28 min ago · Moderate · Calumet Harbor IL to Gary IN; Gary to Burns Harbor IN; Burns Harbor to Michigan\nalert\nSmall Craft Advisory\n28 min ago · Minor · Winthrop Harbor to Wilmette Harbor IL; Wilmette Harbor to Northerly Island IL; N\nalert\nGale Warning\n28 min ago · Moderate · Winthrop Harbor to Wilmette Harbor IL; Wilmette Harbor to Northerly Island IL; N\nalert\nSmall Craft Advisory\n28 min ago · Minor · Calumet Harbor IL to Gary IN; Gary to Burns Harbor IN; Burns Harbor to Michigan\nalert\nGale Warning\n38 min ago · Moderate · Lake Michigan Michigan City IN to St. Joseph MI 5 NM offshore to mid-line of lak\nalert\nGale Warning\n38 min ago · Moderate · Sheboygan to Port Washington WI; Port Washington to North Point Light WI\nalert\nGale Warning\n38 min ago · Moderate · North Point Light to Wind Point WI; Wind Point WI to Winthrop Harbor IL\nalert\nSmall Craft Advisory\n38 min ago · Minor · North Point Light to Wind Point WI; Wind Point WI to Winthrop Harbor IL\nalert\nSmall Craft Advisory\n38 min ago · Minor · Sheboygan to Port Washington WI; Port Washington to North Point Light WI\nalert\nSmall Craft Advisory\n38 min ago · Minor · North Point Light to Wind Point WI; Wind Point WI to Winthrop Harbor IL\nalert\nSmall Craft Advisory\n38 min ago · Minor · Sheboygan to Port Washington WI; Port Washington to North Point Light WI\nalert\nSmall Craft Advisory\n40 min ago · Minor · Dunkirk to Buffalo NY\nalert\nSmall Craft Advisory\n40 min ago · Minor · Niagara River to Hamlin Beach NY\nalert\nSmall Craft Advisory\n40 min ago · Minor · Hamlin Beach to Sodus Bay NY\nalert\nSmall Craft Advisory\n40 min ago · Minor · Sodus Bay to Mexico Bay NY; Mexico Bay NY to the St. Lawrence River\nalert\nSmall Craft Advisory\n40 min ago · Minor · Upper Niagara River and Buffalo Harbor; Lower Niagara River\nalert\nSmall Craft Advisory\n40 min ago · Minor · Ripley to Dunkirk NY\nalert\nWinter Weather Advisory\n48 min ago · Moderate · Baraga; Marquette\nalert\nSpecial Weather Statement\n48 min ago · Moderate · Foothills of the Blue Mountains of Washington\nalert\nSpecial Weather Statement\n51 min ago · Moderate · Shelby; Brown; Bartholomew; Decatur; Lawrence; Jackson; Jennings\nalert\nWind Advisory\n1 h ago · Moderate · Municipality of Skagway\nalert\nWind Advisory\n1 h ago · Moderate · Annette Island\nalert\nSpecial Weather Statement\n1 h ago · Moderate · Lower Columbia Basin of Oregon; Foothills of the Northern Blue Mountains of Oreg\nalert\nSmall Craft Advisory\n1 h ago · Minor · Waters from Cape Falcon to Cape Foulweather OR from 10 to 60 nm\nalert\nHazardous Seas Warning\n1 h ago · Moderate · Waters from Cape Shoalwater WA to Cape Falcon OR from 10 to 60 nm\nalert\nSmall Craft Advisory\n1 h ago · Minor · Coastal waters from Cape Falcon to Cape Foulweather OR out 10 nm\nalert\nSmall Craft Advisory\n1 h ago · Minor · Coastal waters from Cape Shoalwater WA to Cape Falcon OR out 10 nm\nalert\nGale Watch\n1 h ago · Moderate · Waters from Cape Falcon to Cape Foulweather OR from 10 to 60 nm\nalert\nHazardous Seas Warning\n1 h ago · Moderate · Waters from Cape Foulweather to Florence OR from 10 to 60 nm\nalert\nGale Watch\n1 h ago · Moderate · Coastal waters from Cape Foulweather to Florence OR out 10 nm\nalert\nGale Watch\n1 h ago · Moderate · Coastal waters from Cape Falcon to Cape Foulweather OR out 10 nm\nalert\nHazardous Seas Warning\n1 h ago ",
+  "core": {
+    "counts": {
+      "nws": 542,
+      "usgs": 332
+    },
+    "feeds": {
+      "nws": {
+        "feed": "nws",
+        "state": "ok",
+        "lastAttemptAt": "2026-11-12T01:11:45.254Z",
+        "lastSuccessAt": "2026-11-12T01:11:45.643Z",
+        "sourceUpdatedAt": "2026-11-12T01:11:37.000Z",
+        "fromCache": false,
+        "error": null,
+        "consecutiveFailures": 0,
+        "nextAttemptAt": "2026-11-12T02:11:45.698Z",
+        "recordCount": 542,
+        "skippedRecords": 0,
+        "coverage": {
+          "completeness": "complete",
+          "skippedRecords": 0,
+          "note": null
+        },
+        "scope": "active-US"
+      },
+      "usgs": {
+        "feed": "usgs",
+        "state": "ok",
+        "lastAttemptAt": "2026-11-12T01:11:45.272Z",
+        "lastSuccessAt": "2026-11-12T01:11:45.364Z",
+        "sourceUpdatedAt": "2026-11-12T01:10:59.000Z",
+        "fromCache": false,
+        "error": null,
+        "consecutiveFailures": 0,
+        "nextAttemptAt": "2026-11-12T02:11:45.383Z",
+        "recordCount": 336,
+        "skippedRecords": 0,
+        "coverage": {
+          "completeness": "complete",
+          "skippedRecords": 0,
+          "note": null
+        },
+        "scope": "2.5_week"
+      }
+    },
+    "layersEnabled": []
+  },
+  "closedByRunner": true,
+  "finishedAt": "2026-11-12T01:11:47.609Z",
+  "archiveStableDuringRun": true
+}

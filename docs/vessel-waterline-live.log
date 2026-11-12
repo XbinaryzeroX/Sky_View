@@ -1,0 +1,48 @@
+{
+  "result": "PASS",
+  "mode": "live",
+  "at": "2026-11-12T04:40:58.734Z",
+  "asar": "c7a61a99bef1b217e37c5300b98a9c28ff1b9e5d8384dfd29875b6f61dd33718",
+  "source": "Live public Fintraffic AIS and displayed terrain",
+  "stages": [
+    {
+      "label": "oblique",
+      "terrain": 92.06194362358383,
+      "ready": true,
+      "hullWaterline": 92.06194362358383,
+      "heightReference": 3,
+      "meshPicked": true,
+      "testPoint": [
+        686.0010589032422,
+        419.6153393093223
+      ]
+    },
+    {
+      "label": "close-cargo",
+      "terrain": -0.00022919983736307463,
+      "ready": true,
+      "hullWaterline": -0.00022920111532245696,
+      "heightReference": 3,
+      "meshPicked": true,
+      "testPoint": [
+        685.993293283329,
+        472.2741563225445
+      ]
+    }
+  ],
+  "errors": [],
+  "ship": {
+    "id": "230949000",
+    "reportedType": 70
+  },
+  "coastalShip": {
+    "id": "212179000",
+    "reportedType": 70
+  },
+  "closeView": {
+    "rangeM": 240,
+    "tilesLoaded": true,
+    "level": 19,
+    "card": "Cargo vessel · 99 m long × 14 m beam"
+  }
+}

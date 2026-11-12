@@ -96,8 +96,8 @@ describe('alert intersection', () => {
     const zones = (z: string[]) => ({ status: 'resolved' as const, zones: z, checkedAt: '2026-11-09T00:00:00Z', error: null });
     expect(matchAlert(loc({ zones: zones(['forecast/OKZ060', 'county/OKC143']) }), a)).toMatchObject({ status: 'inside', method: 'zone' });
     expect(matchAlert(loc({ zones: zones(['forecast/OKZ061', 'county/OKC145']) }), a)).toMatchObject({ status: 'outside', method: 'zone' });
-    // Fire zone with same code as forecast zone is a different zone type
-    expect(matchAlert(loc({ zones: zones(['fire/OKZ060']) }), a).status).toBe('outside');
+    // Fire coverage alone does not establish the point's forecast/county zones.
+    expect(matchAlert(loc({ zones: zones(['fire/OKZ060']) }), a).status).toBe('unknown');
   });
 
   it('missing geometry with no affected zones stays unknown', () => {

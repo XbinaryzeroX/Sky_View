@@ -39,10 +39,32 @@ export interface ModelPack {
 
 const icaoKey = (type: string, military: boolean) => `${type}|${military ? 'mil' : 'civ'}`;
 
-const VESSELS: VesselSymbol[] = ['cargo', 'tanker', 'passenger', 'highspeed', 'fishing', 'tug', 'sailing', 'pleasure', 'service', 'military', 'unknown'];
+const VESSELS: VesselSymbol[] = ['cargo', 'tanker', 'passenger', 'highspeed', 'fishing', 'tug', 'sailing', 'pleasure', 'pilot', 'service', 'workboat', 'wingInGround', 'military', 'unknown'];
 const LICENSE_URL: Record<PackModel['license'], string> = {
   'CC0 1.0': 'https://creativecommons.org/publicdomain/zero/1.0/',
   'CC BY 4.0': 'https://creativecommons.org/licenses/by/4.0/',
+};
+
+// Early pack indexes assigned one mesh to an entire aircraft family. Existing copies
+// still carry those aliases. Keep only the type documented by each Sketchfab upload.
+// An empty string means the original upload did not identify a specific variant.
+const legacyAircraftTypes: Readonly<Record<string, string>> = {
+  b14863d4091e41e6abe25832a0af3b00: 'A20N',
+  '259de41be0c7410e86b7e79be33d6b3a': '',
+  df830e5199634ae2955bf5b618ba6ab3: '',
+  '524f485c748146b7968e0dd8eb84e786': '',
+  '9f40c75533df4faf9de1854fb36add80': '',
+  cfa2836ead8c4278a199a7d34a87f02e: '',
+  cd1977bedc32412fa1ce2cda23520b84: 'B748',
+  cc2c62f56cd94a7c8b2c586515b378e7: '',
+  '77f0d3a4db5e4090a04f0daa2e09cdcc': '',
+  e280fdcf4f6f40048ad3b1d85a5b37e2: '',
+  d0e93f7b8717493b959d797cad7a7051: 'E145',
+  '02c4fa44604243c2bb48db64506a39af': 'CRJ9',
+  '1e1a7186f7444d288675262fcee44744': 'AT76',
+  '5fd537e678d746778586fb73989988a0': 'DH8D',
+  c9cadc2f026946da8cf9715a683739e9: 'C172',
+  b88fa0194c2b49ef8560337ab96d7579: 'GLF6',
 };
 
 function text(v: unknown, max: number): string | null {
@@ -68,7 +90,10 @@ function parseEntry(e: unknown): PackModel | null {
   const author = text(o.author, 80);
   const source = typeof o.sourceUrl === 'string' && /^https:\/\/sketchfab\.com\/3d-models\/[A-Za-z0-9_-]{1,200}$/.test(o.sourceUrl) ? o.sourceUrl : null;
   if (!kind || !license || !lengthM || !widthM || !heightM || !title || !author || !source) return null;
-  const icao = kind === 'aircraft' && Array.isArray(o.icao) ? o.icao.filter((t): t is string => typeof t === 'string' && /^[A-Z0-9]{2,4}$/.test(t)).slice(0, 40) : [];
+  const uid = source.match(/[0-9a-f]{32}$/i)?.[0].toLowerCase();
+  const exactType = uid ? legacyAircraftTypes[uid] : undefined;
+  const icao = kind === 'aircraft' && Array.isArray(o.icao) ? o.icao.filter((t): t is string =>
+    typeof t === 'string' && /^[A-Z0-9]{2,4}$/.test(t) && (exactType === undefined || t === exactType)).slice(0, 40) : [];
   const vessel = kind === 'ship' && VESSELS.includes(o.vessel as VesselSymbol) ? (o.vessel as VesselSymbol) : null;
   if (kind === 'aircraft' ? !icao.length : !vessel) return null;
   return { id, file: o.file, kind, icao, vessel, military: o.military === true, lengthM, widthM, heightM, title, author, license, licenseUrl: LICENSE_URL[license], sourceUrl: source, tris: num(o.tris, 0, 5e6) ?? 0 };

@@ -73,13 +73,13 @@ export class BuildingManager {
   constructor(private readonly widget: CesiumWidget) {
     // Lit (not flat) buildings: a light that stays above and slightly behind the
     // camera, so roofs read brightest and walls get distinct shades from any
-    // viewing angle or time of day. Globe lighting is off, so only lit
-    // primitives (these buildings) are affected.
+    // viewing angle in the daylight display. Day/night mode supplies its own solar light.
     const light = new DirectionalLight({ direction: new Cartesian3(0, 0, -1), intensity: LIGHT_INTENSITY });
     widget.scene.light = light;
     const down = new Cartesian3();
     const dir = new Cartesian3();
     widget.scene.preRender.addEventListener((scene) => {
+      if (scene.light !== light) return;
       const cam = scene.camera;
       scene.globe.ellipsoid.geodeticSurfaceNormal(cam.positionWC, down);
       Cartesian3.negate(down, down);

@@ -8,7 +8,8 @@
 // Vessels: class from the AIS ship type; size from the AIS-reported length and beam
 // when present, else a typical size for the class.
 
-import { classifyAircraft, classifyVessel, type AircraftSymbol, type VesselSymbol } from './vehicleClass';
+import { classifyAircraft, classifyVessel, faaShapeCode, type AircraftSymbol, type VesselSymbol } from './vehicleClass';
+import airlinerCharacteristics from './airlinerCharacteristics.json';
 
 export type EngineMount = 'wing' | 'tail' | 'nose' | 'none';
 
@@ -23,6 +24,9 @@ export interface AircraftShape {
   prop: boolean;
   /** A third engine in the tail fin (MD-11, DC-10, Falcon 7X/8X). */
   trijet: boolean;
+  /** Visible rotor configuration, where the civil type is documented. */
+  rotorBlades?: number;
+  tailRotor?: 'ducted' | 'none';
   military: boolean;
 }
 
@@ -36,9 +40,16 @@ export const CLASS_DEFAULTS: Record<AircraftSymbol, Base> = {
   turboprop: base(25, 27, 2, 'wing', true, true, true),
   bizjet: base(18, 17, 2, 'tail', false, true),
   light: base(8.3, 11, 1, 'nose', true, false, true),
+  jet: base(30, 28, 2, 'wing'),
+  propeller: base(21, 27, 2, 'wing', false, false, true),
+  seaplane: base(11, 15, 1, 'nose', true, false, true),
   helicopter: base(12, 10.5, 1, 'none'),
+  gyroplane: base(5, 8.4, 1, 'none'),
+  poweredlift: base(13, 16, 2, 'none', true),
   glider: base(7, 18, 0, 'none', false, true),
   balloon: base(18, 16, 0, 'none'),
+  airship: base(46, 13, 2, 'none'),
+  parachute: base(4, 11, 0, 'none'),
   drone: base(2, 3, 1, 'nose', false, false, true),
   unknown: base(38, 35, 2, 'wing'),
 };
@@ -98,14 +109,34 @@ const T: Record<string, Row> = {
 };
 
 const CLASS_FALLBACK_SIZE_OK = (n: number) => Number.isFinite(n) && n > 0;
+const airlinerSizes: Readonly<Record<string, {lengthM?: number; spanWithTipsM?: number; spanWithoutTipsM?: number}>> = airlinerCharacteristics;
+// R44 pilot handbook section 7, MD 520N manufacturer brochure, Airbus H135 product specifications.
+const civilRotors: Readonly<Record<string, Pick<AircraftShape, 'rotorBlades' | 'tailRotor'>>> = {
+  R44: { rotorBlades: 2 }, MD52: { rotorBlades: 5, tailRotor: 'none' }, EC35: { rotorBlades: 4, tailRotor: 'ducted' },
+};
 
 export function aircraftShape(type: string | null | undefined, emitterCategory: string | null | undefined, military = false): AircraftShape {
   const cls = classifyAircraft(type, emitterCategory).symbol;
   const d = CLASS_DEFAULTS[cls];
-  const row = type ? T[type.trim().toUpperCase()] : undefined;
-  if (!row) return { cls, ...d, military };
+  const code = type?.trim().toUpperCase() ?? '';
+  const rotor = !military && Object.hasOwn(civilRotors, code) ? civilRotors[code] : undefined;
+  const row = Object.hasOwn(T, code) ? T[code] : undefined;
+  if (!row) {
+    const description = faaShapeCode(code);
+    if (!description) return { cls, ...d, ...rotor, military };
+    const size = Object.hasOwn(airlinerSizes, code) ? airlinerSizes[code] : undefined;
+    const engines = Number(description[1]);
+    const fixed = ['L', 'A', 'S'].includes(description[0]) && cls !== 'glider';
+    const prop = fixed ? description[2] !== 'J' : d.prop;
+    const mount = fixed ? (engines === 1 ? (prop ? 'nose' : 'tail') : (engines > 2 || d.mount === 'nose' ? 'wing' : d.mount)) : d.mount;
+    const typical = cls === 'jet' ? (description[3] === 'H' || description[3] === 'J' ? CLASS_DEFAULTS.widebody : description[3] === 'S' ? CLASS_DEFAULTS.bizjet : d)
+      : cls === 'turboprop' && engines === 1 ? { lengthM: 12, spanM: 15 } : d;
+    return { ...d, ...rotor, cls, engines, prop, mount, military, trijet: fixed && engines === 3 && !prop,
+      lengthM: size?.lengthM ?? typical.lengthM, spanM: size?.spanWithTipsM ?? size?.spanWithoutTipsM ?? typical.spanM };
+  }
   const [lengthM, spanM, engines, mount, highWing, tTail, prop, trijet] = row;
   return {
+    ...rotor,
     cls,
     lengthM: CLASS_FALLBACK_SIZE_OK(lengthM) ? lengthM : d.lengthM,
     spanM: CLASS_FALLBACK_SIZE_OK(spanM) ? spanM : d.spanM,
@@ -121,7 +152,8 @@ export function aircraftShape(type: string | null | undefined, emitterCategory: 
 
 /** Model variant key: everything that changes the geometry (sizes are applied per instance). */
 export function aircraftVariant(s: AircraftShape): string {
-  return ['air', s.cls, s.engines, s.mount, s.highWing ? 'hi' : 'lo', s.tTail ? 't' : 'c', s.prop ? 'p' : 'j', s.trijet ? '3' : '', s.military ? 'mil' : 'civ'].join(':');
+  const key = ['air', s.cls, s.engines, s.mount, s.highWing ? 'hi' : 'lo', s.tTail ? 't' : 'c', s.prop ? 'p' : 'j', s.trijet ? '3' : '', s.military ? 'mil' : 'civ'].join(':');
+  return s.rotorBlades || s.tailRotor ? `${key}:${s.rotorBlades ?? ''}:${s.tailRotor ?? ''}` : key;
 }
 
 export interface VesselShape {
@@ -142,6 +174,9 @@ export const VESSEL_DEFAULTS: Record<VesselSymbol, { lengthM: number; beamM: num
   sailing: { lengthM: 12, beamM: 4 },
   pleasure: { lengthM: 14, beamM: 4.5 },
   service: { lengthM: 18, beamM: 6 },
+  pilot: { lengthM: 17, beamM: 5.2 },
+  workboat: { lengthM: 43, beamM: 11 },
+  wingInGround: { lengthM: 26, beamM: 18 },
   military: { lengthM: 120, beamM: 15 },
   unknown: { lengthM: 60, beamM: 12 },
 };

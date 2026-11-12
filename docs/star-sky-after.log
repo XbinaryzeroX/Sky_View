@@ -1,0 +1,24 @@
+{
+  "at": "2026-11-12T05:51:27.020Z",
+  "result": "PASS",
+  "errors": [],
+  "archive": "03bafa005199fc31acfcf055934308bd7b71a75412fe7c243802cb6fb1c339b8",
+  "sky": {
+    "size": 2048,
+    "files": [
+      "/star-sky/px.webp",
+      "/star-sky/mx.webp",
+      "/star-sky/py.webp",
+      "/star-sky/my.webp",
+      "/star-sky/pz.webp",
+      "/star-sky/mz.webp"
+    ],
+    "height": 39000000
+  },
+  "skyCrop": {
+    "pixels": 63800,
+    "backgroundLevel": 8,
+    "backgroundFraction": 0.9957836990595611,
+    "starPixels": 15
+  }
+}

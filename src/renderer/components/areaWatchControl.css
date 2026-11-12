@@ -1,0 +1,8 @@
+.area-watch-control { flex-basis: 100%; min-width: 0; border-left: 2px solid var(--border-strong); margin: 2px 0 8px; padding: 5px 0 5px 9px; }
+.area-watch-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 10px; }
+.area-watch-control p, .area-watch-context p { margin: 5px 0; overflow-wrap: anywhere; }
+.area-watch-control fieldset { border: 0; padding: 0; margin: 6px 0 0; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.area-watch-control fieldset .btn-row { flex-basis: 100%; margin: 3px 0; }
+.area-watch-threshold, .area-watch-enabled { display: flex; align-items: center; gap: 6px; }
+.area-watch-threshold input { width: 6em; min-width: 0; background: var(--bg); color: inherit; border: 1px solid var(--border-strong); border-radius: 4px; padding: 3px 6px; }
+.area-watch-context { margin: 8px 0 12px; padding: 6px 0; border-top: 1px solid var(--border); font-size: 11px; line-height: 1.45; }

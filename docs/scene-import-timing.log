@@ -1,0 +1,35 @@
+{
+  "node": "v24.22.1",
+  "date": "2026-11-11T17:14:25.866Z",
+  "scope": "Local dispatch, validation and SQLite only. Both routes use current handlers. Excludes native file picker, Electron transport, rendering and provider traffic.",
+  "fixture": {
+    "pins": 500,
+    "views": 50,
+    "sceneVersion": 1,
+    "bytes": 82222
+  },
+  "dispatches": {
+    "perRow": 553,
+    "atomic": 1
+  },
+  "samplesMs": {
+    "perRow": [
+      210.87,
+      208,
+      38.33,
+      42.88,
+      37.87
+    ],
+    "atomic": [
+      8.15,
+      7.1,
+      6.14,
+      7.31,
+      5.9
+    ]
+  },
+  "medianMs": {
+    "perRow": 42.88,
+    "atomic": 7.1
+  }
+}

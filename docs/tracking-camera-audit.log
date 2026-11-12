@@ -1,0 +1,9 @@
+
+> atlas-watch@0.7.0 smoke
+> node scripts/smoke.mjs docs/screenshots/audit-tracking-camera.png 110000
+
+SMOKE_SCRIPT {"aircraft":{"id":"a1c7c1","label":"UAL858","source":"adsb.lol (ODbL)","observedAt":"2026-11-11T15:18:41.741Z","altitudeM":10668,"groundTrack":114.56},"followHeightM":11868.5041282082,"cockpitHeightM":10667.999999999936,"cockpitEntered":true,"escapeReturnsToFollow":true,"stopCleanedControls":true,"rendererErrors":[]}
+[layers] aircraft failed (1): adsb.lol: Network error: fetch failed
+SMOKE_RESULT {"globeReady":true,"errors":[],"locations":0,"alerts":390,"quakes":318,"nws":"ok","usgs":"ok"}
+SMOKE_FEEDS {"nws":"ok","nwsCount":390,"usgs":"ok","usgsCount":322,"nwsErr":null,"usgsErr":null}
+exit=0 screenshot=C:\Users\infob\Documents\Claude\Sky_View\docs\screenshots\audit-tracking-camera.png

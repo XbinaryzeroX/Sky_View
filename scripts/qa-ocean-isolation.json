@@ -1,0 +1,6 @@
+[
+  { "name": "cape-normal", "lat": -33.9249, "lon": 18.4241, "h": 20000 },
+  { "name": "cape-no-terrain", "lat": -33.9249, "lon": 18.4241, "h": 20000, "js": "(async()=>{await window.atlas.updateSettings({terrainEnabled:false});await new Promise(r=>setTimeout(r,4000));return 'terrain off';})()" },
+  { "name": "cape-no-label-overlay", "lat": -33.9249, "lon": 18.4241, "h": 20000, "js": "(async()=>{await window.atlas.updateSettings({terrainEnabled:true,labelsOverlay:false});await new Promise(r=>setTimeout(r,6000));return 'overlay off';})()" },
+  { "name": "cape-imagery-only", "lat": -33.9249, "lon": 18.4241, "h": 20000, "js": "(async()=>{await window.atlas.updateSettings({terrainEnabled:false,labelsOverlay:false,buildings3d:false});await new Promise(r=>setTimeout(r,4000));return 'imagery only';})()" }
+]

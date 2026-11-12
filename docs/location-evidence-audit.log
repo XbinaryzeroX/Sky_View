@@ -1,0 +1,1770 @@
+{
+  "result": "PASS",
+  "completedAt": "2026-11-12T01:08:11.254Z",
+  "appVersion": "0.7.0",
+  "before": {
+    "log": "docs/location-evidence-before.log",
+    "inputHashes": {
+      "dist/main/main.cjs": "9df7c085b4f906b24e87716682379aa7621c77c157e87e0c7c8b38e7f6fdfdfa",
+      "dist/preload/preload.cjs": "632ca69c9b1b0e89fbb1962df65f4a4a5b720f2af5b5109592bc268265213655",
+      "dist/renderer/index.html": "3e9ff06b225779f3682e19c6e52fd49406b70b8bd4813b904f8f312680782fe4",
+      "dist/renderer/assets/index-DTaMdsXe.js": "12cdc3fc67158f12de0301ddfefd448bb6d712ef74aa178e7181f8007b94ee28",
+      "dist/renderer/assets/index-CUnw5lOt.css": "baef0757a85791c9d743172dd5475fb4dbcec89caeefaa3c90761a268eb1c550"
+    },
+    "providerRequests": 0,
+    "summaryDisplayedZeroDespiteUnavailable": true,
+    "summary": "QA offline saved place — Washington000 (≤ 25 km)",
+    "screenshot": "docs/screenshots/location-evidence/audit-location-before-summary.png"
+  },
+  "fixtures": {
+    "log": "docs/location-evidence-fixtures.log",
+    "earlierLog": "docs/location-evidence-fixtures-pre-overview-fix.log",
+    "explicitSynthetic": true,
+    "builtAssetsUnchanged": true,
+    "inputHashes": {
+      "dist/main/main.cjs": "422a902d4c86296dcc331a409562731d87e78958554dd6c11461d392cd2a9363",
+      "dist/preload/preload.cjs": "632ca69c9b1b0e89fbb1962df65f4a4a5b720f2af5b5109592bc268265213655",
+      "dist/renderer/index.html": "2d0dc43eb83e3f20ef23355d99e7a5d847dda855e9ad3c9783aaec3803bdaf79",
+      "dist/renderer/assets/index-D2greLkX.js": "74552c351d892bee84bcb54aa5862445007949a1810a8e41807a184e564572bb",
+      "dist/renderer/assets/index-CUnw5lOt.css": "baef0757a85791c9d743172dd5475fb4dbcec89caeefaa3c90761a268eb1c550"
+    },
+    "phases": [
+      {
+        "kind": "missing",
+        "result": "PASS",
+        "summaryRows": [
+          [
+            "QA offline saved place — Washington",
+            "Unknown",
+            "Unknown",
+            "Unknown (≤ 25 km)"
+          ],
+          [
+            "QA independent control — Washington",
+            "Unknown",
+            "Unknown",
+            "Unknown (≤ 25 km)"
+          ]
+        ],
+        "observationTimes": {
+          "nws": null,
+          "usgs": null
+        },
+        "coverage": {
+          "nws": {
+            "completeness": "unknown",
+            "skippedRecords": null,
+            "note": "Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out."
+          },
+          "usgs": {
+            "completeness": "unknown",
+            "skippedRecords": null,
+            "note": "Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out."
+          }
+        },
+        "summaryBounds": {
+          "x": 488,
+          "y": 400.90625,
+          "width": 706,
+          "height": 147.0625,
+          "preview": {
+            "x": 467,
+            "y": 215.84375,
+            "width": 758,
+            "height": 516.609375
+          }
+        },
+        "rendererErrors": [],
+        "exports": [
+          {
+            "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-missing-1.html",
+            "format": "html",
+            "request": {
+              "previewId": "4d2b162f-90f0-416f-8519-d2f9603dc07f"
+            },
+            "bytes": 8034,
+            "sha256": "6ca35dc3550e705970c076a5cc95545ad93ac63ba8ad2763ba1273ce2d8f77d8"
+          },
+          {
+            "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-missing-2.pdf",
+            "format": "pdf",
+            "request": {
+              "previewId": "4d2b162f-90f0-416f-8519-d2f9603dc07f"
+            },
+            "bytes": 36636,
+            "sha256": "136f10362aa9136c6c93988f9ece4f8c8594400abe45f351f0c6adb98633ae89"
+          }
+        ],
+        "screenshot": "docs/screenshots/location-evidence/audit-location-missing-summary.png"
+      },
+      {
+        "kind": "mixed",
+        "result": "PASS",
+        "summaryRows": [
+          [
+            "QA independent control — Washington",
+            "Unknown",
+            "≥1 in retrieved subset",
+            "0 last observed; current unknown (≤ 25 km)"
+          ],
+          [
+            "QA primary saved place — Bay Area",
+            "≥1 in retrieved subset",
+            "≥1 in retrieved subset",
+            "1 last observed; current unknown (≤ 25 km)"
+          ]
+        ],
+        "observationTimes": {
+          "nws": "2026-11-12T01:04:09.532Z",
+          "usgs": "2026-11-11T21:04:09.302Z"
+        },
+        "coverage": {
+          "nws": {
+            "completeness": "partial",
+            "skippedRecords": 1,
+            "note": "Normalization omitted 1 record(s); the reply may be incomplete."
+          },
+          "usgs": {
+            "completeness": "complete",
+            "skippedRecords": 0,
+            "note": null
+          }
+        },
+        "summaryBounds": {
+          "x": 488,
+          "y": 401.09375,
+          "width": 706,
+          "height": 147.0625,
+          "preview": {
+            "x": 467,
+            "y": 215.84375,
+            "width": 758,
+            "height": 516.609375
+          }
+        },
+        "rendererErrors": [],
+        "exports": [
+          {
+            "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-mixed-1.html",
+            "format": "html",
+            "request": {
+              "previewId": "4524657d-f40d-46da-883d-a7bb7545eda9"
+            },
+            "bytes": 9406,
+            "sha256": "66bb22c189c59b22b2ce5da6775415cda8b156c0b13e773e48751f5bc2cf0250"
+          },
+          {
+            "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-mixed-2.pdf",
+            "format": "pdf",
+            "request": {
+              "previewId": "4524657d-f40d-46da-883d-a7bb7545eda9"
+            },
+            "bytes": 49755,
+            "sha256": "324937dd11ae567e617cd005257daa225356df1e23779303e115552388e611e9"
+          }
+        ],
+        "screenshot": "docs/screenshots/location-evidence/audit-location-mixed-summary.png"
+      },
+      {
+        "kind": "restart",
+        "result": "PASS",
+        "summaryRows": [
+          [
+            "QA independent control — Washington",
+            "Unknown; last reply incomplete",
+            "≥1 in last reply; current unknown",
+            "0 last observed; current unknown (≤ 25 km)"
+          ],
+          [
+            "QA primary saved place — Bay Area",
+            "≥1 in last reply; current unknown",
+            "≥1 in last reply; current unknown",
+            "1 last observed; current unknown (≤ 25 km)"
+          ]
+        ],
+        "observationTimes": {
+          "nws": "2026-11-12T01:04:09.532Z",
+          "usgs": "2026-11-11T21:04:09.302Z"
+        },
+        "coverage": {
+          "nws": {
+            "completeness": "partial",
+            "skippedRecords": 1,
+            "note": "Normalization omitted 1 record(s); the reply may be incomplete."
+          },
+          "usgs": {
+            "completeness": "complete",
+            "skippedRecords": 0,
+            "note": null
+          }
+        },
+        "summaryBounds": {
+          "x": 488,
+          "y": 400.984375,
+          "width": 706,
+          "height": 147.0625,
+          "preview": {
+            "x": 467,
+            "y": 215.84375,
+            "width": 758,
+            "height": 516.609375
+          }
+        },
+        "rendererErrors": [],
+        "exports": [
+          {
+            "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-restart-1.html",
+            "format": "html",
+            "request": {
+              "previewId": "5592ad56-6cf4-4880-99ff-a1734424e5fa"
+            },
+            "bytes": 10158,
+            "sha256": "7577fefd19367cd0d152eac3619e531dd20c4dfdba274576de85597354cb9fbe"
+          },
+          {
+            "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-restart-2.pdf",
+            "format": "pdf",
+            "request": {
+              "previewId": "5592ad56-6cf4-4880-99ff-a1734424e5fa"
+            },
+            "bytes": 50057,
+            "sha256": "47a78f8748c407e4d94cd97db4da334296d037854cc04f4aa349a3519de93c7f"
+          }
+        ],
+        "screenshot": "docs/screenshots/location-evidence/audit-location-restart-summary.png"
+      },
+      {
+        "kind": "complete-empty",
+        "result": "PASS",
+        "summaryRows": [
+          [
+            "QA independent control — Washington",
+            "Unknown",
+            "Unknown",
+            "0 (≤ 25 km)"
+          ],
+          [
+            "QA primary saved place — Bay Area",
+            "0",
+            "0",
+            "0 (≤ 25 km)"
+          ]
+        ],
+        "observationTimes": {
+          "nws": "2026-11-12T01:04:32.069Z",
+          "usgs": "2026-11-12T01:04:32.071Z"
+        },
+        "coverage": {
+          "nws": {
+            "completeness": "complete",
+            "skippedRecords": 0,
+            "note": null
+          },
+          "usgs": {
+            "completeness": "complete",
+            "skippedRecords": 0,
+            "note": null
+          }
+        },
+        "summaryBounds": {
+          "x": 488,
+          "y": 409.71875,
+          "width": 706,
+          "height": 128.21875,
+          "preview": {
+            "x": 467,
+            "y": 215.84375,
+            "width": 758,
+            "height": 516.609375
+          }
+        },
+        "rendererErrors": [],
+        "exports": [
+          {
+            "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-complete-empty-1.html",
+            "format": "html",
+            "request": {
+              "previewId": "55ba6341-fb7e-4b25-b352-a8038041936e"
+            },
+            "bytes": 7208,
+            "sha256": "e9eef9789f50b92f145684f070a3e7e8365fb1f22fcb002b4edde6f610c89f08"
+          },
+          {
+            "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-complete-empty-2.pdf",
+            "format": "pdf",
+            "request": {
+              "previewId": "55ba6341-fb7e-4b25-b352-a8038041936e"
+            },
+            "bytes": 36185,
+            "sha256": "34973abb297dee31c55115af63dc2896c8aaf3f39e74afb5bd1d2a5e9f03b0fc"
+          }
+        ],
+        "screenshot": "docs/screenshots/location-evidence/audit-location-complete-empty-summary.png"
+      },
+      {
+        "kind": "partial-zero",
+        "result": "PASS",
+        "summaryRows": [
+          [
+            "QA primary saved place — Bay Area",
+            "Unknown",
+            "Unknown",
+            "Unknown (≤ 25 km)"
+          ],
+          [
+            "QA independent control — Washington",
+            "Unknown",
+            "Unknown",
+            "Unknown (≤ 25 km)"
+          ]
+        ],
+        "observationTimes": {
+          "nws": "2026-11-12T01:04:42.220Z",
+          "usgs": "2026-11-12T01:04:42.221Z"
+        },
+        "coverage": {
+          "nws": {
+            "completeness": "partial",
+            "skippedRecords": 1,
+            "note": "Normalization omitted 1 record(s); the reply may be incomplete."
+          },
+          "usgs": {
+            "completeness": "partial",
+            "skippedRecords": 1,
+            "note": "USGS reported count does not match the original returned feature count; source completeness cannot be established. Normalization omitted 1 record(s); the reply may be incomplete."
+          }
+        },
+        "summaryBounds": {
+          "x": 488,
+          "y": 409.703125,
+          "width": 706,
+          "height": 128.21875,
+          "preview": {
+            "x": 467,
+            "y": 215.84375,
+            "width": 758,
+            "height": 516.609375
+          }
+        },
+        "rendererErrors": [],
+        "exports": [
+          {
+            "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-partial-zero-1.html",
+            "format": "html",
+            "request": {
+              "previewId": "ee1081ca-edb1-413f-90a5-0815770da6a8"
+            },
+            "bytes": 8042,
+            "sha256": "7fb49007ead4ede0c75dadcfdd90b674677dcb11601fc0ce73ebb300a7baa8e6"
+          },
+          {
+            "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-partial-zero-2.pdf",
+            "format": "pdf",
+            "request": {
+              "previewId": "ee1081ca-edb1-413f-90a5-0815770da6a8"
+            },
+            "bytes": 36804,
+            "sha256": "497572ff62502e0816164c783aca9c55b84574b2f865394ef5789e3963f8dfa4"
+          }
+        ],
+        "screenshot": "docs/screenshots/location-evidence/audit-location-partial-zero-summary.png"
+      },
+      {
+        "kind": "expired-cache",
+        "result": "PASS",
+        "summaryRows": [
+          [
+            "QA independent control — Washington",
+            "Unknown; last reply incomplete",
+            "≥1 in last reply; current unknown",
+            "0 last observed; current unknown (≤ 25 km)"
+          ],
+          [
+            "QA primary saved place — Bay Area",
+            "≥1 in last reply; current unknown",
+            "≥1 in last reply; current unknown",
+            "1 last observed; current unknown (≤ 25 km)"
+          ]
+        ],
+        "observationTimes": {
+          "nws": "2026-11-11T21:04:52.263Z",
+          "usgs": "2026-11-11T21:04:52.263Z"
+        },
+        "coverage": {
+          "nws": {
+            "completeness": "complete",
+            "skippedRecords": 0,
+            "note": null
+          },
+          "usgs": {
+            "completeness": "complete",
+            "skippedRecords": 0,
+            "note": null
+          }
+        },
+        "summaryBounds": {
+          "x": 488,
+          "y": 400.75,
+          "width": 706,
+          "height": 147.0625,
+          "preview": {
+            "x": 467,
+            "y": 215.84375,
+            "width": 758,
+            "height": 516.609375
+          }
+        },
+        "rendererErrors": [],
+        "exports": [
+          {
+            "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-expired-cache-1.html",
+            "format": "html",
+            "request": {
+              "previewId": "290a6dce-d217-4c22-8224-d2f0cf16a855"
+            },
+            "bytes": 10003,
+            "sha256": "0983d7f3db628e63ad4cc5ff167e40a7c1ea6ce6084a1d6ba0a9f0b83456235b"
+          },
+          {
+            "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-expired-cache-2.pdf",
+            "format": "pdf",
+            "request": {
+              "previewId": "290a6dce-d217-4c22-8224-d2f0cf16a855"
+            },
+            "bytes": 50006,
+            "sha256": "a96f2ce1760d9c7d20c65937005c41845dc3d8f94037258334a7af6de2fdedc0"
+          }
+        ],
+        "screenshot": "docs/screenshots/location-evidence/audit-location-expired-cache-summary.png"
+      }
+    ]
+  },
+  "actualPackaged": {
+    "log": "docs/location-evidence-packaged.log",
+    "archiveSha256": "bd9a8cd5cfaa5786b0145f13441c73ba73a5ffae2b9cfe54152da5145893a7c4",
+    "framework": "playwright-core 1.62.1",
+    "archiveStableDuringRun": true,
+    "sourceResponsesReplaced": false,
+    "profileIsolated": true,
+    "phases": [
+      {
+        "phase": "live",
+        "startedAt": "2026-11-12T01:05:21.833Z",
+        "finishedAt": "2026-11-12T01:05:26.374Z",
+        "appVersion": "0.7.0",
+        "security": {
+          "isPackaged": true,
+          "appPath": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+          "version": "0.7.0",
+          "userData": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-location-evidence-package-Z1BdK2\\profile",
+          "noSandbox": false,
+          "disableWebSecurity": false,
+          "ignoreCertificateErrors": false,
+          "windows": [
+            {
+              "contextIsolation": true,
+              "sandbox": true,
+              "nodeIntegration": false,
+              "webSecurity": true
+            }
+          ]
+        },
+        "sourceAudit": [
+          {
+            "feed": "usgs",
+            "url": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+            "status": 200,
+            "date": "Thu, 12 Nov 2026 01:04:32 GMT",
+            "receivedAt": "2026-11-12T01:05:23.431Z",
+            "featureCount": 209,
+            "sha256": "2747d236f002ed61160bec9c4418cd3ea51dadda1758808947eb5405744ee865"
+          },
+          {
+            "feed": "nws",
+            "url": "https://api.weather.gov/alerts/active?status=actual",
+            "status": 200,
+            "date": "Thu, 12 Nov 2026 01:05:21 GMT",
+            "receivedAt": "2026-11-12T01:05:23.446Z",
+            "featureCount": 541,
+            "sha256": "ec72bb1f18a9c3bec4f01c1b9f5c61e026abd1f244a62111043f48aba2b3717a"
+          }
+        ],
+        "realRecordChecks": 750,
+        "sourceCounts": {
+          "nws": 541,
+          "usgs": 209
+        },
+        "observationTimes": {
+          "nws": "2026-11-12T01:05:23.465Z",
+          "usgs": "2026-11-12T01:05:23.434Z"
+        },
+        "manualLocations": [
+          {
+            "id": "94f412e7-9f21-43f0-a014-91738daa1be8",
+            "name": "QA live USGS epicenter place",
+            "lat": 38.8173332214355,
+            "lon": -122.778167724609,
+            "radiusKm": 25
+          },
+          {
+            "id": "742964ac-1b76-45a6-8f76-7e32dca5a5d9",
+            "name": "QA live NWS polygon place",
+            "lat": 39.218,
+            "lon": -85.13,
+            "radiusKm": 25
+          }
+        ],
+        "selectedSourceIds": [
+          {
+            "kind": "quake",
+            "id": "nc75465542"
+          },
+          {
+            "kind": "alert",
+            "id": "urn:oid:2.49.0.1.840.0.bdc529f0472b9dee7d97d57844ca6bc5ff0aacc8.001.1"
+          }
+        ],
+        "summaryRows": [
+          "LocationWeather alerts (confirmed)Alerts not determinableEarthquakes within radius",
+          "QA live USGS epicenter placeUnknown≥525 in retrieved subset28 (≤ 25 km)",
+          "QA live NWS polygon place≥1 in retrieved subset≥525 in retrieved subset0 (≤ 25 km)"
+        ],
+        "rendererErrors": [],
+        "credentialStatusOnly": [
+          {
+            "id": "twelvedata",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "alphavantage",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "openfreemap",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "esri-imagery",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "mapbox",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "eox",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "ourairports",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "nws",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "usgs-quakes",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "usgs-basemap",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "nasa-gibs",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "terrain-tiles",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "adsblol",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "local-adsb",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "digitraffic",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "opensky",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "aisstream",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "celestrak",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "firms",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "nifc",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "awc",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "nhc",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "nowcoast",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "caltrans",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "fintraffic-cams",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "mbta",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "faa-sua",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "census-geocoder",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "google3d",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "ollama",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-on",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-ab",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-sk",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-nb",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-ns",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-nl",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-yt",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-ga",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-fl",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-az",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-wi",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-id",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-ut",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-la",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-nv",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-ak",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-ct",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-pa",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-ne",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-wsdot",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-nsw",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-se",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          }
+        ],
+        "configuredCredentialProviderIds": [],
+        "exports": [
+          {
+            "format": "html",
+            "path": "C:/Users/infob/Documents/Claude/Sky_View/docs/screenshots/location-evidence/location-packaged-live-1.html",
+            "bytes": 17962,
+            "sha256": "76654edd2d33a52affc8015d76076e89bd9b4d0dd682a4d43767325a250e1354"
+          },
+          {
+            "format": "pdf",
+            "path": "C:/Users/infob/Documents/Claude/Sky_View/docs/screenshots/location-evidence/location-packaged-live-2.pdf",
+            "bytes": 67527,
+            "sha256": "b9ecea4e4e6c983f659672ce8804eb1325331c0130c4cc094f19efd4d8bf9746"
+          }
+        ],
+        "screenshots": [
+          "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\audit-location-packaged-live-quake-source.png",
+          "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\audit-location-packaged-live-alert-source.png",
+          "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\audit-location-packaged-live-summary.png",
+          "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\audit-location-packaged-live-analyst.png"
+        ]
+      },
+      {
+        "phase": "restart",
+        "startedAt": "2026-11-12T01:05:26.375Z",
+        "finishedAt": "2026-11-12T01:05:30.618Z",
+        "appVersion": "0.7.0",
+        "security": {
+          "isPackaged": true,
+          "appPath": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+          "version": "0.7.0",
+          "userData": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-location-evidence-package-Z1BdK2\\profile",
+          "noSandbox": false,
+          "disableWebSecurity": false,
+          "ignoreCertificateErrors": false,
+          "windows": [
+            {
+              "contextIsolation": true,
+              "sandbox": true,
+              "nodeIntegration": false,
+              "webSecurity": true
+            }
+          ]
+        },
+        "sourceAudit": [
+          {
+            "feed": "usgs",
+            "url": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+            "status": 200,
+            "date": "Thu, 12 Nov 2026 01:04:32 GMT",
+            "receivedAt": "2026-11-12T01:05:27.567Z",
+            "featureCount": 209,
+            "sha256": "2747d236f002ed61160bec9c4418cd3ea51dadda1758808947eb5405744ee865"
+          },
+          {
+            "feed": "nws",
+            "url": "https://api.weather.gov/alerts/active?status=actual",
+            "status": 200,
+            "date": "Thu, 12 Nov 2026 01:05:25 GMT",
+            "receivedAt": "2026-11-12T01:05:27.583Z",
+            "featureCount": 541,
+            "sha256": "ec72bb1f18a9c3bec4f01c1b9f5c61e026abd1f244a62111043f48aba2b3717a"
+          }
+        ],
+        "realRecordChecks": 750,
+        "sourceCounts": {
+          "nws": 541,
+          "usgs": 209
+        },
+        "observationTimes": {
+          "nws": "2026-11-12T01:05:27.599Z",
+          "usgs": "2026-11-12T01:05:27.570Z"
+        },
+        "manualLocations": [
+          {
+            "id": "94f412e7-9f21-43f0-a014-91738daa1be8",
+            "name": "QA live USGS epicenter place",
+            "lat": 38.8173332214355,
+            "lon": -122.778167724609,
+            "radiusKm": 25
+          },
+          {
+            "id": "742964ac-1b76-45a6-8f76-7e32dca5a5d9",
+            "name": "QA live NWS polygon place",
+            "lat": 39.218,
+            "lon": -85.13,
+            "radiusKm": 25
+          }
+        ],
+        "selectedSourceIds": [
+          {
+            "kind": "quake",
+            "id": "nc75465542"
+          },
+          {
+            "kind": "alert",
+            "id": "urn:oid:2.49.0.1.840.0.bdc529f0472b9dee7d97d57844ca6bc5ff0aacc8.001.1"
+          }
+        ],
+        "summaryRows": [
+          "LocationWeather alerts (confirmed)Alerts not determinableEarthquakes within radius",
+          "QA live USGS epicenter placeUnknown≥525 in retrieved subset28 (≤ 25 km)",
+          "QA live NWS polygon place≥1 in retrieved subset≥525 in retrieved subset0 (≤ 25 km)"
+        ],
+        "rendererErrors": [],
+        "credentialStatusOnly": [
+          {
+            "id": "twelvedata",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "alphavantage",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "openfreemap",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "esri-imagery",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "mapbox",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "eox",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "ourairports",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "nws",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "usgs-quakes",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "usgs-basemap",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "nasa-gibs",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "terrain-tiles",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "adsblol",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "local-adsb",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "digitraffic",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "opensky",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "aisstream",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "celestrak",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "firms",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "nifc",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "awc",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "nhc",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "nowcoast",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "caltrans",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "fintraffic-cams",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "mbta",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "faa-sua",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "census-geocoder",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "google3d",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "ollama",
+            "configured": true,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-on",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-ab",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-sk",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-nb",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-ns",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-nl",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-yt",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-ga",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-fl",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-az",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-wi",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-id",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-ut",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-la",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-nv",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-ak",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-ct",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-pa",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-ne",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-wsdot",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-nsw",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          },
+          {
+            "id": "cam-se",
+            "configured": false,
+            "credentialSource": null,
+            "userConfigured": false,
+            "credentialError": false
+          }
+        ],
+        "configuredCredentialProviderIds": [],
+        "exports": [
+          {
+            "format": "html",
+            "path": "C:/Users/infob/Documents/Claude/Sky_View/docs/screenshots/location-evidence/location-packaged-restart-1.html",
+            "bytes": 17962,
+            "sha256": "76654edd2d33a52affc8015d76076e89bd9b4d0dd682a4d43767325a250e1354"
+          },
+          {
+            "format": "pdf",
+            "path": "C:/Users/infob/Documents/Claude/Sky_View/docs/screenshots/location-evidence/location-packaged-restart-2.pdf",
+            "bytes": 67527,
+            "sha256": "bb23e1df8e11e937decc48a51410ca35775ddde668012c9b781195227122d3b6"
+          }
+        ],
+        "screenshots": [
+          "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\audit-location-packaged-restart-quake-source.png",
+          "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\audit-location-packaged-restart-alert-source.png",
+          "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\audit-location-packaged-restart-summary.png",
+          "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\audit-location-packaged-restart-analyst.png"
+        ]
+      }
+    ]
+  },
+  "documents": {
+    "inspection": "docs/screenshots/location-evidence/location-pdf-inspection.json",
+    "visualReview": "docs/screenshots/location-evidence/location-pdf-visual-review.json",
+    "pdfCountIncludingHistoricalBaseline": 9,
+    "pageCountIncludingHistoricalBaseline": 21,
+    "fullBodyTextPreserved": true,
+    "allTextWithinPrintSafeBounds": true,
+    "independentVisualReview": {
+      "version": 1,
+      "result": "PASS",
+      "reviewedAt": "2026-11-12T01:08:03.293314+00:00",
+      "scope": "Eight final source-exported PDFs; historical before PDF excluded.",
+      "filesReviewed": 8,
+      "pagesRenderedAndVisuallyInspected": 20,
+      "method": "Independent visual inspection of every existing Poppler-rendered page; pdfplumber character-order comparison against corresponding HTML body, source destinations/IDs/UTC labels, Unknown word boundaries, short note integrity and Letter text bounds.",
+      "originalAutomatedInspectionPreservedSha256": "8fbcc21b04e57c2b5d67565565a457bbf7cd9c644792dd849006cbd9000898a0",
+      "files": [
+        {
+          "case": "missing",
+          "pdf": "location-missing-2.pdf",
+          "html": "location-missing-1.html",
+          "sha256": "136f10362aa9136c6c93988f9ece4f8c8594400abe45f351f0c6adb98633ae89",
+          "bytes": 36636,
+          "pagesVisuallyInspected": [
+            1,
+            2
+          ],
+          "letterSize": true,
+          "bodyTextExactIgnoringWhitespace": true,
+          "minimumTextMarginsPt": {
+            "left": 39.75,
+            "top": 42.1,
+            "right": 40.69,
+            "bottom": 44.52
+          },
+          "unknownWords": {
+            "expected": 21,
+            "intactInPdf": 21
+          },
+          "shortNotesUnsplit": 3,
+          "sourceEvidence": {
+            "uniqueIds": 0,
+            "allIdsPreserved": true,
+            "allHyperlinkDestinationsPreserved": true,
+            "sampleIds": []
+          },
+          "utcLabels": {
+            "unique": 2,
+            "allPreserved": true,
+            "samples": [
+              "2026-11-12 01:03 UTC",
+              "2026-11-12 01:04 UTC"
+            ]
+          },
+          "visualResult": "PASS",
+          "noncriticalPagination": []
+        },
+        {
+          "case": "mixed",
+          "pdf": "location-mixed-2.pdf",
+          "html": "location-mixed-1.html",
+          "sha256": "324937dd11ae567e617cd005257daa225356df1e23779303e115552388e611e9",
+          "bytes": 49755,
+          "pagesVisuallyInspected": [
+            1,
+            2
+          ],
+          "letterSize": true,
+          "bodyTextExactIgnoringWhitespace": true,
+          "minimumTextMarginsPt": {
+            "left": 39.75,
+            "top": 42.95,
+            "right": 40.69,
+            "bottom": 56.52
+          },
+          "unknownWords": {
+            "expected": 12,
+            "intactInPdf": 12
+          },
+          "shortNotesUnsplit": 4,
+          "sourceEvidence": {
+            "uniqueIds": 2,
+            "allIdsPreserved": true,
+            "allHyperlinkDestinationsPreserved": true,
+            "sampleIds": [
+              "qa-location-polygon",
+              "qa-location-quake"
+            ]
+          },
+          "utcLabels": {
+            "unique": 4,
+            "allPreserved": true,
+            "samples": [
+              "2026-11-11 21:03 UTC",
+              "2026-11-11 21:04 UTC"
+            ]
+          },
+          "visualResult": "PASS",
+          "noncriticalPagination": []
+        },
+        {
+          "case": "restart",
+          "pdf": "location-restart-2.pdf",
+          "html": "location-restart-1.html",
+          "sha256": "47a78f8748c407e4d94cd97db4da334296d037854cc04f4aa349a3519de93c7f",
+          "bytes": 50057,
+          "pagesVisuallyInspected": [
+            1,
+            2
+          ],
+          "letterSize": true,
+          "bodyTextExactIgnoringWhitespace": true,
+          "minimumTextMarginsPt": {
+            "left": 39.75,
+            "top": 43.14,
+            "right": 40.69,
+            "bottom": 85.49
+          },
+          "unknownWords": {
+            "expected": 21,
+            "intactInPdf": 21
+          },
+          "shortNotesUnsplit": 4,
+          "sourceEvidence": {
+            "uniqueIds": 2,
+            "allIdsPreserved": true,
+            "allHyperlinkDestinationsPreserved": true,
+            "sampleIds": [
+              "qa-location-polygon",
+              "qa-location-quake"
+            ]
+          },
+          "utcLabels": {
+            "unique": 5,
+            "allPreserved": true,
+            "samples": [
+              "2026-11-11 21:03 UTC",
+              "2026-11-11 21:04 UTC"
+            ]
+          },
+          "visualResult": "PASS",
+          "noncriticalPagination": []
+        },
+        {
+          "case": "expired-cache",
+          "pdf": "location-expired-cache-2.pdf",
+          "html": "location-expired-cache-1.html",
+          "sha256": "a96f2ce1760d9c7d20c65937005c41845dc3d8f94037258334a7af6de2fdedc0",
+          "bytes": 50006,
+          "pagesVisuallyInspected": [
+            1,
+            2
+          ],
+          "letterSize": true,
+          "bodyTextExactIgnoringWhitespace": true,
+          "minimumTextMarginsPt": {
+            "left": 39.75,
+            "top": 43.14,
+            "right": 40.69,
+            "bottom": 63.74
+          },
+          "unknownWords": {
+            "expected": 21,
+            "intactInPdf": 21
+          },
+          "shortNotesUnsplit": 4,
+          "sourceEvidence": {
+            "uniqueIds": 2,
+            "allIdsPreserved": true,
+            "allHyperlinkDestinationsPreserved": true,
+            "sampleIds": [
+              "qa-location-polygon",
+              "qa-location-quake"
+            ]
+          },
+          "utcLabels": {
+            "unique": 5,
+            "allPreserved": true,
+            "samples": [
+              "2026-11-11 21:03 UTC",
+              "2026-11-11 21:04 UTC"
+            ]
+          },
+          "visualResult": "PASS",
+          "noncriticalPagination": []
+        },
+        {
+          "case": "complete-empty",
+          "pdf": "location-complete-empty-2.pdf",
+          "html": "location-complete-empty-1.html",
+          "sha256": "34973abb297dee31c55115af63dc2896c8aaf3f39e74afb5bd1d2a5e9f03b0fc",
+          "bytes": 36185,
+          "pagesVisuallyInspected": [
+            1,
+            2
+          ],
+          "letterSize": true,
+          "bodyTextExactIgnoringWhitespace": true,
+          "minimumTextMarginsPt": {
+            "left": 39.75,
+            "top": 43.14,
+            "right": 40.69,
+            "bottom": 63.74
+          },
+          "unknownWords": {
+            "expected": 6,
+            "intactInPdf": 6
+          },
+          "shortNotesUnsplit": 2,
+          "sourceEvidence": {
+            "uniqueIds": 0,
+            "allIdsPreserved": true,
+            "allHyperlinkDestinationsPreserved": true,
+            "sampleIds": []
+          },
+          "utcLabels": {
+            "unique": 1,
+            "allPreserved": true,
+            "samples": [
+              "2026-11-12 01:04 UTC"
+            ]
+          },
+          "visualResult": "PASS",
+          "noncriticalPagination": []
+        },
+        {
+          "case": "partial-zero",
+          "pdf": "location-partial-zero-2.pdf",
+          "html": "location-partial-zero-1.html",
+          "sha256": "497572ff62502e0816164c783aca9c55b84574b2f865394ef5789e3963f8dfa4",
+          "bytes": 36804,
+          "pagesVisuallyInspected": [
+            1,
+            2
+          ],
+          "letterSize": true,
+          "bodyTextExactIgnoringWhitespace": true,
+          "minimumTextMarginsPt": {
+            "left": 39.75,
+            "top": 43.89,
+            "right": 40.69,
+            "bottom": 76.02
+          },
+          "unknownWords": {
+            "expected": 15,
+            "intactInPdf": 15
+          },
+          "shortNotesUnsplit": 3,
+          "sourceEvidence": {
+            "uniqueIds": 0,
+            "allIdsPreserved": true,
+            "allHyperlinkDestinationsPreserved": true,
+            "sampleIds": []
+          },
+          "utcLabels": {
+            "unique": 1,
+            "allPreserved": true,
+            "samples": [
+              "2026-11-12 01:04 UTC"
+            ]
+          },
+          "visualResult": "PASS",
+          "noncriticalPagination": []
+        },
+        {
+          "case": "packaged-live",
+          "pdf": "location-packaged-live-2.pdf",
+          "html": "location-packaged-live-1.html",
+          "sha256": "b9ecea4e4e6c983f659672ce8804eb1325331c0130c4cc094f19efd4d8bf9746",
+          "bytes": 67527,
+          "pagesVisuallyInspected": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "letterSize": true,
+          "bodyTextExactIgnoringWhitespace": true,
+          "minimumTextMarginsPt": {
+            "left": 39.75,
+            "top": 43.14,
+            "right": 40.69,
+            "bottom": 60.27
+          },
+          "unknownWords": {
+            "expected": 4,
+            "intactInPdf": 4
+          },
+          "shortNotesUnsplit": 3,
+          "sourceEvidence": {
+            "uniqueIds": 29,
+            "allIdsPreserved": true,
+            "allHyperlinkDestinationsPreserved": true,
+            "sampleIds": [
+              "nc75465087",
+              "nc75465097"
+            ]
+          },
+          "utcLabels": {
+            "unique": 31,
+            "allPreserved": true,
+            "samples": [
+              "2026-11-11 01:05 UTC",
+              "2026-11-11 01:30 UTC"
+            ]
+          },
+          "visualResult": "PASS",
+          "noncriticalPagination": [
+            "Attribution occupies page 4 alone; preceding data and limitations remain complete."
+          ]
+        },
+        {
+          "case": "packaged-restart",
+          "pdf": "location-packaged-restart-2.pdf",
+          "html": "location-packaged-restart-1.html",
+          "sha256": "bb23e1df8e11e937decc48a51410ca35775ddde668012c9b781195227122d3b6",
+          "bytes": 67527,
+          "pagesVisuallyInspected": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "letterSize": true,
+          "bodyTextExactIgnoringWhitespace": true,
+          "minimumTextMarginsPt": {
+            "left": 39.75,
+            "top": 43.14,
+            "right": 40.69,
+            "bottom": 60.27
+          },
+          "unknownWords": {
+            "expected": 4,
+            "intactInPdf": 4
+          },
+          "shortNotesUnsplit": 3,
+          "sourceEvidence": {
+            "uniqueIds": 29,
+            "allIdsPreserved": true,
+            "allHyperlinkDestinationsPreserved": true,
+            "sampleIds": [
+              "nc75465087",
+              "nc75465097"
+            ]
+          },
+          "utcLabels": {
+            "unique": 31,
+            "allPreserved": true,
+            "samples": [
+              "2026-11-11 01:05 UTC",
+              "2026-11-11 01:30 UTC"
+            ]
+          },
+          "visualResult": "PASS",
+          "noncriticalPagination": [
+            "Attribution occupies page 4 alone; preceding data and limitations remain complete."
+          ]
+        }
+      ],
+      "limits": [
+        "Whitespace is ignored only for body-text equality; word boundaries are checked separately for Unknown.",
+        "This verifies exported content and print appearance, not independent provider data accuracy or emergency coverage.",
+        "Six fixture cases contain explicitly synthetic evidence; packaged-live and packaged-restart contain the recorded public-source evidence supplied by the separate packaged application QA.",
+        "Ordinary paragraphs and long tables may continue onto later pages; no critical loss, clipped source identifiers or split short callouts was observed."
+      ],
+      "sourceOrPackageChanged": false
+    }
+  },
+  "limits": {
+    "nativeSavePickerOperated": false,
+    "installerExecuted": false,
+    "genuineUserProfileAccessed": false,
+    "optionalPaidOrCredentialedLayersActivated": false,
+    "syntheticProviderAdapters": "Fixture TEMP profiles only; actual packaged HTTPS replies were observed without replacement.",
+    "trafficBoundary": "Packaged launches used existing public NWS/USGS adapters and ordinary validated refresh; no provider account or billing action."
+  }
+}

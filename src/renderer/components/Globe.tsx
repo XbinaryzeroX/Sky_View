@@ -1,8 +1,11 @@
 import { redactCredentialText } from '../../shared/sanitize';
+import { lightGlobe, nightLightsLayers, type EarthLighting } from '../map/earthLighting';
 import { profAdd } from '../lib/prof';
-import { buildImageryLayers, type ImageryState } from '../map/imageryOverlay';
+import { buildImageryLayers, clampDate, gibsProduct, imageryDates, type ImageryState } from '../map/imageryOverlay';
+import { imageryHealth, observeImageryRequests } from '../lib/imageryHealth';
 import { expireFrames, fetchLatestFrame, frameLabel, frameUsable, GEO_SAT_LOOKUP_TIMEOUT_MS, GEO_SAT_MAX_LAT, GEO_SAT_REFRESH_MS, GEO_SATS, tileTemplate, type GeoFrames, type GeoSatId, type GeoSatProduct } from '../../shared/geoSatellite';
-import type { RouteInfo } from '../../shared/route';
+import { publicAirlineCallsign, routeMapSegments, type RouteInfo } from '../../shared/route';
+import { airlineRouteBounds } from '../map/airlineRouteView';
 import '../lib/cesiumBase';
 import {
   PointPrimitiveCollection,
@@ -15,11 +18,13 @@ import {
   ColorGeometryInstanceAttribute,
   DistanceDisplayConditionGeometryInstanceAttribute,
   RequestScheduler,
+  RequestState,
   ArcType,
   SkyAtmosphere,
   SkyBox,
   Cartesian2,
   Cartesian3,
+  CallbackPositionProperty,
   Cartographic,
   CesiumWidget,
   Color,
@@ -50,38 +55,44 @@ import {
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import type { MultiLineString, Position } from 'geojson';
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { mesh } from 'topojson-client';
 import type { GeometryCollection, Topology } from 'topojson-specification';
 import countriesTopo from 'world-atlas/countries-50m.json';
 import statesTopo from 'us-atlas/states-10m.json';
 import type { Earthquake, SavedLocation, Settings, WeatherAlert } from '../../shared/types';
+import type { TimelineFrame } from '../../shared/timeline';
 import { quakeClass, SEVERITY_META, prefersReducedMotion } from '../lib/format';
-import { BASEMAPS, isBasemapId, labelsOverlayLayer, needsContextFills, oceanVeilLayer, isCustomerImagery, previousUtcDay, US_RECTS } from '../map/basemaps';
+import { BASEMAPS, isBasemapId, labelsOverlayLayer, needsContextFills, imagerySourcesHere, previousUtcDay } from '../map/basemaps';
 import { BuildingManager, BUILDINGS_MAX_CAMERA_M, type BuildingStats } from '../map/buildings';
+import { historicalBasemap } from '../map/historicalImagery';
+import type { ArchiveImage } from '../../shared/satelliteYears';
 import { usgsStats } from '../map/usgsProvider';
 import { modelStats } from '../map/vehicleModels';
 import { packStats } from '../map/modelPack';
 import { geoidStats } from '../map/geoid';
+import { watchPhotorealSurface } from '../map/photorealSurface';
 import type { TrailKind, TrailPoint } from '../map/trailHeights';
 import { vectorStats, type VectorStats } from '../map/vectorTiles';
 import { createTerrariumTerrain, seaStats, TERRAIN_INFO, type TerrainStats } from '../map/terrain';
 import { LayerRenderer } from '../map/layerRender';
+import { warningMapRecords, warningPickId } from '../map/warningGeometry';
+import { perimeterPickId } from '../map/perimeterGeometry';
+import { attachCockpit, attachPassengerFollow } from '../map/trackingCamera';
+import { CameraRestorer, capturedCamera, type CameraRestoreAdapter, type RestoreCameraOptions } from '../map/cameraRestore';
+import type { TrackingMode } from '../../shared/trackingCamera';
 import { PlaceLabelManager } from '../map/placeLabels';
 import type { AircraftFilter } from '../../shared/aircraft';
-import airportsData from '../data/airports.json';
+import { AIRPORTS } from '../data/airports';
 import { applyVisualMode } from '../map/visualModes';
 import type { LayerId, LayerSnapshot, ViewState } from '../../shared/layers';
-import type { Annotation } from '../lib/api';
+import type { Annotation, Camera } from '../lib/api';
 
 export type GlobeSelection = { kind: 'location' | 'alert' | 'quake' | 'airport'; id: string } | { kind: 'record'; layer: LayerId; id: string };
 
 export type ToolMode = 'none' | 'measure-line' | 'measure-area' | 'draw-pin' | 'draw-line' | 'draw-area';
 
-export interface PlaybackFrame {
-  t: string;
-  points: { layer: LayerId; rid: string; lat: number; lon: number; altM: number | null; heading: number | null; onGround: boolean | null }[];
-}
+export type PlaybackFrame = TimelineFrame;
 
 export interface GlobeLayers {
   alerts: boolean;
@@ -91,9 +102,6 @@ export interface GlobeLayers {
   boundaries: boolean;
 }
 
-/** Google Photoreal 3D appears below this camera height and hides above PHOTOREAL_HIDE_ABOVE_M (3D mode only). */
-export const PHOTOREAL_SHOW_BELOW_M = 40_000;
-export const PHOTOREAL_HIDE_ABOVE_M = 50_000;
 
 /** Closest the camera may get to the ground, metres. */
 export const MIN_CAMERA_HEIGHT_M = 100;
@@ -101,6 +109,7 @@ export const MIN_CAMERA_HEIGHT_M = 100;
 export const MAX_TILT_DEG = 80;
 
 export interface GlobeDiagnostics {
+  routeLegCount: number;
   renderErrors: number;
   lastRenderError: string | null;
   globeShown: boolean | null;
@@ -126,14 +135,26 @@ export interface GlobeDiagnostics {
 }
 
 export interface GlobeHandle {
+  replayMap(kind?: 'alert' | 'quake', id?: string): {
+    active: boolean; cursor: string | null; alertCount: number; quakeCount: number;
+    positions: [number, number][]; screen: { x: number; y: number } | null;
+  } | null;
   getDiagnostics(): GlobeDiagnostics | null;
+  focusAirlineRoute(route: RouteInfo): void;
   setView(lat: number, lon: number, heightM: number, pitchDeg?: number): void;
-  getCamera(): { lat: number; lon: number; heightM: number; heading: number; pitch: number } | null;
-  setCamera(c: { lat: number; lon: number; heightM: number; heading: number; pitch: number }, animate?: boolean): void;
+  /** Renderer-only isolation hook; does not persist settings or change provider access. */
+  setWaterEffect(enabled: boolean): void;
+  /** Coordinates in degrees, orientation in radians; unavailable during a mode morph. */
+  getCamera(): Camera | null;
+  /** Current screen-center intersection; null while morphing or looking past the globe. */
+  getMapCenter(): { lat: number; lon: number } | null;
+  setCamera(c: Camera, animate?: boolean): void;
+  /** Queues across mount/morph; false if invalid, superseded, cancelled or unmounted. */
+  restoreCamera(c: Camera, options?: RestoreCameraOptions): Promise<boolean>;
   flyHome(): void;
   flyRegion(region: 'us' | 'lower48' | 'alaska' | 'hawaii'): void;
   northUp(): void;
-  focus(lat: number, lon: number, radiusKm?: number): void;
+  focus(lat: number, lon: number, radiusKm?: number, minimumHeightM?: number): void;
   zoom(direction: 1 | -1): void;
 }
 
@@ -154,6 +175,8 @@ interface Props {
   /** Whose trail it is (sets its vertical reference). */
   trailKind: TrailKind;
   trackedRecord: { layer: LayerId; id: string } | null;
+  trackingMode?: TrackingMode;
+  onTrackingUnavailable?(reason: string): void;
   showOrbitFor: string | null;
   onViewChange(v: ViewState): void;
   tool: ToolMode;
@@ -162,11 +185,13 @@ interface Props {
   onToolFinish(): void;
   annotations: Annotation[];
   playback: PlaybackFrame | null;
+  playbackActive: boolean;
   google3dKey: string | null;
   /** Reported route airports for the selected aircraft (dashed; not the flown path). */
   routeLine?: RouteInfo | null;
   /** Dated NASA GIBS product over the globe, with optional two-date swipe comparison. */
   imagery?: ImageryState;
+  archived?: ArchiveImage | null;
   onImagerySplit?(split: number): void;
   imageryKeys: { esri: string | null; mapbox: string | null; google: string | null };
   /** Shown to the user when a customer-credential provider (Google) refuses requests. */
@@ -176,6 +201,7 @@ interface Props {
   vesselClasses: string[];
   showAirports: boolean;
   sceneMode: '3d' | '2d';
+  lighting: EarthLighting;
 }
 
 const LOC_COLOR = Color.fromCssColorString('#5fd0e6');
@@ -220,6 +246,10 @@ function linePrimitive(instances: GeometryInstance[]): Primitive {
 }
 
 function parseEntityId(id: string): GlobeSelection | null {
+  const perimeter = perimeterPickId(id);
+  if (perimeter) return { kind: 'record', layer: 'firePerimeters', id: perimeter };
+  const warning = warningPickId(id);
+  if (warning) return { kind: 'record', layer: 'dwd', id: warning };
   const [kind, rest] = [id.slice(0, id.indexOf('|')), id.slice(id.indexOf('|') + 1)];
   if (kind === 'apt') return { kind: 'airport', id: rest };
   if (kind === 'rec' || kind === 'pb') {
@@ -261,13 +291,27 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   propsRef.current = props;
   const [failed, setFailed] = useState<string | null>(null);
   const basemapLayersRef = useRef<ImageryLayer[]>([]);
+  const nightLightsRef = useRef<ImageryLayer[]>([]);
   const imageryErrorsRef = useRef<{ count: number; last: string | null }>({ count: 0, last: null });
   const terrainStatsRef = useRef<TerrainStats | null>(null);
   const tilesPendingRef = useRef(0);
   const layerRendererRef = useRef<LayerRenderer | null>(null);
+  const cockpitCleanupRef = useRef<(() => void) | null>(null);
+  const passengerFollowRef = useRef<{ id: string; dispose(): void } | null>(null);
   const radarLayerRef = useRef<ImageryLayer | null>(null);
   // Place names drawn over imagery (the last basemap layer when on): weather-satellite frames go below it.
   const labelsLayerRef = useRef<ImageryLayer | null>(null);
+  // Keep night imagery above the selected surface and below labels, weather and dated overlays.
+  const placeNightLights = (w: CesiumWidget) => {
+    const layers = w.imageryLayers;
+    let below = basemapLayersRef.current.filter(l => l !== labelsLayerRef.current).at(-1);
+    for (const lights of nightLightsRef.current) {
+      const anchor = () => below ? layers.indexOf(below) : -1;
+      while (layers.indexOf(lights) > anchor() + 1) layers.lower(lights);
+      while (layers.indexOf(lights) < anchor()) layers.raise(lights);
+      below = lights;
+    }
+  };
   /** Drawn weather-satellite frame per satellite (key = layer id + frame time). */
   const geoLayersRef = useRef(new Map<GeoSatId, { key: string; layer: ImageryLayer }>());
   /** Previous frames kept on screen until the new frame's tiles have loaded (no blink every 10 minutes). */
@@ -311,6 +355,8 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   const [heightsVersion, setHeightsVersion] = useState(0);
   const photorealCleanupRef = useRef<(() => void) | null>(null);
   const reportViewRef = useRef<(() => void) | null>(null);
+  const cameraRestoreRef = useRef<CameraRestorer | null>(null);
+  if (!cameraRestoreRef.current) cameraRestoreRef.current = new CameraRestorer(props.sceneMode);
   const renderErrorsRef = useRef<{ count: number; last: string | null }>({ count: 0, last: null });
   const placeLabelsRef = useRef<PlaceLabelManager | null>(null);
   const buildingsRef = useRef<BuildingManager | null>(null);
@@ -325,11 +371,17 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     if (!containerRef.current) return;
     let widget: CesiumWidget;
     try {
-      widget = new CesiumWidget(containerRef.current, {
+      const widgetOptions = {
         baseLayer: false,
         terrainProvider: new EllipsoidTerrainProvider(),
-        // Night sky: Cesium's bundled star field plus a darkened horizon glow (set below).
-        skyBox: SkyBox.createEarthSkyBox(),
+        // Mesh elevations can lie below ellipsoid zero. Leave room for the lowest EGM96
+        // sea levels when Cesium clears the base globe's depth before drawing 3D tiles.
+        depthPlaneEllipsoidOffset: -125,
+        skyBox: new SkyBox({ sources: {
+          positiveX: '/star-sky/px.webp', negativeX: '/star-sky/mx.webp',
+          positiveY: '/star-sky/py.webp', negativeY: '/star-sky/my.webp',
+          positiveZ: '/star-sky/pz.webp', negativeZ: '/star-sky/mz.webp',
+        } }),
         skyAtmosphere: new SkyAtmosphere(),
         requestRenderMode: true,
         maximumRenderTimeChange: Infinity,
@@ -338,8 +390,10 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
         showRenderLoopErrors: false,
         // Ask the browser for the high-performance GPU and skip the costly preserveDrawingBuffer path.
         contextOptions: { webgl: { powerPreference: 'high-performance', alpha: false, antialias: true, preserveDrawingBuffer: false } },
-      });
+      } satisfies NonNullable<ConstructorParameters<typeof CesiumWidget>[1]> & { depthPlaneEllipsoidOffset: number };
+      widget = new CesiumWidget(containerRef.current, widgetOptions);
     } catch (e) {
+      cameraRestoreRef.current?.fail();
       const msg = e instanceof Error ? e.message : String(e);
       setFailed(msg);
       propsRef.current.onReady(false, msg);
@@ -350,14 +404,13 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     scene.backgroundColor = Color.fromCssColorString('#0a1017');
     scene.globe.baseColor = Color.fromCssColorString('#1a2733');
     scene.globe.showGroundAtmosphere = false;
-    // Lighting is "on" only so Cesium's water shader drops its fixed cyan wave highlight (it scales by
-    // 1 − lightingFade). Fade distances of 1–2 m make the lighting fully applied at every distance; with the
-    // camera-relative light from above (see buildings.ts) land imagery keeps its brightness.
+    // With the camera-relative light from above (see buildings.ts), land imagery keeps its brightness.
     scene.globe.enableLighting = true;
     scene.globe.dynamicAtmosphereLighting = false;
     scene.globe.lightingFadeOutDistance = 1;
     scene.globe.lightingFadeInDistance = 2;
-    scene.globe.showWaterEffect = true;
+    // Synthetic ocean highlights obscure coastlines and source imagery. Keep sea-level geometry and water masks.
+    scene.globe.showWaterEffect = false;
     scene.fog.enabled = false;
     let frameStart = 0;
     scene.preUpdate.addEventListener(() => (frameStart = performance.now()));
@@ -376,11 +429,10 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       }, 250);
     });
     scene.globe.depthTestAgainstTerrain = false;
-    // Tile loading: keep more tiles resident in GPU memory (fewer re-downloads and re-decodes when panning
-    // back), preload neighbours of visible tiles, and allow more parallel requests to the tile hosts.
+    // Keep revisited tiles resident and give visible tiles priority over offscreen siblings.
     scene.globe.tileCacheSize = 600;
-    scene.globe.preloadSiblings = true;
-    scene.globe.loadingDescendantLimit = 30;
+    scene.globe.preloadSiblings = false;
+    scene.globe.loadingDescendantLimit = 20;
     for (const host of ['gibs.earthdata.nasa.gov:443', 'basemap.nationalmap.gov:443', 'tiles.openfreemap.org:443', 's3.amazonaws.com:443']) RequestScheduler.requestsByServer[host] = 24;
     if (scene.skyAtmosphere) {
       scene.skyAtmosphere.brightnessShift = -0.9;
@@ -480,6 +532,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
 
     // Report the settled view (center, altitude, bounding box) for viewport-based layers.
     const reportView = () => {
+      if (widget.isDestroyed() || scene.mode === SceneMode.MORPHING) return;
       const c = widget.camera.positionCartographic;
       const center = widget.camera.pickEllipsoid(new Cartesian2(scene.canvas.clientWidth / 2, scene.canvas.clientHeight / 2), scene.globe.ellipsoid);
       const cc = center ? Cartographic.fromCartesian(center) : c;
@@ -494,9 +547,37 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       buildingsRef.current?.update(CMath.toDegrees(cc.latitude), CMath.toDegrees(cc.longitude), c.height - ground);
       placeLabelsRef.current?.refresh();
     };
-    widget.camera.moveEnd.addEventListener(reportView);
+    const offMoveEnd = widget.camera.moveEnd.addEventListener(reportView);
     reportViewRef.current = reportView;
-    setTimeout(reportView, 500);
+    const initialReport = setTimeout(reportView, 500);
+    const cameraAdapter: CameraRestoreAdapter = {
+      mode: () => scene.mode === SceneMode.MORPHING ? 'morphing' : scene.mode === SceneMode.SCENE2D ? '2d' : scene.mode === SceneMode.SCENE3D ? '3d' : 'other',
+      morphTo: (mode) => {
+        if (mode === '2d' && cockpitCleanupRef.current) {
+          cockpitCleanupRef.current(); cockpitCleanupRef.current = null;
+          propsRef.current.onTrackingUnavailable?.('Cockpit perspective ended when switching to 2D.');
+        }
+        if (mode === '2d') scene.morphTo2D(reducedRef.current ? 0 : 1);
+        else scene.morphTo3D(reducedRef.current ? 0 : 1);
+        scene.requestRender();
+      },
+      onMorphComplete: (callback) => scene.morphComplete.addEventListener(callback),
+      cancelFlight: () => widget.camera.cancelFlight(),
+      apply: (camera, animate, complete, cancel) => {
+        if (cockpitCleanupRef.current) {
+          cockpitCleanupRef.current(); cockpitCleanupRef.current = null;
+          propsRef.current.onTrackingUnavailable?.('Cockpit perspective ended when restoring a saved camera.');
+        }
+        widget.trackedEntity = undefined;
+        const destination = Cartesian3.fromDegrees(camera.lon, camera.lat, camera.heightM);
+        const orientation = { heading: camera.heading, pitch: camera.pitch, roll: 0 };
+        if (!animate || reducedRef.current) { widget.camera.setView({ destination, orientation }); complete(); }
+        else widget.camera.flyTo({ destination, orientation, duration: 1.2, complete, cancel });
+        scene.requestRender();
+      },
+      report: reportView,
+    };
+    cameraRestoreRef.current?.attach(cameraAdapter);
     setReady(true);
 
     const ro = new ResizeObserver(() => {
@@ -507,6 +588,9 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     propsRef.current.onReady(true);
 
     return () => {
+      clearTimeout(initialReport); offMoveEnd();
+      cameraRestoreRef.current?.detach(cameraAdapter);
+      if (reportViewRef.current === reportView) reportViewRef.current = null;
       ro.disconnect();
       handler.destroy();
       layerRendererRef.current?.destroy();
@@ -525,14 +609,13 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     if (!w) return;
     // Remove only basemap layers; overlay layers (radar) are managed separately.
     for (const l of basemapLayersRef.current) w.imageryLayers.remove(l, true);
-    const def = BASEMAPS[isBasemapId(props.settings.basemap) ? props.settings.basemap : 'atlas'];
+    const def = props.archived ? historicalBasemap(props.archived) : BASEMAPS[isBasemapId(props.settings.basemap) ? props.settings.basemap : 'atlas'];
     const date = previousUtcDay();
     const layers = def.build({ date, keys: props.imageryKeys, eoxLicensed: props.eoxLicensed });
     // Worldwide place names, roads and boundaries over imagery (OpenStreetMap via OpenFreeMap).
-    if (props.settings.evenOcean && isCustomerImagery(def.id, props.imageryKeys, props.eoxLicensed)) layers.push(oceanVeilLayer());
     labelsLayerRef.current = null;
     if (props.settings.labelsOverlay && def.id !== 'streets' && def.id !== 'neutral') {
-      labelsLayerRef.current = labelsOverlayLayer(needsContextFills(def.id, props.imageryKeys, props.eoxLicensed));
+      labelsLayerRef.current = labelsOverlayLayer(needsContextFills(def.id));
       layers.push(labelsLayerRef.current);
     }
     imageryErrorsRef.current = { count: 0, last: null };
@@ -549,9 +632,34 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       else layer.readyEvent.addEventListener((prov) => hook(prov as never));
     });
     basemapLayersRef.current = layers;
+    placeNightLights(w);
     placeGeoSatLayers();
     w.scene.requestRender();
-  }, [props.settings.basemap, props.settings.labelsOverlay, props.settings.evenOcean, props.imageryKeys.esri, props.imageryKeys.mapbox, props.imageryKeys.google, props.eoxLicensed, failed]);
+  }, [props.archived, props.settings.basemap, props.settings.labelsOverlay, props.imageryKeys.esri, props.imageryKeys.mapbox, props.imageryKeys.google, props.eoxLicensed, failed]);
+
+
+  // ----- sun position and the dark hemisphere -----
+  const solarLighting = props.lighting.mode !== 'day';
+  useEffect(() => {
+    const w = widgetRef.current;
+    if (w && ready) return lightGlobe(w, props.lighting);
+  }, [ready, props.lighting]);
+  useEffect(() => {
+    const w = widgetRef.current;
+    if (!w || !ready || !solarLighting) return;
+    const lights = nightLightsLayers();
+    for (const layer of lights) w.imageryLayers.add(layer);
+    nightLightsRef.current = lights;
+    placeNightLights(w);
+    w.scene.requestRender();
+    return () => {
+      nightLightsRef.current = [];
+      if (!w.isDestroyed()) {
+        for (const layer of lights) w.imageryLayers.remove(layer, true);
+        w.scene.requestRender();
+      }
+    };
+  }, [ready, solarLighting]);
 
   // ----- 3D buildings (OSM extrusions) -----
   useEffect(() => {
@@ -561,7 +669,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
 
   // Ships and parked aircraft are placed for the app's own globe; tell the vehicle layer when Google's 3D surface is showing.
   useEffect(() => {
-    layerRendererRef.current?.setPhotoreal(photorealOn);
+    layerRendererRef.current?.setPhotoreal(photorealOn, tilesetRef.current);
   }, [photorealOn, ready]);
   useEffect(() => {
     buildingsRef.current?.setFacades(props.settings.buildingFacades);
@@ -715,11 +823,11 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   useEffect(() => {
     const lr = layerRendererRef.current;
     if (!lr || !ready) return;
-    const live = props.playback === null;
+    const live = !props.playbackActive;
     for (const [lid, snap] of Object.entries(props.layerSnaps) as [LayerId, LayerSnapshot][]) {
       const on = live && props.layersOn.includes(lid);
       if (on)
-        lr.update(lid, snap.records, {
+        lr.update(lid, lid === 'dwd' ? warningMapRecords(snap) : snap.records, {
           // The global selection on every layer update (each check also compares the layer); a per-layer null
           // would make the renderer forget an aircraft selection when the vessel layer updates.
           selectedId: selRecord?.id ?? null,
@@ -735,19 +843,28 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
         });
       lr.setVisible(lid, on);
     }
-  }, [props.layerSnaps, props.layersOn, selRecord?.layer, selRecord?.id, props.playback === null, ready, props.aircraftFilter, props.vesselClasses, props.settings.smoothMotion, props.settings.aircraftLabels, props.settings.vesselLabels, props.settings.vehicleModels, props.settings.renderQuality]);
+  }, [props.layerSnaps, props.layersOn, selRecord?.layer, selRecord?.id, props.playbackActive, ready, props.aircraftFilter, props.vesselClasses, props.settings.smoothMotion, props.settings.aircraftLabels, props.settings.vesselLabels, props.settings.vehicleModels, props.settings.renderQuality]);
 
   // ----- dated imagery overlay -----
   const imageryLayersRef = useRef<ImageryLayer[]>([]);
   const im = props.imagery;
+  const imageryDateRevision = useSyncExternalStore(imageryDates.subscribe, imageryDates.revision);
   useEffect(() => {
     const w = widgetRef.current;
     if (!w || !ready) return;
     for (const l of imageryLayersRef.current) w.imageryLayers.remove(l, true);
     imageryLayersRef.current = im ? buildImageryLayers(im) : [];
-    for (const l of imageryLayersRef.current) w.imageryLayers.add(l);
+    const product = gibsProduct(im?.product ?? null);
+    const dates = im && product ? [clampDate(product, im.date), ...(im.compare ? [clampDate(product, im.compareDate)] : [])] : [];
+    const health = imageryHealth.selection(im?.product ?? null, dates.filter(Boolean));
+    for (const [index, layer] of imageryLayersRef.current.entries()) {
+      const provider = layer.imageryProvider;
+      provider.requestImage = observeImageryRequests(provider.requestImage.bind(provider), health.observer(dates[index]), (args) => args[3]?.state === RequestState.CANCELLED);
+      w.imageryLayers.add(layer);
+    }
     w.scene.requestRender();
-  }, [ready, im?.product, im?.date, im?.compare, im?.compareDate, im?.opacity, basemapLayersRef.current]);
+    return health.dispose;
+  }, [ready, im?.product, im?.date, im?.compare, im?.compareDate, im?.opacity, imageryDateRevision, basemapLayersRef.current]);
   useEffect(() => {
     const w = widgetRef.current;
     if (!w || !ready) return;
@@ -756,23 +873,26 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   }, [ready, im?.split]);
 
   // ----- reported route (dashed great-circle legs between reported airports) -----
-  const routeEntRef = useRef<Entity | null>(null);
   useEffect(() => {
     const w = widgetRef.current;
     if (!w || !ready) return;
-    if (routeEntRef.current) w.entities.remove(routeEntRef.current);
-    routeEntRef.current = null;
-    const pts = (props.routeLine?.airports ?? []).filter((a) => a.lat !== null && a.lon !== null);
-    if (pts.length >= 2)
-      routeEntRef.current = w.entities.add({
+    const entities = routeMapSegments(props.routeLine).map((points, index) =>
+      w.entities.add({
+        id: 'airline-route-leg-' + index,
         polyline: {
-          positions: Cartesian3.fromDegreesArray(pts.flatMap((a) => [a.lon!, a.lat!])),
-          width: 2,
+          positions: Cartesian3.fromDegreesArray(points.flat()),
+          width: 3,
+          clampToGround: true,
           arcType: ArcType.GEODESIC,
           material: new PolylineDashMaterialProperty({ color: Color.fromCssColorString('#ffd84a').withAlpha(0.85), dashLength: 18 }),
         },
-      });
+      }));
     w.scene.requestRender();
+    return () => {
+      if (w.isDestroyed()) return;
+      for (const entity of entities) w.entities.remove(entity);
+      w.scene.requestRender();
+    };
   }, [props.routeLine, ready]);
 
   // ----- rendering quality -----
@@ -794,7 +914,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     if (ts) {
       ts.maximumScreenSpaceError = max ? 6 : 16;
       ts.cacheBytes = max ? 2 * 1024 ** 3 : 512 * 1024 ** 2;
-      ts.preloadWhenHidden = max;
+      ts.preloadWhenHidden = max && propsRef.current.lighting.mode === 'day' && !propsRef.current.archived;
     }
     w.scene.requestRender();
   }, [ready, props.settings.renderQuality]);
@@ -816,7 +936,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     if (!airportPrimsRef.current) {
       const points = new PointPrimitiveCollection();
       const labels = new LabelCollection();
-      const list = (airportsData as unknown as { airports: [string, string, string, number, number, number | null, string, string, 'L' | 'M'][] }).airports;
+      const list = AIRPORTS;
       const fill = Color.fromCssColorString('#cfd8e3');
       const ring = Color.fromCssColorString('#0a1017');
       for (const [icao, iata, , la, lo, , , , size] of list) {
@@ -839,8 +959,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   useEffect(() => {
     const w = widgetRef.current;
     if (!w || !ready) return;
-    if (props.sceneMode === '2d') w.scene.morphTo2D(reducedRef.current ? 0 : 1);
-    else w.scene.morphTo3D(reducedRef.current ? 0 : 1);
+    cameraRestoreRef.current?.setMode(props.sceneMode);
   }, [props.sceneMode, ready]);
 
   useEffect(() => {
@@ -852,14 +971,53 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   }, [props.trail, props.trailKind]);
 
   // ----- camera follow (tracking) -----
+  const passengerFollow = useMemo(() => {
+    const target = props.trackedRecord;
+    if (target?.layer !== 'aircraft') return false;
+    const report = props.layerSnaps.aircraft?.records.find(record => record.id === target.id);
+    return !!report && !!publicAirlineCallsign('aircraft', report);
+  }, [props.trackedRecord?.layer, props.trackedRecord?.id, props.layerSnaps.aircraft?.records]);
   useEffect(() => {
+    const previousPassenger = passengerFollowRef.current;
+    passengerFollowRef.current = null;
     const w = widgetRef.current;
-    if (!w) return;
+    if (!w || !ready) return;
     const t = props.trackedRecord;
-    const ent = t ? layerRendererRef.current?.entityFor(t.layer, t.id) : undefined;
-    w.trackedEntity = ent ?? undefined;
+    if (!t) { w.trackedEntity = undefined; return; }
+    if (props.trackingMode === 'cockpit') {
+      const dispose = attachCockpit(w, {
+        layer: t.layer,
+        record: () => layerRendererRef.current?.recordFor(t.layer, t.id),
+        position: () => layerRendererRef.current?.positionFor(t.layer, t.id),
+        hideOwnVehicle: (hidden) => layerRendererRef.current?.setInteriorTarget(hidden ? t : null),
+      }, (reason) => propsRef.current.onTrackingUnavailable?.(reason));
+      cockpitCleanupRef.current = dispose;
+      return () => { dispose(); if (cockpitCleanupRef.current === dispose) cockpitCleanupRef.current = null; };
+    }
+    if (passengerFollow) {
+      cameraRestoreRef.current?.cancel();
+      const dispose = attachPassengerFollow(w, () => {
+        const lr = layerRendererRef.current;
+        const current = lr?.recordFor(t.layer, t.id);
+        return current && publicAirlineCallsign(t.layer, current) ? lr?.positionFor(t.layer, t.id) : undefined;
+      }, () => reportViewRef.current?.(), reason => propsRef.current.onTrackingUnavailable?.(reason));
+      passengerFollowRef.current = { id: t.id, dispose };
+      return dispose;
+    }
+    if (t.layer === 'aircraft' && previousPassenger?.id === t.id) {
+      propsRef.current.onTrackingUnavailable?.('Follow ended because this flight no longer has a current public airline report.');
+      return;
+    }
+    // A dedicated anchor survives entity ↔ batched rendering and exposes no provider/network access.
+    const anchor = new Entity({
+      id: 'atlas-tracking-anchor',
+      position: new CallbackPositionProperty(() => layerRendererRef.current?.positionFor(t.layer, t.id), false),
+      viewFrom: new Cartesian3(0, -2500, 1200),
+    });
+    w.trackedEntity = anchor;
     w.scene.requestRender();
-  }, [props.trackedRecord?.layer, props.trackedRecord?.id, props.layerSnaps]);
+    return () => { if (!w.isDestroyed() && w.trackedEntity === anchor) w.trackedEntity = undefined; };
+  }, [props.trackedRecord?.layer, props.trackedRecord?.id, props.trackingMode, passengerFollow, ready]);
 
   // ----- geostationary weather satellites (NASA GIBS): the newest frame is looked up every 10 minutes -----
   const geoOn = props.settings.geoSatEnabled;
@@ -919,9 +1077,8 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   useEffect(() => {
     const w = widgetRef.current;
     if (!w || !ready) return;
-    // The ocean's specular glare is drawn over imagery: over cloud frames it would look like a bright cloud that
-    // is not there, so it is off while weather-satellite frames are shown.
-    w.scene.globe.showWaterEffect = !geoOn;
+    // Preserve source imagery when weather frames are toggled; do not restore synthetic white ocean highlights.
+    w.scene.globe.showWaterEffect = false;
     const want = new Map<GeoSatId, { key: string; make: () => ImageryLayer }>();
     if (geoOn && geoFrames.product === geoProduct)
       for (const s of GEO_SATS) {
@@ -1093,6 +1250,27 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     });
   }, [ready]);
 
+  // The city mesh contains daylight photography. Temporarily keep the loaded tileset hidden
+  // while the globe displays night lights, then resume the same Google session on return.
+  const presentPhotoreal = (w: CesiumWidget, ts: Cesium3DTileset) => {
+    photorealCleanupRef.current?.();
+    photorealCleanupRef.current = null;
+    if (propsRef.current.lighting.mode === 'day' && !propsRef.current.archived) {
+      ts.preloadWhenHidden = propsRef.current.settings.renderQuality === 'maximum';
+      photorealCleanupRef.current = watchPhotorealSurface(w, ts, setPhotorealOn);
+    } else {
+      ts.preloadWhenHidden = false;
+      ts.show = false;
+      setPhotorealOn(false);
+      w.scene.requestRender();
+    }
+  };
+  const archiveSurface = !!props.archived;
+  useEffect(() => {
+    const w = widgetRef.current;
+    if (w && tilesetRef.current) presentPhotoreal(w, tilesetRef.current);
+  }, [solarLighting, archiveSurface]);
+
   // ----- optional Google Photorealistic 3D Tiles (customer key, metered) -----
   useEffect(() => {
     const w = widgetRef.current;
@@ -1113,7 +1291,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       // asks for finer detail, keeps up to 2 GB of tiles in memory and preloads flight destinations.
       void createGooglePhotorealistic3DTileset({ onlyUsingWithGoogleGeocoder: true }, { maximumScreenSpaceError: maxQ ? 6 : 16, cacheBytes: maxQ ? 2 * 1024 ** 3 : 512 * 1024 ** 2, preloadFlightDestinations: true, preloadWhenHidden: maxQ })
         .then((ts) => {
-          if (cancelled) return;
+          if (cancelled) { ts.destroy(); return; }
           // The root can load while individual tiles are refused (quota, restrictions). If tiles keep
           // failing before any loads, go back to the normal globe instead of showing an empty scene.
           let loaded = 0;
@@ -1124,6 +1302,8 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
             imageryErrorsRef.current.last = 'Google 3D Tiles: ' + redactCredentialText(e?.message ?? 'tile failed', [propsRef.current.google3dKey]);
             imageryErrorsRef.current.count++;
             if (loaded === 0 && failed === 3 && tilesetRef.current === ts) {
+              photorealCleanupRef.current?.();
+              photorealCleanupRef.current = null;
               w.scene.primitives.remove(ts);
               tilesetRef.current = null;
               w.scene.globe.show = true;
@@ -1133,29 +1313,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
             }
           });
           tilesetRef.current = w.scene.primitives.add(ts);
-          // Google's tiles are only shown up close in 3D. At globe scale they are a patchwork of differently
-          // processed imagery (e.g. Antarctica), and 3D Tiles cannot be flattened for the 2D map (they break
-          // into curved pieces). Elsewhere the app's own globe is shown. Hysteresis avoids flicker.
-          let near = false;
-          const apply = () => {
-            if (tilesetRef.current !== ts) return;
-            const h = w.camera.positionCartographic.height;
-            const want = w.scene.mode === SceneMode.SCENE3D && (near ? h < PHOTOREAL_HIDE_ABOVE_M : h < PHOTOREAL_SHOW_BELOW_M);
-            if (want === near && ts.show === want) return;
-            near = want;
-            ts.show = want;
-            w.scene.globe.show = !want;
-            setPhotorealOn(want);
-            w.scene.requestRender();
-          };
-          ts.show = false;
-          const offCam = w.camera.changed.addEventListener(apply);
-          const offMorph = w.scene.morphComplete.addEventListener(apply);
-          photorealCleanupRef.current = () => {
-            offCam();
-            offMorph();
-          };
-          apply();
+          presentPhotoreal(w, ts);
         })
         .catch((e) => {
           imageryErrorsRef.current.last = 'Google 3D Tiles: ' + redactCredentialText(e instanceof Error ? e.message : String(e), [propsRef.current.google3dKey]);
@@ -1165,6 +1323,8 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     }
     return () => {
       cancelled = true;
+      photorealCleanupRef.current?.();
+      photorealCleanupRef.current = null;
     };
   }, [props.google3dKey, ready]);
 
@@ -1178,12 +1338,46 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     const fly = (destination: Cartesian3 | Rectangle) => {
       const w = widgetRef.current;
       if (!w) return;
+      cameraRestoreRef.current?.cancel();
+      if (passengerFollowRef.current && w.trackedEntity) {
+        passengerFollowRef.current.dispose();
+        passengerFollowRef.current = null;
+        propsRef.current.onTrackingUnavailable?.('Follow ended when you changed the map view.');
+      }
       const orientation = { heading: 0, pitch: -CMath.PI_OVER_TWO, roll: 0 };
       if (reducedRef.current) w.camera.setView({ destination, orientation });
       else w.camera.flyTo({ destination, orientation, duration: 1.2 });
       w.scene.requestRender();
     };
     return {
+      focusAirlineRoute: route => {
+        const w = widgetRef.current;
+        const bounds = airlineRouteBounds(route);
+        if (!w || !bounds) return;
+        if (w.scene.mode === SceneMode.MORPHING) w.scene.completeMorph();
+        cockpitCleanupRef.current?.();
+        cockpitCleanupRef.current = null;
+        w.trackedEntity = undefined;
+        fly(bounds);
+      },
+      replayMap: (kind, id) => {
+        const w = widgetRef.current;
+        const sources = sourcesRef.current;
+        if (!w || !sources) return null;
+        const clock = w.clock.currentTime;
+        const polygon = kind === 'alert' && id ? sources.alerts.entities.getById(`alert|${id}|0`)?.polygon?.hierarchy?.getValue(clock) as PolygonHierarchy | undefined : undefined;
+        const epicenter = kind === 'quake' && id ? sources.quakes.entities.getById('quake|' + id)?.position?.getValue(clock) : undefined;
+        const points = epicenter ? [epicenter] : polygon?.positions.slice(0, 8) ?? [];
+        const positions: [number, number][] = points.map(point => {
+          const c = Cartographic.fromCartesian(point);
+          return [CMath.toDegrees(c.longitude), CMath.toDegrees(c.latitude)];
+        });
+        const xy = epicenter && w.scene.cartesianToCanvasCoordinates(epicenter);
+        const rect = w.canvas.getBoundingClientRect();
+        return { active: propsRef.current.playbackActive, cursor: propsRef.current.playback?.t ?? null,
+          alertCount: sources.alerts.show ? sources.alerts.entities.values.length : 0, quakeCount: sources.quakes.show ? sources.quakes.entities.values.length : 0,
+          positions, screen: xy ? { x: rect.left + xy.x, y: rect.top + xy.y } : null };
+      },
       getDiagnostics: () => {
         const w = widgetRef.current;
         if (!w) return null;
@@ -1193,9 +1387,15 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
         // Private Cesium field, read-only: levels of tiles drawn this frame (diagnostic only).
         const tiles = (w.scene.globe as unknown as { _surface?: { _tilesToRender?: { level: number }[] } })._surface?._tilesToRender ?? [];
         const maxRenderedLevel = tiles.length ? Math.max(...tiles.map((t) => t.level)) : null;
-        const def = BASEMAPS[isBasemapId(propsRef.current.settings.basemap) ? propsRef.current.settings.basemap : 'atlas'];
-        const inUs = Object.values(US_RECTS).some((r) => Rectangle.contains(r, Cartographic.fromDegrees(lon, lat)));
-        const here = def.sources.filter((s) => s.coverage === 'Global' || s.coverage.startsWith('Global') || inUs);
+        let routeLegCount = 0;
+        for (let i = 0; ; i++) {
+          const line = w.entities.getById('airline-route-leg-' + i)?.polyline;
+          if (!line) break;
+          const vertices = line.positions?.getValue(w.clock.currentTime) as Cartesian3[] | undefined;
+          if (line.show?.getValue(w.clock.currentTime) !== false && vertices) routeLegCount += Math.max(0, vertices.length - 1);
+        }
+        const def = propsRef.current.archived ? historicalBasemap(propsRef.current.archived) : BASEMAPS[isBasemapId(propsRef.current.settings.basemap) ? propsRef.current.settings.basemap : 'atlas'];
+        const here = imagerySourcesHere(def, lon, lat);
         const imageryMaxLevelHere = here.length ? Math.max(...here.map((s) => s.maxLevel)) : 0;
         const ts = terrainStatsRef.current;
         return {
@@ -1210,6 +1410,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
           imageryErrors: imageryErrorsRef.current.count,
           globeShown: widgetRef.current?.scene.globe.show ?? null,
           renderErrors: renderErrorsRef.current.count,
+          routeLegCount,
           lastRenderError: renderErrorsRef.current.last,
           imageryLayerCount: widgetRef.current?.imageryLayers.length ?? null,
           photorealLoaded: !!tilesetRef.current,
@@ -1238,26 +1439,30 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       },
       getCamera: () => {
         const w = widgetRef.current;
-        if (!w) return null;
+        if (!w || w.scene.mode === SceneMode.MORPHING) return null;
         const c = w.camera.positionCartographic;
-        return { lat: CMath.toDegrees(c.latitude), lon: CMath.toDegrees(c.longitude), heightM: c.height, heading: w.camera.heading, pitch: w.camera.pitch };
+        return capturedCamera({ lat: CMath.toDegrees(c.latitude), lon: CMath.toDegrees(c.longitude), heightM: c.height, heading: w.camera.heading, pitch: w.camera.pitch });
+      },
+      getMapCenter: () => {
+        const w = widgetRef.current;
+        if (!w || w.scene.mode === SceneMode.MORPHING) return null;
+        const position = w.camera.pickEllipsoid(new Cartesian2(w.scene.canvas.clientWidth / 2, w.scene.canvas.clientHeight / 2), w.scene.globe.ellipsoid);
+        if (!position) return null;
+        const center = Cartographic.fromCartesian(position);
+        return { lat: CMath.toDegrees(center.latitude), lon: CMath.toDegrees(center.longitude) };
       },
       setCamera: (cam, animate = true) => {
-        const w = widgetRef.current;
-        if (!w) return;
-        const destination = Cartesian3.fromDegrees(cam.lon, cam.lat, cam.heightM);
-        const orientation = { heading: cam.heading, pitch: cam.pitch, roll: 0 };
-        if (!animate || reducedRef.current) w.camera.setView({ destination, orientation });
-        else w.camera.flyTo({ destination, orientation, duration: 1.2 });
-        w.scene.requestRender();
+        void cameraRestoreRef.current?.restore(cam, { mode: propsRef.current.sceneMode, animate });
       },
+      restoreCamera: (cam, options) => cameraRestoreRef.current?.restore(cam, { ...options, mode: options?.mode ?? propsRef.current.sceneMode }) ?? Promise.resolve(false),
       setView: (lat, lon, heightM, pitchDeg = -90) => {
+        void cameraRestoreRef.current?.restore({ lat, lon, heightM, heading: 0, pitch: CMath.toRadians(pitchDeg) }, { mode: propsRef.current.sceneMode, animate: false });
+      },
+      setWaterEffect: (enabled) => {
         const w = widgetRef.current;
         if (!w) return;
-        w.camera.setView({ destination: Cartesian3.fromDegrees(lon, lat, heightM), orientation: { heading: 0, pitch: CMath.toRadians(pitchDeg), roll: 0 } });
+        w.scene.globe.showWaterEffect = enabled;
         w.scene.requestRender();
-        // An instant jump with on-demand rendering may not raise moveEnd; report the view directly.
-        setTimeout(() => reportViewRef.current?.(), 60);
       },
       flyHome: () => fly(Cartesian3.fromDegrees(VIEWS.us.lon, VIEWS.us.lat, VIEWS.us.height)),
       flyRegion: (r) => {
@@ -1268,14 +1473,23 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       northUp: () => {
         const w = widgetRef.current;
         if (!w) return;
+        cameraRestoreRef.current?.cancel();
         const c = w.camera;
         c.setView({ destination: c.positionWC.clone(), orientation: { heading: 0, pitch: c.pitch, roll: 0 } });
         w.scene.requestRender();
       },
-      focus: (lat, lon, radiusKm) => fly(Cartesian3.fromDegrees(lon, lat, Math.max(120_000, (radiusKm ?? 50) * 1000 * 5))),
+      focus: (lat, lon, radiusKm, minimumHeightM) => {
+        let height = Math.max(minimumHeightM ?? 120_000, (radiusKm ?? 50) * 1000 * 5);
+        if (minimumHeightM !== undefined && propsRef.current.settings.terrainEnabled) {
+          const ground = widgetRef.current?.scene.globe.getHeight(Cartographic.fromDegrees(lon, lat));
+          height = ground !== undefined && Number.isFinite(ground) ? height + Math.max(0, ground) : Math.max(height, 10_000);
+        }
+        fly(Cartesian3.fromDegrees(lon, lat, height));
+      },
       zoom: (dir) => {
         const w = widgetRef.current;
         if (!w) return;
+        cameraRestoreRef.current?.cancel();
         const h = w.camera.positionCartographic.height;
         if (dir > 0) w.camera.zoomIn(h * 0.35);
         else w.camera.zoomOut(h * 0.5);

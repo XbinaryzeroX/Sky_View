@@ -1,0 +1,44 @@
+{
+  "startedAt": "2026-11-12T05:02:45.266Z",
+  "result": "PASS",
+  "archive": "6e29aad3576da0f6a3ce1d650b6a83ffcb471b3cb908227db6dc204cfc94b486",
+  "errors": [],
+  "wmts": {
+    "received": 20,
+    "failures": 0
+  },
+  "water": {
+    "x": 74601,
+    "y": 38005,
+    "z": 17,
+    "coveredFraction": 0.9871673583984375,
+    "distinctAlpha": 126
+  },
+  "lake": {
+    "x": 21833,
+    "y": 50046,
+    "z": 17,
+    "coveredFraction": 0.9923095703125,
+    "distinctAlpha": 125
+  },
+  "land": {
+    "x": 74616,
+    "y": 37937,
+    "z": 17,
+    "coveredFraction": 0,
+    "distinctAlpha": 1
+  },
+  "observed": {
+    "z": 14,
+    "x": 9419,
+    "y": 4755,
+    "photoSlot": 5,
+    "rippleSlot": 6,
+    "rippleAlpha": 0.32,
+    "rippleDrawn": false
+  },
+  "shipScaleRippleDifference": 0.06357142857142857,
+  "meanChannelDifference": 0.8712857142857143,
+  "coastalDifferenceWithShading": 0,
+  "photoDifferenceFromCoarseBase": 1
+}

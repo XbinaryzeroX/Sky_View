@@ -1,0 +1,239 @@
+{
+  "product": "BlueMarble_ShadedRelief_Bathymetry",
+  "title": "Blue Marble (August 2004, Shaded Relief and Bathymetry)",
+  "metadata": "https://gibs.earthdata.nasa.gov/layer-metadata/v1.0/BlueMarble_ShadedRelief_Bathymetry.json",
+  "credits": "MODIS / NASA Earth Observatory, served by NASA GIBS",
+  "sources": [
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=BlueMarble_ShadedRelief_Bathymetry&STYLES=&SRS=EPSG%3A3857&BBOX=-10018754.171394622%2C-10018754.17139462%2C0%2C0&WIDTH=2048&HEIGHT=2048&FORMAT=image%2Fpng",
+      "sha256": "d0aeefa66a8299465ad628f4ee09a0cbb7c8f2b749226cfb9a0b09d971659248",
+      "correctedColumns": 0
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=BlueMarble_ShadedRelief_Bathymetry&STYLES=&SRS=EPSG%3A3857&BBOX=-10018754.171394622%2C-20037508.342789244%2C0%2C-10018754.17139462&WIDTH=2048&HEIGHT=2048&FORMAT=image%2Fpng",
+      "sha256": "55e66416b5f430dea67af588b2b49b2a4b4582bb637a76f662f4f73fe001c7b5",
+      "correctedColumns": 0
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=BlueMarble_ShadedRelief_Bathymetry&STYLES=&SRS=EPSG%3A3857&BBOX=-10018754.171394622%2C0%2C0%2C10018754.171394622&WIDTH=2048&HEIGHT=2048&FORMAT=image%2Fpng",
+      "sha256": "396305a27b648fd4bb87c531ae7186f9a9e0d915cd3a072398e432b2809dce1e",
+      "correctedColumns": 0
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=BlueMarble_ShadedRelief_Bathymetry&STYLES=&SRS=EPSG%3A3857&BBOX=-10018754.171394622%2C10018754.171394622%2C0%2C20037508.342789244&WIDTH=2048&HEIGHT=2048&FORMAT=image%2Fpng",
+      "sha256": "0123a41240c1f8c26985d7219c4790cb1c2ef8c9acb73105882e220d551113ae",
+      "correctedColumns": 0
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=BlueMarble_ShadedRelief_Bathymetry&STYLES=&SRS=EPSG%3A3857&BBOX=-20037508.342789244%2C-10018754.17139462%2C-10018754.171394622%2C0&WIDTH=2048&HEIGHT=2048&FORMAT=image%2Fpng",
+      "sha256": "ac3b984dc7d6b55dddf60c5ca9c9c06a8e7d3214a3950de432a8e3caff887686",
+      "correctedColumns": 0
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=BlueMarble_ShadedRelief_Bathymetry&STYLES=&SRS=EPSG%3A3857&BBOX=-20037508.342789244%2C-20037508.342789244%2C-10018754.171394622%2C-10018754.17139462&WIDTH=2048&HEIGHT=2048&FORMAT=image%2Fpng",
+      "sha256": "6d00d43f17ad01feccf1125373803839dc69d236e027544da397d5db503b5878",
+      "correctedColumns": 0
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=BlueMarble_ShadedRelief_Bathymetry&STYLES=&SRS=EPSG%3A3857&BBOX=-20037508.342789244%2C0%2C-10018754.171394622%2C10018754.171394622&WIDTH=2048&HEIGHT=2048&FORMAT=image%2Fpng",
+      "sha256": "419649a468f0e6cc5d5e8a7d65b0f9fed7d5c6d1146304305fc530c71a344299",
+      "correctedColumns": 0
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=BlueMarble_ShadedRelief_Bathymetry&STYLES=&SRS=EPSG%3A3857&BBOX=-20037508.342789244%2C10018754.171394622%2C-10018754.171394622%2C20037508.342789244&WIDTH=2048&HEIGHT=2048&FORMAT=image%2Fpng",
+      "sha256": "d96c25245776fb59e76d3ae28053497de661ca48473515e6bbbe71d43f03e5f1",
+      "correctedColumns": 0
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=BlueMarble_ShadedRelief_Bathymetry&STYLES=&SRS=EPSG%3A3857&BBOX=0%2C-10018754.17139462%2C10018754.17139462%2C0&WIDTH=2048&HEIGHT=2048&FORMAT=image%2Fpng",
+      "sha256": "3c789f22f58d821dcd8b5256d1505bad1854eabad7e604a64a0ad0374393e78e",
+      "correctedColumns": 0
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=BlueMarble_ShadedRelief_Bathymetry&STYLES=&SRS=EPSG%3A3857&BBOX=0%2C-20037508.342789244%2C10018754.17139462%2C-10018754.17139462&WIDTH=2048&HEIGHT=2048&FORMAT=image%2Fpng",
+      "sha256": "4654c37999f4a32ca354575a6d01859a21bd91d04c83915f2f72a97c6ea1e15f",
+      "correctedColumns": 0
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=BlueMarble_ShadedRelief_Bathymetry&STYLES=&SRS=EPSG%3A3857&BBOX=0%2C0%2C10018754.17139462%2C10018754.171394622&WIDTH=2048&HEIGHT=2048&FORMAT=image%2Fpng",
+      "sha256": "d7139ae365e63bad0448b46ddc46ff39ea24a9e5de034eab14ce9eb6fc6b97ef",
+      "correctedColumns": 0
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=BlueMarble_ShadedRelief_Bathymetry&STYLES=&SRS=EPSG%3A3857&BBOX=0%2C10018754.171394622%2C10018754.17139462%2C20037508.342789244&WIDTH=2048&HEIGHT=2048&FORMAT=image%2Fpng",
+      "sha256": "7d29ff425e1f55298edf4f3b59669f86595b6c725b801b8699179e568a143119",
+      "correctedColumns": 0
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=BlueMarble_ShadedRelief_Bathymetry&STYLES=&SRS=EPSG%3A3857&BBOX=10018754.17139462%2C-10018754.17139462%2C20037508.342789244%2C0&WIDTH=2048&HEIGHT=2048&FORMAT=image%2Fpng",
+      "sha256": "8d6e759cd868e3957df56fc411fdb505a3a80e65d6c1da650978f7bb3a760133",
+      "correctedColumns": 0
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=BlueMarble_ShadedRelief_Bathymetry&STYLES=&SRS=EPSG%3A3857&BBOX=10018754.17139462%2C-20037508.342789244%2C20037508.342789244%2C-10018754.17139462&WIDTH=2048&HEIGHT=2048&FORMAT=image%2Fpng",
+      "sha256": "71e3553d55fefecc00498413aa22ca3c703c5d91c4fa0e8fd8bf1434efd1de9f",
+      "correctedColumns": 0
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=BlueMarble_ShadedRelief_Bathymetry&STYLES=&SRS=EPSG%3A3857&BBOX=10018754.17139462%2C0%2C20037508.342789244%2C10018754.171394622&WIDTH=2048&HEIGHT=2048&FORMAT=image%2Fpng",
+      "sha256": "0c3de9ca6c2293a8a140e6696d13919c208a7f4812c26489b38c240557bbf003",
+      "correctedColumns": 0
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=BlueMarble_ShadedRelief_Bathymetry&STYLES=&SRS=EPSG%3A3857&BBOX=10018754.17139462%2C10018754.171394622%2C20037508.342789244%2C20037508.342789244&WIDTH=2048&HEIGHT=2048&FORMAT=image%2Fpng",
+      "sha256": "628799e645e524a0eaefea971301c099f8feb3ad531ef114461685357ef735b8",
+      "correctedColumns": 0
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=BlueMarble_ShadedRelief_Bathymetry&STYLES=&SRS=EPSG%3A4326&BBOX=-180%2C-90%2C180%2C-78&WIDTH=2048&HEIGHT=128&FORMAT=image%2Fpng",
+      "sha256": "fb25f8bb6d3d2691f9335f9dd78fab0309a2765ed9a0cddcc39f35a1da10381f"
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=BlueMarble_ShadedRelief_Bathymetry&STYLES=&SRS=EPSG%3A4326&BBOX=-180%2C78%2C180%2C90&WIDTH=2048&HEIGHT=128&FORMAT=image%2Fpng",
+      "sha256": "956cb4534ef2795e7c9d519abc9e57b8c5fd16c6e53c06d2386d582d6045f63c"
+    }
+  ],
+  "coverage": {
+    "mercator": {
+      "epsg": 3857,
+      "tileSize": 1024,
+      "zooms": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "xyzOrder": "zoom/row/column",
+      "nativeWorldWidth": 8192
+    },
+    "polar": {
+      "epsg": 4326,
+      "size": [
+        2048,
+        128
+      ],
+      "north": [
+        -180,
+        78,
+        180,
+        90
+      ],
+      "south": [
+        -180,
+        -90,
+        180,
+        -78
+      ]
+    }
+  },
+  "generator": "node scripts/build-basemap-overview.mjs",
+  "checks": [
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/5/12/6.jpeg",
+      "sha256": "1eec1bcc44b6020d63a0e0a91b7372b770f5b43430ca106384ac015c18cbb33b",
+      "meanAbsoluteError": 10.049601715686274,
+      "nativeEdgeRatio": 1.029833498021791
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/5/18/9.jpeg",
+      "sha256": "e446242e2e273500dac6d9d8b69042f4f5e12aa6837fb1aa43ccea5c144f0779",
+      "meanAbsoluteError": 7.4694087009803924,
+      "nativeEdgeRatio": 0.9591863262494176
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/5/12/28.jpeg",
+      "sha256": "951cb3cd110aed17b0f71b11e887efa7c072283e59d78d58b18437fb0f0dd7b5",
+      "meanAbsoluteError": 3.6756280637254903,
+      "nativeEdgeRatio": 1.054366744776558
+    }
+  ],
+  "files": {
+    "0/0/0.jpg": "39d7ff23c6769570b1c7d5bfab9c1144f66e802ceafa52e968bf053319a32a8f",
+    "1/0/0.jpg": "27204a86b92adefe1903f80ce7785aa141034c026a0a1e3183a841e75bbbdc62",
+    "1/0/1.jpg": "b118ac2efb1b89cbc3c722c39ffd3ee6585919b3dca1a90a5b57d9f8718ac297",
+    "1/1/0.jpg": "f9a06758c7bbbaed8b76410875f9b668df388df1fbef3ca06376d13750220b17",
+    "1/1/1.jpg": "06658757e375096ccb6b934dc2d31e998228a01d20cc15c471dfbd800a97a20a",
+    "2/0/0.jpg": "02ab05083c49456546c44556408d36444d625623fd6e393b0381378720a841a1",
+    "2/0/1.jpg": "e15311d6b8eff8b1c7b5a1b09e1d68888fa01ad337eae88ef1b950aba133029e",
+    "2/0/2.jpg": "8130d86e76a8155ac19d44876be6e8035eff25eb58a6474a1f7ffc87463cd4d4",
+    "2/0/3.jpg": "8fc63df55a67ea9d0ca1f12d9d8df8409f81ebe8ae3236c19762d6e48e4ec623",
+    "2/1/0.jpg": "eecaab4b0e47ab7c0a8140265c04270b6563567e58d08e8689c3d7fbcc067ca4",
+    "2/1/1.jpg": "a323258b6f6f23210c9f97821f27496c98df9402df87a3792e5bcd33773f0723",
+    "2/1/2.jpg": "7d6212aaf3b77cd579a46a639f22b5b08e176b895ed3637e053a8a36c5db2604",
+    "2/1/3.jpg": "86bfd033c75ebfef42e472e647fe72ac90127b70938d8afc6f436bd3eb5e86ec",
+    "2/2/0.jpg": "6b92935d8b6e1200ad4562861747b8489733ae978e6494c374758d2b76cd1ed1",
+    "2/2/1.jpg": "7ac5beb16dc480d1cab3d1e7937fcb5eb0793ef66c9c27ffbf7339f007f9f7f1",
+    "2/2/2.jpg": "b04e6799540358a8d4caea598507bd4a5bdefaeab7426b1fe411535b83b27242",
+    "2/2/3.jpg": "230911dc76c5ccc79c1c5b1ede20c9c48e4a961e15a848b2c2d027371f3db0d3",
+    "2/3/0.jpg": "835d89abc2a6cd88e441f3d65c5c4c8332ee316f99a5690340049f2978ab3e24",
+    "2/3/1.jpg": "ba2c67f4be9453ba6e770ee8738dccec769c958a7bfaaf42f336dd9a89da2be5",
+    "2/3/2.jpg": "09fa4d37f4324d8a28438b475a538d0886f7a10ce66b9d53ebfaf00870abc832",
+    "2/3/3.jpg": "85bc1485fec532e2aa31b5f967cf4b75990c148a5359675c754cc3b707769762",
+    "3/0/0.jpg": "52e44c97ef07ffa9f483a0267c42c0ca1bbcfb1bcd578960f72bf2e9c8955423",
+    "3/0/1.jpg": "9a4025741fa92e3105111d07466d03e5596e8a189507c54511b77de22e7c7f8f",
+    "3/0/2.jpg": "bee08f61671502727d517bf447a14e8afa245ec654661117dc16a6c5f9bd941b",
+    "3/0/3.jpg": "2019924be86d7a65cb1c42425376c0f74747fb5c29ac0d6a0e9958737f63666b",
+    "3/0/4.jpg": "a7334ecb032dad74352c7370fed49802c1060b1c33a120846e0917bb1f588c6d",
+    "3/0/5.jpg": "513bf3f35e4899eb1acd2743a75682fb0ce8d1de9045228548b5867c22eb7097",
+    "3/0/6.jpg": "b85fbd74c21869fc4f98e02875d59fff896ea471d348e2dbfd602c8d12169317",
+    "3/0/7.jpg": "62da3193f3c5e1c95023a0512d6bae242cc7308fa33403aa4016cc9d56d3d0df",
+    "3/1/0.jpg": "debab9d6e187fc51099f74a1601337ee46b21ffe1c10059018770f56ee31d2a6",
+    "3/1/1.jpg": "dc3cd0bfcaeffb435b066793b3bc143f3bd4b37b1e61f735077e5580aae7c7c7",
+    "3/1/2.jpg": "c8e66c61f7adb0f603efaaf92eb8d1230baed5e85c3ef151552382e2448fedfa",
+    "3/1/3.jpg": "5a3df54d30d7ce2a687d2b7269e0aed7d44347714d4ff4424feff172b9e5b15c",
+    "3/1/4.jpg": "a16140083325afc42ec2ab9bb9a567df5df259a0c74ac8160b05b40a605b32b4",
+    "3/1/5.jpg": "aa649db2ae204cb241287496bd7b718adfecca15711089303a3e15028317ecfc",
+    "3/1/6.jpg": "082e048a4ac5d64f2288f66e01b95f46b95806d5de598a1d471e783086d219f6",
+    "3/1/7.jpg": "76550f140aa551d6ec71520c98502fd06f5f8437c3838e0c4204352b245a64d7",
+    "3/2/0.jpg": "e55d80d68dd43ba54ff13301a2a2e5d1abecbdade42bd7a2a3d76d7cd04a3e0f",
+    "3/2/1.jpg": "8ec359df2a5ecf7f3b6fba7feab00de3dafa5ba2e15aa340434b992211acc4b7",
+    "3/2/2.jpg": "3a5da3880e4ca06d0a8b555dbda4d420fc4817ae4874e2ffa68102e489aa6e9e",
+    "3/2/3.jpg": "9308a1e8b681301dc986c5f73c7b36a1e3f98c1dddd2f1b0968d388eb78542ec",
+    "3/2/4.jpg": "1ace3c4a7ef3d08ea6de04f36adcb8a8144ff09cbbedd1463c9ef9c6772094b5",
+    "3/2/5.jpg": "d1d4ac9ada2e7b961a571b6b862a304937f91f6da4478e55725af74862335670",
+    "3/2/6.jpg": "224093e4cb54b2594fbb39d59edfc384cf7969413d49d12ceab71d7c0b91f756",
+    "3/2/7.jpg": "82a41b7255e28829f24c139a8826940e981d58d0105c039ea4f4fd9440a3c97e",
+    "3/3/0.jpg": "2817481e230091a74c4191b6dcdb9f820f4bcdb81f2fe9feee1668405a42435d",
+    "3/3/1.jpg": "d3ea97ae875ae73139e0daf0596bad78346853d6341695726740c9e42529405d",
+    "3/3/2.jpg": "21df23538cce3afe95d5c3bd5f78b0e7aae9c1abc5603de9758d096d1c0c515a",
+    "3/3/3.jpg": "89bf1c9a13324e94d2fe705d5b5c0c12384e01091bb7d0e28ed819cd52939398",
+    "3/3/4.jpg": "ce57f35ffb207f95f61dbd7d0dcf618171d13d9378de7202fd9bdda705248ff9",
+    "3/3/5.jpg": "e4ce052c7ddd09bf7fc4182374100535b4a33ebea9ddcd339184ede511dcf00e",
+    "3/3/6.jpg": "be05817126e4a8c7c0bcc3c6faa5995f633de69c953d5f20577a5e6bc0992644",
+    "3/3/7.jpg": "2d3166447e658ea7d550146adc59f537ec200c3bc6e03a59cf25de8169359bf3",
+    "3/4/0.jpg": "15281f9fe4a657bdbaf63620e02e144661c6c3fa8e45fd1106b6b196782abeff",
+    "3/4/1.jpg": "0514b18f13780cbf2f52a81c4368bcdb82eb5526193519a19edbf6b94fbb1b85",
+    "3/4/2.jpg": "8a13fdec83221ba596479ae2daac55f81b04e0e0f755a4fc3302ffb683d26201",
+    "3/4/3.jpg": "b31565a5fe51f934a68deeb4778337ea33592633042c0f51eb4eccdf62764725",
+    "3/4/4.jpg": "affcdcbd3435fb8e23f5056b9c78be998a38bc0449218a94fc7bb870fe789771",
+    "3/4/5.jpg": "7716650979b37336f488a13a7e87fc802bcf4fd61030b9d9935adbdb93d76120",
+    "3/4/6.jpg": "8adeb074374efbbd4807613111678da76eec76663e60c5751589288be80fff05",
+    "3/4/7.jpg": "72bd7c568716b1cd7b13778051a24075eb9c637ce370a37c81169d65c7a0d96b",
+    "3/5/0.jpg": "8a5037df963cdff962c030bf49a889af363725b938ff3d9d256555b650bbce21",
+    "3/5/1.jpg": "550f97100ee6e5cb743b7e3e13cf1af88f5f2f635338b118f8f802c73042d593",
+    "3/5/2.jpg": "0d55b235b7e026e68852f7f2f1add0730fba554b64dbdd0b98209e677f3f4666",
+    "3/5/3.jpg": "6d45cfb57025d503f9236c93e76816c0c0e5dab640aa108ed5355f60ed3e144a",
+    "3/5/4.jpg": "852a7029d9a95759a26b5ae23c78e19b7310f7d1a30d55073a66539cabf52588",
+    "3/5/5.jpg": "2514a999bcf301d40ba4590c0aab5d6e758b0bf94845fa2e1a754d7ef1d96cce",
+    "3/5/6.jpg": "f4fd682721c6c744af6114acac39096cc35ff8bcb7be0c016f0069fcda30e631",
+    "3/5/7.jpg": "dcf68c07aff7dc5a2b66b0670415f8e9907697d61124c8ef68b25ba2854710a9",
+    "3/6/0.jpg": "8fc8928e2d5e31a55a46ce9e3e6c132fa60468b273aa3c28bb5d4dd3db50ff1d",
+    "3/6/1.jpg": "a538b57a63ad6018b663eb6146f2bb238eefa6682015be2317354be77b0312ff",
+    "3/6/2.jpg": "5ad261a4a953d4ddb251c51b2e6ce9da157b00bdace26c94970e6a0f2dee3525",
+    "3/6/3.jpg": "4fd812a782d53cc689637fecf46c04f782ca6e778890950fcae77ab701a8d1e4",
+    "3/6/4.jpg": "1612edd3df68c52ac230d90d34aeec6e32181c65de434bdfeed6a7f97fb481a7",
+    "3/6/5.jpg": "bfec1f469005490ee0e6e45923fb91e7edaba3b024de875a2edb8d72a53ef4ac",
+    "3/6/6.jpg": "6e7507268d316750e2220b468a232987e985c34568c7e19b2fa1708cf863c365",
+    "3/6/7.jpg": "7189a55680afa9e41cb4c6e5f19998c84583314d9e78dbfec13521792c503123",
+    "3/7/0.jpg": "7a3b37449bcb3e51215b6d0054618072c442534c81c055a6256eaf533c4dfdd8",
+    "3/7/1.jpg": "5e752b3aee7c3c7548be1f2d2ef2c7707cf673735f7c19c51eb8591b99918e0b",
+    "3/7/2.jpg": "33b0ed6adcaf6949655b3fc9dd72f7cd437123b8727dfd11eaa050b2ce8519aa",
+    "3/7/3.jpg": "832fed4f9135bd046a2cf147160ffbbc91178ea6837d89e0905cf2b74cceba50",
+    "3/7/4.jpg": "1ca23e8f338772e780115a1778253d7e946d4c319de5350d591d5a61abd5f33c",
+    "3/7/5.jpg": "00f79a94f3dfa6a84b0a562f8e07d819ee6556d87879b2f9765bdab6c8e1c888",
+    "3/7/6.jpg": "4b9d8323350a905fff224847821046ef1be0e129f5041ecc9eb079b0032f156c",
+    "3/7/7.jpg": "ee8da7efa89a6f47c53c4cf717422f1844345e9594568abab4db0a4613c01abb",
+    "polar/north.jpg": "69cfbaeea17e5cf5278145e415addf93aa06295f89c537c443a0d076975caf66",
+    "polar/south.jpg": "a5ea75c5f1ded674ea6bd8db46576162de61b205c139251cb47b65a6a735c6da"
+  }
+}

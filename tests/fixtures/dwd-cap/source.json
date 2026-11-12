@@ -1,0 +1,23 @@
+{
+  "url": "https://opendata.dwd.de/weather/alerts/cap/COMMUNEUNION_DWD_STAT/Z_CAP_C_EDZW_LATEST_PVW_STATUS_PREMIUMDWD_COMMUNEUNION_DE.zip",
+  "retrievedAt": "2026-11-12T01:14:40.000Z",
+  "sourceUpdatedAt": "2026-11-12T01:12:35.000Z",
+  "archiveSha256": "0A1BB00338F4429F2487FCCC3295F4DAC309DB89003B1CA6A5C19B181BDECA95",
+  "publisher": "Deutscher Wetterdienst",
+  "license": "CC BY 4.0",
+  "changes": "Two original XML entries copied verbatim from the complete German STATUS ZIP; archive packaging only changes in tests.",
+  "files": [
+    {
+      "file": "official-sea.xml",
+      "originalFilename": "2.49.0.0.276.0.DWD.PVW.1794438060000.6c67ffea-b992-4fe1-a3aa-c0492d86ede2.DEU.xml",
+      "sha256": "d39937936a897d79840eca8538d1cb14447c0479e742f7057c7e80c85ae9df11",
+      "bytes": 2090
+    },
+    {
+      "file": "official-land.xml",
+      "originalFilename": "2.49.0.0.276.0.DWD.PVW.1794416340000.e7ea374c-30d6-441d-b5c6-b400a5ebca2d.DEU.xml",
+      "sha256": "be7623a07959a7986dd2b9e8bce9b7485bd5197c8b80f65feb0e898c5bbd9c25",
+      "bytes": 5181
+    }
+  ]
+}

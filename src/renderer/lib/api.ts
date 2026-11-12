@@ -1,10 +1,13 @@
 // Typed access to the preload bridge.
 
-import type { Candle, Quote, SymbolMatch, MarketResult, MarketRange, Headline } from '../../shared/markets';
+import type { Candle, Quote, SymbolMatch, MarketResult, MarketRange, Headline, TrendingMarkets } from '../../shared/markets';
 import type { LemmyPost, LemmyComment, LemmyCommunity } from '../../shared/lemmy';
 import type { z } from 'zod';
 import type { lemmyWriteSchema } from '../../shared/ipc';
+import type { Scene as SharedScene, SavedView as SharedSavedView, AppliedScene, RestoredView } from '../../shared/ipc';
+import type { BriefingExportRequest, BriefingPreview, BriefingRequest } from '../../shared/briefing';
 import type { RouteInfo } from '../../shared/route';
+import type { DatedFlightStatus } from '../../shared/flightStatus';
 import type { VehicleInfo } from '../../shared/vehicleInfo';
 import type {
   AiAnswer,
@@ -22,12 +25,22 @@ import type {
 } from '../../shared/types';
 import type { GeoRecord, LayerId, LayerSnapshot, TrackPoint, ViewState } from '../../shared/layers';
 import type { ProviderId, ProviderState } from '../../shared/providers';
+import type { GeoJsonFilePreview, GeoJsonImportResult } from '../../shared/geojsonAnnotations';
+import type { AreaWatchRuleInput } from '../../shared/areaWatch';
+import type { TimelineRange, TimelineFrame } from '../../shared/timeline';
+import type { ConflictSnapshot } from '../../shared/conflictReports';
+import type { ConflictAssessments } from '../../shared/conflictAssessments';
 
 export interface AtlasApi {
+  conflictReports(): Promise<ConflictSnapshot>;
+  conflictAssessments(): Promise<ConflictAssessments>;
+  timelineRange(): Promise<TimelineRange>;
+  timelineFrame(t: string): Promise<TimelineFrame>;
+  marketsTrending(): Promise<TrendingMarkets>;
   marketsSearch(q: string): Promise<MarketResult<SymbolMatch[]>>;
   marketsQuote(s: string): Promise<MarketResult<Quote>>;
   marketsCandles(symbol: string, range: MarketRange): Promise<MarketResult<Candle[]>>;
-  marketsNews(symbol: string, name: string | null): Promise<{ articles: Headline[]; fetchedAt: string }>;
+  marketsNews(symbol: string, name: string | null, selection?: 'trending'): Promise<{ articles: Headline[]; fetchedAt: string; source: string }>;
   marketsExplain(symbol: string, headlines: string[], movement: string): Promise<string>;
   lemmyStatus(): Promise<{ signedIn: boolean; name: string | null }>;
   lemmyLogin(input: { username_or_email: string; password: string; totp_2fa_token?: string }): Promise<boolean>;
@@ -56,7 +69,8 @@ export interface AtlasApi {
   getHistory(key: string): Promise<HistoryRecordDetail | null>;
   clearHistory(): Promise<number>;
   previewBriefing(ids: string[]): Promise<string>;
-  exportBriefing(ids: string[], format: 'html' | 'pdf'): Promise<string | null>;
+  previewBriefing(request: BriefingRequest): Promise<BriefingPreview>;
+  exportBriefing(request: string[] | BriefingExportRequest, format: 'html' | 'pdf'): Promise<string | null>;
   aiStatus(): Promise<AiStatus>;
   aiAsk(req: { question: string; locationIds: string[] }): Promise<AiAnswer>;
   openExternal(url: string): Promise<boolean>;
@@ -78,15 +92,24 @@ export interface AtlasApi {
   listAnnotations(): Promise<Annotation[]>;
   putAnnotation(a: Annotation): Promise<boolean>;
   deleteAnnotation(id: string): Promise<boolean>;
+  previewAnnotationsGeoJson(): Promise<GeoJsonFilePreview | null>;
+  importAnnotationsGeoJson(text: string): Promise<GeoJsonImportResult>;
+  exportAnnotationsGeoJson(): Promise<string | null>;
+  putAreaWatch(rule: AreaWatchRuleInput): Promise<void>;
+  deleteAreaWatch(areaId: string): Promise<void>;
+  readAreaWatchEvents(ids: string[]): Promise<void>;
   listViews(): Promise<SavedView[]>;
   putView(v: SavedView): Promise<boolean>;
   deleteView(id: string): Promise<boolean>;
   exportScene(scene: Scene): Promise<string | null>;
   importScene(): Promise<Scene | null>;
+  applyScene(scene: Scene, allowMeteredBasemap?: boolean): Promise<AppliedScene>;
+  restoreView(id: string, allowMeteredBasemap?: boolean): Promise<RestoredView>;
   lookupAircraft(q: string): Promise<GeoRecord[]>;
   aircraftNear(lat: number, lon: number, radiusNm: number): Promise<GeoRecord[]>;
   /** Usual route for a callsign from the adsb.lol route database (not a date-specific flight plan). */
   aircraftRoute(callsign: string, lat: number, lon: number): Promise<RouteInfo | null>;
+  airlineFlightStatus(recordId: string, callsign: string): Promise<DatedFlightStatus | null>;
   vehicleInfo(q: { kind: 'aircraft' | 'vessel'; hex?: string; registration?: string; imo?: number }): Promise<VehicleInfo>;
   getWatchlist(): Promise<WatchItem[]>;
   setWatchlist(items: WatchItem[]): Promise<boolean>;
@@ -120,26 +143,8 @@ export interface Annotation {
   visible: boolean;
   createdAt: string;
 }
-export interface SavedView {
-  id: string;
-  name: string;
-  camera: Camera;
-  basemap: string;
-  layersEnabled: LayerId[];
-  createdAt: string;
-}
-export interface Scene {
-  format: 'atlas-watch-scene';
-  version: 1;
-  createdAt: string;
-  camera: Camera;
-  basemap: Settings['basemap'];
-  terrainEnabled: boolean;
-  layersEnabled: LayerId[];
-  visualMode: Settings['visualMode'];
-  annotations: Annotation[];
-  views: SavedView[];
-}
+export type SavedView = SharedSavedView;
+export type Scene = SharedScene;
 
 export interface HostNetStats {
   host: string;

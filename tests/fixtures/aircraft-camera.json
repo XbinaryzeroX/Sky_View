@@ -1,0 +1,6 @@
+{
+  "id": "abc123", "label": "CAM123", "lat": 51.5, "lon": -0.1,
+  "altM": 10000, "heading": 90, "speedKts": 420, "category": null,
+  "observedAt": "2026-11-11T15:00:00.000Z", "source": "Test fixture only", "sourceUrl": null,
+  "props": { "type": "A320", "onGround": false }
+}

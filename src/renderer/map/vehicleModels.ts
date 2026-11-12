@@ -3,7 +3,7 @@
 // Cesium caches the geometry and textures, so instances share GPU memory. Far-away
 // vehicles stay as icons, so the number of models is bounded.
 
-import { Cartesian3, Color, HeightReference, Matrix4, Model, ShadowMode, Transforms, type CesiumWidget } from 'cesium';
+import { Cartesian3, Color, Matrix4, Model, ShadowMode, Transforms, type CesiumWidget, type HeightReference } from 'cesium';
 import { writeGlb } from './glb';
 import type { TextureSlot, VehicleModelSpec } from './vehicleMeshes';
 import { clearShownModels, setShownModel } from './shownModels';
@@ -23,7 +23,7 @@ export interface ModelCandidate {
   pitch: number;
   /** [length (forward), width (left), height] scale relative to the built model. */
   scale: [number, number, number];
-  ground: boolean;
+  heightReference: HeightReference;
   selected: boolean;
   /** Smallest on-screen size in pixels (keeps distant models as visible as icons). */
   minimumPixelSize: number;
@@ -50,11 +50,12 @@ function fuselageTexture(cls: string): OffscreenCanvas {
   g.fillRect(0, H * 0.36, W, H * 0.28);
   const rows = [0.215, 0.785];
   const glass = '#1d2733';
-  if (cls === 'helicopter' || cls === 'glider') {
+  const canopy = cls === 'helicopter' || cls === 'gyroplane';
+  if (canopy || cls === 'glider') {
     g.fillStyle = glass;
-    const end = cls === 'helicopter' ? 0.34 : 0.32;
-    g.fillRect(W * (cls === 'helicopter' ? 0 : 0.08), 0, W * (end - (cls === 'helicopter' ? 0 : 0.08)), H * (cls === 'helicopter' ? 0.3 : 0.12));
-    g.fillRect(W * (cls === 'helicopter' ? 0 : 0.08), H * (cls === 'helicopter' ? 0.7 : 0.88), W * (end - (cls === 'helicopter' ? 0 : 0.08)), H * 0.3);
+    const start = canopy ? 0 : 0.08, end = canopy ? 0.34 : 0.32;
+    g.fillRect(W * start, 0, W * (end - start), H * (canopy ? 0.3 : 0.12));
+    g.fillRect(W * start, H * (canopy ? 0.7 : 0.88), W * (end - start), H * 0.3);
     if (cls === 'helicopter') for (const v of rows) g.fillRect(W * 0.36, H * (v - 0.05), W * 0.16, H * 0.1);
     return c;
   }
@@ -71,7 +72,8 @@ function fuselageTexture(cls: string): OffscreenCanvas {
     g.closePath();
     g.fill();
   }
-  const count = ({ widebody: 62, narrowbody: 34, regional: 24, turboprop: 16, bizjet: 7, light: 2, drone: 0, unknown: 34 } as Record<string, number>)[cls] ?? 30;
+  const count = ({ widebody: 62, narrowbody: 34, regional: 24, turboprop: 16, bizjet: 7, light: 2,
+    propeller: 7, jet: 15, seaplane: 3, poweredlift: 4, drone: 0, unknown: 34 } as Record<string, number>)[cls] ?? 30;
   const u0 = cls === 'light' ? 0.13 : 0.14;
   const u1 = cls === 'light' ? 0.42 : cls === 'bizjet' ? 0.62 : 0.84;
   const pitch = ((u1 - u0) * W) / Math.max(1, count);
@@ -166,7 +168,7 @@ interface Live {
   /** True only once Cesium has finished processing the model (readyEvent): until then the icon stays. */
   ready: boolean;
   failed: boolean;
-  ground: boolean;
+  candidate: ModelCandidate;
 }
 
 const SELECTED = Color.fromCssColorString('#ffd84a');
@@ -207,18 +209,22 @@ export class VehicleModelLayer {
         if (!this.failedVariants.has(c.variant)) this.create(c);
         continue;
       }
+      l.candidate = c;
       if (!l.model || l.failed) continue;
       placementMatrix(c.position, c.heading, c.pitch, c.scale, l.model.modelMatrix);
-      if (l.ground !== c.ground) {
-        l.model.heightReference = c.ground ? HeightReference.CLAMP_TO_TERRAIN : HeightReference.NONE;
-        l.ground = c.ground;
-      }
+      if (l.model.heightReference !== c.heightReference) l.model.heightReference = c.heightReference;
       l.model.silhouetteSize = c.selected ? 2 : 0;
       if (l.ready) shown.add(c.key);
     }
     modelStats.shown = shown.size;
     this.widget.scene.requestRender();
     return shown;
+  }
+
+  /** Move the existing mesh between feed updates without rerunning model selection or loading. */
+  move(key: string, position: Cartesian3, heading: number): void {
+    const live = this.live.get(key);
+    if (live?.model) placementMatrix(position, heading, live.candidate.pitch, live.candidate.scale, live.model.modelMatrix);
   }
 
   private fail(key: string, entry: Live, variant: string, error: unknown): void {
@@ -236,7 +242,7 @@ export class VehicleModelLayer {
   }
 
   private create(c: ModelCandidate): void {
-    const entry: Live = { variant: c.variant, model: null, ready: false, failed: false, ground: c.ground };
+    const entry: Live = { variant: c.variant, model: null, ready: false, failed: false, candidate: c };
     modelStats.created++;
     this.live.set(c.key, entry);
     void (async () => {
@@ -250,7 +256,7 @@ export class VehicleModelLayer {
           minimumPixelSize: c.minimumPixelSize,
           maximumScale: 400,
           scene: this.widget.scene,
-          heightReference: c.ground ? HeightReference.CLAMP_TO_TERRAIN : HeightReference.NONE,
+          heightReference: c.heightReference,
           shadows: ShadowMode.DISABLED,
           silhouetteColor: SELECTED,
           silhouetteSize: c.selected ? 2 : 0,

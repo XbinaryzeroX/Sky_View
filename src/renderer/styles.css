@@ -951,6 +951,28 @@ h2 {
   border-radius: var(--radius);
   background: #fff;
 }
+.briefing-layout.briefing-visit { grid-template-columns: minmax(0, 1fr); }
+.briefing-preview-pane { min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.briefing-preview-pane > .briefing-preview { flex: 1; min-height: 0; }
+.briefing-preview-pane > p { margin: 0; }
+.briefing-document { overflow: auto; overscroll-behavior: contain; padding: 20px; color: #1b2430; font: 14px/1.45 "Segoe UI", system-ui, sans-serif; }
+.briefing-document h1 { font-size: 22px; margin: 0 0 4px; color: #1b2430; }
+.briefing-document h2 { font-size: 17px; margin: 28px 0 8px; border-bottom: 1px solid #ccd3dc; padding-bottom: 4px; color: #1b2430; }
+.briefing-document h3 { font-size: 15px; margin: 16px 0 6px; color: #1b2430; }
+.briefing-document .muted { color: #5b6675; }
+.briefing-document .small { font-size: 12px; }
+.briefing-document table { border-collapse: collapse; width: 100%; margin: 6px 0 12px; }
+.briefing-document th, .briefing-document td { border: 1px solid #d5dbe3; padding: 5px 7px; text-align: left; vertical-align: top; font-size: 13px; overflow-wrap: normal; }
+.briefing-document li, .briefing-document .small.muted, .briefing-document td .muted { overflow-wrap: anywhere; }
+.briefing-document th { background: #eef2f6; }
+.briefing-document .note { background: #f6f3e8; color: #1b2430; border-left: 3px solid #c49a2c; padding: 6px 10px; margin: 8px 0; font-size: 13px; }
+.briefing-document .tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 12px; font-weight: 600; border: 1px solid #9aa5b3; }
+.briefing-document .sev-Extreme, .briefing-document .sev-Severe { border-color: #b3261e; color: #8c1d18; }
+.briefing-document .sev-Moderate { border-color: #a86b00; color: #7a4e00; }
+.briefing-document a { color: #0b5f8a; text-decoration: underline; }
+.briefing-document a:focus-visible { outline: 2px solid #0b5f8a; outline-offset: 2px; }
+.briefing-modes .link-btn:disabled { opacity: .45; cursor: default; }
+@media (max-width: 740px) { .briefing-layout { grid-template-columns: minmax(0, 1fr); height: 60vh; } .briefing-picker { max-height: 140px; } .briefing-document { padding: 12px; } }
 .ai-answer {
   margin-top: 12px;
   border: 1px solid var(--border-strong);
@@ -1874,7 +1896,168 @@ h2 {
 }
 
 .market-news li {
-  padding:8px 0;
+  padding:14px 0;
+  border-top:1px solid var(--border);
+  overflow-wrap:anywhere;
+}
+
+.market-news h4 {
+  font-size:16px;
+  color:var(--text-strong);
+  margin:5px 0;
+}
+
+.market-article-summary {
+  margin:6px 0 10px;
+  line-height:1.55;
+  max-width:82ch;
+}
+
+.market-news a, .market-back {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+}
+
+.market-page-head {
+  border-bottom:1px solid var(--border);
+  padding-bottom:14px;
+}
+
+.market-page-head .btn[aria-pressed='true'] {
+  background:var(--raised);
+  border-color:var(--accent-dim);
+  color:var(--text-strong);
+}
+
+.market-browser {
+  max-width:960px;
+  margin-inline:auto;
+}
+
+.market-browser h3 {
+  font-size:21px;
+  color:var(--text-strong);
+  margin-bottom:4px;
+}
+
+.market-browser > h3 + p {
+  margin-top:3px;
+}
+
+.market-browser .market-news, .market-ranking {
+  list-style:none;
+  padding:0;
+  margin:0;
+}
+
+.market-columns {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(6em, .32fr) minmax(5em, .23fr) minmax(5em, .25fr) 16px;
+  gap:12px;
+  align-items:center;
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+}
+
+.market-columns > :first-child {
+  text-align:left;
+}
+
+.market-list-head {
+  padding:12px 14px 6px;
+  color:var(--muted);
+  font-size:12px;
+}
+
+.market-ranking {
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--panel);
+}
+
+.market-ranking li + li {
+  border-top:1px solid var(--border);
+}
+
+.market-ranking button {
+  width:100%;
+  background:transparent;
+  padding:9px 14px;
+  border:0;
+  cursor:pointer;
+}
+
+.market-ranking button:is(:hover,:focus-visible) {
+  background:var(--raised);
+}
+
+.market-ranking button > svg, .market-ticker {
+  color:var(--accent);
+}
+
+.market-volume time {
+  display:block;
+}
+
+.market-identity {
+  display:grid;
+  line-height:1.35;
+  overflow-wrap:anywhere;
+}
+
+.market-identity b, .market-ticker {
+  font-family:var(--mono);
+}
+
+.market-identity b {
+  color:var(--text-strong);
+}
+
+.market-back {
+  display:flex;
+  margin-bottom:16px;
+}
+
+.market-detail-title {
+  margin-top:2px;
+}
+
+.market-detail-figures {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  gap:12px;
+  margin:8px 0;
+  font-variant-numeric:tabular-nums;
+}
+
+.market-detail-figures .market-price {
+  font-size:18px;
+  font-weight:600;
+}
+
+.market-stories-heading {
+  border-top:1px solid var(--border);
+  padding-top:16px;
+}
+
+.sr-only {
+  position:absolute;
+  width:1px;
+  height:1px;
+  padding:0;
+  overflow:hidden;
+  clip-path:inset(50%);
+  white-space:nowrap;
+}
+
+@media (max-width:650px) {
+  .market-columns {
+    grid-template-columns:minmax(0,1fr) 6em 4.25em 4.25em;
+    gap:5px;
+  }
+  .market-ranking button > svg { display:none; }
 }
 
 .community-card {
@@ -2333,6 +2516,12 @@ h2 {
   top: 12px;
   left: 12px;
 }
+.earth-lighting-panel { display: grid; gap: 12px; padding: 14px; }
+.earth-lighting-panel .seg { display: flex; flex-wrap: wrap; }
+.earth-lighting-panel p { margin: 0; }
+.earth-lighting-panel input[type="range"] { width: 100%; }
+.lighting-inputs { display: grid; grid-template-columns: 1.2fr 1fr; gap: 10px; }
+.lighting-inputs input { min-width: 0; width: 100%; }
 
 .map-top-right {
   top: 12px;
@@ -2664,7 +2853,7 @@ h2 {
 }
 
 .playback-active .floating-right, .playback-active .center > .tools:not(.scenes-panel) {
-  max-height: calc(100% - 326px);
+  max-height: calc(100% - var(--replay-panel-inset, 250px) - 60px);
 }
 
 .history-open .hud {
@@ -2958,12 +3147,12 @@ h2 {
 }
 
 .playback-active .floating-left, .playback-active .narrow-page, .playback-active .center > .diag {
-  max-height: calc(100% - 250px);
+  max-height: calc(100% - var(--replay-panel-inset, 250px) - 60px);
 }
 
-.playback-active .floating-places, .playback-active .center > .tools.scenes-panel {
-  bottom: 170px;
-  max-height: calc(100% - 250px);
+.playback-active .floating-places, .playback-active .center > .tools.scenes-panel, .playback-active .playback-menu {
+  bottom: var(--replay-panel-inset, 250px);
+  max-height: calc(100% - var(--replay-panel-inset, 250px) - 60px);
 }
 
 /* Reserve the license-logo area independently of the expandable text attribution. */
@@ -3005,3 +3194,74 @@ h2 {
   text-align: left;
 }
 .traffic-bar { min-height: 36px; padding: 2px 8px; }
+
+/* Aircraft selection in the existing map details panel. */
+.floating-panel.flight-panel {
+  width: min(415px, calc(100% - 92px));
+  max-height: calc(100% - 120px);
+}
+.flight-panel .floating-panel-body { padding: 0; }
+.flight-panel .right-panel { padding: 0 0 12px; }
+.flight-panel .details { padding: 0 12px 12px; }
+.flight-card { color: var(--text); font-variant-numeric: tabular-nums; }
+.flight-card h2, .flight-card h3, .flight-card p, .flight-card figure, .flight-card dl { margin: 0; }
+.flight-card .flight-heading {
+  padding: 15px 4px 13px;
+  border-bottom: 1px solid var(--border);
+}
+.flight-kicker { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #b7cbd9; letter-spacing: .045em; }
+.flight-kicker svg { color: #77d5df; }
+.flight-heading h2 { margin: 5px 0; font-size: clamp(21px, 2vw, 29px); line-height: 1.14; overflow-wrap: anywhere; }
+.flight-heading h2 span { color: #bbcbd6; font-weight: 450; }
+.flight-panel .flight-card .flight-heading h2, .flight-panel .flight-card h3 {
+  color: #f1f6fa; text-transform: none; letter-spacing: -.015em;
+}
+.flight-heading p, .flight-card .flight-source { color: #bccbd5; font-size: 11.5px; line-height: 1.5; }
+.flight-airports { display: grid; grid-template-columns: repeat(auto-fit,minmax(90px,1fr)); gap: 10px; padding: 12px 4px; }
+.flight-airports > div { position: relative; display: grid; align-content: start; padding-right: 15px; }
+.flight-airports strong { font: 600 21px/1.3 var(--mono,monospace); }
+.flight-airports span, .flight-airports small { color: #bccbd5; font-size: 11px; }
+.flight-airport-arrow { position: absolute; top: 20px; right: 0; color: #73d4df; }
+.flight-card .flight-identity { padding: 13px; border: 1px solid #33485c; border-radius: 12px; background: linear-gradient(154deg,#162c40,#111c29 70%); margin-top: 7px; }
+.flight-card h3 { font-size: 15px; font-weight: 650; line-height: 1.3; }
+.flight-identity h3 { font-size: 19px; margin: 0 0 3px; }
+.flight-visual { position: relative; margin: 9px -7px 4px; }
+.flight-visual figure img { width: 100%; height: clamp(132px,17vh,185px); object-fit: cover; display: block; border-radius: 7px; }
+.flight-preview { position: relative; height: clamp(140px,19vh,195px); border-radius: 7px; overflow: hidden; background: radial-gradient(ellipse at 55% 65%,#3a5369,#20374b 52%,#142537); }
+.flight-preview-canvas, .flight-preview-canvas .cesium-widget, .flight-preview-canvas canvas { width: 100%; height: 100%; display: block; background: transparent; }
+.flight-preview-canvas { touch-action: pan-y; cursor: grab; }
+.flight-preview-canvas:active { cursor: grabbing; }
+.flight-preview-loading { position: absolute; inset: 43% 0 auto; text-align: center; color: #d3e0ea; font-size: 12px; pointer-events: none; }
+.flight-rotate, .flight-view-options { display: flex; gap: 2px; position: absolute; z-index: 1; padding: 2px; border-radius: 6px; background: #0b141ee8; }
+.flight-view-options { top: 5px; left: 5px; }
+.flight-rotate { right: 5px; bottom: 5px; }
+.flight-view-options button,.flight-rotate button { border: 0; border-radius: 4px; background: transparent; color: #c0d0dd; padding: 5px 7px; display: inline-flex; align-items: center; gap: 4px; font-size: 11px; cursor: pointer; }
+.flight-view-options button[aria-pressed="true"],.flight-rotate button:hover { background: #2d485e; color: #fff; }
+.flight-credit { color: #b9c9d5; font-size: 10.5px; padding: 5px 2px; line-height: 1.45; }
+.flight-card a { color: #88dbe6; overflow-wrap: anywhere; }
+.flight-card a svg { width: 11px; height: 11px; vertical-align: middle; }
+.flight-card .flight-facts { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px 15px; margin: 10px 0 4px; }
+.flight-facts dt,.flight-readings dt { color: #acbdca; font-size: 11px; }
+.flight-facts dd,.flight-readings dd { font-size: 13px; line-height: 1.4; margin: 2px 0 0; overflow-wrap: anywhere; }
+.flight-lookup { margin-top: 7px; text-align: left; }
+.flight-observation,.flight-journey,.flight-schedule,.flight-spec { padding: 13px 3px; border-bottom: 1px solid var(--border); }
+.flight-schedule p, .flight-schedule button { margin: 5px 0 0; }
+.flight-movement h4 { font-size: 12px; margin: 10px 0 0; }
+.flight-movement dd small { font-size: 11px; color: #b4d1d7; }
+.flight-card .flight-readings { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); margin: 8px 0; gap: 5px; }
+.flight-readings dd { font-size: 16px; font-weight: 650; }
+.flight-readings small { color: #bac9d4; font-size: 10.5px; font-weight: 500; }
+.flight-journey p { margin-top: 6px; font-size: 12px; line-height: 1.45; }
+.flight-journey .btn { margin-top: 6px; }
+.flight-line-key { display: inline-block; width: 20px; margin-right: 4px; border-top: 2px dashed #ffd84a; vertical-align: middle; }
+.flight-spec-sources { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 10px; font-size: 11px; }
+.flight-card .veh-route > h3 { display: none; }
+.flight-panel .flight-report { padding: 10px 3px; }
+.flight-panel .flight-report summary { cursor: pointer; font-weight: 600; }
+@media (max-width: 720px) {
+  .floating-panel.flight-panel { left: 6px; right: 6px; top: auto; bottom: 52px; width: auto; max-height: 65%; }
+}
+
+.archive-year-control { display: flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 12px; }
+.archive-year-control select { width: auto; min-width: 4.3em; padding: 4px; font: inherit; }
+@media (max-width: 1140px) { .archive-year-control { flex-direction: column; gap: 0; font-size: 10px; } }

@@ -1,0 +1,24 @@
+{
+  "provenance": "Approximate public worldwide coordinates for link construction only; these are not imagery observations or verified panorama coverage.",
+  "valid": [
+    { "name": "Tokyo Station", "lat": 35.6812362, "lon": 139.7671248, "viewpoint": "35.681236,139.767125" },
+    { "name": "Sydney Opera House", "lat": -33.856784, "lon": 151.2152967, "viewpoint": "-33.856784,151.215297" },
+    { "name": "Cape Town", "lat": -33.9248687, "lon": 18.4240553, "viewpoint": "-33.924869,18.424055" },
+    { "name": "Lima", "lat": -12.046374, "lon": -77.042793, "viewpoint": "-12.046374,-77.042793" },
+    { "name": "Tromso", "lat": 69.649208, "lon": 18.955324, "viewpoint": "69.649208,18.955324" },
+    { "name": "East antimeridian", "lat": -16.5, "lon": 180, "viewpoint": "-16.5,180" },
+    { "name": "West antimeridian", "lat": 64.5, "lon": -180, "viewpoint": "64.5,-180" },
+    { "name": "North Pole boundary", "lat": 90, "lon": 0, "viewpoint": "90,0" },
+    { "name": "South Pole boundary", "lat": -90, "lon": 0, "viewpoint": "-90,0" },
+    { "name": "Zero", "lat": 0, "lon": 0, "viewpoint": "0,0" }
+  ],
+  "invalid": [
+    { "name": "Latitude north of WGS84", "lat": 90.00000001, "lon": 0 },
+    { "name": "Latitude south of WGS84", "lat": -90.00000001, "lon": 0 },
+    { "name": "Longitude east of WGS84", "lat": 0, "lon": 180.00000001 },
+    { "name": "Longitude west of WGS84", "lat": 0, "lon": -180.00000001 },
+    { "name": "No latitude", "lat": null, "lon": 139.767125 },
+    { "name": "Numeric string longitude", "lat": 35.681236, "lon": "139.767125" },
+    { "name": "Injected longitude", "lat": 35.681236, "lon": "139.7&key=secret" }
+  ]
+}

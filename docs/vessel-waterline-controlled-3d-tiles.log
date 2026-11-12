@@ -1,0 +1,38 @@
+{
+  "result": "PASS",
+  "mode": "controlled-3d-tiles",
+  "at": "2026-11-12T05:51:46.428Z",
+  "asar": "03bafa005199fc31acfcf055934308bd7b71a75412fe7c243802cb6fb1c339b8",
+  "source": "Synthetic local 3D tileset, synthetic AIS and isolated test credential. All Google API requests intercepted.",
+  "stages": [
+    {
+      "label": "covered",
+      "terrain": 183.00000006463006,
+      "ready": true,
+      "hullWaterline": 183.0000000034919,
+      "heightReference": 5,
+      "meshPicked": true,
+      "testPoint": [
+        685.9990202764212,
+        420.88247099133724
+      ]
+    },
+    {
+      "label": "outside supplied mesh",
+      "globeShown": true
+    },
+    {
+      "label": "returned to coverage",
+      "globeShown": true
+    }
+  ],
+  "errors": [],
+  "intercepted": [
+    "tile.googleapis.com/v1/3dtiles/root.json",
+    "tile.googleapis.com/v1/3dtiles/synthetic-lake.glb"
+  ],
+  "ship": {
+    "id": "111000001",
+    "reportedType": 70
+  }
+}

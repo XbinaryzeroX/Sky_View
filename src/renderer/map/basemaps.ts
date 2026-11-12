@@ -2,18 +2,19 @@
 // Cesium requests finer tiles as the camera descends, keeps parent tiles on
 // screen while children load, and stops at each provider's maximum level.
 //
-// Global base: NASA Blue Marble Shaded Relief + Bathymetry. Its ocean color
-// matches the low-zoom USGS tiles, so the old dark-ocean seam is gone.
+// Optical observations cover the globe. NASA Blue Marble refines land only.
 // Regional high-detail layers (USGS) overlay this base; their no-data areas
 // are transparent (see usgsProvider.ts) so the base shows through.
 
 import {
+  Cartographic,
   Color,
   buildModuleUrl,
   Credit,
   GeographicTilingScheme,
   ImageryLayer,
   Rectangle,
+  SingleTileImageryProvider,
   TileMapServiceImageryProvider,
   UrlTemplateImageryProvider,
   WebMapServiceImageryProvider,
@@ -21,7 +22,8 @@ import {
   Google2DImageryProvider,
   WebMercatorTilingScheme,
 } from 'cesium';
-import { GibsBaseProvider, OffshoreVeilProvider } from './gibsProvider';
+import { GibsBaseProvider } from './gibsProvider';
+import { WorldCoverImageryProvider, worldCoverUrl } from './worldCover';
 import { UsgsImageryProvider, type UsgsService } from './usgsProvider';
 import { createVectorImageryProvider } from './vectorTiles';
 
@@ -67,16 +69,32 @@ export const US_RECTS = {
 };
 
 export const GLOBAL_BASE: ImagerySourceInfo = {
-  id: 'gibs-bluemarble-shaded',
-  name: 'Blue Marble Shaded Relief + Bathymetry',
-  provider: 'NASA GIBS',
+  id: 'atlas-optical-overview',
+  name: 'Ocean Colour CCI and MODIS global imagery, Blue Marble over land',
+  provider: 'ESA CCI / PML and NASA GIBS',
   coverage: 'Global',
   maxLevel: 8,
-  bestResolution: '≈ 500 m/pixel',
-  captureDate: 'Composite (Blue Marble 2004, SRTM/GEBCO relief); not current',
-  terms: 'NASA open data; no restrictions; attribution requested',
+  bestResolution: '≈ 500 m/pixel on land; the bundled ocean overview is sampled at 1/12°',
+  captureDate: '2021 ocean-colour composite and MODIS observations; NASA Blue Marble 2004 land',
+  terms: 'ESA Climate Change Initiative Ocean Colour, PML, and NASA Earthdata',
   host: 'gibs.earthdata.nasa.gov',
 };
+
+const SENTINEL: ImagerySourceInfo = {
+  id: 'worldcover-s2-rgb', name: 'Sentinel-2 true colour', provider: 'ESA WorldCover / Terrascope',
+  coverage: 'Land and coastal waters between 60° S and 83° N, where observations are available',
+  maxLevel: 14, bestResolution: '10 m/pixel', captureDate: '2021 annual median composite',
+  terms: 'CC BY 4.0, ESA WorldCover consortium and Copernicus Sentinel', host: 'wmts.terrascope.be',
+};
+
+const SENTINEL_BOUNDS = Rectangle.fromDegrees(-180, -60, 180, 83);
+
+export function sentinelLayer(year: 2020 | 2021 = 2021): ImageryLayer {
+  return new ImageryLayer(new WorldCoverImageryProvider({
+    url: worldCoverUrl(year), tilingScheme: MERC, rectangle: SENTINEL_BOUNDS, maximumLevel: SENTINEL.maxLevel,
+    credit: new Credit(`© ESA WorldCover project ${year} / Contains modified Copernicus Sentinel data (${year}) processed by ESA WorldCover consortium`),
+  }, year), { rectangle: SENTINEL_BOUNDS, minimumTerrainLevel: 5 });
+}
 
 const USGS_IMAGERY: ImagerySourceInfo = {
   id: 'usgs-imagery',
@@ -114,8 +132,13 @@ export const POLAR_CAP_LAT = 78;
  */
 function polarCaps(): ImageryLayer[] {
   const caps = [Rectangle.fromDegrees(-180, POLAR_CAP_LAT, 180, 90), Rectangle.fromDegrees(-180, -90, 180, -POLAR_CAP_LAT)];
-  return caps.map(
-    (rectangle) =>
+  return caps.flatMap(
+    (rectangle, index) => [
+      new ImageryLayer(new SingleTileImageryProvider({
+        url: `/basemap-overview/polar/${index === 0 ? 'north' : 'south'}.jpg`,
+        rectangle, tileWidth: 2048, tileHeight: 128,
+        credit: new Credit('Imagery: NASA Blue Marble Shaded Relief + Bathymetry (GIBS)'),
+      }), { rectangle }),
       new ImageryLayer(
         new WebMapServiceImageryProvider({
           url: 'https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi',
@@ -126,22 +149,38 @@ function polarCaps(): ImageryLayer[] {
           maximumLevel: 7,
           credit: new Credit('Imagery: NASA Blue Marble Shaded Relief + Bathymetry (GIBS)'),
         }),
-        { rectangle },
+        { rectangle, minimumTerrainLevel: 4 },
       ),
+    ],
   );
 }
 
+/** Full-globe observations; the camera never has to wait for an online water or vector tile. */
+export function oceanColourLayer(year: 2020 | 2021 = 2021, rectangle?: Rectangle): ImageryLayer {
+  return new ImageryLayer(new UrlTemplateImageryProvider({
+    url: `/optical-water/${year}/{z}/{y}/{x}.webp`, tilingScheme: new GeographicTilingScheme(),
+    tileWidth: 540, tileHeight: 540, maximumLevel: 2,
+    credit: new Credit(`Satellite surface: ESA CCI Ocean Colour / PML, NASA Terra MODIS (${year})`),
+  }), { rectangle });
+}
+
 function globalBase(): ImageryLayer[] {
+  const temperate = Rectangle.fromDegrees(-180, -POLAR_CAP_LAT, 180, POLAR_CAP_LAT);
+  const landCaps = [Rectangle.fromDegrees(-180, POLAR_CAP_LAT, 180, 90), Rectangle.fromDegrees(-180, -90, 180, -POLAR_CAP_LAT)];
   return [
-    new ImageryLayer(
-      new GibsBaseProvider({
-        url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg',
-        tilingScheme: MERC,
-        maximumLevel: 8,
-        credit: new Credit('Imagery: NASA Blue Marble Shaded Relief + Bathymetry (GIBS)'),
-      }),
-    ),
-    ...polarCaps(),
+    oceanColourLayer(),
+    new ImageryLayer(new GibsBaseProvider({
+      url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg',
+      tilingScheme: MERC, rectangle: temperate, maximumLevel: 8, credit: new Credit('Land reference: NASA Blue Marble (2004)'),
+    }), { rectangle: temperate, minimumTerrainLevel: 5 }),
+    // Cesium can stretch the edge of Mercator tiles across the last polar terrain
+    // triangles even with a layer rectangle. The geographic observations cover it.
+    ...landCaps.map(rectangle => oceanColourLayer(2021, rectangle)),
+    ...landCaps.map((rectangle, index) => new ImageryLayer(new SingleTileImageryProvider({
+      url: `/basemap-overview/polar/${index === 0 ? 'north' : 'south'}-land.webp`,
+      rectangle, tileWidth: 2048, tileHeight: 128,
+      credit: new Credit('Polar land reference: NASA Blue Marble (2004); Natural Earth land outline'),
+    }), { rectangle })),
   ];
 }
 
@@ -157,6 +196,10 @@ function usgsLayers(service: UsgsService): ImageryLayer[] {
   );
 }
 
+function atlasImagery(): ImageryLayer[] {
+  return [...globalBase(), sentinelLayer(), ...usgsLayers('USGSImageryOnly')];
+}
+
 export function previousUtcDay(now = new Date()): string {
   return new Date(now.getTime() - 86400_000).toISOString().slice(0, 10);
 }
@@ -165,9 +208,9 @@ export const BASEMAPS: Record<BasemapId, BasemapDef> = {
   atlas: {
     id: 'atlas',
     label: 'Atlas imagery (keyless)',
-    description: 'NASA global base worldwide; USGS orthoimagery to ≈2 m over the U.S. Add the street/label overlay for worldwide city context.',
-    sources: [GLOBAL_BASE, USGS_IMAGERY],
-    build: () => [...globalBase(), ...usgsLayers('USGSImageryOnly')],
+    description: 'NASA global overview, 10 m Sentinel-2 imagery across land and coastal waters where available, and USGS orthoimagery over the U.S.',
+    sources: [GLOBAL_BASE, SENTINEL, USGS_IMAGERY],
+    build: atlasImagery,
   },
   streets: {
     id: 'streets',
@@ -227,7 +270,7 @@ export const BASEMAPS: Record<BasemapId, BasemapDef> = {
               }),
             ),
           ]
-        : [...globalBase(), ...usgsLayers('USGSImageryOnly')],
+        : atlasImagery(),
   },
   mapbox: {
     id: 'mapbox',
@@ -248,7 +291,7 @@ export const BASEMAPS: Record<BasemapId, BasemapDef> = {
               }),
             ),
           ]
-        : [...globalBase(), ...usgsLayers('USGSImageryOnly')],
+        : atlasImagery(),
   },
   eox: {
     id: 'eox',
@@ -269,7 +312,7 @@ export const BASEMAPS: Record<BasemapId, BasemapDef> = {
               }),
             ),
           ]
-        : [...globalBase(), ...usgsLayers('USGSImageryOnly')],
+        : atlasImagery(),
   },
   naturalEarth: {
     id: 'naturalEarth',
@@ -294,15 +337,15 @@ export const BASEMAPS: Record<BasemapId, BasemapDef> = {
     build: (ctx) =>
       ctx.keys.google
         ? [...globalBase(), ImageryLayer.fromProviderAsync(Google2DImageryProvider.fromUrl({ key: ctx.keys.google, mapType: 'satellite' } as never) as unknown as Promise<ImageryProvider>)]
-        : [...globalBase(), ...usgsLayers('USGSImageryOnly')],
+        : atlasImagery(),
   },
   google3d: {
     id: 'google3d',
     label: 'Google Photorealistic 3D (your key, metered)',
     description: 'Requires your Google Maps key; each session is billed to your Google account. Falls back to Atlas imagery when not configured.',
     requires: 'google3d',
-    sources: [GLOBAL_BASE, USGS_IMAGERY, { id: 'google3d', name: 'Google Photorealistic 3D Tiles', provider: 'Google Map Tiles API', coverage: 'Many cities worldwide (Google coverage)', maxLevel: 0, bestResolution: 'Varies by city', captureDate: 'Varies; not live', terms: 'Google Maps Platform terms (metered, customer key)', host: 'tile.googleapis.com' }],
-    build: () => [...globalBase(), ...usgsLayers('USGSImageryOnly')],
+    sources: [GLOBAL_BASE, SENTINEL, USGS_IMAGERY, { id: 'google3d', name: 'Google Photorealistic 3D Tiles', provider: 'Google Map Tiles API', coverage: 'Many cities worldwide (Google coverage)', maxLevel: 0, bestResolution: 'Varies by city', captureDate: 'Varies; not live', terms: 'Google Maps Platform terms (metered, customer key)', host: 'tile.googleapis.com' }],
+    build: atlasImagery,
   },
 };
 
@@ -317,30 +360,14 @@ export function labelsOverlayLayer(context = false): ImageryLayer {
   return new ImageryLayer(context ? createVectorImageryProvider('context', Object.values(US_RECTS)) : createVectorImageryProvider('overlay'), { minimumTerrainLevel: 3 });
 }
 
-/** The even-ocean veil (see OffshoreVeilProvider), for customer imagery basemaps. */
-export function oceanVeilLayer(): ImageryLayer {
-  return new ImageryLayer(
-    new OffshoreVeilProvider({
-      url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg',
-      tilingScheme: MERC,
-      credit: new Credit('Offshore sea: NASA Blue Marble (GIBS)'),
-    }),
-    { minimumTerrainLevel: 9 },
-  );
+/** Cartographic fills are reserved for relief maps and the US-only topo imagery outside its coverage. */
+export function needsContextFills(id: BasemapId): boolean {
+  return id === 'naturalEarth';
 }
 
-/** Customer imagery basemaps that are active (their key or license is present). */
-export function isCustomerImagery(id: BasemapId, keys: BuildContext['keys'], eoxLicensed: boolean): boolean {
-  return (id === 'esri' && !!keys.esri) || (id === 'mapbox' && !!keys.mapbox) || (id === 'google2d' && !!keys.google) || (id === 'eox' && eoxLicensed);
-}
-
-/** Basemaps whose detail outside the U.S. is only the ~500 m NASA base (when their key is missing, too). */
-export function needsContextFills(id: BasemapId, keys: BuildContext['keys'], eoxLicensed: boolean): boolean {
-  if (id === 'esri') return !keys.esri;
-  if (id === 'mapbox') return !keys.mapbox;
-  if (id === 'google2d') return !keys.google;
-  if (id === 'eox') return !eoxLicensed;
-  return id === 'atlas' || id === 'usgsImageryTopo' || id === 'gibsDaily' || id === 'naturalEarth' || id === 'google3d';
+export function imagerySourcesHere(def: BasemapDef, lon: number, lat: number): ImagerySourceInfo[] {
+  const inUs = Object.values(US_RECTS).some(r => Rectangle.contains(r, Cartographic.fromDegrees(lon, lat)));
+  return def.sources.filter(source => source.id === SENTINEL.id ? lat >= -60 && lat <= 83 : !source.regional || inUs);
 }
 
 export function isBasemapId(v: unknown): v is BasemapId {

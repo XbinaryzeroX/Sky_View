@@ -1,0 +1,151 @@
+{
+  "startedAt": "2026-11-12T04:27:56.200Z",
+  "mode": "Live public network",
+  "result": "PASS",
+  "asar": "5eacf4b1d1a0c77cba3914ca968d5052d3c6d7d406b79a2883c92ce0a507c682",
+  "views": [
+    {
+      "label": "us",
+      "lat": 38.4,
+      "lon": -99,
+      "heightM": 5200000,
+      "samples": [
+        {
+          "elapsedMs": 66,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 2,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 0,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 3165,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 2,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 4,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 6262,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 2,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 4,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 9367,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 2,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 4,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 12462,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 2,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 4,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 15564,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 2,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 4,
+            "failed": 0
+          }
+        }
+      ],
+      "final": {
+        "terrainLevel": null,
+        "layers": [],
+        "visible": 0,
+        "pending": 2,
+        "renderedMax": null,
+        "imageryErrors": 0,
+        "lastError": null,
+        "renderErrors": 0,
+        "terrain": {
+          "requested": 4,
+          "loaded": 4,
+          "failed": 0
+        }
+      },
+      "responses": {
+        "s3.amazonaws.com 200": 4
+      },
+      "localOverviewResponses": 0,
+      "firstLocalOverviewMs": null,
+      "firstResponses": [
+        {
+          "atMs": 80,
+          "path": "/elevation-tiles-prod/terrarium/1/1/0.png",
+          "status": 200
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "globeReadyMs": 1005,
+  "settings": {
+    "basemap": "atlas",
+    "renderQuality": "balanced",
+    "terrainEnabled": true,
+    "labelsOverlay": true,
+    "radarEnabled": true
+  },
+  "heldRequests": {
+    "tiles.openfreemap.org": 1
+  }
+}

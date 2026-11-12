@@ -1,8 +1,13 @@
-import type { RouteInfo } from '../../shared/route';
+import { publicAirlineCallsign, type RouteInfo } from '../../shared/route';
 import { VehicleExtras } from './VehicleExtras';
+import { FlightCard } from './FlightCard';
+import { SatellitePasses } from './SatellitePasses';
+import type { DwdWarning } from '../../shared/dwd';
+import { DwdWarningDetails } from './DwdWarnings';
+import type { SavedLocation } from '../../shared/types';
 import { useEffect, useMemo, useState } from 'react';
 import { CameraPlayer, cameraMedia } from './CameraPlayer';
-import { geodesicDistanceKm } from '../../shared/geo';
+import { geodesicDistanceKm, geometryBbox } from '../../shared/geo';
 import { LAYERS, TEMPORAL_LABEL, type GeoRecord, type LayerId, type LayerSnapshot } from '../../shared/layers';
 import { relativeTime } from '../lib/format';
 import { Empty, ExternalLink, Time } from './common';
@@ -10,6 +15,8 @@ import { Empty, ExternalLink, Time } from './common';
 interface Props {
   layer: LayerId;
   record: GeoRecord | null;
+  dwdWarning?: DwdWarning | null;
+  layerEnabled?: boolean;
   snaps: Partial<Record<LayerId, LayerSnapshot>>;
   tracked: boolean;
   orbitShown: boolean;
@@ -22,10 +29,16 @@ interface Props {
   photosEnabled?: boolean;
   onEnablePhotos?(): void;
   onShowRoute?(route: RouteInfo | null): void;
+  onViewRoute?(route: RouteInfo): void;
+  onOpenProviders?(): void;
+  savedPlaces?: SavedLocation[];
 }
 
 const PROP_LABEL: Record<string, string> = {
   icao24: 'ICAO address',
+  groundTrackDeg: 'Ground track (°)',
+  trueHeadingDeg: 'True heading (°)',
+  directionSource: 'Map direction source',
   originCountry: 'Country of registration',
   streamUrl: 'Live stream (HLS)',
   mediaType: 'Media type',
@@ -45,6 +58,8 @@ const PROP_LABEL: Record<string, string> = {
   iso3: 'Country code',
   callsign: 'Callsign',
   registration: 'Registration',
+  airframeYear: 'Airframe build year',
+  ownerOperator: 'Reported owner / operator',
   type: 'Aircraft type',
   description: 'Type description',
   emitterCategory: 'Emitter category code',
@@ -74,6 +89,10 @@ const PROP_LABEL: Record<string, string> = {
   percentContained: 'Contained (%)',
   discovered: 'Discovered',
   state: 'State',
+  incidentId: 'Incident ID',
+  irwinId: 'IRWIN incident ID',
+  globalId: 'NIFC feature GlobalID',
+  objectId: 'NIFC feature OBJECTID',
   upper: 'Upper limit',
   lower: 'Lower limit',
   timesOfUse: 'Times of use',
@@ -111,7 +130,15 @@ const PROP_LABEL: Record<string, string> = {
 };
 
 /** Identifier-like keys are shown without digit grouping (IMO 9401556, not 9,401,556). */
-const ID_KEYS = /^(mmsi|imo|icao24|squawk|id|year|noradId|catalogNumber)$/i;
+const ID_KEYS = /^(mmsi|imo|icao24|squawk|id|year|airframeYear|noradId|catalogNumber|objectId)$/i;
+const ignoreRoute = (_route: RouteInfo | null) => {};
+
+const perimeterFields = new Set(['gisAcres', 'incidentAcres', 'acres', 'dateCurrent', 'polygonDateTime']);
+
+function perimeterArea(value: GeoRecord['props'][string]) {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? `${value.toLocaleString(undefined, { maximumSignificantDigits: 8 })} acres` : 'Not provided by NIFC';
+}
 
 function fmt(v: string | number | boolean | null, key = ''): string {
   if (v === null || v === '') return '—';
@@ -154,6 +181,17 @@ export function RecordDetails(p: Props) {
   const meta = LAYERS[p.layer];
   const r = p.record;
   const status = p.snaps[p.layer]?.status;
+  const perimeter = p.layer === 'firePerimeters';
+  const footprint = useMemo(() => {
+    const geometry = r?.geometry;
+    if (!perimeter || !geometry || geometry.type === 'LineString') return null;
+    const [west, south, east, north] = geometryBbox(geometry);
+    const lon = ((west + east) / 2 + 540) % 360 - 180;
+    const lat = (south + north) / 2;
+    const radiusKm = Math.max(1, geodesicDistanceKm(lat, lon, north, east), geodesicDistanceKm(lat, lon, south, east));
+    const parts = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates;
+    return { lat, lon, radiusKm, parts: parts.length, holes: parts.reduce((total, rings) => total + rings.length - 1, 0) };
+  }, [perimeter, r?.geometry]);
   const nearby = useMemo(() => {
     if (!r || (p.layer !== 'aircraft' && p.layer !== 'aircraftMil' && p.layer !== 'vessels')) return [];
     const pool = [...(p.snaps.aircraft?.records ?? []).map((x) => ({ l: 'aircraft' as LayerId, x })), ...(p.snaps.vessels?.records ?? []).map((x) => ({ l: 'vessels' as LayerId, x }))];
@@ -165,52 +203,26 @@ export function RecordDetails(p: Props) {
       .slice(0, 25);
   }, [r, p.snaps.aircraft, p.snaps.vessels, p.layer]);
 
+  if (p.layer === 'dwd') return <DwdWarningDetails warning={p.dwdWarning ?? null} snapshot={p.snaps.dwd} enabled={p.layerEnabled ?? p.snaps.dwd?.status.enabled ?? false} record={r} onFocus={p.onFocus} />;
+  if (perimeter && p.layerEnabled === false) return <Empty>Wildfire perimeters are turned off. Enable the layer in Hazards to view NIFC records.</Empty>;
+  if (perimeter && !r && !status?.lastSuccessAt) return <Empty>{status?.state === 'loading' ? 'Loading the NIFC perimeter data…' : 'NIFC perimeter data is unavailable.'}</Empty>;
   if (!r) return <Empty>This record is no longer in the latest {meta.name.toLowerCase()} data (it may have left the coverage area or the view).</Empty>;
   const movable = p.layer === 'aircraft' || p.layer === 'aircraftMil' || p.layer === 'vessels' || p.layer === 'transit' || p.layer === 'satellites';
-  return (
-    <div className="details">
-      <header className="details-head">
-        <div className="eyebrow">{meta.name}</div>
-        <h2>{r.label}</h2>
-        <div className="tag-row">
-          <span className={`tag temporal t-${meta.temporal}`}>{TEMPORAL_LABEL[meta.temporal]}</span>
-          {r.category && <span className="tag">{r.category}</span>}
-          {r.props.militaryFlag === true && <span className="tag sev-moderate">Military flag (unverified)</span>}
-          {typeof r.props.emergency === 'string' && r.props.emergency !== 'none' && <span className="tag sev-extreme">Emergency: {r.props.emergency}</span>}
-        </div>
-      </header>
-      <div className="btn-row">
-        <button className="btn" onClick={() => p.onFocus(r.lat, r.lon, p.layer === 'satellites' ? 3000 : 30)} disabled={p.layer === 'satellites'}>
-          Focus
-        </button>
-        {movable && (
-          <button className={`btn ${p.tracked ? 'primary' : ''}`} onClick={() => p.onTrack(!p.tracked)} aria-pressed={p.tracked}>
-            {p.tracked ? 'Stop tracking' : 'Track'}
-          </button>
-        )}
-        {p.onWatch && (p.layer === 'aircraft' || p.layer === 'aircraftMil' || p.layer === 'vessels') && (
-          <button className={`btn ${p.watched ? 'primary' : ''}`} onClick={() => p.onWatch!(!p.watched)} aria-pressed={p.watched}>
-            {p.watched ? '★ Watching' : '☆ Watch'}
-          </button>
-        )}
-        {p.layer === 'satellites' && (
-          <button className={`btn ${p.orbitShown ? 'primary' : ''}`} onClick={() => p.onOrbit(!p.orbitShown)} aria-pressed={p.orbitShown}>
-            {p.orbitShown ? 'Hide predicted orbit' : 'Show predicted orbit'}
-          </button>
-        )}
-      </div>
-      {(p.layer === 'aircraft' || p.layer === 'aircraftMil' || p.layer === 'vessels') && (
-        <VehicleExtras layer={p.layer} r={r} photosEnabled={!!p.photosEnabled} onEnablePhotos={() => p.onEnablePhotos?.()} onShowRoute={(x) => p.onShowRoute?.(x)} />
-      )}
-      <p className="muted small">{meta.temporalNote}</p>
-      {p.tracked && movable && p.layer !== 'satellites' && <p className="muted small">The trail shows positions this app recorded while running (observed fixes joined by straight lines; not interpolated estimates).</p>}
-      {p.orbitShown && <p className="muted small">The orbit line is a prediction from the orbital elements for about one revolution.</p>}
-      <dl className="kvs">
+  const flightCard = p.layer === 'aircraft' && r.props.militaryFlag !== true;
+  const sourceReport = (
+    <dl className="kvs">
+        {perimeter && <>
+          <div className="kv"><dt>Mapped perimeter area</dt><dd>{perimeterArea(r.props.gisAcres)}</dd></div>
+          <div className="kv"><dt>Reported incident size</dt><dd>{perimeterArea(r.props.incidentAcres)}</dd></div>
+          <div className="kv"><dt>Polygon captured</dt><dd><Time iso={typeof r.props.polygonDateTime === 'string' ? r.props.polygonDateTime : null} /></dd></div>
+          <div className="kv"><dt>Polygon record last edited</dt><dd><Time iso={typeof r.props.dateCurrent === 'string' ? r.props.dateCurrent : null} /></dd></div>
+          {footprint && <div className="kv"><dt>Supplied footprint</dt><dd>{footprint.parts} polygon {footprint.parts === 1 ? 'part' : 'parts'} · {footprint.holes} interior {footprint.holes === 1 ? 'ring' : 'rings'}</dd></div>}
+        </>}
         {p.layer !== 'satellites' && (
           <div className="kv">
-            <dt>Position</dt>
+            <dt>{perimeter ? 'Map focus coordinates' : 'Position'}</dt>
             <dd>
-              {r.lat.toFixed(4)}, {r.lon.toFixed(4)}
+              {(footprint?.lat ?? r.lat).toFixed(4)}, {(footprint?.lon ?? r.lon).toFixed(4)}
             </dd>
           </div>
         )}
@@ -234,7 +246,7 @@ export function RecordDetails(p: Props) {
             <dd>{r.speedKts.toFixed(1)} kt</dd>
           </div>
         )}
-        <div className="kv">
+        {!perimeter && <div className="kv">
           <dt>{meta.temporal === 'calculated' ? 'Element epoch' : meta.temporal === 'static' ? 'Published' : p.layer === 'cameras' ? 'Image time' : 'Observed'}</dt>
           <dd>
             {r.observedAt ? (
@@ -247,7 +259,7 @@ export function RecordDetails(p: Props) {
               '—'
             )}
           </dd>
-        </div>
+        </div>}
         <div className="kv">
           <dt>Fetched</dt>
           <dd>
@@ -261,7 +273,7 @@ export function RecordDetails(p: Props) {
           </div>
         )}
         {Object.entries(r.props)
-          .filter(([k, v]) => v !== null && v !== '' && k !== 'snapshot' && k !== 'maxAgeS')
+          .filter(([k, v]) => v !== null && v !== '' && k !== 'snapshot' && k !== 'maxAgeS' && !(perimeter && perimeterFields.has(k)))
           .map(([k, v]) => (
             <div className="kv" key={k}>
               <dt>{PROP_LABEL[k] ?? k}</dt>
@@ -269,6 +281,52 @@ export function RecordDetails(p: Props) {
             </div>
           ))}
       </dl>
+  );
+  const actions = (
+    <div className="btn-row">
+        <button className="btn" onClick={() => p.onFocus(footprint?.lat ?? r.lat, footprint?.lon ?? r.lon, footprint?.radiusKm ?? 30)} disabled={p.layer === 'satellites'}>
+          Focus
+        </button>
+        {movable && (
+          <button className={`btn ${p.tracked ? 'primary' : ''}`} onClick={() => p.onTrack(!p.tracked)} aria-pressed={p.tracked}>
+            {p.tracked ? 'Stop tracking' : publicAirlineCallsign(p.layer, r) ? 'Follow' : 'Track'}
+          </button>
+        )}
+        {p.onWatch && (p.layer === 'aircraft' || p.layer === 'aircraftMil' || p.layer === 'vessels') && (
+          <button className={`btn ${p.watched ? 'primary' : ''}`} onClick={() => p.onWatch!(!p.watched)} aria-pressed={p.watched}>
+            {p.watched ? '★ Watching' : '☆ Watch'}
+          </button>
+        )}
+        {p.layer === 'satellites' && (
+          <button className={`btn ${p.orbitShown ? 'primary' : ''}`} onClick={() => p.onOrbit(!p.orbitShown)} aria-pressed={p.orbitShown}>
+            {p.orbitShown ? 'Hide predicted orbit' : 'Show predicted orbit'}
+          </button>
+        )}
+      </div>
+  );
+  return (
+    <div className="details">
+      {flightCard ? <FlightCard key={`${r.id}:${r.props.callsign ?? ''}:${r.props.registration ?? ''}:${r.props.snapshot === true}:${r.observedAt?.slice(0,10) ?? ''}`} record={r} actions={actions} photosEnabled={!!p.photosEnabled}
+        onEnablePhotos={() => p.onEnablePhotos?.()} onShowRoute={p.onShowRoute ?? ignoreRoute} onViewRoute={p.onViewRoute} onOpenProviders={() => p.onOpenProviders?.()}/> : <header className="details-head">
+        <div className="eyebrow">{meta.name}</div>
+        <h2>{r.label}</h2>
+        <div className="tag-row">
+          <span className={`tag temporal t-${meta.temporal}`}>{TEMPORAL_LABEL[meta.temporal]}</span>
+          {r.category && <span className="tag">{r.category}</span>}
+          {r.props.militaryFlag === true && <span className="tag sev-moderate">Military flag (unverified)</span>}
+          {typeof r.props.emergency === 'string' && r.props.emergency !== 'none' && <span className="tag sev-extreme">Emergency: {r.props.emergency}</span>}
+        </div>
+      </header>}
+      {!flightCard && actions}
+      {!flightCard && (p.layer === 'aircraft' || p.layer === 'aircraftMil' || p.layer === 'vessels') && (
+        <VehicleExtras key={`${p.layer}:${r.id}:${r.props.callsign ?? ''}`} layer={p.layer} r={r} photosEnabled={!!p.photosEnabled} onEnablePhotos={() => p.onEnablePhotos?.()} onShowRoute={p.onShowRoute ?? ignoreRoute} />
+      )}
+      <p className="muted small">{meta.temporalNote}</p>
+      {perimeter && status && (status.state === 'error' || status.freshness !== 'fresh') && <p className="muted small">Last observed perimeter. Last successful refresh <Time iso={status.lastSuccessAt} />.{status.error && ` ${status.error}`}</p>}
+      {p.tracked && movable && p.layer !== 'satellites' && <p className="muted small">The trail shows positions this app recorded while running (observed fixes joined by straight lines; not interpolated estimates).</p>}
+      {p.orbitShown && <p className="muted small">The orbit line is a prediction from the orbital elements for about one revolution.</p>}
+      {p.layer === 'satellites' && <SatellitePasses key={r.id} record={r} savedPlaces={p.savedPlaces} />}
+      {flightCard ? <details className="flight-report"><summary>Full source report</summary>{sourceReport}</details> : sourceReport}
       {p.layer === 'cameras' ? <CameraPlayer key={r.id} media={cameraMedia(r)} title={r.label} /> : r.imageUrl && <CameraImage url={r.imageUrl} refreshMin={typeof r.props.updateFrequencyMin === 'number' ? r.props.updateFrequencyMin : null} />}
       {nearby.length > 0 && (
         <>
@@ -295,7 +353,7 @@ export function RecordDetails(p: Props) {
           <dd>{r.source}</dd>
         </div>
         <div className="kv">
-          <dt>Record</dt>
+          <dt>{perimeter ? 'Dataset' : 'Record'}</dt>
           <dd>
             <ExternalLink url={r.sourceUrl}>Open source</ExternalLink>
           </dd>

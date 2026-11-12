@@ -1,0 +1,8 @@
+
+> atlas-watch@0.7.0 smoke
+> node scripts/smoke.mjs docs/screenshots/audit-imagery-dates.png 90000
+
+SMOKE_SCRIPT_ERROR Imagery date QA condition timed out
+SMOKE_RESULT {"globeReady":true,"errors":[],"locations":0,"alerts":391,"quakes":318,"nws":"ok","usgs":"ok"}
+SMOKE_FEEDS {"nws":"ok","nwsCount":391,"usgs":"ok","usgsCount":322,"nwsErr":null,"usgsErr":null}
+exit=0 screenshot=C:\Users\infob\Documents\Claude\Sky_View\docs\screenshots\audit-imagery-dates.png

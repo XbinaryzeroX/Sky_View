@@ -2,6 +2,7 @@
 // All timestamps are ISO-8601 strings in UTC unless noted otherwise.
 
 import type { MultiPolygon, Polygon } from 'geojson';
+import type { AreaWatchState } from './areaWatch';
 
 export type FeedId = 'nws' | 'usgs';
 
@@ -31,6 +32,8 @@ export interface WeatherAlert {
   areaDesc: string | null;
   /** Zone URLs the alert applies to (forecast, county, fire, marine...). */
   affectedZones: string[];
+  /** Some raw zone references were malformed or exceeded the normalization limit. */
+  zoneCoverageIncomplete?: boolean;
   ugc: string[];
   same: string[];
   /** Identifiers of earlier alerts this one updates or replaces. */
@@ -112,6 +115,16 @@ export interface FeedStatus {
   nextAttemptAt: string | null;
   recordCount: number;
   skippedRecords: number;
+  /** Completeness of the retrieved reply, independent of age and transport status. */
+  coverage?: FeedCoverage;
+  /** Actual successfully retrieved source scope, never inferred from an empty array. */
+  scope?: string | null;
+}
+
+export interface FeedCoverage {
+  completeness: 'complete' | 'partial' | 'unknown';
+  skippedRecords: number | null;
+  note: string | null;
 }
 
 export type Freshness = 'fresh' | 'stale' | 'unavailable';
@@ -140,6 +153,10 @@ export interface LocationEvaluation {
   /** Number of active alerts confirmed NOT to contain the location. */
   alertsOutsideCount: number;
   nwsFreshness: Freshness;
+  /** Lifecycle time used for these NWS matches, distinct from wall-clock evaluatedAt. */
+  nwsLifecycleAt?: string;
+  nwsObservedAt?: string | null;
+  nwsHistorical?: boolean;
   /** Explains why alert coverage may be incomplete (null when complete). */
   alertCoverageNote: string | null;
   quakesNearby: QuakeMatch[];
@@ -153,6 +170,8 @@ export interface FeedDiff {
   updated: string[];
   removed: string[];
   previousAt: string | null;
+  /** A pair of replies can exist without supporting complete change totals. */
+  unavailableReason?: string;
 }
 
 export interface QuakeQuery {
@@ -177,14 +196,17 @@ export interface Settings {
   historyMaxRecords: number;
   zoneLookupEnabled: boolean;
   basemap: 'atlas' | 'streets' | 'usgsImageryTopo' | 'usgsTopo' | 'gibsDaily' | 'esri' | 'mapbox' | 'eox' | 'naturalEarth' | 'neutral' | 'google3d' | 'google2d';
+  /** Selected acquisition year. Null uses the configured ordinary basemap. */
+  imageryYear: number | null;
   labelsOverlay: boolean;
   buildings3d: boolean;
   units: 'metric' | 'imperial' | 'nautical';
   smoothMotion: boolean;
   /** App-built 3D models for the aircraft and ships nearest the camera (icons further away). */
   vehicleModels: boolean;
-  /** Draw the same smoothed sea over customer imagery more than 1.5 km offshore (Google/Esri/Mapbox/EOX). */
+  /** Smooth the coarse NASA background wherever more detailed imagery has no coverage. */
   evenOcean: boolean;
+  waterDetail: boolean;
   /** Decorative window grids on OSM building walls (generated, not the real building). */
   buildingFacades: boolean;
   /** Geographic (place/water) label level. */
@@ -224,6 +246,7 @@ export interface Settings {
 }
 
 export interface AppSnapshot {
+  areaWatches: AreaWatchState;
   locations: SavedLocation[];
   alerts: WeatherAlert[];
   /** Alert ids superseded by a newer revision in the current dataset. */

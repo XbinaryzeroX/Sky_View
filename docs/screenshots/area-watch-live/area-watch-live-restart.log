@@ -1,0 +1,4 @@
+
+SMOKE_SCRIPT {"result":"PASS","mode":"live","restartPersistentDedup":true,"readStatePreserved":true,"preservedEvidence":141,"currentEvidence":142,"sourceUpdatedAt":"2026-11-11T16:33:30.000Z","environmentNow":"2026-11-11T16:33:39.208Z","sourceClockDifferenceMs":9208,"clockNote":"Publisher and environment timestamps are recorded independently.","rendererErrors":[]}
+SMOKE_RESULT {"globeReady":true,"errors":[],"locations":0,"alerts":414,"quakes":199,"nws":"ok","usgs":"ok"}
+SMOKE_FEEDS {"nws":"ok","nwsCount":414,"usgs":"ok","usgsCount":199,"nwsErr":null,"usgsErr":null}

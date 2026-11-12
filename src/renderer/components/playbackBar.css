@@ -1,0 +1,16 @@
+.playback { max-height: min(42vh, 340px); overflow-y: auto; }
+.pb-cursor { white-space: nowrap; }
+.pb-status { flex-basis: 100%; min-width: 0; }
+.pb-status p { margin: 4px 0; overflow-wrap: anywhere; }
+.pb-feed-status { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px; }
+.pb-feed { display: grid; align-content: start; gap: 2px; font-size: 11px; overflow-wrap: anywhere; }
+.pb-feed strong { font-size: 11.5px; }
+.pb-feed-gap strong, .pb-feed-unknown strong, .pb-feed-partial strong { color: #ffd166; }
+.pb-scope { font-size: 10.5px; line-height: 1.35; }
+.app.playback-active .hud { top: 62px; bottom: auto; }
+@media (max-width: 740px) {
+  .playback .pb-range { flex-basis: 100%; order: 1; }
+  .playback .pb-status { order: 2; }
+  .pb-feed-status { grid-template-columns: 1fr; }
+  .app.playback-active .hud { max-width: calc(100% - 120px); }
+}

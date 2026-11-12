@@ -1,0 +1,100 @@
+{
+  "years": [
+    2020,
+    2021
+  ],
+  "width": 4320,
+  "height": 2160,
+  "description": "ESA OC-CCI annual Rrs (665/560/490 nm, 4 km native grid sampled at 1/12 degree); six sampled NASA Terra MODIS RGB dates, selecting the second-darkest observation where four or more are present, in coverage gaps.",
+  "attribution": "The European Space Agency (ESA) Climate Change Initiative (CCI) Ocean Colour data are developed and produced through funding and resources from ESA, Copernicus Climate Change Service (C3S) and the NERC EO Data Analysis and AI Service (NEODAAS). NASA EOSDIS GIBS / Terra MODIS. Land mask: Natural Earth, public domain.",
+  "sources": [
+    {
+      "url": "https://www.oceancolour.org/thredds/dodsC/cci/v6.0-release/geographic/annual/rrs/2020/ESACCI-OC-L3S-RRS-MERGED-1Y_YEARLY_4km_GEO_PML_RRS-2020-fv6.0.nc.dods?Rrs_665.Rrs_665%5B0%5D%5B1:2:4319%5D%5B1:2:8639%5D",
+      "sha256": "be2527c7baf824ae0342c0c54b5f6cdaaf849f7ab9228b7859561c38c12055f6"
+    },
+    {
+      "url": "https://www.oceancolour.org/thredds/dodsC/cci/v6.0-release/geographic/annual/rrs/2020/ESACCI-OC-L3S-RRS-MERGED-1Y_YEARLY_4km_GEO_PML_RRS-2020-fv6.0.nc.dods?Rrs_560.Rrs_560%5B0%5D%5B1:2:4319%5D%5B1:2:8639%5D",
+      "sha256": "2b6259b1e35b3e0bd9964139561dab110523ce29d02b58936c28531afc14891e"
+    },
+    {
+      "url": "https://www.oceancolour.org/thredds/dodsC/cci/v6.0-release/geographic/annual/rrs/2020/ESACCI-OC-L3S-RRS-MERGED-1Y_YEARLY_4km_GEO_PML_RRS-2020-fv6.0.nc.dods?Rrs_490.Rrs_490%5B0%5D%5B1:2:4319%5D%5B1:2:8639%5D",
+      "sha256": "93c162bf92ee29f90a448892b5684a7a6e0f42ec14f82ffd8e7647548a8527f7"
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=MODIS_Terra_CorrectedReflectance_TrueColor&STYLES=&SRS=EPSG%3A4326&BBOX=-180%2C-90%2C180%2C90&WIDTH=2160&HEIGHT=1080&FORMAT=image%2Fpng&TRANSPARENT=TRUE&TIME=2020-01-15",
+      "sha256": "489881a1f9ed22be97c6e2e58a6b620674b87fd902aeb057de9b2b1b66e27891"
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=MODIS_Terra_CorrectedReflectance_TrueColor&STYLES=&SRS=EPSG%3A4326&BBOX=-180%2C-90%2C180%2C90&WIDTH=2160&HEIGHT=1080&FORMAT=image%2Fpng&TRANSPARENT=TRUE&TIME=2020-03-22",
+      "sha256": "a9da33f15b47b8427055bcefd890e9f45c1e8cb62e97891b401e61f9e9cda4d8"
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=MODIS_Terra_CorrectedReflectance_TrueColor&STYLES=&SRS=EPSG%3A4326&BBOX=-180%2C-90%2C180%2C90&WIDTH=2160&HEIGHT=1080&FORMAT=image%2Fpng&TRANSPARENT=TRUE&TIME=2020-05-18",
+      "sha256": "a3a8a883872baca1a250c0b2ab0b8b82642e650265a3a95adbb2fc3ca555c2ec"
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=MODIS_Terra_CorrectedReflectance_TrueColor&STYLES=&SRS=EPSG%3A4326&BBOX=-180%2C-90%2C180%2C90&WIDTH=2160&HEIGHT=1080&FORMAT=image%2Fpng&TRANSPARENT=TRUE&TIME=2020-07-15",
+      "sha256": "9fa6cc8629ba67a1ebbbacc5cf7041867b953b6446e7e80b7575cb423cdc4142"
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=MODIS_Terra_CorrectedReflectance_TrueColor&STYLES=&SRS=EPSG%3A4326&BBOX=-180%2C-90%2C180%2C90&WIDTH=2160&HEIGHT=1080&FORMAT=image%2Fpng&TRANSPARENT=TRUE&TIME=2020-09-22",
+      "sha256": "ac9d224435b9a64615afe8ce35ea721302d186545adb0ee5d8acb14703f2e926"
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=MODIS_Terra_CorrectedReflectance_TrueColor&STYLES=&SRS=EPSG%3A4326&BBOX=-180%2C-90%2C180%2C90&WIDTH=2160&HEIGHT=1080&FORMAT=image%2Fpng&TRANSPARENT=TRUE&TIME=2020-11-18",
+      "sha256": "1e27f5a2505c5a4eb6fc1dd4d88d0afbd34c47295ccbfe123a5373684708df22"
+    },
+    {
+      "url": "https://www.oceancolour.org/thredds/dodsC/cci/v6.0-release/geographic/annual/rrs/2021/ESACCI-OC-L3S-RRS-MERGED-1Y_YEARLY_4km_GEO_PML_RRS-2021-fv6.0.nc.dods?Rrs_560.Rrs_560%5B0%5D%5B1:2:4319%5D%5B1:2:8639%5D",
+      "sha256": "474936aa26ca7963a37a0b4ef9cfbcd7f7e050180fcd1e016bd9ded6c011f55b"
+    },
+    {
+      "url": "https://www.oceancolour.org/thredds/dodsC/cci/v6.0-release/geographic/annual/rrs/2021/ESACCI-OC-L3S-RRS-MERGED-1Y_YEARLY_4km_GEO_PML_RRS-2021-fv6.0.nc.dods?Rrs_490.Rrs_490%5B0%5D%5B1:2:4319%5D%5B1:2:8639%5D",
+      "sha256": "06d459b203a54537c649b3ba72d7bcafa5ce796af34bb7721b20ae6b8304497a"
+    },
+    {
+      "url": "https://www.oceancolour.org/thredds/dodsC/cci/v6.0-release/geographic/annual/rrs/2021/ESACCI-OC-L3S-RRS-MERGED-1Y_YEARLY_4km_GEO_PML_RRS-2021-fv6.0.nc.dods?Rrs_665.Rrs_665%5B0%5D%5B1:2:4319%5D%5B1:2:8639%5D",
+      "sha256": "2e396a50467054935f4791d7404234a7bf286c420acf4708bc29e718b1b3ede4"
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=MODIS_Terra_CorrectedReflectance_TrueColor&STYLES=&SRS=EPSG%3A4326&BBOX=-180%2C-90%2C180%2C90&WIDTH=2160&HEIGHT=1080&FORMAT=image%2Fpng&TRANSPARENT=TRUE&TIME=2021-01-15",
+      "sha256": "124ab0bbe0c2891f6fe54544bf6d543455a07d36fad1fa633c054df9b362801d"
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=MODIS_Terra_CorrectedReflectance_TrueColor&STYLES=&SRS=EPSG%3A4326&BBOX=-180%2C-90%2C180%2C90&WIDTH=2160&HEIGHT=1080&FORMAT=image%2Fpng&TRANSPARENT=TRUE&TIME=2021-03-22",
+      "sha256": "d5117a873bc1eadf2d7ea1b008ebd997319a0c6923da43a38960b2c952f6a9d4"
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=MODIS_Terra_CorrectedReflectance_TrueColor&STYLES=&SRS=EPSG%3A4326&BBOX=-180%2C-90%2C180%2C90&WIDTH=2160&HEIGHT=1080&FORMAT=image%2Fpng&TRANSPARENT=TRUE&TIME=2021-05-18",
+      "sha256": "8651a6998b8f595af6f9d8ba84064b556c5bd502222b2c874e5bca81b43612c5"
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=MODIS_Terra_CorrectedReflectance_TrueColor&STYLES=&SRS=EPSG%3A4326&BBOX=-180%2C-90%2C180%2C90&WIDTH=2160&HEIGHT=1080&FORMAT=image%2Fpng&TRANSPARENT=TRUE&TIME=2021-07-15",
+      "sha256": "dcd25ac8a8a32447710797e20209e9eadfac65262387a52bff5eb06ee7d469d9"
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=MODIS_Terra_CorrectedReflectance_TrueColor&STYLES=&SRS=EPSG%3A4326&BBOX=-180%2C-90%2C180%2C90&WIDTH=2160&HEIGHT=1080&FORMAT=image%2Fpng&TRANSPARENT=TRUE&TIME=2021-09-22",
+      "sha256": "b8a5e0915c0ca904be558cc8ee97df6d5a619abc4e21c37568ab159d99f82182"
+    },
+    {
+      "url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=MODIS_Terra_CorrectedReflectance_TrueColor&STYLES=&SRS=EPSG%3A4326&BBOX=-180%2C-90%2C180%2C90&WIDTH=2160&HEIGHT=1080&FORMAT=image%2Fpng&TRANSPARENT=TRUE&TIME=2021-11-18",
+      "sha256": "676f94f86c3eaff3bdb0bfb60d8745ae7598656eafdfc92a6b0921cacf25267d"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_lakes.geojson",
+      "sha256": "2d036f53dedec578001c5c30c2959ee7d4eebc1306900fa4367c49929ec8f2d9"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_lakes_europe.geojson",
+      "sha256": "b4dd9e7a5edd0d07b54768b5404d1ebe77f80b9d579c85fff65f90cf50369769"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_lakes_north_america.geojson",
+      "sha256": "76f49d4b698f3529e690136a989713bcd3c028ade150346f4b358de9815cfc43"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_lakes_australia.geojson",
+      "sha256": "29d5f4b1f3f9f38c7247e16d0a4b77f2bcf6d01c9410c39811b7a95d9b324c0e"
+    }
+  ]
+}

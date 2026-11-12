@@ -74,7 +74,32 @@ export function repairRightEdge(rgba: Uint8ClampedArray, width: number, height: 
   let x = width - 1;
   while (x >= width - maxCols && colMean(x) < ref * 0.4) x--;
   const band = width - 1 - x;
-  if (band === 0 || band >= maxCols) return 0;
+  if (band === 0) {
+    // GIBS z5 has a half-dark final column (39 vs 73 mean brightness), not the nearly black band
+    // seen at deeper levels. Require the same abrupt drop in >=90% of usable rows so a normal
+    // ocean gradient or a short coastline is not mistaken for the source's one-column seam.
+    let usable = 0;
+    let dark = 0;
+    for (let y = 0; y < height; y++) {
+      const value = (cx: number) => {
+        const i = (y * width + cx) * 4;
+        return Math.max(rgba[i], rgba[i + 1], rgba[i + 2]);
+      };
+      const local = (value(width - 3) + value(width - 2)) / 2;
+      if (local < 20) continue;
+      usable++;
+      const edge = value(width - 1);
+      if (edge < local * 0.7 && local - edge >= 8) dark++;
+    }
+    if (usable < height / 2 || dark < usable * 0.9) return 0;
+    // Only this last column is damaged: no extra transition column is removed.
+    for (let y = 0; y < height; y++) {
+      const from = (y * width + width - 2) * 4;
+      rgba.set(rgba.subarray(from, from + 4), from + 4);
+    }
+    return 1;
+  }
+  if (band >= maxCols) return 0;
   const good = Math.max(0, x - 1); // also replace one transition column
   for (let y = 0; y < height; y++) {
     const from = (y * width + good) * 4;

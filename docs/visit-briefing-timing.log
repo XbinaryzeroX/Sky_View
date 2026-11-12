@@ -1,0 +1,33 @@
+{
+  "scope": "Local reads only. Full-frame comparison uses the existing Replay reader as a reference implementation. Excludes rendering, provider I/O and export.",
+  "node": "v24.22.1",
+  "fixture": {
+    "alerts": 500,
+    "earthquakes": 10000,
+    "changesPerCategoryPerFeed": 1
+  },
+  "samplesMs": {
+    "fullFrameComparison": [
+      116.22,
+      90,
+      88.54,
+      80.07,
+      71.95,
+      79.43,
+      78.52
+    ],
+    "visitComparison": [
+      68.63,
+      54.34,
+      55.81,
+      51.38,
+      54.75,
+      63.98,
+      61.16
+    ]
+  },
+  "medianMs": {
+    "fullFrameComparison": 80.07,
+    "visitComparison": 55.81
+  }
+}

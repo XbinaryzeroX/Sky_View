@@ -1,0 +1,1015 @@
+{
+  "result": "PASS",
+  "startedAt": "2026-11-12T01:38:23.610Z",
+  "executable": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\Atlas Watch.exe",
+  "archive": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+  "archiveSha256": "1899faf2b01f54e0371f68b3ef12546666260242344e8b75ae259b9ef248fe97",
+  "temporary": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-package-xeBPyh",
+  "profile": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-package-xeBPyh\\profile",
+  "database": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-package-xeBPyh\\qa.sqlite",
+  "framework": "playwright-core 1.62.1",
+  "instrumentedPackagedProcess": true,
+  "providerResponsesReplaced": false,
+  "syntheticProviderData": false,
+  "genuineProfileAccessed": false,
+  "installerExecuted": false,
+  "defaultBrowserOpened": false,
+  "phases": [
+    {
+      "phase": "live",
+      "result": "PASS",
+      "startedAt": "2026-11-12T01:38:23.611Z",
+      "errors": [],
+      "screenshots": [
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-live-layer.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-live-events.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-live-unmapped.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-live-mapped-selected-headline.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-live-mapped-detail.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-live-map-pick.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-live-saved-place.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-live-core-quake.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-live-core-alert.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-live-replay-excluded.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-live-bulletins.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-live-off.png"
+      ],
+      "pid": 34460,
+      "security": {
+        "isPackaged": true,
+        "version": "0.7.0",
+        "appPath": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+        "userData": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-package-xeBPyh\\profile",
+        "noSandbox": false,
+        "disableWebSecurity": false,
+        "ignoreCertificateErrors": false,
+        "windows": [
+          {
+            "contextIsolation": true,
+            "sandbox": true,
+            "nodeIntegration": false,
+            "webSecurity": true
+          }
+        ]
+      },
+      "sourceVerification": {
+        "returnedWarningsChecked": 21,
+        "independentCapMessages": 21,
+        "areaChecks": 3670,
+        "sourcePolygons": 91,
+        "sourceExclusionRings": 0,
+        "coordinateChecks": 11496,
+        "geocodeChecks": 3579,
+        "records": [
+          {
+            "id": "dwd:0206666591c45bf69386d5031f48c3ae2ea77cecbd39cc64ccd64d635b35192d",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416340000.a8d36ea9-d492-4556-b3ad-fd8d83b61117.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T16:59:00.000Z",
+            "language": "de-DE",
+            "event": "WINDBÖEN",
+            "areaCount": 379,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:1c3d94117582e0953aeab9fdd87e78b6137cbbd03375e8bbe9fe507a04aa531a",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794396660000.d5ee8f53-2b55-44da-9d31-00920677309f.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T11:31:00.000Z",
+            "language": "de-DE",
+            "event": "FROST",
+            "areaCount": 1120,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:215bc871c10924fece16fa0d3cd724ccdf4460093ad7321bc1a3e415c3bb6c28",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794396720000.24561887-36d6-491f-829b-63323bb5953a.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T11:32:00.000Z",
+            "language": "de-DE",
+            "event": "FROST",
+            "areaCount": 16,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:3a9fabc74f3ac567c0b356d409195d0963e5d3a1847cf4d28687cbb05fd0574a",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416340000.31fb0618-a3fd-493a-b36e-22d7084c4b65.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T16:59:00.000Z",
+            "language": "de-DE",
+            "event": "WINDBÖEN",
+            "areaCount": 40,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:3caf8fbaf17dcb74bd1ccd943e486918b2438e039f9a4f454ce755d73bdc44db",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416640000.a5035164-8605-4092-a855-0c14f22c4e36.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T17:04:00.000Z",
+            "language": "de-DE",
+            "event": "WINDBÖEN",
+            "areaCount": 26,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:45f2fdf5f18dba22e5be236b00025e9c6adb5c2af0713ff81b4a0270b83ff8d3",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416340000.bd8fac7c-6719-4e54-ad6b-3a81e274d4ce.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T16:59:00.000Z",
+            "language": "de-DE",
+            "event": "STURMBÖEN",
+            "areaCount": 65,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:4daa13f76b0fec3e6bad51862bf0c4a630d252ca59d92b1ae2051b05aba5e854",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794438060000.31ff09e1-9ee0-4ad1-b9a7-2293f1102603.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T23:01:00.000Z",
+            "language": "de-DE",
+            "event": "BÖEN",
+            "areaCount": 1,
+            "geometryStatus": "unavailable",
+            "mapped": false
+          },
+          {
+            "id": "dwd:605bf0b04cdc1d10d62c5209f22059d5f126047e8643568ebcf061d6d4deb986",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794401580000.09327748-f33a-42f2-b5b7-dcffe80db830.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T12:53:00.000Z",
+            "language": "de-DE",
+            "event": "FROST",
+            "areaCount": 701,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:7942571fef4c2ef239d480a0c974ad52172fcf65d546414cf73486ed1691c111",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794438060000.45f889c7-bd24-43a3-a384-f1f36368ea88.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T23:01:00.000Z",
+            "language": "de-DE",
+            "event": "STARKWIND",
+            "areaCount": 1,
+            "geometryStatus": "unavailable",
+            "mapped": false
+          },
+          {
+            "id": "dwd:86b4c7c8e7583cd1146f58d9d84966c62287d3bc64c83d258b2643b4a9dc6994",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416340000.28ee6d60-058d-47a2-bf2d-b143a88f00fc.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T16:59:00.000Z",
+            "language": "de-DE",
+            "event": "WINDBÖEN",
+            "areaCount": 151,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:919a1d471ff01d0199c9402bd1d79b94a609009a95fb00880c028344346a0f4f",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794438060000.6c67ffea-b992-4fe1-a3aa-c0492d86ede2.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T23:01:00.000Z",
+            "language": "de-DE",
+            "event": "STARKWIND",
+            "areaCount": 1,
+            "geometryStatus": "unavailable",
+            "mapped": false
+          },
+          {
+            "id": "dwd:923ab4e95dc00859ce74d15e96e55fa48edb91d58ef2e9ee8fed352363d3ae90",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794442860000.17c52a63-617a-4967-87b2-f9bf44b52d87.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-12T00:21:00.000Z",
+            "language": "de-DE",
+            "event": "NEBEL",
+            "areaCount": 374,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:9ebd56f4977d4d62685e689be1a9f1e8d8e54e5e3f7a683bfe09d767ffd15fe3",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416340000.26f63325-0673-4603-89b8-1fe97673b926.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T16:59:00.000Z",
+            "language": "de-DE",
+            "event": "WINDBÖEN",
+            "areaCount": 82,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:afd665bf7875d7158e98856d2e8f1a720c5f2b8bc4fd1b85ed393c5cc9883f71",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416340000.24647758-8caf-4552-8c57-65d0eedbfca1.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T16:59:00.000Z",
+            "language": "de-DE",
+            "event": "WINDBÖEN",
+            "areaCount": 115,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:c826884fddcba9dcafd3de5bd70e99ff2db3d17038698d31b2f9e73ffc377c7c",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416340000.162bb287-8e38-403f-88ff-a811f976a457.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T16:59:00.000Z",
+            "language": "de-DE",
+            "event": "STURMBÖEN",
+            "areaCount": 115,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:c83bb5422673949b7e6194c33d1887c5b5dcdfdb2d53bbbdd2d7073f044e5b70",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416340000.e7ea374c-30d6-441d-b5c6-b400a5ebca2d.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T16:59:00.000Z",
+            "language": "de-DE",
+            "event": "STURMBÖEN",
+            "areaCount": 6,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:ce08c9578846302a46701226189e6762e31ed1c6bd7f4a3a4b5ae006ced13c1f",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794434100000.beb239ba-f241-4025-8ad0-3673017e09db.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T21:55:00.000Z",
+            "language": "de-DE",
+            "event": "NEBEL",
+            "areaCount": 20,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:db401f4fba8261ca140ef5b29fbb5a2d1109469e67b2357587a2f61f8f37c26c",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794438060000.22d10736-bba7-4341-98e0-755911de7ffb.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T23:01:00.000Z",
+            "language": "de-DE",
+            "event": "STARKWIND",
+            "areaCount": 1,
+            "geometryStatus": "unavailable",
+            "mapped": false
+          },
+          {
+            "id": "dwd:dcc3f06e3994cd1764b6cc1aa678a6401da573d7f70e07a8b1c3cc7a64ee2c4b",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416640000.bf79699d-1ab5-4f48-9228-a9dac4456ace.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T17:04:00.000Z",
+            "language": "de-DE",
+            "event": "WINDBÖEN",
+            "areaCount": 122,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:ef6aa8210274b0c4067933e7b087e8f5fceb026cc9a94a189f2d1301c9761988",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794438060000.55275c93-9883-4960-89f4-c5c420d78b69.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T23:01:00.000Z",
+            "language": "de-DE",
+            "event": "BÖEN",
+            "areaCount": 2,
+            "geometryStatus": "unavailable",
+            "mapped": false
+          },
+          {
+            "id": "dwd:f0dcbb7e15c975d2dbd9ee7f64afdc8f67d4cce64a63f1cdbf79e4e448a4be99",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794436920000.e25edcf4-fec0-45b6-9e81-f1d82db2e8b7.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T22:42:00.000Z",
+            "language": "de-DE",
+            "event": "NEBEL",
+            "areaCount": 332,
+            "geometryStatus": "partial",
+            "mapped": true
+          }
+        ]
+      },
+      "sourceResponses": [
+        {
+          "url": "https://opendata.dwd.de/weather/alerts/cap/COMMUNEUNION_DWD_STAT/Z_CAP_C_EDZW_LATEST_PVW_STATUS_PREMIUMDWD_COMMUNEUNION_DE.zip",
+          "status": 200,
+          "receivedAt": "2026-11-12T01:38:25.880Z",
+          "etag": "\"6af51761-1d759\"",
+          "lastModified": "Thu, 12 Nov 2026 01:33:21 GMT",
+          "requestValidators": {
+            "etag": null,
+            "modifiedSince": null
+          },
+          "bytes": 120665,
+          "sha256": "d2af8737ee4946e2fb6db2a38cebabb6e07a0a4e411446bb8ad5223feac7554b"
+        }
+      ],
+      "snapshot": {
+        "status": {
+          "id": "dwd",
+          "enabled": true,
+          "state": "ok",
+          "lastAttemptAt": "2026-11-12T01:38:25.476Z",
+          "lastSuccessAt": "2026-11-12T01:38:26.119Z",
+          "sourceUpdatedAt": "2026-11-12T01:33:21.000Z",
+          "error": null,
+          "consecutiveFailures": 0,
+          "nextAttemptAt": "2026-11-12T01:43:26.119Z",
+          "recordCount": 21,
+          "skippedRecords": 0,
+          "freshness": "fresh",
+          "note": "DWD STATUS received 2026-11-12T01:38:26.119Z. 21 unexpired or open-ended bulletins, 16 with map geometry. 16 with partial geometry."
+        },
+        "warningCount": 21,
+        "mapped": 16,
+        "unmapped": 5
+      },
+      "connectionTest": {
+        "ok": true,
+        "message": "DWD STATUS checked 2026-11-12T01:38:26.119Z. DWD STATUS received 2026-11-12T01:38:26.119Z. 21 unexpired or open-ended bulletins, 16 with map geometry. 16 with partial geometry.",
+        "at": "2026-11-12T01:38:27.233Z",
+        "requestCountBefore": 1,
+        "requestCountAfter": 1
+      },
+      "eventIds": [
+        "dwd:923ab4e95dc00859ce74d15e96e55fa48edb91d58ef2e9ee8fed352363d3ae90",
+        "dwd:4daa13f76b0fec3e6bad51862bf0c4a630d252ca59d92b1ae2051b05aba5e854",
+        "dwd:7942571fef4c2ef239d480a0c974ad52172fcf65d546414cf73486ed1691c111",
+        "dwd:919a1d471ff01d0199c9402bd1d79b94a609009a95fb00880c028344346a0f4f",
+        "dwd:db401f4fba8261ca140ef5b29fbb5a2d1109469e67b2357587a2f61f8f37c26c",
+        "dwd:ef6aa8210274b0c4067933e7b087e8f5fceb026cc9a94a189f2d1301c9761988",
+        "dwd:f0dcbb7e15c975d2dbd9ee7f64afdc8f67d4cce64a63f1cdbf79e4e448a4be99",
+        "dwd:ce08c9578846302a46701226189e6762e31ed1c6bd7f4a3a4b5ae006ced13c1f",
+        "dwd:3caf8fbaf17dcb74bd1ccd943e486918b2438e039f9a4f454ce755d73bdc44db",
+        "dwd:dcc3f06e3994cd1764b6cc1aa678a6401da573d7f70e07a8b1c3cc7a64ee2c4b",
+        "dwd:0206666591c45bf69386d5031f48c3ae2ea77cecbd39cc64ccd64d635b35192d",
+        "dwd:3a9fabc74f3ac567c0b356d409195d0963e5d3a1847cf4d28687cbb05fd0574a",
+        "dwd:45f2fdf5f18dba22e5be236b00025e9c6adb5c2af0713ff81b4a0270b83ff8d3",
+        "dwd:86b4c7c8e7583cd1146f58d9d84966c62287d3bc64c83d258b2643b4a9dc6994",
+        "dwd:9ebd56f4977d4d62685e689be1a9f1e8d8e54e5e3f7a683bfe09d767ffd15fe3",
+        "dwd:afd665bf7875d7158e98856d2e8f1a720c5f2b8bc4fd1b85ed393c5cc9883f71",
+        "dwd:c826884fddcba9dcafd3de5bd70e99ff2db3d17038698d31b2f9e73ffc377c7c",
+        "dwd:c83bb5422673949b7e6194c33d1887c5b5dcdfdb2d53bbbdd2d7073f044e5b70",
+        "dwd:605bf0b04cdc1d10d62c5209f22059d5f126047e8643568ebcf061d6d4deb986",
+        "dwd:215bc871c10924fece16fa0d3cd724ccdf4460093ad7321bc1a3e415c3bb6c28",
+        "dwd:1c3d94117582e0953aeab9fdd87e78b6137cbbd03375e8bbe9fe507a04aa531a"
+      ],
+      "sourceState": "current",
+      "availability": {
+        "mapped": true,
+        "unmapped": true
+      },
+      "unmappedDetail": {
+        "id": "dwd:4daa13f76b0fec3e6bad51862bf0c4a630d252ca59d92b1ae2051b05aba5e854",
+        "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794438060000.31ff09e1-9ee0-4ad1-b9a7-2293f1102603.DEU",
+        "text": "GERMANY · DEUTSCHER WETTERDIENST\nAMTLICHE WARNUNG DES SEEWETTERDIENSTES HAMBURG VOR BÖEN\n●\nMinor\nAlert\nIn the retrieved status package\n\nDWD: current reply. 21 warnings; 16 with supplied map geometry; 5 without usable geometry.\n\nLast successful check Nov 11, 8:38 PM EST · archive publication Nov 11, 8:33 PM EST.\n\nArchive receipt and coverage details\n\nUnlocated warning areas remain geographically unknown.\n\n© Deutscher Wetterdienst · Germany · original German text · CC BY 4.0 . CAP polygons converted to GeoJSON. Separate from NWS/USGS reports and recorded Replay.\n\nNo usable supplied map geometry. Area names and geocodes remain available; no map position is inferred.\n\nEvent · German original\nBÖEN\nCAP identifier\n2.49.0.0.276.0.DWD.PVW.1794438060000.31ff09e1-9ee0-4ad1-b9a7-2293f1102603.DEU\nCAP sender\nopendata@dwd.de\nSent by DWD\nNov 11, 6:01 PM EST\n2026-11-11T23:01:00.000Z\nEffective\nNov 11, 6:01 PM EST\n2026-11-11T23:01:00.000Z\nOnset\nNov 11, 6:01 PM EST\n2026-11-11T23:01:00.000Z\nMessage expiry\nNot supplied\nUrgency / certainty\nImmediate / Likely\nResponse types\nPrepare\nGeometry\nunavailable · 1 areas without located geometry · 0 invalid geometry items skipped\n\nDWD did not supply an expiry. No end time or continued validity is inferred; check the official source.\n\nORIGINAL WARNING TEXT\n\nBöen von 7 Beaufort aus West bis Nordwest.\n\nPUBLISHER INSTRUCTIONS\n\nInstructions not supplied.\n\nNAMED WARNING AREAS (1)\nElbe-/Wesermündung · WARNCELLID: 501000003 · not located on the map · altitude 0 m; ceiling 3,000 m\n\nMap and saved-place tests use supplied horizontal polygons with holes; altitude and ceiling restrictions are not evaluated. Missing geometry is unknown, never evidence that a place is outside a warning.\n\nOfficial DWD warning source \n\nSource: © Deutscher Wetterdienst · CC BY 4.0 . Original German text is preserved; CAP polygons are converted to GeoJSON. This display is not an official warning service."
+      },
+      "sameWarningReselect": {
+        "priorScrollTop": 1045,
+        "resetToTop": true
+      },
+      "differentWarningReselect": {
+        "priorScrollTop": 1045,
+        "resetToTop": true
+      },
+      "mappedDetail": {
+        "id": "dwd:0206666591c45bf69386d5031f48c3ae2ea77cecbd39cc64ccd64d635b35192d",
+        "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416340000.a8d36ea9-d492-4556-b3ad-fd8d83b61117.DEU",
+        "language": "de-DE",
+        "headline": "Amtliche WARNUNG vor WINDBÖEN",
+        "point": [
+          9.294350999999999,
+          54.0905116
+        ]
+      },
+      "actualMapPick": {
+        "id": "dwd:0206666591c45bf69386d5031f48c3ae2ea77cecbd39cc64ccd64d635b35192d",
+        "point": [
+          9.294350999999999,
+          54.0905116
+        ],
+        "canvasCenter": {
+          "x": 754,
+          "y": 473
+        }
+      },
+      "savedPlace": {
+        "id": "6921b98f-1cd1-4660-b3b0-f376401182fb",
+        "lat": 54.0905116,
+        "lon": 9.294350999999999,
+        "expectedInsideIds": [
+          "dwd:0206666591c45bf69386d5031f48c3ae2ea77cecbd39cc64ccd64d635b35192d"
+        ],
+        "renderedInsideTitles": [
+          "Amtliche WARNUNG vor WINDBÖEN"
+        ],
+        "summaryText": "Supplied horizontal intersections: 1. 20 warning(s) have unlocated portions that cannot be ruled out here. Altitude/ceiling restrictions are not evaluated.",
+        "text": "DWD WARNINGS AT THIS POINT\n\nDWD: current reply. 21 warnings; 16 with supplied map geometry; 5 without usable geometry.\n\nLast successful check Nov 11, 8:38 PM EST · archive publication Nov 11, 8:33 PM EST.\n\nArchive receipt and coverage details\n\nUnlocated warning areas remain geographically unknown.\n\n© Deutscher Wetterdienst · Germany · original German text · CC BY 4.0 . CAP polygons converted to GeoJSON. Separate from NWS/USGS reports and recorded Replay.\n\nSupplied horizontal intersections: 1. 20 warning(s) have unlocated portions that cannot be ruled out here. Altitude/ceiling restrictions are not evaluated.\n\n●\nMinor\nAmtliche WARNUNG vor WINDBÖEN\nDWD · Inside supplied horizontal polygon · Upcoming\n●\nMinor\nAmtliche WARNUNG vor FROST\nDWD · Unknown — unlocated warning area · In the retrieved status package\n●\nMinor\nAmtliche WARNUNG vor FROST\nDWD · Unknown — unlocated warning area · In the retrieved status package\n●\nMinor\nAmtliche WARNUNG vor WINDBÖEN\nDWD · Unknown — unlocated warning area · Upcoming\n●\nMinor\nAmtliche WARNUNG vor WINDBÖEN\nDWD · Unknown — unlocated warning area · Upcoming\n◆\nModerate\nAmtliche WARNUNG vor STURMBÖEN\nDWD · Unknown — unlocated warning area · Upcoming\n●\nMinor\nAmtliche Warnung des Seewetterdienstes Hamburg vor BÖEN\nDWD · Unknown — unlocated warning area · In the retrieved status package\n●\nMinor\nAmtliche WARNUNG vor FROST\nDWD · Unknown — unlocated warning area · In the retrieved status package\n●\nMinor\nAmtliche Warnung des Seewetterdienstes Hamburg vor STARKWIND\nDWD · Unknown — unlocated warning area · In the retrieved status package\n●\nMinor\nAmtliche WARNUNG vor WINDBÖEN\nDWD · Unknown — unlocated warning area · Upcoming\n●\nMinor\nAmtliche Warnung des Seewetterdienstes Hamburg vor STARKWIND\nDWD · Unknown — unlocated warning area · In the retrieved status package\n●\nMinor\nAmtliche WARNUNG vor NEBEL\nDWD · Unknown — unlocated warning area · In the retrieved status package\n●\nMinor\nAmtliche WARNUNG vor WINDBÖEN\nDWD · Unknown — unlocated warning area · Upcoming\n●\nMinor\nAmtliche WARNUNG vor WINDBÖEN\nDWD · Unknown — unlocated warning area · Upcoming\n◆\nModerate\nAmtliche WARNUNG vor STURMBÖEN\nDWD · Unknown — unlocated warning area · Upcoming\n◆\nModerate\nAmtliche WARNUNG vor STURMBÖEN\nDWD · Unknown — unlocated warning area · Upcoming\n●\nMinor\nAmtliche WARNUNG vor NEBEL\nDWD · Unknown — unlocated warning area · In the retrieved status package\n●\nMinor\nAmtliche Warnung des Seewetterdienstes Hamburg vor STARKWIND\nDWD · Unknown — unlocated warning area · In the retrieved status package\n●\nMinor\nAmtliche WARNUNG vor WINDBÖEN\nDWD · Unknown — unlocated warning area · Upcoming\n●\nMinor\nAmtliche Warnung des Seewetterdienstes Hamburg vor BÖEN\nDWD · Unknown — unlocated warning area · In the retrieved status package\n●\nMinor\nAmtliche WARNUNG vor NEBEL\nDWD · Unknown — unlocated warning area · In the retrieved status package\n\nThe existing briefing and saved-location NWS/USGS counts do not include DWD warnings."
+      },
+      "existingBriefingExcludesDwd": true,
+      "coreSelectionsAfterDwd": [
+        {
+          "kind": "quake",
+          "id": "us7000txqa",
+          "available": true
+        },
+        {
+          "kind": "alert",
+          "id": "urn:oid:2.49.0.1.840.0.d80cc76de26953027eb02516b3e7ef61718f3119.001.1",
+          "available": true
+        }
+      ],
+      "nwsAndArchiveSeparation": true,
+      "replayExcludesLiveDwd": true,
+      "replayEntry": "Events → Replay recorded alerts and earthquakes; remains on Globe (page navigation intentionally exits Replay).",
+      "offHidesWarnings": true,
+      "selectedHeadlineBounds": [
+        {
+          "id": "dwd:4daa13f76b0fec3e6bad51862bf0c4a630d252ca59d92b1ae2051b05aba5e854",
+          "text": "Amtliche Warnung des Seewetterdienstes Hamburg vor BÖEN",
+          "scrollTop": 0,
+          "headline": {
+            "x": 1070.61083984375,
+            "y": 227.078125,
+            "width": 268,
+            "height": 31.875
+          },
+          "body": {
+            "x": 1040.61083984375,
+            "y": 154.75,
+            "width": 338,
+            "height": 568.25
+          },
+          "visible": true,
+          "reachable": true
+        },
+        {
+          "id": "dwd:4daa13f76b0fec3e6bad51862bf0c4a630d252ca59d92b1ae2051b05aba5e854",
+          "text": "Amtliche Warnung des Seewetterdienstes Hamburg vor BÖEN",
+          "scrollTop": 0,
+          "headline": {
+            "x": 1067,
+            "y": 227.078125,
+            "width": 268,
+            "height": 31.875
+          },
+          "body": {
+            "x": 1037,
+            "y": 154.75,
+            "width": 338,
+            "height": 568.25
+          },
+          "visible": true,
+          "reachable": true
+        },
+        {
+          "id": "dwd:0206666591c45bf69386d5031f48c3ae2ea77cecbd39cc64ccd64d635b35192d",
+          "text": "Amtliche WARNUNG vor WINDBÖEN",
+          "scrollTop": 0,
+          "headline": {
+            "x": 1067,
+            "y": 227.078125,
+            "width": 268,
+            "height": 15.9375
+          },
+          "body": {
+            "x": 1037,
+            "y": 154.75,
+            "width": 338,
+            "height": 568.25
+          },
+          "visible": true,
+          "reachable": true
+        },
+        {
+          "id": "dwd:0206666591c45bf69386d5031f48c3ae2ea77cecbd39cc64ccd64d635b35192d",
+          "text": "Amtliche WARNUNG vor WINDBÖEN",
+          "scrollTop": 0,
+          "headline": {
+            "x": 1067,
+            "y": 227.078125,
+            "width": 268,
+            "height": 15.9375
+          },
+          "body": {
+            "x": 1037,
+            "y": 154.75,
+            "width": 338,
+            "height": 568.25
+          },
+          "visible": true,
+          "reachable": true
+        },
+        {
+          "id": "dwd:0206666591c45bf69386d5031f48c3ae2ea77cecbd39cc64ccd64d635b35192d",
+          "text": "Amtliche WARNUNG vor WINDBÖEN",
+          "scrollTop": 0,
+          "headline": {
+            "x": 1067,
+            "y": 227.078125,
+            "width": 268,
+            "height": 15.9375
+          },
+          "body": {
+            "x": 1037,
+            "y": 154.75,
+            "width": 338,
+            "height": 568.25
+          },
+          "visible": true,
+          "reachable": true
+        },
+        {
+          "id": "dwd:0206666591c45bf69386d5031f48c3ae2ea77cecbd39cc64ccd64d635b35192d",
+          "text": "Amtliche WARNUNG vor WINDBÖEN",
+          "scrollTop": 0,
+          "headline": {
+            "x": 1067,
+            "y": 227.078125,
+            "width": 268,
+            "height": 15.9375
+          },
+          "body": {
+            "x": 1037,
+            "y": 154.75,
+            "width": 338,
+            "height": 568.25
+          },
+          "visible": true,
+          "reachable": true
+        }
+      ],
+      "closedByRunner": true,
+      "finishedAt": "2026-11-12T01:38:38.003Z"
+    },
+    {
+      "phase": "restart",
+      "result": "PASS",
+      "startedAt": "2026-11-12T01:38:38.004Z",
+      "errors": [],
+      "screenshots": [
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-restart-layer.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-restart-events.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-restart-unmapped.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-restart-mapped-selected-headline.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-restart-mapped-detail.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-restart-map-pick.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-restart-bulletins.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-restart-off.png"
+      ],
+      "pid": 40012,
+      "security": {
+        "isPackaged": true,
+        "version": "0.7.0",
+        "appPath": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+        "userData": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-package-xeBPyh\\profile",
+        "noSandbox": false,
+        "disableWebSecurity": false,
+        "ignoreCertificateErrors": false,
+        "windows": [
+          {
+            "contextIsolation": true,
+            "sandbox": true,
+            "nodeIntegration": false,
+            "webSecurity": true
+          }
+        ]
+      },
+      "sourceVerification": {
+        "returnedWarningsChecked": 21,
+        "independentCapMessages": 21,
+        "areaChecks": 3670,
+        "sourcePolygons": 91,
+        "sourceExclusionRings": 0,
+        "coordinateChecks": 11496,
+        "geocodeChecks": 3579,
+        "records": [
+          {
+            "id": "dwd:0206666591c45bf69386d5031f48c3ae2ea77cecbd39cc64ccd64d635b35192d",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416340000.a8d36ea9-d492-4556-b3ad-fd8d83b61117.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T16:59:00.000Z",
+            "language": "de-DE",
+            "event": "WINDBÖEN",
+            "areaCount": 379,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:1c3d94117582e0953aeab9fdd87e78b6137cbbd03375e8bbe9fe507a04aa531a",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794396660000.d5ee8f53-2b55-44da-9d31-00920677309f.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T11:31:00.000Z",
+            "language": "de-DE",
+            "event": "FROST",
+            "areaCount": 1120,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:215bc871c10924fece16fa0d3cd724ccdf4460093ad7321bc1a3e415c3bb6c28",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794396720000.24561887-36d6-491f-829b-63323bb5953a.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T11:32:00.000Z",
+            "language": "de-DE",
+            "event": "FROST",
+            "areaCount": 16,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:3a9fabc74f3ac567c0b356d409195d0963e5d3a1847cf4d28687cbb05fd0574a",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416340000.31fb0618-a3fd-493a-b36e-22d7084c4b65.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T16:59:00.000Z",
+            "language": "de-DE",
+            "event": "WINDBÖEN",
+            "areaCount": 40,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:3caf8fbaf17dcb74bd1ccd943e486918b2438e039f9a4f454ce755d73bdc44db",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416640000.a5035164-8605-4092-a855-0c14f22c4e36.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T17:04:00.000Z",
+            "language": "de-DE",
+            "event": "WINDBÖEN",
+            "areaCount": 26,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:45f2fdf5f18dba22e5be236b00025e9c6adb5c2af0713ff81b4a0270b83ff8d3",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416340000.bd8fac7c-6719-4e54-ad6b-3a81e274d4ce.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T16:59:00.000Z",
+            "language": "de-DE",
+            "event": "STURMBÖEN",
+            "areaCount": 65,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:4daa13f76b0fec3e6bad51862bf0c4a630d252ca59d92b1ae2051b05aba5e854",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794438060000.31ff09e1-9ee0-4ad1-b9a7-2293f1102603.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T23:01:00.000Z",
+            "language": "de-DE",
+            "event": "BÖEN",
+            "areaCount": 1,
+            "geometryStatus": "unavailable",
+            "mapped": false
+          },
+          {
+            "id": "dwd:605bf0b04cdc1d10d62c5209f22059d5f126047e8643568ebcf061d6d4deb986",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794401580000.09327748-f33a-42f2-b5b7-dcffe80db830.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T12:53:00.000Z",
+            "language": "de-DE",
+            "event": "FROST",
+            "areaCount": 701,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:7942571fef4c2ef239d480a0c974ad52172fcf65d546414cf73486ed1691c111",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794438060000.45f889c7-bd24-43a3-a384-f1f36368ea88.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T23:01:00.000Z",
+            "language": "de-DE",
+            "event": "STARKWIND",
+            "areaCount": 1,
+            "geometryStatus": "unavailable",
+            "mapped": false
+          },
+          {
+            "id": "dwd:86b4c7c8e7583cd1146f58d9d84966c62287d3bc64c83d258b2643b4a9dc6994",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416340000.28ee6d60-058d-47a2-bf2d-b143a88f00fc.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T16:59:00.000Z",
+            "language": "de-DE",
+            "event": "WINDBÖEN",
+            "areaCount": 151,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:919a1d471ff01d0199c9402bd1d79b94a609009a95fb00880c028344346a0f4f",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794438060000.6c67ffea-b992-4fe1-a3aa-c0492d86ede2.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T23:01:00.000Z",
+            "language": "de-DE",
+            "event": "STARKWIND",
+            "areaCount": 1,
+            "geometryStatus": "unavailable",
+            "mapped": false
+          },
+          {
+            "id": "dwd:923ab4e95dc00859ce74d15e96e55fa48edb91d58ef2e9ee8fed352363d3ae90",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794442860000.17c52a63-617a-4967-87b2-f9bf44b52d87.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-12T00:21:00.000Z",
+            "language": "de-DE",
+            "event": "NEBEL",
+            "areaCount": 374,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:9ebd56f4977d4d62685e689be1a9f1e8d8e54e5e3f7a683bfe09d767ffd15fe3",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416340000.26f63325-0673-4603-89b8-1fe97673b926.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T16:59:00.000Z",
+            "language": "de-DE",
+            "event": "WINDBÖEN",
+            "areaCount": 82,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:afd665bf7875d7158e98856d2e8f1a720c5f2b8bc4fd1b85ed393c5cc9883f71",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416340000.24647758-8caf-4552-8c57-65d0eedbfca1.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T16:59:00.000Z",
+            "language": "de-DE",
+            "event": "WINDBÖEN",
+            "areaCount": 115,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:c826884fddcba9dcafd3de5bd70e99ff2db3d17038698d31b2f9e73ffc377c7c",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416340000.162bb287-8e38-403f-88ff-a811f976a457.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T16:59:00.000Z",
+            "language": "de-DE",
+            "event": "STURMBÖEN",
+            "areaCount": 115,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:c83bb5422673949b7e6194c33d1887c5b5dcdfdb2d53bbbdd2d7073f044e5b70",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416340000.e7ea374c-30d6-441d-b5c6-b400a5ebca2d.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T16:59:00.000Z",
+            "language": "de-DE",
+            "event": "STURMBÖEN",
+            "areaCount": 6,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:ce08c9578846302a46701226189e6762e31ed1c6bd7f4a3a4b5ae006ced13c1f",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794434100000.beb239ba-f241-4025-8ad0-3673017e09db.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T21:55:00.000Z",
+            "language": "de-DE",
+            "event": "NEBEL",
+            "areaCount": 20,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:db401f4fba8261ca140ef5b29fbb5a2d1109469e67b2357587a2f61f8f37c26c",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794438060000.22d10736-bba7-4341-98e0-755911de7ffb.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T23:01:00.000Z",
+            "language": "de-DE",
+            "event": "STARKWIND",
+            "areaCount": 1,
+            "geometryStatus": "unavailable",
+            "mapped": false
+          },
+          {
+            "id": "dwd:dcc3f06e3994cd1764b6cc1aa678a6401da573d7f70e07a8b1c3cc7a64ee2c4b",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416640000.bf79699d-1ab5-4f48-9228-a9dac4456ace.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T17:04:00.000Z",
+            "language": "de-DE",
+            "event": "WINDBÖEN",
+            "areaCount": 122,
+            "geometryStatus": "partial",
+            "mapped": true
+          },
+          {
+            "id": "dwd:ef6aa8210274b0c4067933e7b087e8f5fceb026cc9a94a189f2d1301c9761988",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794438060000.55275c93-9883-4960-89f4-c5c420d78b69.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T23:01:00.000Z",
+            "language": "de-DE",
+            "event": "BÖEN",
+            "areaCount": 2,
+            "geometryStatus": "unavailable",
+            "mapped": false
+          },
+          {
+            "id": "dwd:f0dcbb7e15c975d2dbd9ee7f64afdc8f67d4cce64a63f1cdbf79e4e448a4be99",
+            "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794436920000.e25edcf4-fec0-45b6-9e81-f1d82db2e8b7.DEU",
+            "sender": "opendata@dwd.de",
+            "sent": "2026-11-11T22:42:00.000Z",
+            "language": "de-DE",
+            "event": "NEBEL",
+            "areaCount": 332,
+            "geometryStatus": "partial",
+            "mapped": true
+          }
+        ]
+      },
+      "sourceResponses": [
+        {
+          "url": "https://opendata.dwd.de/weather/alerts/cap/COMMUNEUNION_DWD_STAT/Z_CAP_C_EDZW_LATEST_PVW_STATUS_PREMIUMDWD_COMMUNEUNION_DE.zip",
+          "status": 304,
+          "receivedAt": "2026-11-12T01:38:39.818Z",
+          "etag": "\"6af51761-1d759\"",
+          "lastModified": "Thu, 12 Nov 2026 01:33:21 GMT",
+          "requestValidators": {
+            "etag": "\"6af51761-1d759\"",
+            "modifiedSince": "Thu, 12 Nov 2026 01:33:21 GMT"
+          },
+          "bytes": 0,
+          "sha256": null
+        }
+      ],
+      "snapshot": {
+        "status": {
+          "id": "dwd",
+          "enabled": true,
+          "state": "ok",
+          "lastAttemptAt": "2026-11-12T01:38:39.360Z",
+          "lastSuccessAt": "2026-11-12T01:38:39.818Z",
+          "sourceUpdatedAt": "2026-11-12T01:33:21.000Z",
+          "error": null,
+          "consecutiveFailures": 0,
+          "nextAttemptAt": "2026-11-12T01:43:39.818Z",
+          "recordCount": 21,
+          "skippedRecords": 0,
+          "freshness": "fresh",
+          "note": "DWD STATUS received 2026-11-12T01:38:26.119Z. 21 unexpired or open-ended bulletins, 16 with map geometry. 16 with partial geometry."
+        },
+        "warningCount": 21,
+        "mapped": 16,
+        "unmapped": 5
+      },
+      "connectionTest": {
+        "ok": true,
+        "message": "DWD STATUS checked 2026-11-12T01:38:39.818Z. DWD STATUS received 2026-11-12T01:38:26.119Z. 21 unexpired or open-ended bulletins, 16 with map geometry. 16 with partial geometry.",
+        "at": "2026-11-12T01:38:40.663Z",
+        "requestCountBefore": 1,
+        "requestCountAfter": 1
+      },
+      "eventIds": [
+        "dwd:923ab4e95dc00859ce74d15e96e55fa48edb91d58ef2e9ee8fed352363d3ae90",
+        "dwd:4daa13f76b0fec3e6bad51862bf0c4a630d252ca59d92b1ae2051b05aba5e854",
+        "dwd:7942571fef4c2ef239d480a0c974ad52172fcf65d546414cf73486ed1691c111",
+        "dwd:919a1d471ff01d0199c9402bd1d79b94a609009a95fb00880c028344346a0f4f",
+        "dwd:db401f4fba8261ca140ef5b29fbb5a2d1109469e67b2357587a2f61f8f37c26c",
+        "dwd:ef6aa8210274b0c4067933e7b087e8f5fceb026cc9a94a189f2d1301c9761988",
+        "dwd:f0dcbb7e15c975d2dbd9ee7f64afdc8f67d4cce64a63f1cdbf79e4e448a4be99",
+        "dwd:ce08c9578846302a46701226189e6762e31ed1c6bd7f4a3a4b5ae006ced13c1f",
+        "dwd:3caf8fbaf17dcb74bd1ccd943e486918b2438e039f9a4f454ce755d73bdc44db",
+        "dwd:dcc3f06e3994cd1764b6cc1aa678a6401da573d7f70e07a8b1c3cc7a64ee2c4b",
+        "dwd:0206666591c45bf69386d5031f48c3ae2ea77cecbd39cc64ccd64d635b35192d",
+        "dwd:3a9fabc74f3ac567c0b356d409195d0963e5d3a1847cf4d28687cbb05fd0574a",
+        "dwd:45f2fdf5f18dba22e5be236b00025e9c6adb5c2af0713ff81b4a0270b83ff8d3",
+        "dwd:86b4c7c8e7583cd1146f58d9d84966c62287d3bc64c83d258b2643b4a9dc6994",
+        "dwd:9ebd56f4977d4d62685e689be1a9f1e8d8e54e5e3f7a683bfe09d767ffd15fe3",
+        "dwd:afd665bf7875d7158e98856d2e8f1a720c5f2b8bc4fd1b85ed393c5cc9883f71",
+        "dwd:c826884fddcba9dcafd3de5bd70e99ff2db3d17038698d31b2f9e73ffc377c7c",
+        "dwd:c83bb5422673949b7e6194c33d1887c5b5dcdfdb2d53bbbdd2d7073f044e5b70",
+        "dwd:605bf0b04cdc1d10d62c5209f22059d5f126047e8643568ebcf061d6d4deb986",
+        "dwd:215bc871c10924fece16fa0d3cd724ccdf4460093ad7321bc1a3e415c3bb6c28",
+        "dwd:1c3d94117582e0953aeab9fdd87e78b6137cbbd03375e8bbe9fe507a04aa531a"
+      ],
+      "sourceState": "current",
+      "availability": {
+        "mapped": true,
+        "unmapped": true
+      },
+      "unmappedDetail": {
+        "id": "dwd:4daa13f76b0fec3e6bad51862bf0c4a630d252ca59d92b1ae2051b05aba5e854",
+        "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794438060000.31ff09e1-9ee0-4ad1-b9a7-2293f1102603.DEU",
+        "text": "GERMANY · DEUTSCHER WETTERDIENST\nAMTLICHE WARNUNG DES SEEWETTERDIENSTES HAMBURG VOR BÖEN\n●\nMinor\nAlert\nIn the retrieved status package\n\nDWD: current reply. 21 warnings; 16 with supplied map geometry; 5 without usable geometry.\n\nLast successful check Nov 11, 8:38 PM EST · archive publication Nov 11, 8:33 PM EST.\n\nArchive receipt and coverage details\n\nUnlocated warning areas remain geographically unknown.\n\n© Deutscher Wetterdienst · Germany · original German text · CC BY 4.0 . CAP polygons converted to GeoJSON. Separate from NWS/USGS reports and recorded Replay.\n\nNo usable supplied map geometry. Area names and geocodes remain available; no map position is inferred.\n\nEvent · German original\nBÖEN\nCAP identifier\n2.49.0.0.276.0.DWD.PVW.1794438060000.31ff09e1-9ee0-4ad1-b9a7-2293f1102603.DEU\nCAP sender\nopendata@dwd.de\nSent by DWD\nNov 11, 6:01 PM EST\n2026-11-11T23:01:00.000Z\nEffective\nNov 11, 6:01 PM EST\n2026-11-11T23:01:00.000Z\nOnset\nNov 11, 6:01 PM EST\n2026-11-11T23:01:00.000Z\nMessage expiry\nNot supplied\nUrgency / certainty\nImmediate / Likely\nResponse types\nPrepare\nGeometry\nunavailable · 1 areas without located geometry · 0 invalid geometry items skipped\n\nDWD did not supply an expiry. No end time or continued validity is inferred; check the official source.\n\nORIGINAL WARNING TEXT\n\nBöen von 7 Beaufort aus West bis Nordwest.\n\nPUBLISHER INSTRUCTIONS\n\nInstructions not supplied.\n\nNAMED WARNING AREAS (1)\nElbe-/Wesermündung · WARNCELLID: 501000003 · not located on the map · altitude 0 m; ceiling 3,000 m\n\nMap and saved-place tests use supplied horizontal polygons with holes; altitude and ceiling restrictions are not evaluated. Missing geometry is unknown, never evidence that a place is outside a warning.\n\nOfficial DWD warning source \n\nSource: © Deutscher Wetterdienst · CC BY 4.0 . Original German text is preserved; CAP polygons are converted to GeoJSON. This display is not an official warning service."
+      },
+      "sameWarningReselect": {
+        "priorScrollTop": 1113,
+        "resetToTop": true
+      },
+      "differentWarningReselect": {
+        "priorScrollTop": 1113,
+        "resetToTop": true
+      },
+      "mappedDetail": {
+        "id": "dwd:0206666591c45bf69386d5031f48c3ae2ea77cecbd39cc64ccd64d635b35192d",
+        "capIdentifier": "2.49.0.0.276.0.DWD.PVW.1794416340000.a8d36ea9-d492-4556-b3ad-fd8d83b61117.DEU",
+        "language": "de-DE",
+        "headline": "Amtliche WARNUNG vor WINDBÖEN",
+        "point": [
+          9.294350999999999,
+          54.294547200000004
+        ]
+      },
+      "actualMapPick": {
+        "id": "dwd:0206666591c45bf69386d5031f48c3ae2ea77cecbd39cc64ccd64d635b35192d",
+        "point": [
+          9.294350999999999,
+          54.294547200000004
+        ],
+        "canvasCenter": {
+          "x": 754,
+          "y": 473
+        }
+      },
+      "nwsAndArchiveSeparation": true,
+      "offHidesWarnings": true,
+      "selectedHeadlineBounds": [
+        {
+          "id": "dwd:4daa13f76b0fec3e6bad51862bf0c4a630d252ca59d92b1ae2051b05aba5e854",
+          "text": "Amtliche Warnung des Seewetterdienstes Hamburg vor BÖEN",
+          "scrollTop": 0,
+          "headline": {
+            "x": 1070.606201171875,
+            "y": 227.078125,
+            "width": 268,
+            "height": 31.875
+          },
+          "body": {
+            "x": 1040.606201171875,
+            "y": 154.75,
+            "width": 338,
+            "height": 568.25
+          },
+          "visible": true,
+          "reachable": true
+        },
+        {
+          "id": "dwd:4daa13f76b0fec3e6bad51862bf0c4a630d252ca59d92b1ae2051b05aba5e854",
+          "text": "Amtliche Warnung des Seewetterdienstes Hamburg vor BÖEN",
+          "scrollTop": 0,
+          "headline": {
+            "x": 1067,
+            "y": 227.078125,
+            "width": 268,
+            "height": 31.875
+          },
+          "body": {
+            "x": 1037,
+            "y": 154.75,
+            "width": 338,
+            "height": 568.25
+          },
+          "visible": true,
+          "reachable": true
+        },
+        {
+          "id": "dwd:0206666591c45bf69386d5031f48c3ae2ea77cecbd39cc64ccd64d635b35192d",
+          "text": "Amtliche WARNUNG vor WINDBÖEN",
+          "scrollTop": 0,
+          "headline": {
+            "x": 1067,
+            "y": 227.078125,
+            "width": 268,
+            "height": 15.9375
+          },
+          "body": {
+            "x": 1037,
+            "y": 154.75,
+            "width": 338,
+            "height": 568.25
+          },
+          "visible": true,
+          "reachable": true
+        },
+        {
+          "id": "dwd:0206666591c45bf69386d5031f48c3ae2ea77cecbd39cc64ccd64d635b35192d",
+          "text": "Amtliche WARNUNG vor WINDBÖEN",
+          "scrollTop": 0,
+          "headline": {
+            "x": 1067,
+            "y": 227.078125,
+            "width": 268,
+            "height": 15.9375
+          },
+          "body": {
+            "x": 1037,
+            "y": 154.75,
+            "width": 338,
+            "height": 568.25
+          },
+          "visible": true,
+          "reachable": true
+        }
+      ],
+      "closedByRunner": true,
+      "finishedAt": "2026-11-12T01:38:46.178Z"
+    }
+  ],
+  "archiveStableDuringRun": true,
+  "finishedAt": "2026-11-12T01:38:46.190Z"
+}

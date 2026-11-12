@@ -1,0 +1,21 @@
+{
+  "startedAt": "2026-11-12T03:49:46.069Z",
+  "archiveSha256": "014b599a7dc4472d5ff121d8276647ca4cebbfc3e6180c975884da60aea3a994",
+  "result": "PASS",
+  "source": "adsb.lol (ODbL)",
+  "callsign": "UAL1123",
+  "firstReportAt": "2026-11-12T03:49:47.993Z",
+  "motion": {
+    "seconds": 4.9955,
+    "renderedFrames": 974,
+    "movingFrames": 973,
+    "aircraftMetres": 722,
+    "cameraMetres": 723,
+    "maxCenterErrorPx": 2.334968730801729e-8,
+    "drawnAs": [
+      "billboard",
+      "model"
+    ]
+  },
+  "nextReportAt": "2026-11-12T03:49:56.145Z"
+}

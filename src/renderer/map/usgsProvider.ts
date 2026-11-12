@@ -9,40 +9,82 @@ import { profAdd } from '../lib/prof';
 // Real imagery tiles are JPEGs of ~20–40 KB. This provider makes no-data
 // pixels transparent so the global base shows through, leaving imagery as is.
 //
-// Coastal water (2026-11-09): USGS orthoimagery stops a few km offshore in
-// ragged, tile-shaped patches with smeared edge pixels, so the sea looked
-// "detailed only near land". Imagery over OpenStreetMap ocean that is more
-// than NEARSHORE_KEEP_M (1.5 km) from land is now faded out, so the open sea is
-// drawn by one consistent global source. Harbors, rivers, bays, lakes and
-// beaches keep their real USGS imagery. If vector tiles are unavailable the
-// tile is shown unmasked.
-//
 // Orientation: Cesium decodes its own imagery bitmaps with imageOrientation
 // 'flipY' (Chromium ignores UNPACK_FLIP_Y for ImageBitmap), so every bitmap
 // returned here is created flipped the same way.
 
 import { UrlTemplateImageryProvider, type Request } from 'cesium';
+import { oceanMask } from './vectorTiles';
 
 export type UsgsService = 'USGSImageryOnly' | 'USGSImageryTopo' | 'USGSTopo';
 
 import { BLANK_JPEG_MAX_BYTES, BLANK_WHITE_FRACTION, clearNoDataPixels, clearWhiteFill, probeHasWhite, whiteFraction } from '../../shared/tilePixels';
-import { offshoreMask } from './vectorTiles';
 
-export const usgsStats = { noDataTiles: 0, blankTiles: 0, imageryTiles: 0, oceanMasked: 0, maskUnavailable: 0, mixedWhiteTiles: 0 };
+export const usgsStats = { noDataTiles: 0, blankTiles: 0, imageryTiles: 0, mixedWhiteTiles: 0 };
 
 // Coverage-edge tiles (2026-11-09, Kingston ON): JPEGs of 5-11 KB that are part imagery, part flat white
 // no-data. They pass the size test, so each imagery JPEG is probed on a 32×32 copy (≈4 KB readback) and only
 // tiles with white in the probe get the full-resolution white-fill clearing.
 const PROBE = 32;
 
+// Use neighbouring masks so the transition is continuous across imagery tile edges.
+// A failed water lookup leaves the original USGS photograph untouched.
+const waterMasks = new Map<string, Promise<OffscreenCanvas | null>>();
+function waterMask(level: number, x: number, y: number) {
+  const width = 2 ** level;
+  if (y < 0 || y >= width) return Promise.resolve(null);
+  x = ((x % width) + width) % width;
+  const key = `${level}/${x}/${y}`;
+  let mask = waterMasks.get(key);
+  if (!mask) {
+    mask = oceanMask(level, x, y, true).catch(() => null);
+    waterMasks.set(key, mask);
+    void mask.then(value => { if (!value && waterMasks.get(key) === mask) waterMasks.delete(key); });
+    if (waterMasks.size > 256) waterMasks.delete(waterMasks.keys().next().value!);
+  }
+  return mask;
+}
+
+async function blendShore(source: ImageBitmap | OffscreenCanvas, level: number, x: number, y: number) {
+  const size = 256;
+  const masks = await Promise.all(Array.from({length: 9}, (_, i) => waterMask(level, x + i % 3 - 1, y + Math.floor(i / 3) - 1)));
+  if (masks.some(mask => !mask)) return createImageBitmap(source, { imageOrientation: 'flipY' });
+  const land = new OffscreenCanvas(size * 3, size * 3);
+  const lg = land.getContext('2d')!;
+  lg.fillStyle = '#fff';
+  lg.fillRect(0, 0, land.width, land.height);
+  lg.globalCompositeOperation = 'destination-out';
+  masks.forEach((mask, i) => lg.drawImage(mask!, (i % 3) * size, Math.floor(i / 3) * size));
+
+  const lat = Math.atan(Math.sinh(Math.PI * (1 - 2 * (y + .5) / 2 ** level)));
+  const metresPerPixel = 2 * Math.PI * 6378137 * Math.cos(lat) / (size * 2 ** level);
+  const radius = Math.max(2, Math.min(24, 200 / metresPerPixel));
+  const blurred = new OffscreenCanvas(size * 3, size * 3);
+  const bg = blurred.getContext('2d')!;
+  bg.filter = `blur(${radius}px)`;
+  bg.drawImage(land, 0, 0);
+  const crop = new OffscreenCanvas(size, size), cg = crop.getContext('2d', {willReadFrequently:true})!;
+  cg.drawImage(blurred, size, size, size, size, 0, 0, size, size);
+  const alpha = cg.getImageData(0, 0, size, size);
+  // Raise the land influence before inverting it so the full USGS photograph
+  // extends into the nearshore water, followed by a short smooth transition.
+  for (let i = 3; i < alpha.data.length; i += 4) alpha.data[i] = 255 - Math.min(255, alpha.data[i] * 4);
+  cg.putImageData(alpha, 0, 0);
+  cg.globalCompositeOperation = 'destination-in';
+  cg.drawImage(masks[4]!, 0, 0);
+  const result = new OffscreenCanvas(size, size), rg = result.getContext('2d')!;
+  rg.drawImage(source, 0, 0, size, size);
+  rg.globalCompositeOperation = 'destination-out';
+  rg.drawImage(crop, 0, 0);
+  return createImageBitmap(result, { imageOrientation: 'flipY' });
+}
+
 export class UsgsImageryProvider extends UrlTemplateImageryProvider {
   private readonly service: UsgsService;
-  private readonly maskOcean: boolean;
 
-  constructor(options: ConstructorParameters<typeof UrlTemplateImageryProvider>[0], service: UsgsService, maskOcean = true) {
+  constructor(options: ConstructorParameters<typeof UrlTemplateImageryProvider>[0], service: UsgsService) {
     super(options);
     this.service = service;
-    this.maskOcean = maskOcean;
   }
 
   override requestImage(x: number, y: number, level: number, _request?: Request): Promise<ImageBitmap> {
@@ -54,7 +96,6 @@ export class UsgsImageryProvider extends UrlTemplateImageryProvider {
       const isPng = (res.headers.get('content-type') ?? '').includes('png');
       // The topo service legitimately uses white map background; only imagery services are cleared.
       const clearable = this.service !== 'USGSTopo';
-      const maskP = clearable && this.maskOcean ? offshoreMask(level, x, y) : Promise.resolve(null);
       // Real imagery (JPEG > 4 KB): decoded off the main thread by createImageBitmap. Black no-data fill is
       // removed on the GPU (colorToAlpha on the layer, see basemaps.ts), so no pixel readback is needed.
       if (!isPng && (!clearable || blob.size > BLANK_JPEG_MAX_BYTES)) {
@@ -75,32 +116,17 @@ export class UsgsImageryProvider extends UrlTemplateImageryProvider {
               g.putImageData(img, 0, 0);
               profAdd('usgs.white', performance.now() - t0);
               dec.close();
-              const m = await maskP;
-              if (m && m !== 'none') {
-                usgsStats.oceanMasked++;
-                g.globalCompositeOperation = 'destination-out';
-                g.drawImage(m, 0, 0, c.width, c.height);
-              }
-              return createImageBitmap(c, { imageOrientation: 'flipY' });
+              return this.service === 'USGSImageryOnly' ? blendShore(c, level, x, y) : createImageBitmap(c, { imageOrientation: 'flipY' });
             }
+          }
+          if (this.service === 'USGSImageryOnly') {
+            const result = await blendShore(dec, level, x, y);
+            dec.close();
+            return result;
           }
           dec.close();
         }
-        const mask = await maskP;
-        if (mask === null || mask === 'none') {
-          if (mask === null && clearable && this.maskOcean) usgsStats.maskUnavailable++;
-          return createImageBitmap(blob, { imageOrientation: 'flipY', premultiplyAlpha: 'none' });
-        }
-        // Offshore water present: one GPU canvas composite (no readback).
-        usgsStats.oceanMasked++;
-        const bmp = await createImageBitmap(blob);
-        const c = new OffscreenCanvas(bmp.width, bmp.height);
-        const g = c.getContext('2d')!;
-        g.drawImage(bmp, 0, 0);
-        bmp.close();
-        g.globalCompositeOperation = 'destination-out';
-        g.drawImage(mask, 0, 0, c.width, c.height);
-        return createImageBitmap(c, { imageOrientation: 'flipY' });
+        return createImageBitmap(blob, { imageOrientation: 'flipY', premultiplyAlpha: 'none' });
       }
       // No-data tiles (white PNGs, tiny blank JPEGs): rare, small, cleared on the CPU.
       const bmp = await createImageBitmap(blob, { premultiplyAlpha: 'none' });
@@ -122,13 +148,7 @@ export class UsgsImageryProvider extends UrlTemplateImageryProvider {
       }
       g.putImageData(img, 0, 0);
       profAdd('usgs.pixels', performance.now() - t0);
-      const m = await maskP;
-      if (m && m !== 'none') {
-        usgsStats.oceanMasked++;
-        g.globalCompositeOperation = 'destination-out';
-        g.drawImage(m, 0, 0, bmp.width, bmp.height);
-      }
-      return createImageBitmap(c, { imageOrientation: 'flipY' });
+      return this.service === 'USGSImageryOnly' ? blendShore(c, level, x, y) : createImageBitmap(c, { imageOrientation: 'flipY' });
     })();
   }
 }

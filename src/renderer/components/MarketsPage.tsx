@@ -1,12 +1,145 @@
 // Market UI: provider requests are explicit or scoped to the mounted page.
 import { useEffect, useRef, useState } from 'react';
 import { createChart, CandlestickSeries, LineSeries, HistogramSeries, ColorType, type UTCTimestamp } from 'lightweight-charts';
-import { ArrowUpRight, ArrowDownRight, Plus, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, ArrowDownRight, ChevronRight, Plus, X } from 'lucide-react';
 import { api, errorText } from '../lib/api';
-import { marketProviderName, moveSummary, rangeSpec, type Candle, type Quote, type MarketRange, type SymbolMatch, type Headline } from '../../shared/markets';
+import { marketProviderName, moveSummary, rangeSpec, type Candle, type Quote, type MarketRange, type SymbolMatch, type TrendingMarket, type TrendingMarkets } from '../../shared/markets';
 import type { PageCtx } from './Pages';
-import { ExternalLink } from './common';
-import { relativeTime } from '../lib/format';
+import { ExternalLink, Time } from './common';
+
+type MarketNews = Awaited<ReturnType<typeof api.marketsNews>>;
+
+export function ArticlePreviews({ news }: { news: MarketNews }) {
+  return (
+    <>
+      <p className="muted small">{news.source} · Retrieved <Time iso={news.fetchedAt} relative /></p>
+      {news.articles.length ? (
+        <ol className="market-news">
+          {news.articles.map((article, index) => (
+            <li id={'market-headline-' + (index + 1)} key={article.url}>
+              <div className="muted small">{article.domain} · <Time iso={article.seenAt} /></div>
+              <h4>{article.title}</h4>
+              {article.summary
+                ? <p className="market-article-summary">{article.summary}</p>
+                : <p className="muted small">The source supplied a headline only.</p>}
+              <ExternalLink url={article.url}>Read article<span className="sr-only"> — {article.title}</span></ExternalLink>
+            </li>
+          ))}
+        </ol>
+      ) : <p className="muted">No recent stories returned for this market.</p>}
+    </>
+  );
+}
+
+function TrendingDetail({ item, back }: { item: TrendingMarket; back(): void }) {
+  const [news, setNews] = useState<MarketNews | null>(null);
+  const [error, setError] = useState('');
+  const [retry, setRetry] = useState(0);
+  const heading = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => { heading.current?.focus(); }, []);
+  useEffect(() => {
+    let current = true;
+    setNews(null);
+    setError('');
+    void api.marketsNews(item.symbol, item.name, 'trending').then(result => {
+      if (current) setNews(result);
+    }).catch(error => { if (current) setError(errorText(error)); });
+    return () => { current = false; };
+  }, [item.symbol, item.name, retry]);
+
+  return (
+    <section className="market-browser" aria-label={'Market details for ' + item.symbol}>
+      <button className="link-btn market-back" onClick={back}><ArrowLeft size={16} aria-hidden="true" /> Back to trending</button>
+      <span className="market-ticker">{item.symbol}</span>
+      <h3 className="market-detail-title" ref={heading} tabIndex={-1}>{item.name}</h3>
+      <div className="market-detail-figures">
+        <MarketFigures item={item} />
+        <span>{item.volume.toLocaleString()} shares traded</span>
+      </div>
+      {item.asOf && <p className="muted small">Market data as of <Time iso={item.asOf} /></p>}
+      <h3 className="market-stories-heading">Related news</h3>
+      {error ? (
+        <div><p className="error" role="alert">{error}</p><button className="btn" onClick={() => setRetry(n => n + 1)}>Retry news</button></div>
+      ) : news ? <ArticlePreviews news={news} /> : <p className="muted" role="status">Loading stories for {item.symbol}…</p>}
+    </section>
+  );
+}
+
+const volumeFormat = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 });
+const sessionDate = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeZone: 'America/New_York' });
+function MarketFigures({ item }: { item: TrendingMarket }) {
+  return (
+    <>
+      <span className="market-price">{item.price === null ? '—' : item.price.toLocaleString(undefined, { maximumFractionDigits: 4 })} {item.price !== null && item.currency}</span>
+      <span className={item.changePct === null || item.changePct === 0 ? 'muted' : item.changePct > 0 ? 'market-up' : 'market-down'}>
+        {item.changePct === null ? '—' : (item.changePct > 0 ? '+' : '') + item.changePct.toFixed(2) + '%'}
+      </span>
+    </>
+  );
+}
+
+function TrendingBrowser() {
+  const [ranking, setRanking] = useState<TrendingMarkets | null>(null);
+  const [selected, setSelected] = useState<TrendingMarket | null>(null);
+  const [error, setError] = useState('');
+  const [retry, setRetry] = useState(0);
+  const restoreFocus = useRef<string | null>(null);
+  const list = useRef<HTMLOListElement>(null);
+  useEffect(() => {
+    let current = true;
+    setError('');
+    void api.marketsTrending().then(result => { if (current) setRanking(result); })
+      .catch(error => { if (current) setError(errorText(error)); });
+    return () => { current = false; };
+  }, [retry]);
+  useEffect(() => {
+    if (selected || !restoreFocus.current) return;
+    const buttons = list.current?.querySelectorAll('button');
+    Array.from(buttons ?? []).find(button => button.dataset.symbol === restoreFocus.current)?.focus();
+    restoreFocus.current = null;
+  }, [selected]);
+
+  if (selected) return (
+    <TrendingDetail key={selected.symbol} item={selected}
+      back={() => { restoreFocus.current = selected.symbol; setSelected(null); }} />
+  );
+  return (
+    <section className="market-browser" aria-label="Trending markets">
+      <h3>Most active U.S. stocks</h3>
+      <p className="muted">Ranked by shares traded in the latest reported session.</p>
+      {error ? (
+        <div><p className="error" role="alert">{error}</p><button className="btn" onClick={() => setRetry(n => n + 1)}>Retry ranking</button></div>
+      ) : !ranking ? <p className="muted" role="status">Loading the market ranking…</p> : (
+        <>
+          <p className="muted small">{ranking.source} · Retrieved <Time iso={ranking.fetchedAt} relative /></p>
+          {ranking.items.length ? (
+            <>
+              <div className="market-list-head market-columns" aria-hidden="true">
+                <span>Stock</span><span>Price</span><span>Change</span><span>Volume</span>
+              </div>
+              <ol className="market-ranking" ref={list}>
+                {ranking.items.map(item => (
+                  <li key={item.symbol}>
+                    <button className="market-columns" data-symbol={item.symbol} onClick={() => setSelected(item)}>
+                      <span className="market-identity"><span className="sr-only">View news for </span><b>{item.symbol}</b><span className="muted">{item.name}</span></span>
+                      <MarketFigures item={item} />
+                      <span className="market-volume" title={item.volume.toLocaleString() + ' shares'}>
+                        {volumeFormat.format(item.volume)}<span className="sr-only"> shares traded</span>
+                        {item.asOf && <time className="muted small" dateTime={item.asOf}>{sessionDate.format(new Date(item.asOf))}</time>}
+                      </span>
+                      <ChevronRight size={16} aria-hidden="true" />
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            </>
+          ) : <p className="muted">The source returned no ranked stocks.</p>}
+        </>
+      )}
+    </section>
+  );
+}
 
 function PriceChart({ candles, line }: { candles: Candle[]; line: boolean }) {
   const element = useRef<HTMLDivElement>(null);
@@ -37,6 +170,22 @@ function PriceChart({ candles, line }: { candles: Candle[]; line: boolean }) {
 }
 
 export function MarketsPage({ ctx }: { ctx: PageCtx }) {
+  const [view, setView] = useState<'trending' | 'watchlist'>('trending');
+  return (
+    <>
+      <div className="page-head market-page-head">
+        <h2>Markets</h2>
+        <div className="seg" role="group" aria-label="Market view">
+          <button className="btn" aria-pressed={view === 'trending'} onClick={() => setView('trending')}>Trending</button>
+          <button className="btn" aria-pressed={view === 'watchlist'} onClick={() => setView('watchlist')}>Watchlist</button>
+        </div>
+      </div>
+      {view === 'trending' ? <TrendingBrowser /> : <MarketWatchlist ctx={ctx} />}
+    </>
+  );
+}
+
+function MarketWatchlist({ ctx }: { ctx: PageCtx }) {
   const settings = ctx.snap.settings;
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [query, setQuery] = useState('');
@@ -47,7 +196,7 @@ export function MarketsPage({ ctx }: { ctx: PageCtx }) {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [prices, setPrices] = useState<Record<string, Quote>>({});
   const [candles, setCandles] = useState<Candle[]>([]);
-  const [news, setNews] = useState<Headline[]>([]);
+  const [news, setNews] = useState<MarketNews | null>(null);
   const [error, setError] = useState('');
   const [newsError, setNewsError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -125,7 +274,7 @@ export function MarketsPage({ ctx }: { ctx: PageCtx }) {
     setError('');
     setCandles([]);
     setQuote(null);
-    setNews([]);
+    setNews(null);
     setNewsError('');
     setAnswer('');
     explainGeneration.current++;
@@ -138,7 +287,7 @@ export function MarketsPage({ ctx }: { ctx: PageCtx }) {
         setPrices(old => ({ ...old, [selected]: result.data }));
         setWarning(result.warning ?? '');
         void api.marketsNews(selected, result.data.name).then(news => {
-          if (alive) setNews(news.articles);
+          if (alive) setNews(news);
         }).catch(error => { if (alive) setNewsError(errorText(error)); });
         const series = await api.marketsCandles(selected, range);
         if (alive) {
@@ -200,7 +349,7 @@ export function MarketsPage({ ctx }: { ctx: PageCtx }) {
     const current = () => mounted.current && generation === explainGeneration.current;
     setAiBusy(true);
     setAnswer('');
-    void api.marketsExplain(selected, news.map(article => article.title), movement).then(answer => {
+    void api.marketsExplain(selected, news?.articles.map(article => article.title) ?? [], movement).then(answer => {
       if (current()) setAnswer(answer);
     }).catch(error => {
       if (current()) setNewsError(errorText(error));
@@ -211,7 +360,7 @@ export function MarketsPage({ ctx }: { ctx: PageCtx }) {
     <>
       {error && configured !== true && <p className="error" role="alert">{error}</p>}
       <div className="page-head">
-        <h2>Markets</h2>
+        <h3>Market watchlist</h3>
         <select aria-label="Market provider" value={settings.marketProvider}
           onChange={event => ctx.patch({ marketProvider: event.target.value as typeof settings.marketProvider })}>
           <option value="twelvedata">Twelve Data</option>
@@ -220,8 +369,9 @@ export function MarketsPage({ ctx }: { ctx: PageCtx }) {
       </div>
       {configured === false ? (
         <div className="note">
-          <h3>Markets needs a data provider key</h3>
-          <p>No included or saved key is available for this provider. Add your own key in Providers. Prices may be delayed.</p>
+          <h3>Watchlist prices need a provider key</h3>
+          <p>Add a key for {provider} in Providers to search symbols and load charts.</p>
+          {settings.marketWatchlist.length > 0 && <p>Saved symbols · {settings.marketWatchlist.join(', ')}</p>}
           <button className="btn" onClick={ctx.openProviders}>Open Providers</button>{' '}
           <ExternalLink url={settings.marketProvider === 'twelvedata' ? 'https://twelvedata.com/docs' : 'https://www.alphavantage.co/documentation/'}>
             Provider docs
@@ -297,17 +447,8 @@ export function MarketsPage({ ctx }: { ctx: PageCtx }) {
                 <h3>What's moving it</h3>
                 <p>{movement}</p>
                 {newsError && <p className="error" role="alert">{newsError}</p>}
-                {!news.length && !newsError && <p className="muted">No recent headlines available.</p>}
-                <ol className="market-news">
-                  {news.map((article, index) => (
-                    <li id={'market-headline-' + (index + 1)} key={article.url}>
-                      <ExternalLink url={article.url}>{article.title}</ExternalLink>
-                      <div className="muted small">{article.domain} · {relativeTime(article.seenAt)}</div>
-                    </li>
-                  ))}
-                </ol>
-                <p className="muted small">News index: GDELT Project</p>
-                {ai && news.length > 0 && (
+                {news ? <ArticlePreviews news={news} /> : !newsError && quote && <p className="muted" role="status">Loading related news…</p>}
+                {ai && news && news.articles.length > 0 && (
                   <button className="btn" disabled={aiBusy} onClick={summarize}>
                     {aiBusy ? 'Summarizing…' : 'Summarize possible drivers (local AI)'}
                   </button>
@@ -317,7 +458,7 @@ export function MarketsPage({ ctx }: { ctx: PageCtx }) {
                     <b>AI summary of the headlines above (local model; may be wrong; not investment advice)</b>
                     <p>{answer.split(/(\[\d+\])/).map((part, index) => {
                       const number = Number(part.match(/^\[(\d+)\]$/)?.[1]);
-                      return number && news[number - 1] ? (
+                      return number && news?.articles[number - 1] ? (
                         <button key={index} className="link-btn"
                           onClick={() => document.getElementById('market-headline-' + number)?.scrollIntoView({ block: 'nearest' })}>{part}</button>
                       ) : part;

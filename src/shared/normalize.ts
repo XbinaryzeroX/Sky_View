@@ -97,6 +97,8 @@ export function normalizeNwsFeature(f: unknown): WeatherAlert | null {
     }
   }
   const sourceUrl = typeof feat.id === 'string' && feat.id.startsWith('https://api.weather.gov/') ? feat.id : `https://api.weather.gov/alerts/${encodeURIComponent(id)}`;
+  const affectedZones = stringArray(p.affectedZones).filter((z) => zoneKeyFromUrl(z) !== null);
+  const zoneCoverageIncomplete = p.affectedZones != null && (!Array.isArray(p.affectedZones) || p.affectedZones.length > 2000 || p.affectedZones.some(zone => zoneKeyFromUrl(zone) === null));
   return {
     id,
     sourceUrl,
@@ -117,7 +119,8 @@ export function normalizeNwsFeature(f: unknown): WeatherAlert | null {
     ends: toIso(p.ends),
     senderName: cleanText(p.senderName, 200),
     areaDesc: cleanText(p.areaDesc, 4000),
-    affectedZones: stringArray(p.affectedZones).filter((z) => zoneKeyFromUrl(z) !== null),
+    affectedZones,
+    ...(zoneCoverageIncomplete ? { zoneCoverageIncomplete: true } : {}),
     ugc: stringArray(geocode.UGC, 2000, 12),
     same: stringArray(geocode.SAME, 2000, 12),
     references,

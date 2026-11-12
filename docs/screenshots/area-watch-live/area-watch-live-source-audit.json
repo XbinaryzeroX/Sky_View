@@ -1,0 +1,32 @@
+[
+  {
+    "mode": "live",
+    "requestUrl": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+    "httpStatus": 200,
+    "responseDate": "Wed, 11 Nov 2026 16:31:30 GMT",
+    "receivedAt": "2026-11-11T16:32:10.586Z",
+    "sourceGeneratedAt": "2026-11-11T16:31:30.000Z",
+    "featureCount": 198,
+    "payloadSha256": "14f31c91978988c591b62cd21f033d479a338a00c6668859e4b643abae61f1e1"
+  },
+  {
+    "mode": "live",
+    "requestUrl": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+    "httpStatus": 200,
+    "responseDate": "Wed, 11 Nov 2026 16:31:30 GMT",
+    "receivedAt": "2026-11-11T16:32:14.548Z",
+    "sourceGeneratedAt": "2026-11-11T16:31:30.000Z",
+    "featureCount": 198,
+    "payloadSha256": "14f31c91978988c591b62cd21f033d479a338a00c6668859e4b643abae61f1e1"
+  },
+  {
+    "mode": "live",
+    "requestUrl": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+    "httpStatus": 200,
+    "responseDate": "Wed, 11 Nov 2026 16:33:30 GMT",
+    "receivedAt": "2026-11-11T16:33:35.993Z",
+    "sourceGeneratedAt": "2026-11-11T16:33:30.000Z",
+    "featureCount": 199,
+    "payloadSha256": "749ad07ee8893a1eced671a4d57f0281e83ba99202021daa6e4b17c1e7d9cb7c"
+  }
+]

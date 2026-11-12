@@ -1,0 +1,6 @@
+.geojson-preview { max-height: 240px; overflow: auto; margin: 12px 0; }
+.geojson-preview table { width: 100%; border-collapse: collapse; }
+.geojson-preview th, .geojson-preview td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border, #29333d); overflow-wrap: anywhere; }
+.geojson-rejections { max-height: 160px; overflow: auto; padding: 10px; background: #492d2226; }
+.geojson-rejections li { margin: 5px 0; }
+.geojson-accept { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; }

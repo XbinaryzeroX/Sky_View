@@ -1,0 +1,44 @@
+{
+  "baseline": "a22dcb09ea6144d4899a373ab25c4f70931cd129",
+  "node": "v24.22.1",
+  "area": "Pure saved-place spatial evaluation, no network or rendering.",
+  "locations": 200,
+  "alerts": 400,
+  "zoneReferencesPerAlert": 6,
+  "results": {
+    "previous": {
+      "inside": 1800,
+      "outside": 78200,
+      "unknown": 0
+    },
+    "current": {
+      "inside": 1800,
+      "outside": 58200,
+      "unknown": 20000
+    }
+  },
+  "samplesMs": {
+    "previous": [
+      61.7,
+      57.91,
+      60.05,
+      60.66,
+      64.88,
+      58.26,
+      59.81
+    ],
+    "current": [
+      6.12,
+      5.3,
+      4.94,
+      4.23,
+      8.29,
+      9.81,
+      5.65
+    ]
+  },
+  "medianMs": {
+    "previous": 60.05,
+    "current": 5.65
+  }
+}

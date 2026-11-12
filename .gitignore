@@ -8,5 +8,44 @@ release/
 
 builtin-keys*.json
 
-# Vehicle model pack (made by scripts/import-models.mjs from Sketchfab downloads; not committed)
-public/vehicle-models/
+# Bundle the reviewed fleet and its credits. Keep separately imported personal files local.
+public/vehicle-models/*
+!public/vehicle-models/index.json
+!public/vehicle-models/ATTRIBUTION.txt
+!public/vehicle-models/a21n.glb
+!public/vehicle-models/a306.glb
+!public/vehicle-models/a310.glb
+!public/vehicle-models/a318.glb
+!public/vehicle-models/a319.glb
+!public/vehicle-models/a320.glb
+!public/vehicle-models/a320ceo.glb
+!public/vehicle-models/a321.glb
+!public/vehicle-models/a332.glb
+!public/vehicle-models/a333.glb
+!public/vehicle-models/a342.glb
+!public/vehicle-models/a343.glb
+!public/vehicle-models/a346.glb
+!public/vehicle-models/a359.glb
+!public/vehicle-models/a35k.glb
+!public/vehicle-models/a380.glb
+!public/vehicle-models/at46.glb
+!public/vehicle-models/at75.glb
+!public/vehicle-models/atr72.glb
+!public/vehicle-models/b38m.glb
+!public/vehicle-models/b39m.glb
+!public/vehicle-models/b462.glb
+!public/vehicle-models/b712.glb
+!public/vehicle-models/b733.glb
+!public/vehicle-models/b738.glb
+!public/vehicle-models/b742.glb
+!public/vehicle-models/b747.glb
+!public/vehicle-models/b74s.glb
+!public/vehicle-models/b772.glb
+!public/vehicle-models/b77w.glb
+!public/vehicle-models/b788.glb
+!public/vehicle-models/b789.glb
+!public/vehicle-models/b78x.glb
+!public/vehicle-models/bcs3.glb
+!public/vehicle-models/crj.glb
+!public/vehicle-models/erj145.glb
+!public/vehicle-models/md11.glb

@@ -108,8 +108,11 @@ export function pointInGeometry(lat: number, lon: number, g: Polygon | MultiPoly
   const geom = crosses ? normalizeAntimeridian(g) : g;
   const testLon = crosses && lon < 0 ? lon + 360 : lon;
   const box = bbox ?? geometryBbox(g);
-  if (testLon < box[0] || testLon > box[2] || lat < box[1] || lat > box[3]) return false;
-  return booleanPointInPolygon([testLon, lat], geom);
+  if (lat < box[1] || lat > box[3]) return false;
+  // The exact date-line boundary has two valid WGS84 spellings. A polygon
+  // touching that boundary need not cross it, so normalization alone is insufficient.
+  const longitudes = !crosses && Math.abs(lon) === 180 ? [testLon, -testLon] : [testLon];
+  return longitudes.some(value => value >= box[0] && value <= box[2] && booleanPointInPolygon([value, lat], geom));
 }
 
 /** Total geodesic length of a path of [lon, lat] points, in km. */
@@ -130,11 +133,36 @@ export function polygonAreaKm2(points: [number, number][]): { areaKm2: number; p
 
 /**
  * Parses typed coordinates: "39.7392, -104.9903", "39.7392 -104.9903", or a
- * two-dimensional WGS84 geo: URI ("geo:39.7392,-104.9903"). Returns null otherwise.
+ * WGS84 geo: URI (RFC 5870). Altitude/uncertainty are validated, but this
+ * horizontal navigation helper returns latitude/longitude only. Unknown CRS
+ * values are never reinterpreted as WGS84. Returns null for invalid input.
  */
 export function parseCoordinates(input: string): { lat: number; lon: number } | null {
   const s = input.trim();
-  const m = /^(?:geo:)?\s*([+-]?\d{1,2}(?:\.\d+)?)\s*[,\s]\s*([+-]?\d{1,3}(?:\.\d+)?)(?:;[^\s]*)?$/i.exec(s);
+  let m: RegExpExecArray | null;
+  if (/^geo:/i.test(s)) {
+    const [coordinates, ...parameters] = s.slice(4).split(';');
+    m = /^(-?\d{1,2}(?:\.\d+)?),(-?\d{1,3}(?:\.\d+)?)(?:,(-?\d+(?:\.\d+)?))?$/.exec(coordinates);
+    if (!m || (m[3] !== undefined && !Number.isFinite(Number(m[3])))) return null;
+    let crs = false, uncertainty = false, extensions = false;
+    for (let at = 0; at < parameters.length; at++) {
+      const parameter = /^([a-z\d-]+)(?:=((?:[a-z\d\-_.!~*'()\[\]:&+$]|%[a-f\d]{2})+))?$/i.exec(parameters[at]);
+      if (!parameter) return null;
+      const name = parameter[1].toLowerCase(), value = parameter[2];
+      if (name === 'crs') {
+        if (crs || at !== 0 || value?.toLowerCase() !== 'wgs84') return null;
+        crs = true;
+      } else if (name === 'u') {
+        if (uncertainty || extensions || value === undefined || !/^\d+(?:\.\d+)?$/.test(value) || !Number.isFinite(Number(value))) return null;
+        uncertainty = true;
+      } else extensions = true;
+    }
+  } else {
+    // Decimal pairs permit ordinary pasted Unicode minus signs. Do not apply
+    // URI suffix/CRS rules or infer decimal-comma conventions for plain text.
+    const decimal = '[+-]?(?:\\d+(?:\\.\\d+)?|\\.\\d+)';
+    m = new RegExp(`^(${decimal})(?:\\s*,\\s*|\\s+)(${decimal})$`).exec(s.replace(/\u2212/g, '-'));
+  }
   if (!m) return null;
   const lat = Number(m[1]);
   const lon = Number(m[2]);

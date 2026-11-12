@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { CLASS_DEFAULTS, VESSEL_DEFAULTS, aircraftShape, aircraftVariant, pitchFromRates, vesselShape } from '../src/shared/vehicleDims';
 import { buildAircraft, buildVessel, type VehicleModelSpec } from '../src/renderer/map/vehicleMeshes';
 import { writeGlb, type Geometry } from '../src/renderer/map/glb';
-import type { AircraftSymbol, VesselSymbol } from '../src/shared/vehicleClass';
+import { classifyAircraft, classifyVessel, type AircraftSymbol, type VesselSymbol } from '../src/shared/vehicleClass';
+import aircraftTypeShapes from '../src/shared/aircraftTypeShapes.json';
 import { Axis, Cartesian3, Matrix4 } from 'cesium';
 import { placementMatrix } from '../src/renderer/map/vehicleModels';
 
@@ -92,6 +93,49 @@ describe('vehicle shapes', () => {
     expect(mil.military).toBe(true);
     expect(aircraftVariant(mil)).not.toBe(aircraftVariant(aircraftShape('B738', null)));
   });
+  it('assigns every bundled FAA designator a model, including rotary and water-based aircraft with no emitter category', () => {
+    const missing: string[] = [];
+    for (const code of Object.keys(aircraftTypeShapes)) {
+      const shape = aircraftShape(code, null);
+      if (shape.cls === 'unknown' || !CLASS_DEFAULTS[shape.cls] || !Number.isInteger(shape.engines) || shape.lengthM <= 0 || shape.spanM <= 0) missing.push(code);
+    }
+    expect(missing).toEqual([]);
+    expect(Object.keys(aircraftTypeShapes).length).toBeGreaterThan(2500);
+    for (const code of ['B212', 'MD52', 'H269']) expect(classifyAircraft(code, 'A1')).toMatchObject({ symbol: 'helicopter', basis: 'type' });
+    expect(aircraftShape('A002', null).cls).toBe('gyroplane');
+    expect(aircraftShape('CL2T', null)).toMatchObject({ cls: 'seaplane', engines: 2, mount: 'wing', prop: true });
+    expect(aircraftShape('B461', null)).toMatchObject({ cls: 'regional', engines: 4, mount: 'wing' });
+    expect(aircraftShape('SHIP', null).cls).toBe('airship');
+    expect(aircraftShape(null, 'B3').cls).toBe('parachute');
+    expect(aircraftShape(null, 'A7').cls).toBe('helicopter');
+  });
+  it('keeps all AIS code ranges renderable, with distinct pilot, workboat, cargo and tanker models', () => {
+    const classes = Array.from({ length: 100 }, (_, code) => classifyVessel(code).symbol);
+    expect(classes.every(cls => !!VESSEL_DEFAULTS[cls])).toBe(true);
+    expect(new Set(classes.slice(70, 80))).toEqual(new Set(['cargo']));
+    expect(new Set(classes.slice(80, 90))).toEqual(new Set(['tanker']));
+    expect(new Set(classes.slice(20, 30))).toEqual(new Set(['wingInGround']));
+    expect(classes[50]).toBe('pilot');
+    expect(classes[51]).toBe('service');
+    expect(classes[53]).toBe('workboat');
+    expect(classes[99]).toBe('unknown');
+    for (const invalid of [-1, 34.5, NaN, 100]) expect(classifyVessel(invalid).basis).toBe('unknown');
+  });
+  it('uses separately cacheable geometry for civil rotor configurations', () => {
+    const r44 = aircraftShape('R44', null), md = aircraftShape('MD52', null), h135 = aircraftShape('EC35', null);
+    expect(r44.rotorBlades).toBe(2);
+    expect(md).toMatchObject({ rotorBlades: 5, tailRotor: 'none' });
+    expect(h135).toMatchObject({ rotorBlades: 4, tailRotor: 'ducted' });
+    expect(new Set([r44, md, h135].map(aircraftVariant)).size).toBe(3);
+    for (const shape of [r44, md, h135]) {
+      const spec = buildAircraft(shape);
+      const blades = spec.parts.find(p => spec.materials[p.material].name === 'rotor-blades');
+      expect(blades?.geometry.indices.length).toBe(shape.rotorBlades! * 6);
+      expect(spec.parts.some(p => spec.materials[p.material].name === 'prop')).toBe(shape.tailRotor !== 'none');
+      expect(spec.parts.every(p => windingAgrees(p.geometry) === 0)).toBe(true);
+      glbOf(spec);
+    }
+  });
   it('sizes ships from AIS length and beam, with plausibility checks', () => {
     expect(vesselShape(71, 300, 48)).toEqual({ cls: 'cargo', lengthM: 300, beamM: 48, reported: true });
     const odd = vesselShape(80, 250, 1.5); // beam implausible for the length: class proportion
@@ -115,7 +159,7 @@ describe('vehicle shapes', () => {
 });
 
 describe('app-built 3D models', () => {
-  const aircraftClasses: AircraftSymbol[] = ['widebody', 'narrowbody', 'regional', 'turboprop', 'bizjet', 'light', 'helicopter', 'glider', 'balloon', 'drone', 'unknown'];
+  const aircraftClasses = Object.keys(CLASS_DEFAULTS) as AircraftSymbol[];
   it.each(aircraftClasses)('builds a valid %s model with the class proportions', (cls) => {
     const shape = { cls, ...CLASS_DEFAULTS[cls], military: false };
     const spec = buildAircraft(shape);
@@ -129,8 +173,9 @@ describe('app-built 3D models', () => {
       expect(max[1] - min[1]).toBeCloseTo(CLASS_DEFAULTS.balloon.lengthM, 0);
     } else {
       // Length along +Z (nose forward), span (or rotor diameter) along X.
-      expect(length).toBeGreaterThan(CLASS_DEFAULTS[cls].lengthM * 0.85);
-      expect(length).toBeLessThan(CLASS_DEFAULTS[cls].lengthM * 1.3);
+      const longitudinalExtent = cls === 'gyroplane' ? Math.max(shape.lengthM, shape.spanM) : shape.lengthM;
+      expect(length).toBeGreaterThan(longitudinalExtent * 0.85);
+      expect(length).toBeLessThan(longitudinalExtent * 1.3);
       expect(span).toBeGreaterThan(CLASS_DEFAULTS[cls].spanM * 0.9);
       expect(span).toBeLessThan(CLASS_DEFAULTS[cls].spanM * 1.1);
     }
@@ -142,7 +187,7 @@ describe('app-built 3D models', () => {
     expect(glbOf(buildAircraft(shape)).json.meshes[0].primitives.length).toBeGreaterThan(3);
     expect(glbOf(buildAircraft({ ...shape, military: true })).json.images ?? []).toHaveLength(0); // military paint is untextured
   });
-  const vesselClasses: VesselSymbol[] = ['cargo', 'tanker', 'passenger', 'highspeed', 'fishing', 'tug', 'sailing', 'pleasure', 'service', 'military', 'unknown'];
+  const vesselClasses = Object.keys(VESSEL_DEFAULTS) as VesselSymbol[];
   it.each(vesselClasses)('builds a valid %s ship sitting in the water', (cls) => {
     const spec = buildVessel(cls);
     for (const p of spec.parts) expect(windingAgrees(p.geometry)).toBe(0);

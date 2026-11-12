@@ -3,7 +3,7 @@
 // has no record or photos are off. A designator names a type family, not the
 // exact variant, and the panel says so.
 
-const T: Record<string, string> = {
+export const namedAircraftTypes: Readonly<Record<string, string>> = {
   // Airbus
   A19N: 'Airbus A319neo', A20N: 'Airbus A320neo', A21N: 'Airbus A321neo', A318: 'Airbus A318', A319: 'Airbus A319', A320: 'Airbus A320', A321: 'Airbus A321',
   A332: 'Airbus A330-200', A333: 'Airbus A330-300', A337: 'Airbus A330-700L BelugaXL', A338: 'Airbus A330-800neo', A339: 'Airbus A330-900neo', A342: 'Airbus A340-200', A343: 'Airbus A340-300', A345: 'Airbus A340-500', A346: 'Airbus A340-600',
@@ -45,5 +45,5 @@ const T: Record<string, string> = {
 /** Model family for an ICAO type designator, or null when not in the table. */
 export function icaoTypeName(code: string | null | undefined): string | null {
   if (!code) return null;
-  return T[code.trim().toUpperCase()] ?? null;
+  return namedAircraftTypes[code.trim().toUpperCase()] ?? null;
 }

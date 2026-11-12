@@ -1,0 +1,830 @@
+{
+  "measuredAt": "2026-11-12T02:04:22.778Z",
+  "runtime": "v24.22.1",
+  "platform": "win32",
+  "architecture": "x64",
+  "hardware": {
+    "cpu": "AMD Ryzen 7 7700X 8-Core Processor             ",
+    "logicalCpus": 16
+  },
+  "source": {
+    "bytes": 2252758,
+    "sha256": "c4b9b3ec19390d041d7167adaf1ff6a79f633ae1d5833ca992dc8d23a7a90315",
+    "rows": 7342,
+    "aliases": 97615,
+    "canonicalOnlyDocument": {
+      "bytes": 432286,
+      "sha256": "c10c5a6131a361dc4108240df3686a262dd0ecbf42e41d86f64f59c184d2c455",
+      "boundary": "Reconstructed from unchanged original metadata and first six tuple fields; 432286-byte original was observed before alias update."
+    },
+    "matcherSha256": "4e42fec5e694f7a6945ad7d686f1f948a3b98c8ff5464f4754c53f1aa3c5f1bb"
+  },
+  "boundary": "Same machine, catalog and query sequence. Old canonical-only first-eight prefix behavior versus new exact/alias/Unicode/qualifier behavior; results differ intentionally. Node only. JSON parse, TypeScript compilation, renderer/worker startup, DOM, map flight and network excluded.",
+  "coldIndex": {
+    "firstMs": 245.604,
+    "freshConstructionRunsMs": [
+      245.604,
+      268.05269999999996,
+      246.92100000000005,
+      273.9522999999999,
+      246.13139999999999
+    ],
+    "medianMs": 246.92100000000005,
+    "entries": 103154
+  },
+  "oldCanonicalPrefix": {
+    "queries": 6250,
+    "totalMs": 666.5383999999999,
+    "medianMs": 0.10920000000010077,
+    "p95Ms": 0.15190000000006876,
+    "maxMs": 0.7225000000000819,
+    "returnedResults": 5750
+  },
+  "newIndexLookup": {
+    "queries": 6250,
+    "totalMs": 237.5706,
+    "medianMs": 0.00430000000005748,
+    "p95Ms": 0.3330999999998312,
+    "maxMs": 1.1689000000001215,
+    "returnedResults": 9750
+  },
+  "queries": [
+    {
+      "query": "Tokyo",
+      "old": [
+        {
+          "row": 0,
+          "name": "Tokyo",
+          "admin1": "Tokyo",
+          "country": "Japan",
+          "lat": 35.687,
+          "lon": 139.7495,
+          "matchedName": "Tokyo",
+          "match": "exact"
+        }
+      ],
+      "current": [
+        {
+          "row": 0,
+          "name": "Tokyo",
+          "admin1": "Tokyo",
+          "country": "Japan",
+          "lat": 35.687,
+          "lon": 139.7495,
+          "matchedName": "Tokyo",
+          "match": "exact"
+        },
+        {
+          "row": 885,
+          "name": "Hachiōji",
+          "admin1": "Tokyo",
+          "country": "Japan",
+          "lat": 35.6577,
+          "lon": 139.3261,
+          "matchedName": "Tokyo/Hachioji",
+          "match": "prefix"
+        }
+      ]
+    },
+    {
+      "query": "東京",
+      "old": [],
+      "current": [
+        {
+          "row": 0,
+          "name": "Tokyo",
+          "admin1": "Tokyo",
+          "country": "Japan",
+          "lat": 35.687,
+          "lon": 139.7495,
+          "matchedName": "東京",
+          "match": "exact"
+        }
+      ]
+    },
+    {
+      "query": "Dubai",
+      "old": [
+        {
+          "row": 349,
+          "name": "Dubai",
+          "admin1": "Dubay",
+          "country": "United Arab Emirates",
+          "lat": 25.2149,
+          "lon": 55.2869,
+          "matchedName": "Dubai",
+          "match": "exact"
+        }
+      ],
+      "current": [
+        {
+          "row": 349,
+          "name": "Dubai",
+          "admin1": "Dubay",
+          "country": "United Arab Emirates",
+          "lat": 25.2149,
+          "lon": 55.2869,
+          "matchedName": "Dubai",
+          "match": "exact"
+        }
+      ]
+    },
+    {
+      "query": "دبي",
+      "old": [],
+      "current": [
+        {
+          "row": 349,
+          "name": "Dubai",
+          "admin1": "Dubay",
+          "country": "United Arab Emirates",
+          "lat": 25.2149,
+          "lon": 55.2869,
+          "matchedName": "دبي",
+          "match": "exact"
+        }
+      ]
+    },
+    {
+      "query": "Beijing",
+      "old": [
+        {
+          "row": 15,
+          "name": "Beijing",
+          "admin1": "Beijing",
+          "country": "China",
+          "lat": 39.9017,
+          "lon": 116.3942,
+          "matchedName": "Beijing",
+          "match": "exact"
+        }
+      ],
+      "current": [
+        {
+          "row": 15,
+          "name": "Beijing",
+          "admin1": "Beijing",
+          "country": "China",
+          "lat": 39.9017,
+          "lon": 116.3942,
+          "matchedName": "Beijing",
+          "match": "exact"
+        }
+      ]
+    },
+    {
+      "query": "北京",
+      "old": [],
+      "current": [
+        {
+          "row": 15,
+          "name": "Beijing",
+          "admin1": "Beijing",
+          "country": "China",
+          "lat": 39.9017,
+          "lon": 116.3942,
+          "matchedName": "北京",
+          "match": "exact"
+        }
+      ]
+    },
+    {
+      "query": "Москва",
+      "old": [],
+      "current": [
+        {
+          "row": 17,
+          "name": "Moscow",
+          "admin1": "Moskva",
+          "country": "Russia",
+          "lat": 55.7541,
+          "lon": 37.6136,
+          "matchedName": "Москва",
+          "match": "exact"
+        }
+      ]
+    },
+    {
+      "query": "München",
+      "old": [],
+      "current": [
+        {
+          "row": 381,
+          "name": "Munich",
+          "admin1": "Bayern",
+          "country": "Germany",
+          "lat": 48.1319,
+          "lon": 11.573,
+          "matchedName": "München",
+          "match": "exact"
+        }
+      ]
+    },
+    {
+      "query": "Munich",
+      "old": [
+        {
+          "row": 381,
+          "name": "Munich",
+          "admin1": "Bayern",
+          "country": "Germany",
+          "lat": 48.1319,
+          "lon": 11.573,
+          "matchedName": "Munich",
+          "match": "exact"
+        }
+      ],
+      "current": [
+        {
+          "row": 381,
+          "name": "Munich",
+          "admin1": "Bayern",
+          "country": "Germany",
+          "lat": 48.1319,
+          "lon": 11.573,
+          "matchedName": "Munich",
+          "match": "exact"
+        }
+      ]
+    },
+    {
+      "query": "Osaka",
+      "old": [
+        {
+          "row": 6300,
+          "name": "Osakarovka",
+          "admin1": "Qaraghandy",
+          "country": "Kazakhstan",
+          "lat": 50.5799,
+          "lon": 72.5699,
+          "matchedName": "Osakarovka",
+          "match": "prefix"
+        }
+      ],
+      "current": [
+        {
+          "row": 14,
+          "name": "Ōsaka",
+          "admin1": "Osaka",
+          "country": "Japan",
+          "lat": 34.6911,
+          "lon": 135.5038,
+          "matchedName": "Osaka",
+          "match": "exact"
+        },
+        {
+          "row": 6300,
+          "name": "Osakarovka",
+          "admin1": "Qaraghandy",
+          "country": "Kazakhstan",
+          "lat": 50.5799,
+          "lon": 72.5699,
+          "matchedName": "Osakarov",
+          "match": "prefix"
+        }
+      ]
+    },
+    {
+      "query": "Mumbai",
+      "old": [
+        {
+          "row": 3,
+          "name": "Mumbai",
+          "admin1": "Maharashtra",
+          "country": "India",
+          "lat": 19.0684,
+          "lon": 72.8758,
+          "matchedName": "Mumbai",
+          "match": "exact"
+        }
+      ],
+      "current": [
+        {
+          "row": 3,
+          "name": "Mumbai",
+          "admin1": "Maharashtra",
+          "country": "India",
+          "lat": 19.0684,
+          "lon": 72.8758,
+          "matchedName": "Mumbai",
+          "match": "exact"
+        }
+      ]
+    },
+    {
+      "query": "Bombay",
+      "old": [],
+      "current": [
+        {
+          "row": 3,
+          "name": "Mumbai",
+          "admin1": "Maharashtra",
+          "country": "India",
+          "lat": 19.0684,
+          "lon": 72.8758,
+          "matchedName": "Bombay",
+          "match": "exact"
+        }
+      ]
+    },
+    {
+      "query": "Sao Paulo",
+      "old": [],
+      "current": [
+        {
+          "row": 4,
+          "name": "São Paulo",
+          "admin1": "São Paulo",
+          "country": "Brazil",
+          "lat": -23.5567,
+          "lon": -46.627,
+          "matchedName": "Sao Paulo",
+          "match": "exact"
+        }
+      ]
+    },
+    {
+      "query": "São Paulo",
+      "old": [],
+      "current": [
+        {
+          "row": 4,
+          "name": "São Paulo",
+          "admin1": "São Paulo",
+          "country": "Brazil",
+          "lat": -23.5567,
+          "lon": -46.627,
+          "matchedName": "São Paulo",
+          "match": "exact"
+        }
+      ]
+    },
+    {
+      "query": "Montréal",
+      "old": [],
+      "current": [
+        {
+          "row": 86,
+          "name": "Montréal",
+          "admin1": "Québec",
+          "country": "Canada",
+          "lat": 45.5019,
+          "lon": -73.5852,
+          "matchedName": "Montréal",
+          "match": "exact"
+        }
+      ]
+    },
+    {
+      "query": "Anchorage",
+      "old": [
+        {
+          "row": 1664,
+          "name": "Anchorage",
+          "admin1": "Alaska",
+          "country": "United States of America",
+          "lat": 61.214,
+          "lon": -149.8874,
+          "matchedName": "Anchorage",
+          "match": "exact"
+        }
+      ],
+      "current": [
+        {
+          "row": 1664,
+          "name": "Anchorage",
+          "admin1": "Alaska",
+          "country": "United States of America",
+          "lat": 61.214,
+          "lon": -149.8874,
+          "matchedName": "Anchorage",
+          "match": "exact"
+        }
+      ]
+    },
+    {
+      "query": "Paris, France",
+      "old": [],
+      "current": [
+        {
+          "row": 19,
+          "name": "Paris",
+          "admin1": "Île-de-France",
+          "country": "France",
+          "lat": 48.8581,
+          "lon": 2.353,
+          "matchedName": "Paris",
+          "match": "exact"
+        }
+      ]
+    },
+    {
+      "query": "Paris, Texas",
+      "old": [],
+      "current": []
+    },
+    {
+      "query": "London, Ontario, Canada",
+      "old": [],
+      "current": [
+        {
+          "row": 1336,
+          "name": "London",
+          "admin1": "Ontario",
+          "country": "Canada",
+          "lat": 42.97,
+          "lon": -81.25,
+          "matchedName": "London",
+          "match": "exact"
+        }
+      ]
+    },
+    {
+      "query": "Springfield, Illinois",
+      "old": [],
+      "current": [
+        {
+          "row": 2631,
+          "name": "Springfield",
+          "admin1": "Illinois",
+          "country": "United States of America",
+          "lat": 39.7882,
+          "lon": -89.6371,
+          "matchedName": "Springfield",
+          "match": "exact"
+        }
+      ]
+    },
+    {
+      "query": "Victoria, Seychelles",
+      "old": [],
+      "current": [
+        {
+          "row": 4836,
+          "name": "Victoria",
+          "admin1": "",
+          "country": "Seychelles",
+          "lat": -4.6166,
+          "lon": 55.45,
+          "matchedName": "Victoria",
+          "match": "exact"
+        }
+      ]
+    },
+    {
+      "query": "Washington, D.C.",
+      "old": [],
+      "current": [
+        {
+          "row": 68,
+          "name": "Washington,  D.C.",
+          "admin1": "District of Columbia",
+          "country": "United States of America",
+          "lat": 38.9015,
+          "lon": -77.0114,
+          "matchedName": "Washington,  D.C.",
+          "match": "exact"
+        }
+      ]
+    },
+    {
+      "query": "san",
+      "old": [
+        {
+          "row": 42,
+          "name": "Santiago",
+          "admin1": "Región Metropolitana de Santiago",
+          "country": "Chile",
+          "lat": -33.4402,
+          "lon": -70.6505,
+          "matchedName": "Santiago",
+          "match": "prefix"
+        },
+        {
+          "row": 96,
+          "name": "San Francisco",
+          "admin1": "California",
+          "country": "United States of America",
+          "lat": 37.7843,
+          "lon": -122.3996,
+          "matchedName": "San Francisco",
+          "match": "prefix"
+        },
+        {
+          "row": 128,
+          "name": "San Diego",
+          "admin1": "California",
+          "country": "United States of America",
+          "lat": 32.7189,
+          "lon": -117.1509,
+          "matchedName": "San Diego",
+          "match": "prefix"
+        },
+        {
+          "row": 161,
+          "name": "San Juan",
+          "admin1": "",
+          "country": "Puerto Rico",
+          "lat": 18.44,
+          "lon": -66.13,
+          "matchedName": "San Juan",
+          "match": "prefix"
+        },
+        {
+          "row": 195,
+          "name": "Santo Domingo",
+          "admin1": "Distrito Nacional",
+          "country": "Dominican Republic",
+          "lat": 18.4707,
+          "lon": -69.9297,
+          "matchedName": "Santo Domingo",
+          "match": "prefix"
+        },
+        {
+          "row": 201,
+          "name": "Santa Cruz",
+          "admin1": "Santa Cruz",
+          "country": "Bolivia",
+          "lat": -17.752,
+          "lon": -63.2279,
+          "matchedName": "Santa Cruz",
+          "match": "prefix"
+        },
+        {
+          "row": 215,
+          "name": "Sanaa",
+          "admin1": "Amanat Al Asimah",
+          "country": "Yemen",
+          "lat": 15.3567,
+          "lon": 44.2046,
+          "matchedName": "Sanaa",
+          "match": "prefix"
+        },
+        {
+          "row": 246,
+          "name": "San Bernardino",
+          "admin1": "California",
+          "country": "United States of America",
+          "lat": 34.1223,
+          "lon": -117.302,
+          "matchedName": "San Bernardino",
+          "match": "prefix"
+        }
+      ],
+      "current": [
+        {
+          "row": 4535,
+          "name": "San",
+          "admin1": "Ségou",
+          "country": "Mali",
+          "lat": 13.3004,
+          "lon": -4.9,
+          "matchedName": "San",
+          "match": "exact"
+        },
+        {
+          "row": 4,
+          "name": "São Paulo",
+          "admin1": "São Paulo",
+          "country": "Brazil",
+          "lat": -23.5567,
+          "lon": -46.627,
+          "matchedName": "San Paolo",
+          "match": "prefix"
+        },
+        {
+          "row": 6,
+          "name": "Shanghai",
+          "admin1": "Shanghai",
+          "country": "China",
+          "lat": 31.2184,
+          "lon": 121.4346,
+          "matchedName": "Sanghaj",
+          "match": "prefix"
+        },
+        {
+          "row": 42,
+          "name": "Santiago",
+          "admin1": "Región Metropolitana de Santiago",
+          "country": "Chile",
+          "lat": -33.4402,
+          "lon": -70.6505,
+          "matchedName": "Santiago",
+          "match": "prefix"
+        },
+        {
+          "row": 60,
+          "name": "St.  Petersburg",
+          "admin1": "City of St. Petersburg",
+          "country": "Russia",
+          "lat": 59.941,
+          "lon": 30.3141,
+          "matchedName": "San Petersburgo",
+          "match": "prefix"
+        },
+        {
+          "row": 96,
+          "name": "San Francisco",
+          "admin1": "California",
+          "country": "United States of America",
+          "lat": 37.7843,
+          "lon": -122.3996,
+          "matchedName": "San Francisco",
+          "match": "prefix"
+        },
+        {
+          "row": 128,
+          "name": "San Diego",
+          "admin1": "California",
+          "country": "United States of America",
+          "lat": 32.7189,
+          "lon": -117.1509,
+          "matchedName": "San Diego",
+          "match": "prefix"
+        },
+        {
+          "row": 161,
+          "name": "San Juan",
+          "admin1": "",
+          "country": "Puerto Rico",
+          "lat": 18.44,
+          "lon": -66.13,
+          "matchedName": "San Juan",
+          "match": "prefix"
+        }
+      ]
+    },
+    {
+      "query": "sa",
+      "old": [
+        {
+          "row": 42,
+          "name": "Santiago",
+          "admin1": "Región Metropolitana de Santiago",
+          "country": "Chile",
+          "lat": -33.4402,
+          "lon": -70.6505,
+          "matchedName": "Santiago",
+          "match": "prefix"
+        },
+        {
+          "row": 94,
+          "name": "Salvador",
+          "admin1": "Bahia",
+          "country": "Brazil",
+          "lat": -12.968,
+          "lon": -38.4819,
+          "matchedName": "Salvador",
+          "match": "prefix"
+        },
+        {
+          "row": 96,
+          "name": "San Francisco",
+          "admin1": "California",
+          "country": "United States of America",
+          "lat": 37.7843,
+          "lon": -122.3996,
+          "matchedName": "San Francisco",
+          "match": "prefix"
+        },
+        {
+          "row": 128,
+          "name": "San Diego",
+          "admin1": "California",
+          "country": "United States of America",
+          "lat": 32.7189,
+          "lon": -117.1509,
+          "matchedName": "San Diego",
+          "match": "prefix"
+        },
+        {
+          "row": 157,
+          "name": "Sapporo",
+          "admin1": "Hokkaido",
+          "country": "Japan",
+          "lat": 43.0769,
+          "lon": 141.3381,
+          "matchedName": "Sapporo",
+          "match": "prefix"
+        },
+        {
+          "row": 161,
+          "name": "San Juan",
+          "admin1": "",
+          "country": "Puerto Rico",
+          "lat": 18.44,
+          "lon": -66.13,
+          "matchedName": "San Juan",
+          "match": "prefix"
+        },
+        {
+          "row": 195,
+          "name": "Santo Domingo",
+          "admin1": "Distrito Nacional",
+          "country": "Dominican Republic",
+          "lat": 18.4707,
+          "lon": -69.9297,
+          "matchedName": "Santo Domingo",
+          "match": "prefix"
+        },
+        {
+          "row": 201,
+          "name": "Santa Cruz",
+          "admin1": "Santa Cruz",
+          "country": "Bolivia",
+          "lat": -17.752,
+          "lon": -63.2279,
+          "matchedName": "Santa Cruz",
+          "match": "prefix"
+        }
+      ],
+      "current": [
+        {
+          "row": 4,
+          "name": "São Paulo",
+          "admin1": "São Paulo",
+          "country": "Brazil",
+          "lat": -23.5567,
+          "lon": -46.627,
+          "matchedName": "San Paolo",
+          "match": "prefix"
+        },
+        {
+          "row": 6,
+          "name": "Shanghai",
+          "admin1": "Shanghai",
+          "country": "China",
+          "lat": 31.2184,
+          "lon": 121.4346,
+          "matchedName": "Sanghaj",
+          "match": "prefix"
+        },
+        {
+          "row": 42,
+          "name": "Santiago",
+          "admin1": "Región Metropolitana de Santiago",
+          "country": "Chile",
+          "lat": -33.4402,
+          "lon": -70.6505,
+          "matchedName": "Santiago",
+          "match": "prefix"
+        },
+        {
+          "row": 60,
+          "name": "St.  Petersburg",
+          "admin1": "City of St. Petersburg",
+          "country": "Russia",
+          "lat": 59.941,
+          "lon": 30.3141,
+          "matchedName": "Saint Petersburg",
+          "match": "prefix"
+        },
+        {
+          "row": 94,
+          "name": "Salvador",
+          "admin1": "Bahia",
+          "country": "Brazil",
+          "lat": -12.968,
+          "lon": -38.4819,
+          "matchedName": "Salvador",
+          "match": "prefix"
+        },
+        {
+          "row": 96,
+          "name": "San Francisco",
+          "admin1": "California",
+          "country": "United States of America",
+          "lat": 37.7843,
+          "lon": -122.3996,
+          "matchedName": "San Francisco",
+          "match": "prefix"
+        },
+        {
+          "row": 128,
+          "name": "San Diego",
+          "admin1": "California",
+          "country": "United States of America",
+          "lat": 32.7189,
+          "lon": -117.1509,
+          "matchedName": "San Diego",
+          "match": "prefix"
+        },
+        {
+          "row": 157,
+          "name": "Sapporo",
+          "admin1": "Hokkaido",
+          "country": "Japan",
+          "lat": 43.0769,
+          "lon": 141.3381,
+          "matchedName": "Sapporo",
+          "match": "prefix"
+        }
+      ]
+    },
+    {
+      "query": "not a catalog city",
+      "old": [],
+      "current": []
+    }
+  ]
+}

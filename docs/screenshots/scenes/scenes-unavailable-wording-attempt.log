@@ -1,0 +1,6 @@
+
+[feeds] nws refresh failed (1): Network unavailable or host unreachable
+[feeds] usgs refresh failed (1): Network unavailable or host unreachable
+SMOKE_SCRIPT_ERROR [retaining the recorded cursor and opaque selection when its local archive has been cleared] Error: Missing historical selected record has no honest unavailable message
+    at check (<anonymous>:4:47)
+    at <anonymous>:89:5

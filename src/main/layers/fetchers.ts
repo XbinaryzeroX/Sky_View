@@ -3,23 +3,26 @@ import { mergeIncidents, normalizeEonet, normalizeGdacs } from '../../shared/inc
 // Per-layer fetch functions. URLs come from fixed templates; the only
 // variable inputs are validated numbers (view center/bbox) and enum values.
 
-import { aisDimensions, decodePackedEta, type VesselStatic, normalizeAdsb, normalizeArcgisPolygons, normalizeCaltrans, normalizeDigitrafficAis, normalizeFintrafficCams, normalizeFirmsCsv, normalizeMbta, normalizeMetar, normalizeNhc, normalizeNycCams, normalizeTle, type Normalized } from '../../shared/layerNormalize';
+import { aisDimensions, decodePackedEta, type VesselStatic, normalizeAdsb, normalizeArcgisPolygons, normalizeCaltrans, normalizeDigitrafficAis, normalizeFintrafficCams, normalizeFirmsCsv, normalizeMbta, normalizeMetar, normalizeNhc, normalizeNycCams, normalizeTle, WFIGS_PERIMETER_LIMITS, type Normalized } from '../../shared/layerNormalize';
 import { LAYERS, type GeoRecord, type LayerId, type ViewState } from '../../shared/layers';
 import { createHash } from 'node:crypto';
 import type { Settings } from '../../shared/types';
 import { computeBackoffMs, FeedHttpError, type FetchJson, type FetchText } from '../feeds/http';
+import { deadlineAfter } from '../feeds/timing';
 import type { AtlasStore } from '../store';
 import { mainGeoidHeight } from '../geoid';
 import { normalizeDriveBc, normalizeHongKongCams, normalizeQuebecCams, normalizeTflJamCams } from '../../shared/cameraSources';
 import { KEYED_CAMERA_SYSTEMS, keyedCameraRequest, normalizeKeyedCameras, type KeyedCameraId } from '../../shared/keyedCameras';
+import type { DwdSource } from './dwdSource';
 
 export interface FetchContext {
+  dwd?: DwdSource;
   view: ViewState | null;
   /** OpenSky API client 'id:secret' (optional; anonymous when absent). */
   openskyClient?: string | null;
   /** Saved keys of keyed camera systems (cameras layer only). */
   cameraKey?: (id: KeyedCameraId) => string | null;
-  /** Per-source state kept by the layer manager between refreshes (cameras layer only). */
+  /** Per-source state kept by the layer manager between refreshes (cameras and aircraft providers). */
   sources?: SourceState;
   /** Current time in ms, read again as a refresh proceeds (requests are sequential and can take minutes). Defaults to Date.now. */
   clock?: () => number;
@@ -34,6 +37,8 @@ export interface FetchContext {
 
 export interface FetchResult extends Normalized {
   note: string | null;
+  /** Aircraft coverage is incomplete: merge usable fixes with last-known data and keep an error visible. */
+  incomplete?: { error: string; retryAt: number | null };
   /** Epoch ms at which part of the result falls due (a rate limit ends, a kept catalog ages out), if before the next poll. */
   refreshAt?: number | null;
   /**
@@ -54,6 +59,11 @@ export interface SourceState {
 const NM = 1852;
 const VIEW_LIMIT_AIRCRAFT_M = 3_000_000;
 const VIEW_LIMIT_METAR_M = 1_500_000;
+
+/** The opted-in remote source for this view; local receiver polling is independent of either host. */
+export function aircraftProviderHost(view: ViewState | null, settings: Pick<Settings, 'worldAircraft'>): 'api.adsb.lol' | 'opensky-network.org' {
+  return view && view.heightM > VIEW_LIMIT_AIRCRAFT_M && settings.worldAircraft ? 'opensky-network.org' : 'api.adsb.lol';
+}
 
 /** Most adsb.lol area queries per refresh when zoomed out (fair use; each area is also cached for a minute). */
 export const AIRCRAFT_MAX_AREAS = 12;
@@ -135,57 +145,102 @@ async function fetchAircraft(ctx: FetchContext): Promise<FetchResult> {
   let note: string | null = null;
   let updated: string | null = null;
   const errors: string[] = [];
+  const clock = ctx.clock ?? (() => ctx.now.getTime());
+  const sources = ctx.sources ?? { backoff: new Map(), cache: new Map() };
+  let retryAt: number | null = null;
+  const due = (until: number) => { retryAt = Math.max(retryAt ?? 0, until); };
+  const blocked = (host: string, label: string): boolean => {
+    const limit = sources.backoff.get(host);
+    if (!limit || limit.until <= clock()) return false;
+    due(limit.until);
+    errors.push(`${label}: provider cooldown until ${new Date(limit.until).toISOString()}`);
+    return true;
+  };
+  const failed = (host: string, label: string, error: unknown) => {
+    errors.push(`${label}: ${error instanceof Error ? error.message : String(error)}`);
+    if (error instanceof FeedHttpError && (error.status === 429 || error.status === 503 || error.retryAfterSec !== null)) {
+      const strikes = (sources.backoff.get(host)?.strikes ?? 0) + 1;
+      const wait = Math.max(60_000, computeBackoffMs(strikes, error.retryAfterSec));
+      const until = Math.max(sources.backoff.get(host)?.until ?? 0, deadlineAfter(clock(), wait));
+      sources.backoff.set(host, { until, strikes });
+      due(until);
+    }
+  };
+  const includeUpdated = (time: string | null) => { if (time && (!updated || time < updated)) updated = time; };
   const v = ctx.view;
-  if (v && v.heightM > VIEW_LIMIT_AIRCRAFT_M && ctx.settings.worldAircraft) {
-    try {
+  if (v && aircraftProviderHost(v, ctx.settings) === 'opensky-network.org') {
+    if (!blocked('opensky-network.org', 'OpenSky')) try {
       const w = await openSkyWorld(ctx);
       out.push(...w.records);
       skipped += w.skipped;
-      updated = w.time;
+      includeUpdated(w.time);
+      sources.backoff.delete('opensky-network.org');
       note = `Worldwide snapshot from OpenSky Network: ${w.records.length.toLocaleString()} aircraft, positions from ${w.time ? new Date(w.time).toISOString().slice(11, 16) + ' UTC' : 'the last snapshot'}. Refreshed every ${w.authed ? '90 s (your OpenSky client)' : '15 min (anonymous quota)'}; zoom in below 3,000 km for live adsb.lol positions.`;
     } catch (e) {
-      errors.push(`OpenSky: ${(e as Error).message}`);
+      failed('opensky-network.org', 'OpenSky', e);
     }
   } else if (!v) {
     note = 'Waiting for the map view.';
   } else {
     const plan = aircraftQueryPlan(v);
     const multi = plan.centers.length > 1;
-    const seenIds = new Set<string>();
+    const seenIds = new Map<string, number>();
     let ok = 0;
-    // A few at a time; areas fetched in the last minute are reused.
-    for (let i = 0; i < plan.centers.length; i += 3) {
+    // At most three already-started requests settle after a host limit; never start the next batch.
+    const limited = blocked('api.adsb.lol', 'adsb.lol');
+    for (let i = 0; !limited && i < plan.centers.length; i += 3) {
       await Promise.all(
         plan.centers.slice(i, i + 3).map(async (c) => {
           const url = `https://api.adsb.lol/v2/point/${c.lat.toFixed(4)}/${c.lon.toFixed(4)}/${plan.radiusNm}`;
           try {
             const hit = multi ? areaCache.get(url) : undefined;
             let body: unknown;
-            if (hit && ctx.now.getTime() - hit.at < AREA_CACHE_MS) body = hit.body;
+            let referenceAt: number;
+            if (hit && clock() - hit.at < AREA_CACHE_MS) { body = hit.body; referenceAt = hit.at; }
             else {
               body = (await ctx.fetchJson(url, { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 20000 })).body;
-              if (multi) areaCache.set(url, { at: ctx.now.getTime(), body });
+              referenceAt = clock();
+              if (multi) areaCache.set(url, { at: referenceAt, body });
             }
-            const n = normalizeAdsb(body, 'adsb.lol (ODbL)', ctx.now.getTime(), mainGeoidHeight);
-            for (const rec of n.records) if (!seenIds.has(rec.id)) (seenIds.add(rec.id), out.push(rec));
+            const n = normalizeAdsb(body, 'adsb.lol (ODbL)', referenceAt, mainGeoidHeight);
+            for (const rec of n.records) {
+              if (!seenIds.has(rec.id)) { seenIds.set(rec.id, out.length); out.push(rec); }
+              else {
+                const previous = seenIds.get(rec.id)!;
+                if ((rec.observedAt ?? '') > (out[previous].observedAt ?? '')) out[previous] = rec;
+              }
+            }
             skipped += n.skipped;
-            if (!updated || (n.sourceUpdatedAt ?? '') > updated) updated = n.sourceUpdatedAt;
+            includeUpdated(n.sourceUpdatedAt);
             ok++;
           } catch (e) {
-            errors.push(`adsb.lol: ${(e as Error).message}`);
+            failed('api.adsb.lol', 'adsb.lol', e);
           }
         }),
       );
+      if ((sources.backoff.get('api.adsb.lol')?.until ?? 0) > clock()) break;
     }
-    if (areaCache.size > 200) for (const [k, val] of areaCache) if (ctx.now.getTime() - val.at > AREA_CACHE_MS) areaCache.delete(k);
+    if ((sources.backoff.get('api.adsb.lol')?.until ?? 0) > clock() && retryAt === null) blocked('api.adsb.lol', 'adsb.lol');
+    if (!limited && ok === plan.centers.length) {
+      // A military-layer request may have received a newer host limit while this grid was in flight.
+      if ((sources.backoff.get('api.adsb.lol')?.until ?? 0) > clock()) blocked('api.adsb.lol', 'adsb.lol');
+      else sources.backoff.delete('api.adsb.lol');
+    }
+    if (areaCache.size > 200) {
+      for (const [k, val] of areaCache) if (clock() - val.at > AREA_CACHE_MS) areaCache.delete(k);
+      while (areaCache.size > 200) areaCache.delete(areaCache.keys().next().value!);
+    }
     note = !multi
       ? `Showing aircraft within ${plan.radiusNm} nm of the view center.`
       : `Showing aircraft in ${ok} areas of 250 nm around the view center${plan.partial ? ' (not the whole visible globe: adsb.lol answers one 250 nm area per request, so the nearest areas are loaded first; zoom in or pan to see others)' : ''}.`;
   }
   if (ctx.localReceiverUrl) {
-    try {
+    const localHost = new URL(ctx.localReceiverUrl).origin;
+    if (!blocked(localHost, 'local receiver')) try {
       const res = await ctx.fetchJson(ctx.localReceiverUrl, { timeoutMs: 8000, maxBytes: 20 * 1024 * 1024 });
-      const n = normalizeAdsb(res.body, 'Local receiver', ctx.now.getTime(), mainGeoidHeight);
+      const n = normalizeAdsb(res.body, 'Local receiver', clock(), mainGeoidHeight);
+      includeUpdated(n.sourceUpdatedAt);
+      sources.backoff.delete(localHost);
       const seen = new Map(out.map((r, i) => [r.id, i]));
       for (const rec of n.records) {
         const i = seen.get(rec.id);
@@ -195,16 +250,39 @@ async function fetchAircraft(ctx: FetchContext): Promise<FetchResult> {
       }
       skipped += n.skipped;
     } catch (e) {
-      errors.push(`local receiver: ${(e as Error).message}`);
+      failed(localHost, 'local receiver', e);
     }
   }
-  if (errors.length && out.length === 0) throw new Error(errors.join('; '));
-  return { records: out, skipped, sourceUpdatedAt: updated, note: errors.length ? `${note ?? ''} Partial: ${errors.join('; ')}`.trim() : note };
+  return { records: out, skipped, sourceUpdatedAt: updated, note: errors.length ? `${note ?? ''} Partial: ${errors.join('; ')}`.trim() : note,
+    ...(errors.length ? { incomplete: { error: errors.join('; '), retryAt } } : {}) };
 }
 
 async function fetchAircraftMil(ctx: FetchContext): Promise<FetchResult> {
-  const res = await ctx.fetchJson('https://api.adsb.lol/v2/mil', { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 25000 });
-  return { ...normalizeAdsb(res.body, 'adsb.lol /v2/mil (ODbL)', ctx.now.getTime(), mainGeoidHeight), note: 'Military flag comes from the adsb.lol aircraft database and may be incomplete or wrong.' };
+  const host = 'api.adsb.lol';
+  const now = () => ctx.clock?.() ?? ctx.now.getTime();
+  const limit = ctx.sources?.backoff.get(host);
+  if (limit && limit.until > now()) return { records: [], skipped: 0, sourceUpdatedAt: null,
+    note: 'Keeping last-known military-flagged aircraft during the adsb.lol provider cooldown.',
+    incomplete: { error: `adsb.lol: provider cooldown until ${new Date(limit.until).toISOString()}`, retryAt: limit.until } };
+  try {
+    const res = await ctx.fetchJson('https://api.adsb.lol/v2/mil', { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 25000 });
+    const currentLimit = ctx.sources?.backoff.get(host);
+    const normalized = normalizeAdsb(res.body, 'adsb.lol /v2/mil (ODbL)', now(), mainGeoidHeight);
+    const note = 'Military flag comes from the adsb.lol aircraft database and may be incomplete or wrong.';
+    if (currentLimit && currentLimit.until > now()) return { ...normalized, note,
+      incomplete: { error: `adsb.lol: provider cooldown until ${new Date(currentLimit.until).toISOString()}`, retryAt: currentLimit.until } };
+    ctx.sources?.backoff.delete(host);
+    return { ...normalized, note };
+  } catch (error) {
+    if (!(error instanceof FeedHttpError) || (error.status !== 429 && error.status !== 503 && error.retryAfterSec === null)) throw error;
+    // The grid can establish a longer wait while this military request is already in flight.
+    const currentLimit = ctx.sources?.backoff.get(host);
+    const strikes = (currentLimit?.strikes ?? 0) + 1;
+    const until = Math.max(currentLimit?.until ?? 0, deadlineAfter(now(), Math.max(60_000, computeBackoffMs(strikes, error.retryAfterSec))));
+    ctx.sources?.backoff.set(host, { until, strikes });
+    return { records: [], skipped: 0, sourceUpdatedAt: null, note: 'Keeping last-known military-flagged aircraft while the provider asks the app to wait.',
+      incomplete: { error: `adsb.lol: ${error.message}`, retryAt: until } };
+  }
 }
 
 let vesselMeta: { at: number; map: Map<number, VesselStatic> } | null = null;
@@ -301,6 +379,7 @@ async function fetchFires(ctx: FetchContext): Promise<FetchResult> {
 }
 
 async function fetchArcgisPaged(ctx: FetchContext, baseQuery: string, kind: 'perimeter' | 'airspace'): Promise<FetchResult> {
+  if (kind === 'perimeter') return fetchPerimeterPages(ctx, baseQuery);
   const out: GeoRecord[] = [];
   let skipped = 0;
   for (let offset = 0, page = 0; page < 20; page++) {
@@ -316,16 +395,83 @@ async function fetchArcgisPaged(ctx: FetchContext, baseQuery: string, kind: 'per
   return { records: out, skipped, sourceUpdatedAt: null, note: null };
 }
 
+/** A partial national perimeter refresh cannot establish removals from the prior complete reply. */
+async function fetchPerimeterPages(ctx: FetchContext, baseQuery: string): Promise<FetchResult> {
+  const out: GeoRecord[] = [], ids = new Set<string>(); let coordinates = 0;
+  for (let offset = 0, page = 0; page < WFIGS_PERIMETER_LIMITS.pages; page++) {
+    const res = await ctx.fetchJson(`${baseQuery}&resultOffset=${offset}&resultRecordCount=${WFIGS_PERIMETER_LIMITS.pageRecords}`, { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 45000, maxBytes: 60 * 1024 * 1024 });
+    if (res.status !== 200) throw new Error('NIFC did not supply a complete HTTP 200 perimeter reply.');
+    const n = normalizeArcgisPolygons(res.body, 'perimeter');
+    if (n.skipped) throw new Error(`Incomplete NIFC perimeter reply: ${n.skipped} feature(s) have unsupported geometry or no stable publisher feature ID. Keeping the previous complete snapshot.`);
+    for (const record of n.records) {
+      if (ids.has(record.id)) throw new Error('Incomplete NIFC perimeter paging: a publisher feature ID repeated. Keeping the previous complete snapshot.');
+      ids.add(record.id);
+      const g = record.geometry!;
+      if (g.type === 'LineString') throw new Error('Unexpected NIFC perimeter geometry.');
+      for (const polygon of g.type === 'Polygon' ? [g.coordinates] : g.coordinates) for (const ring of polygon) coordinates += ring.length;
+      if (coordinates > WFIGS_PERIMETER_LIMITS.coordinates) throw new Error('Incomplete NIFC perimeter reply: coordinate limit reached. Keeping the previous complete snapshot.');
+    }
+    out.push(...n.records);
+    const body = res.body as { features: unknown[]; exceededTransferLimit?: unknown; properties?: { exceededTransferLimit?: unknown } };
+    const flags = [body.exceededTransferLimit, body.properties?.exceededTransferLimit].filter(v => v !== undefined);
+    if (flags.some(v => typeof v !== 'boolean')) throw new Error('NIFC returned an invalid paging-completeness flag.');
+    const count = body.features.length;
+    const more = flags.includes(true) || (flags.length === 0 && count === WFIGS_PERIMETER_LIMITS.pageRecords);
+    if (!more) return { records: out, skipped: 0, sourceUpdatedAt: null,
+      note: `NIFC WFIGS query completed in ${page + 1} page(s). ${out.length} perimeter features; these are not distinct incident counts. Source polygons retain all supplied parts and holes.` };
+    if (!count) throw new Error('Incomplete NIFC perimeter paging: continuation advertised without features. Keeping the previous complete snapshot.');
+    offset += count;
+  }
+  throw new Error('Incomplete NIFC perimeter reply: page limit reached while more features remain. Keeping the previous complete snapshot.');
+}
+
+// NOAA asks clients to wait between calls and stay below 100 requests/minute.
+// Serialize this adapter across refreshes on the same HTTP boundary too; a force
+// refresh must not create a burst. Production uses the shared main-process fetchJson.
+const metarCadence = new WeakMap<FetchJson, { queue: Promise<void>; lastStart: number | null }>();
+async function metarRequest(ctx: FetchContext, url: string) {
+  let cadence = metarCadence.get(ctx.fetchJson);
+  if (!cadence) metarCadence.set(ctx.fetchJson, (cadence = { queue: Promise.resolve(), lastStart: null }));
+  const previous = cadence.queue;
+  let release!: () => void;
+  cadence.queue = new Promise<void>((resolve) => { release = resolve; });
+  await previous;
+  try {
+    // A wall-clock correction must neither bypass spacing nor create an overflowing timer.
+    const now = () => performance.now();
+    if (cadence.lastStart !== null) {
+      const wait = Math.min(600, Math.max(0, cadence.lastStart + 600 - now()));
+      if (wait > 0) await new Promise<void>((resolve) => setTimeout(resolve, wait));
+    }
+    cadence.lastStart = now();
+    return await ctx.fetchJson(url, { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 20000 });
+  } finally { release(); }
+}
+
 async function fetchMetar(ctx: FetchContext): Promise<FetchResult> {
   const v = ctx.view;
   if (!v || v.heightM > VIEW_LIMIT_METAR_M) return { records: [], skipped: 0, sourceUpdatedAt: null, note: 'Zoom in below 1,500 km altitude to load weather observations for the view.' };
-  const [w0, s, e0, n] = v.bbox;
-  // A view crossing the antimeridian (west > east) is clamped to its western part.
-  const w = w0;
-  const e = e0 < w0 ? 180 : e0;
-  const res = await ctx.fetchJson(`https://aviationweather.gov/api/data/metar?bbox=${s.toFixed(2)},${w.toFixed(2)},${n.toFixed(2)},${e.toFixed(2)}&format=json`, { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 20000 });
-  const out = normalizeMetar(res.body);
-  return { ...out, note: out.records.length >= 400 ? 'The provider returns at most 400 stations; zoom in for complete coverage.' : null };
+  const [w, s, e, n] = v.bbox;
+  // Ordinary NOAA boxes avoid assuming undocumented west>east wrapping support.
+  const longitudeRanges = w <= e ? [[w, e]] : [[w, 180], [-180, e]];
+  const records = new Map<string, GeoRecord>();
+  let skipped = 0, truncated = 0;
+  for (const [west, east] of longitudeRanges) {
+    const bbox = [s, west, n, east].map((value) => value.toFixed(3)).join(',');
+    // Any failed half rejects the refresh unchanged. LayerManager retains last-known
+    // observations and the original FeedHttpError/Retry-After; partial coverage is never 'ok'.
+    const res = await metarRequest(ctx, `https://aviationweather.gov/api/data/metar?bbox=${bbox}&format=json`);
+    const count = Array.isArray(res.body) ? res.body.length : 0;
+    if (count >= 400) truncated++;
+    const out = normalizeMetar(Array.isArray(res.body) ? res.body.slice(0, 400) : res.body);
+    skipped += out.skipped + Math.max(0, count - 400);
+    for (const record of out.records) {
+      const previous = records.get(record.id);
+      if (!previous || (record.observedAt ?? '') > (previous.observedAt ?? '')) records.set(record.id, record);
+    }
+  }
+  return { records: [...records.values()], skipped, sourceUpdatedAt: null,
+    note: truncated ? `NOAA reached the 400-observation limit in ${truncated} of ${longitudeRanges.length} query boxes; results may be truncated. Zoom in for more complete coverage.` : null };
 }
 
 /** A camera catalog the cameras layer loads (one request per refresh when it is due). */
@@ -448,13 +594,18 @@ async function fetchCameras(ctx: FetchContext): Promise<FetchResult> {
       state.backoff.delete(src.host);
       due(at + reuseMs);
     } catch (e) {
-      if (e instanceof FeedHttpError && (e.status === 429 || e.status === 503)) {
-        const strikes = (held?.strikes ?? 0) + 1;
+      if (e instanceof FeedHttpError && (e.status === 429 || e.status === 503 || e.retryAfterSec !== null)) {
+        const currentLimit = state.backoff.get(src.host);
+        const strikes = (currentLimit?.strikes ?? 0) + 1;
         // Measured from the answer, not from the start of the refresh.
-        const until = clock() + Math.max(60_000, computeBackoffMs(strikes, e.retryAfterSec));
+        const until = Math.max(currentLimit?.until ?? 0, deadlineAfter(clock(), Math.max(60_000, computeBackoffMs(strikes, e.retryAfterSec))));
         state.backoff.set(src.host, { until, strikes });
         due(until);
-        keep(src, 'rate limited');
+        // A rejected key invalidates its old catalog even when the publisher also asks us to wait.
+        if (src.dropCacheOn?.(e)) {
+          state.cache.delete(src.key);
+          failed.push(src.failure(e));
+        } else keep(src, 'rate limited');
       } else if (src.dropCacheOn?.(e)) {
         state.cache.delete(src.key);
         failed.push(src.failure(e));
@@ -501,6 +652,11 @@ async function fetchIncidents(ctx: FetchContext): Promise<FetchResult> {
 }
 
 export const FETCHERS: Record<LayerId, (ctx: FetchContext) => Promise<FetchResult>> = {
+  dwd: async (ctx) => {
+    if (!ctx.dwd) throw new Error('DWD warning source unavailable');
+    const snapshot = await ctx.dwd.refresh();
+    return { ...snapshot, refreshAt: Date.parse(snapshot.checkedAt) + LAYERS.dwd.pollSeconds * 1000 };
+  },
   aircraft: fetchAircraft,
   aircraftMil: fetchAircraftMil,
   vessels: fetchVessels,
@@ -509,7 +665,7 @@ export const FETCHERS: Record<LayerId, (ctx: FetchContext) => Promise<FetchResul
   firePerimeters: (ctx) =>
     fetchArcgisPaged(
       ctx,
-      'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query?where=1%3D1&outFields=poly_IncidentName,poly_DateCurrent,poly_PolygonDateTime,poly_GISAcres,poly_IRWINID,attr_IncidentSize,attr_PercentContained,attr_FireDiscoveryDateTime,attr_UniqueFireIdentifier,attr_POOState&outSR=4326&geometryPrecision=5&maxAllowableOffset=0.0005&f=geojson',
+      'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query?where=1%3D1&outFields=OBJECTID,GlobalID,poly_IncidentName,poly_DateCurrent,poly_PolygonDateTime,poly_GISAcres,poly_IRWINID,attr_IncidentSize,attr_PercentContained,attr_FireDiscoveryDateTime,attr_UniqueFireIdentifier,attr_POOState,attr_IncidentTypeCategory&outSR=4326&geometryPrecision=5&maxAllowableOffset=0.0005&f=geojson',
       'perimeter',
     ),
   metar: fetchMetar,

@@ -1,0 +1,24 @@
+.conflict-updates { margin-top: 14px; overflow-wrap: anywhere; }
+.conflict-view { display: flex; gap: 12px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+.conflict-view button { padding: 5px 1px 8px; background: transparent; border: 0; border-bottom: 2px solid transparent; color: var(--muted); font: inherit; cursor: pointer; }
+.conflict-view button[aria-pressed="true"] { border-color: var(--accent); color: var(--text); }
+.conflict-updates h3, .conflict-updates h4 { margin: 0; line-height: 1.35; }
+.conflict-caption { margin: 6px 0 10px; line-height: 1.45; }
+.conflict-check, .conflict-byline, .conflict-area { color: var(--muted); font-size: 12px; line-height: 1.45; }
+.conflict-check { margin: 8px 0 12px; }
+.conflict-check p { margin: 2px 0; }
+.conflict-error { color: #f4b884; }
+.conflict-filter { display: grid; gap: 5px; margin: 12px 0; }
+.conflict-country, .conflict-assessments li { margin: 10px 0; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel-2); }
+.conflict-country > h3 { font-weight: 600; margin-bottom: 8px; }
+.conflict-report p { margin: 5px 0 0; line-height: 1.45; }
+.conflict-report a { display: inline; }
+.conflict-report a svg { width: 13px; height: 13px; vertical-align: baseline; }
+.conflict-country summary { margin-top: 12px; cursor: pointer; color: var(--muted); }
+.conflict-country details .conflict-report { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.conflict-assessments { margin: 0; list-style: none; padding: 0; }
+.conflict-assessments h4 { margin-top: 4px; }
+.conflict-assessments p { margin: 4px 0 7px; font-size: 13px; }
+.conflict-trend.trend-worsening { color: #f1b595; }
+.conflict-trend.trend-improving { color: #91d2bd; }
+.conflict-read-reports { display: block; margin: 8px 0 0; text-align: left; }

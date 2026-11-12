@@ -1,0 +1,82 @@
+{
+  "result": "PARTIAL",
+  "startedAt": "2026-11-11T16:54:07.466Z",
+  "executable": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\Atlas Watch.exe",
+  "archiveSha256": "6F4BBDFD4A84B36EF35E85F6CA019CD87BB47E685B48A5C91819B3E54BD980DC",
+  "spawnedPid": 38688,
+  "profile": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-packaged-launch-8zNifL\\profile",
+  "database": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-packaged-launch-8zNifL\\live.sqlite",
+  "normalPackagedStartup": true,
+  "testHooksEnabled": false,
+  "remoteDebuggerEnabled": false,
+  "genuineProfileAccessed": false,
+  "installerExecuted": false,
+  "timeout": true,
+  "finishedAt": "2026-11-11T16:56:37.542Z",
+  "exit": {
+    "code": null,
+    "signal": "SIGTERM"
+  },
+  "databaseState": {
+    "caches": [
+      {
+        "feed": "nws",
+        "fetched_at": "2026-11-11T16:54:07.963Z",
+        "source_updated_at": "2026-11-11T16:45:22.000Z"
+      },
+      {
+        "feed": "usgs",
+        "fetched_at": "2026-11-11T16:54:07.740Z",
+        "source_updated_at": "2026-11-11T16:53:59.000Z"
+      }
+    ],
+    "epochs": [
+      {
+        "feed": "nws",
+        "observed_at": "2026-11-11T16:54:07.963Z",
+        "source_updated_at": "2026-11-11T16:45:22.000Z",
+        "scope": "active-US",
+        "state": "recorded",
+        "reason": null,
+        "expected_count": 414
+      },
+      {
+        "feed": "usgs",
+        "observed_at": "2026-11-11T16:54:07.740Z",
+        "source_updated_at": "2026-11-11T16:53:59.000Z",
+        "scope": "2.5_week",
+        "state": "recorded",
+        "reason": null,
+        "expected_count": 325
+      }
+    ],
+    "encryptedCredentialRows": 0
+  },
+  "liveFeedsRecorded": true,
+  "isolatedProfileCreated": true,
+  "uiEvidence": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\packaged-launch-ui.json",
+  "uiVerified": false,
+  "uiWindow": {
+    "app": "process:C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\Atlas Watch.exe",
+    "id": 14092788,
+    "title": "Atlas Watch"
+  },
+  "archiveStableDuringRun": true,
+  "diagnostics": [],
+  "runnerResult": "FAIL",
+  "uiVerification": {
+    "verified": false,
+    "at": "2026-11-11T16:59:42.210Z",
+    "window": {
+      "app": "process:C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\Atlas Watch.exe",
+      "id": 14092788,
+      "title": "Atlas Watch"
+    },
+    "scope": "The newly spawned packaged executable window was listed by path/title. No screenshot or accessibility tree was returned.",
+    "toolFailure": "foreground window did not report a process id",
+    "recoveryFailure": "Packaged window is no longer uniquely available after the isolated runner timeout",
+    "furtherAttempts": false
+  },
+  "verificationLimit": "The normal final executable created its isolated profile/database and recorded both live feeds. Rendered UI, controls and graceful window exit were not verified because Computer Use failed; the runner timeout terminated only its spawned process. No installer was executed.",
+  "spawnedProcessCleanupVerified": true
+}

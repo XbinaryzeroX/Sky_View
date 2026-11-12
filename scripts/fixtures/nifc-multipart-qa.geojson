@@ -1,0 +1,30 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": 20261111,
+      "properties": {
+        "poly_IncidentName": "CONTROLLED QA multipart fire — not a live observation",
+        "poly_DateCurrent": 1794434400000,
+        "attr_UniqueFireIdentifier": "QA|NIFC|two-parts",
+        "attr_IncidentSize": 1234.5,
+        "attr_PercentContained": 25,
+        "attr_POOState": "US-CA"
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [[-121,39],[-120.4,39],[-120.4,39.6],[-121,39.6],[-121,39]],
+            [[-120.8,39.2],[-120.8,39.4],[-120.6,39.4],[-120.6,39.2],[-120.8,39.2]]
+          ],
+          [
+            [[-119.8,39],[-119.2,39],[-119.2,39.6],[-119.8,39.6],[-119.8,39]],
+            [[-119.6,39.2],[-119.6,39.4],[-119.4,39.4],[-119.4,39.2],[-119.6,39.2]]
+          ]
+        ]
+      }
+    }
+  ]
+}

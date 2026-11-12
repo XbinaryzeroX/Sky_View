@@ -1,0 +1,22 @@
+SMOKE_SCRIPT {"result":"PASS","data":"local import fixture, no synthetic provider records","previewOnly":true,"previewCounts":{"ready":3,"duplicate":1,"rejected":5},"explicitAcknowledgement":true,"originalPreserved":true,"annotationCount":4,"duplicateReimport":{"imported":0,"duplicates":3},"streetViewTarget":{"tiltedCenter":{"lat":51.52568087080293,"lon":-0.12000000000010858},"tiltedCamera":{"lat":51.5,"lon":-0.11999999999999994},"noHitRefused":true,"mode2d":true,"handoffExercised":true,"browserOpened":false},"exportStatus":"Annotations exported to C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-geojson-ui-vNWRXL\\annotations.geojson","rendererErrors":[]}
+SMOKE_RESULT {"globeReady":true,"errors":[],"locations":0,"alerts":409,"quakes":320,"nws":"ok","usgs":"ok"}
+SMOKE_FEEDS {"nws":"ok","nwsCount":409,"usgs":"ok","usgsCount":324,"nwsErr":null,"usgsErr":null}
+SMOKE_SCRIPT {"result":"PASS","restartPersisted":true,"annotationCount":4,"rendererErrors":[]}
+SMOKE_RESULT {"globeReady":true,"errors":[],"locations":0,"alerts":409,"quakes":320,"nws":"ok","usgs":"ok"}
+SMOKE_FEEDS {"nws":"ok","nwsCount":409,"usgs":"ok","usgsCount":324,"nwsErr":null,"usgsErr":null}
+{
+  "result": "PASS",
+  "adapters": "file chooser/save results and shell dispatch only",
+  "nativePickerInteraction": "unverified: Windows helper could not operate controls",
+  "browserOpened": false,
+  "publicImageryCopied": false,
+  "exportFeatures": 4,
+  "restarted": {
+    "result": "PASS",
+    "restartPersisted": true,
+    "annotationCount": 4,
+    "rendererErrors": []
+  },
+  "session": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-geojson-ui-vNWRXL",
+  "previewShot": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\audit-geojson-preview.png"
+}

@@ -1,0 +1,259 @@
+{
+  "startedAt": "2026-11-12T04:40:22.881Z",
+  "mode": "Chromium offline",
+  "result": "PASS",
+  "asar": "c7a61a99bef1b217e37c5300b98a9c28ff1b9e5d8384dfd29875b6f61dd33718",
+  "views": [
+    {
+      "label": "us",
+      "lat": 38.4,
+      "lon": -99,
+      "heightM": 5200000,
+      "samples": [
+        {
+          "elapsedMs": 59,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 2,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 0,
+            "loaded": 0,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 242,
+          "terrainLevel": 0,
+          "layers": [],
+          "visible": 2,
+          "pending": 8,
+          "renderedMax": 0,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 0,
+            "loaded": 0,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 536,
+          "terrainLevel": 1,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 2,
+              "x": 0,
+              "y": 1,
+              "textureWidth": 1024,
+              "textureHeight": 1024,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            }
+          ],
+          "visible": 5,
+          "pending": 59,
+          "renderedMax": 1,
+          "imageryErrors": 49,
+          "lastError": "level 5: Failed to fetch",
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 0,
+            "loaded": 0,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 705,
+          "terrainLevel": 4,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 5,
+              "x": 7,
+              "y": 12,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            }
+          ],
+          "visible": 25,
+          "pending": 27,
+          "renderedMax": 4,
+          "imageryErrors": 88,
+          "lastError": "level 4: Failed to fetch",
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 0,
+            "loaded": 0,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 3705,
+          "terrainLevel": 4,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 5,
+              "x": 7,
+              "y": 12,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            }
+          ],
+          "visible": 39,
+          "pending": 0,
+          "renderedMax": 4,
+          "imageryErrors": 94,
+          "lastError": "level 4: Failed to fetch",
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 0,
+            "loaded": 0,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 6796,
+          "terrainLevel": 4,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 5,
+              "x": 7,
+              "y": 12,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            }
+          ],
+          "visible": 39,
+          "pending": 0,
+          "renderedMax": 4,
+          "imageryErrors": 94,
+          "lastError": "level 4: Failed to fetch",
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 0,
+            "loaded": 0,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 9900,
+          "terrainLevel": 4,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 5,
+              "x": 7,
+              "y": 12,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            }
+          ],
+          "visible": 39,
+          "pending": 0,
+          "renderedMax": 4,
+          "imageryErrors": 94,
+          "lastError": "level 4: Failed to fetch",
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 0,
+            "loaded": 0,
+            "failed": 0
+          }
+        },
+        {
+          "elapsedMs": 13000,
+          "terrainLevel": 4,
+          "layers": [
+            {
+              "slot": 0,
+              "level": 5,
+              "x": 7,
+              "y": 12,
+              "textureWidth": 256,
+              "textureHeight": 256,
+              "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+            }
+          ],
+          "visible": 39,
+          "pending": 0,
+          "renderedMax": 4,
+          "imageryErrors": 94,
+          "lastError": "level 4: Failed to fetch",
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 0,
+            "loaded": 0,
+            "failed": 0
+          }
+        }
+      ],
+      "earlyScreenshotStartMs": 1559,
+      "earlyScreenshotEndMs": 1809,
+      "final": {
+        "terrainLevel": 4,
+        "layers": [
+          {
+            "slot": 0,
+            "level": 5,
+            "x": 7,
+            "y": 12,
+            "textureWidth": 256,
+            "textureHeight": 256,
+            "source": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg"
+          }
+        ],
+        "visible": 39,
+        "pending": 0,
+        "renderedMax": 4,
+        "imageryErrors": 94,
+        "lastError": "level 4: Failed to fetch",
+        "renderErrors": 0,
+        "terrain": {
+          "requested": 0,
+          "loaded": 0,
+          "failed": 0
+        }
+      },
+      "bundledOverviewResources": 0,
+      "responses": {
+        "tiles.openfreemap.org net::ERR_INTERNET_DISCONNECTED": 16,
+        "atlas 200": 55
+      },
+      "localOverviewResponses": 55,
+      "firstLocalOverviewMs": 205,
+      "firstResponses": [
+        {
+          "atMs": 61,
+          "path": "/planet",
+          "status": "net::ERR_INTERNET_DISCONNECTED"
+        },
+        {
+          "atMs": 205,
+          "path": "/basemap-overview/1/0/0.jpg",
+          "status": 200
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "globeReadyMs": 977,
+  "settings": {
+    "basemap": "atlas",
+    "renderQuality": "balanced",
+    "terrainEnabled": true,
+    "labelsOverlay": true,
+    "radarEnabled": false
+  }
+}

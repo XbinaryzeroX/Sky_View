@@ -1,0 +1,412 @@
+{
+  "result": "PASS",
+  "measuredAt": "2026-11-12T01:51:42.746Z",
+  "node": "v24.22.1",
+  "cesium": "1.147.0",
+  "machine": {
+    "platform": "win32",
+    "release": "10.0.26300",
+    "arch": "x64",
+    "cpu": "AMD Ryzen 7 7700X 8-Core Processor             "
+  },
+  "prior": {
+    "gitCommit": "a22dcb09ea6144d4899a373ab25c4f70931cd129",
+    "path": "src/renderer/map/layerRender.ts",
+    "sha256": "4af542121a11fd8f8b3864883a590084caf713872fcd6a12bf152f956fa84277",
+    "qualification": "Exact git HEAD renderer. Its first-part perimeter construction and geometry-recreation update branch match the pre-increment source inspected in this audit. Other current dependencies are shared and not invoked by this perimeter path; no historical packaged frame rate is inferred."
+  },
+  "current": {
+    "path": "src/renderer/map/layerRender.ts",
+    "sha256": "73dc46dbabe09b55f8990dfdc3d1b4dc8c6f62b7e5ce31dad2e9525ccde9db5a",
+    "perimeterHelperSha256": "7c58789b81740f6a21025a673016d9b62b3a93d7cc93d9b99653eef1bf926721"
+  },
+  "method": "Same process, same Cesium version, same record/geometry objects, no selected record. Actual unmodified LayerRenderer.update methods, real CustomDataSource/EntityCollection/Entity/Cartesian geometry. Prototype-only minimal widget avoids constructor/WebGL/network; harness setup and disposal excluded. Three warm-up pairs then nine paired samples, alternated execution order. Cold samples use empty per-layer caches/collections; unchanged-update samples repeat identical objects after one initial update.",
+  "limits": [
+    "Construction includes coordinate conversion, Entity creation and collection reconciliation, but not GPU upload, primitive tessellation, render frames, app startup, network or IPC.",
+    "Old code draws only the first part of each record. Current cold construction does more correct work; timings do not compare equal rendered output.",
+    "An unchanged update here reuses the same geometry references. A fresh IPC payload can contain new geometry objects and may rebuild; this does not benchmark an unchanged network refresh.",
+    "This is a CPU microbenchmark on this machine; medians reduce but do not eliminate JIT/garbage collection/other-process noise. Packaging is free to continue; no release artifact is opened or changed."
+  ],
+  "scenes": [
+    {
+      "name": "synthetic-two-parts-and-one-hole",
+      "records": 1,
+      "suppliedPolygonParts": 2,
+      "coldIterationsPerSample": 100,
+      "unchangedUpdatesPerSample": 1000,
+      "priorEntities": 1,
+      "currentEntities": 2,
+      "priorUnchangedEntityRetention": 0,
+      "currentUnchangedEntityRetention": 2,
+      "priorMedian": {
+        "coldMsPerScene": 0.012404,
+        "coldUsPerRecord": 12.404,
+        "unchangedUpdateMsPerScene": 0.011814,
+        "unchangedUpdateUsPerRecord": 11.8145
+      },
+      "currentMedian": {
+        "coldMsPerScene": 0.01824,
+        "coldUsPerRecord": 18.24,
+        "unchangedUpdateMsPerScene": 0.000216,
+        "unchangedUpdateUsPerRecord": 0.2156
+      },
+      "rawPairedSamples": [
+        {
+          "prior": {
+            "coldMsPerScene": 0.01243300000000204,
+            "coldUsPerRecord": 12.433000000002039,
+            "unchangedUpdateMsPerScene": 0.01240420000000006,
+            "unchangedUpdateUsPerRecord": 12.404200000000058,
+            "entities": 1,
+            "retainedEntities": 0
+          },
+          "current": {
+            "coldMsPerScene": 0.018380000000007612,
+            "coldUsPerRecord": 18.380000000007612,
+            "unchangedUpdateMsPerScene": 0.00020069999999998344,
+            "unchangedUpdateUsPerRecord": 0.20069999999998345,
+            "entities": 2,
+            "retainedEntities": 2
+          }
+        },
+        {
+          "prior": {
+            "coldMsPerScene": 0.012392000000003235,
+            "coldUsPerRecord": 12.392000000003236,
+            "unchangedUpdateMsPerScene": 0.011417900000000031,
+            "unchangedUpdateUsPerRecord": 11.41790000000003,
+            "entities": 1,
+            "retainedEntities": 0
+          },
+          "current": {
+            "coldMsPerScene": 0.017744000000003552,
+            "coldUsPerRecord": 17.744000000003552,
+            "unchangedUpdateMsPerScene": 0.00020039999999994508,
+            "unchangedUpdateUsPerRecord": 0.20039999999994507,
+            "entities": 2,
+            "retainedEntities": 2
+          }
+        },
+        {
+          "prior": {
+            "coldMsPerScene": 0.011635000000001127,
+            "coldUsPerRecord": 11.635000000001128,
+            "unchangedUpdateMsPerScene": 0.01188620000000003,
+            "unchangedUpdateUsPerRecord": 11.886200000000029,
+            "entities": 1,
+            "retainedEntities": 0
+          },
+          "current": {
+            "coldMsPerScene": 0.017148000000001957,
+            "coldUsPerRecord": 17.148000000001957,
+            "unchangedUpdateMsPerScene": 0.00031790000000000876,
+            "unchangedUpdateUsPerRecord": 0.31790000000000873,
+            "entities": 2,
+            "retainedEntities": 2
+          }
+        },
+        {
+          "prior": {
+            "coldMsPerScene": 0.013611000000007607,
+            "coldUsPerRecord": 13.611000000007607,
+            "unchangedUpdateMsPerScene": 0.011678899999999999,
+            "unchangedUpdateUsPerRecord": 11.678899999999997,
+            "entities": 1,
+            "retainedEntities": 0
+          },
+          "current": {
+            "coldMsPerScene": 0.0182400000000041,
+            "coldUsPerRecord": 18.240000000004102,
+            "unchangedUpdateMsPerScene": 0.0002516000000000531,
+            "unchangedUpdateUsPerRecord": 0.2516000000000531,
+            "entities": 2,
+            "retainedEntities": 2
+          }
+        },
+        {
+          "prior": {
+            "coldMsPerScene": 0.012404000000002498,
+            "coldUsPerRecord": 12.404000000002497,
+            "unchangedUpdateMsPerScene": 0.012234699999999975,
+            "unchangedUpdateUsPerRecord": 12.234699999999975,
+            "entities": 1,
+            "retainedEntities": 0
+          },
+          "current": {
+            "coldMsPerScene": 0.022091999999993277,
+            "coldUsPerRecord": 22.091999999993277,
+            "unchangedUpdateMsPerScene": 0.00021730000000002293,
+            "unchangedUpdateUsPerRecord": 0.21730000000002292,
+            "entities": 2,
+            "retainedEntities": 2
+          }
+        },
+        {
+          "prior": {
+            "coldMsPerScene": 0.01275799999999549,
+            "coldUsPerRecord": 12.75799999999549,
+            "unchangedUpdateMsPerScene": 0.011814499999999954,
+            "unchangedUpdateUsPerRecord": 11.814499999999953,
+            "entities": 1,
+            "retainedEntities": 0
+          },
+          "current": {
+            "coldMsPerScene": 0.022361999999993713,
+            "coldUsPerRecord": 22.361999999993714,
+            "unchangedUpdateMsPerScene": 0.00021280000000001564,
+            "unchangedUpdateUsPerRecord": 0.21280000000001564,
+            "entities": 2,
+            "retainedEntities": 2
+          }
+        },
+        {
+          "prior": {
+            "coldMsPerScene": 0.013005999999992355,
+            "coldUsPerRecord": 13.005999999992355,
+            "unchangedUpdateMsPerScene": 0.012607399999999984,
+            "unchangedUpdateUsPerRecord": 12.607399999999982,
+            "entities": 1,
+            "retainedEntities": 0
+          },
+          "current": {
+            "coldMsPerScene": 0.020783999999994193,
+            "coldUsPerRecord": 20.783999999994194,
+            "unchangedUpdateMsPerScene": 0.0002155999999999949,
+            "unchangedUpdateUsPerRecord": 0.2155999999999949,
+            "entities": 2,
+            "retainedEntities": 2
+          }
+        },
+        {
+          "prior": {
+            "coldMsPerScene": 0.011146000000003368,
+            "coldUsPerRecord": 11.146000000003369,
+            "unchangedUpdateMsPerScene": 0.011126300000000014,
+            "unchangedUpdateUsPerRecord": 11.126300000000013,
+            "entities": 1,
+            "retainedEntities": 0
+          },
+          "current": {
+            "coldMsPerScene": 0.015161999999996852,
+            "coldUsPerRecord": 15.161999999996851,
+            "unchangedUpdateMsPerScene": 0.00019979999999998198,
+            "unchangedUpdateUsPerRecord": 0.199799999999982,
+            "entities": 2,
+            "retainedEntities": 2
+          }
+        },
+        {
+          "prior": {
+            "coldMsPerScene": 0.009974999999992634,
+            "coldUsPerRecord": 9.974999999992633,
+            "unchangedUpdateMsPerScene": 0.010556100000000014,
+            "unchangedUpdateUsPerRecord": 10.556100000000015,
+            "entities": 1,
+            "retainedEntities": 0
+          },
+          "current": {
+            "coldMsPerScene": 0.0153379999999936,
+            "coldUsPerRecord": 15.337999999993599,
+            "unchangedUpdateMsPerScene": 0.0003102999999999838,
+            "unchangedUpdateUsPerRecord": 0.3102999999999838,
+            "entities": 2,
+            "retainedEntities": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "captured-publisher-geometry",
+      "records": 65,
+      "suppliedPolygonParts": 2205,
+      "capture": {
+        "path": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-wfigs-with-ids.json",
+        "sha256": "896af2f7e9c8142b3058bf2aca22cd379ff448ecaf8563aa2d964c3aa16323d1",
+        "features": 65
+      },
+      "coldIterationsPerSample": 2,
+      "unchangedUpdatesPerSample": 20,
+      "priorEntities": 65,
+      "currentEntities": 2205,
+      "priorUnchangedEntityRetention": 0,
+      "currentUnchangedEntityRetention": 2205,
+      "priorMedian": {
+        "coldMsPerScene": 1.0448,
+        "coldUsPerRecord": 16.073846,
+        "unchangedUpdateMsPerScene": 1.04555,
+        "unchangedUpdateUsPerRecord": 16.085385
+      },
+      "currentMedian": {
+        "coldMsPerScene": 15.063,
+        "coldUsPerRecord": 231.738462,
+        "unchangedUpdateMsPerScene": 0.0089,
+        "unchangedUpdateUsPerRecord": 0.136923
+      },
+      "rawPairedSamples": [
+        {
+          "prior": {
+            "coldMsPerScene": 1.0448000000000093,
+            "coldUsPerRecord": 16.073846153846297,
+            "unchangedUpdateMsPerScene": 1.068195000000003,
+            "unchangedUpdateUsPerRecord": 16.433769230769276,
+            "entities": 65,
+            "retainedEntities": 0
+          },
+          "current": {
+            "coldMsPerScene": 15.063000000000102,
+            "coldUsPerRecord": 231.7384615384631,
+            "unchangedUpdateMsPerScene": 0.00906999999999698,
+            "unchangedUpdateUsPerRecord": 0.1395384615384151,
+            "entities": 2205,
+            "retainedEntities": 2205
+          }
+        },
+        {
+          "prior": {
+            "coldMsPerScene": 1.1186999999999898,
+            "coldUsPerRecord": 17.210769230769074,
+            "unchangedUpdateMsPerScene": 1.0593399999999975,
+            "unchangedUpdateUsPerRecord": 16.297538461538423,
+            "entities": 65,
+            "retainedEntities": 0
+          },
+          "current": {
+            "coldMsPerScene": 17.04964999999993,
+            "coldUsPerRecord": 262.3023076923066,
+            "unchangedUpdateMsPerScene": 0.01037500000001046,
+            "unchangedUpdateUsPerRecord": 0.15961538461554553,
+            "entities": 2205,
+            "retainedEntities": 2205
+          }
+        },
+        {
+          "prior": {
+            "coldMsPerScene": 0.9515499999999975,
+            "coldUsPerRecord": 14.63923076923073,
+            "unchangedUpdateMsPerScene": 1.043934999999999,
+            "unchangedUpdateUsPerRecord": 16.060538461538446,
+            "entities": 65,
+            "retainedEntities": 0
+          },
+          "current": {
+            "coldMsPerScene": 13.583450000000084,
+            "coldUsPerRecord": 208.97615384615514,
+            "unchangedUpdateMsPerScene": 0.008810000000005402,
+            "unchangedUpdateUsPerRecord": 0.13553846153854465,
+            "entities": 2205,
+            "retainedEntities": 2205
+          }
+        },
+        {
+          "prior": {
+            "coldMsPerScene": 1.107650000000035,
+            "coldUsPerRecord": 17.040769230769772,
+            "unchangedUpdateMsPerScene": 1.046894999999995,
+            "unchangedUpdateUsPerRecord": 16.106076923076845,
+            "entities": 65,
+            "retainedEntities": 0
+          },
+          "current": {
+            "coldMsPerScene": 16.78430000000003,
+            "coldUsPerRecord": 258.2200000000005,
+            "unchangedUpdateMsPerScene": 0.008900000000005548,
+            "unchangedUpdateUsPerRecord": 0.13692307692316227,
+            "entities": 2205,
+            "retainedEntities": 2205
+          }
+        },
+        {
+          "prior": {
+            "coldMsPerScene": 0.9278499999999212,
+            "coldUsPerRecord": 14.274615384614172,
+            "unchangedUpdateMsPerScene": 1.0360000000000014,
+            "unchangedUpdateUsPerRecord": 15.93846153846156,
+            "entities": 65,
+            "retainedEntities": 0
+          },
+          "current": {
+            "coldMsPerScene": 13.763950000000023,
+            "coldUsPerRecord": 211.75307692307726,
+            "unchangedUpdateMsPerScene": 0.01058500000000322,
+            "unchangedUpdateUsPerRecord": 0.16284615384620338,
+            "entities": 2205,
+            "retainedEntities": 2205
+          }
+        },
+        {
+          "prior": {
+            "coldMsPerScene": 1.1788500000000113,
+            "coldUsPerRecord": 18.13615384615402,
+            "unchangedUpdateMsPerScene": 1.0455500000000029,
+            "unchangedUpdateUsPerRecord": 16.085384615384662,
+            "entities": 65,
+            "retainedEntities": 0
+          },
+          "current": {
+            "coldMsPerScene": 16.389549999999986,
+            "coldUsPerRecord": 252.14692307692283,
+            "unchangedUpdateMsPerScene": 0.008799999999996543,
+            "unchangedUpdateUsPerRecord": 0.1353846153845622,
+            "entities": 2205,
+            "retainedEntities": 2205
+          }
+        },
+        {
+          "prior": {
+            "coldMsPerScene": 0.9263500000000704,
+            "coldUsPerRecord": 14.251538461539544,
+            "unchangedUpdateMsPerScene": 1.0769599999999968,
+            "unchangedUpdateUsPerRecord": 16.568615384615335,
+            "entities": 65,
+            "retainedEntities": 0
+          },
+          "current": {
+            "coldMsPerScene": 13.40544999999986,
+            "coldUsPerRecord": 206.23769230769014,
+            "unchangedUpdateMsPerScene": 0.009015000000010787,
+            "unchangedUpdateUsPerRecord": 0.13869230769247365,
+            "entities": 2205,
+            "retainedEntities": 2205
+          }
+        },
+        {
+          "prior": {
+            "coldMsPerScene": 1.0392499999999245,
+            "coldUsPerRecord": 15.988461538460378,
+            "unchangedUpdateMsPerScene": 1.0152549999999905,
+            "unchangedUpdateUsPerRecord": 15.619307692307546,
+            "entities": 65,
+            "retainedEntities": 0
+          },
+          "current": {
+            "coldMsPerScene": 16.68425000000002,
+            "coldUsPerRecord": 256.68076923076956,
+            "unchangedUpdateMsPerScene": 0.008589999999992414,
+            "unchangedUpdateUsPerRecord": 0.13215384615372947,
+            "entities": 2205,
+            "retainedEntities": 2205
+          }
+        },
+        {
+          "prior": {
+            "coldMsPerScene": 1.1620000000000346,
+            "coldUsPerRecord": 17.87692307692361,
+            "unchangedUpdateMsPerScene": 1.0035449999999968,
+            "unchangedUpdateUsPerRecord": 15.439153846153797,
+            "entities": 65,
+            "retainedEntities": 0
+          },
+          "current": {
+            "coldMsPerScene": 14.174600000000055,
+            "coldUsPerRecord": 218.07076923077008,
+            "unchangedUpdateMsPerScene": 0.00875500000000784,
+            "unchangedUpdateUsPerRecord": 0.1346923076924283,
+            "entities": 2205,
+            "retainedEntities": 2205
+          }
+        }
+      ]
+    }
+  ],
+  "finishedAt": "2026-11-12T01:51:43.876Z"
+}

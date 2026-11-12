@@ -1,0 +1,657 @@
+{
+  "result": "PASS",
+  "startedAt": "2026-11-12T01:34:51.245Z",
+  "executable": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\Atlas Watch.exe",
+  "archive": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+  "archiveSha256": "1899faf2b01f54e0371f68b3ef12546666260242344e8b75ae259b9ef248fe97",
+  "temporary": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr",
+  "scriptSha256": "1d79cda19bb1aa24d6ca0b0199c33a33f13c145313870a6b22b43ab9427e05b6",
+  "framework": "playwright-core 1.62.1",
+  "instrumentedPackagedProcess": true,
+  "chromiumSandbox": true,
+  "syntheticDwdProviderResponses": true,
+  "genuineDwdNetworkVerification": false,
+  "unchangedProductionHttpReaderParserCacheIpcUi": true,
+  "extraServicesStarted": false,
+  "globalClockChanged": false,
+  "genuineProfileAccessed": false,
+  "installerExecuted": false,
+  "nativePickerOperated": false,
+  "defaultBrowserOpened": false,
+  "fixtures": [
+    "tests/fixtures/dwd-source/area.xml",
+    "tests/fixtures/dwd-source/named.xml"
+  ],
+  "phases": [
+    {
+      "phase": "no-prior-503",
+      "result": "PASS",
+      "startedAt": "2026-11-12T01:34:51.879Z",
+      "profile": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\no-prior\\profile",
+      "database": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\no-prior\\qa.sqlite",
+      "rendererErrors": [],
+      "screenshots": [
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-controlled-no-prior-503-final.png"
+      ],
+      "pid": 43408,
+      "security": {
+        "isPackaged": true,
+        "appPath": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+        "userData": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\no-prior\\profile",
+        "noSandbox": false,
+        "disableWebSecurity": false,
+        "ignoreCertificateErrors": false,
+        "windows": [
+          {
+            "contextIsolation": true,
+            "sandbox": true,
+            "nodeIntegration": false,
+            "webSecurity": true
+          }
+        ]
+      },
+      "snapshot": {
+        "status": {
+          "id": "dwd",
+          "enabled": true,
+          "state": "error",
+          "lastAttemptAt": "2026-11-12T01:34:53.619Z",
+          "lastSuccessAt": null,
+          "sourceUpdatedAt": null,
+          "error": "HTTP 503",
+          "consecutiveFailures": 1,
+          "nextAttemptAt": "2026-11-12T01:36:53.622Z",
+          "recordCount": 0,
+          "skippedRecords": 0,
+          "freshness": "unavailable",
+          "note": null
+        },
+        "mapped": 0
+      },
+      "checks": {
+        "noSnapshotIsUnknownNotZero": true,
+        "http503Visible": true
+      },
+      "requests": [
+        {
+          "url": "https://opendata.dwd.de/weather/alerts/cap/COMMUNEUNION_DWD_STAT/Z_CAP_C_EDZW_LATEST_PVW_STATUS_PREMIUMDWD_COMMUNEUNION_DE.zip",
+          "at": "2026-11-12T01:34:53.620Z",
+          "method": "GET",
+          "redirect": "manual",
+          "validators": {
+            "etag": null,
+            "modifiedSince": null
+          },
+          "replyStatus": 503
+        }
+      ],
+      "ui": {
+        "state": "error",
+        "text": "DWD warning evidence is unavailable. A missing reply does not mean no warnings.\n\nDWD refresh failed: HTTP 503\n\n© Deutscher Wetterdienst · Germany · original German text · CC BY 4.0 . CAP polygons converted to GeoJSON. Separate from NWS/USGS reports and recorded Replay.",
+        "rows": 0
+      },
+      "closedByRunner": true,
+      "finishedAt": "2026-11-12T01:34:55.173Z"
+    },
+    {
+      "phase": "no-prior-pause-restart",
+      "result": "PASS",
+      "startedAt": "2026-11-12T01:34:55.174Z",
+      "profile": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\no-prior\\profile",
+      "database": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\no-prior\\qa.sqlite",
+      "rendererErrors": [],
+      "screenshots": [
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-controlled-no-prior-pause-restart-final.png"
+      ],
+      "pid": 43916,
+      "security": {
+        "isPackaged": true,
+        "appPath": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+        "userData": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\no-prior\\profile",
+        "noSandbox": false,
+        "disableWebSecurity": false,
+        "ignoreCertificateErrors": false,
+        "windows": [
+          {
+            "contextIsolation": true,
+            "sandbox": true,
+            "nodeIntegration": false,
+            "webSecurity": true
+          }
+        ]
+      },
+      "snapshot": {
+        "status": {
+          "id": "dwd",
+          "enabled": true,
+          "state": "error",
+          "lastAttemptAt": "2026-11-12T01:34:56.467Z",
+          "lastSuccessAt": null,
+          "sourceUpdatedAt": null,
+          "error": "DWD requested a pause before retrying",
+          "consecutiveFailures": 1,
+          "nextAttemptAt": "2026-11-12T01:36:53.621Z",
+          "recordCount": 0,
+          "skippedRecords": 0,
+          "freshness": "unavailable",
+          "note": null
+        },
+        "mapped": 0
+      },
+      "checks": {
+        "pausePersistsAcrossRestart": true,
+        "noSourceEvidenceInvented": true
+      },
+      "requests": [],
+      "ui": {
+        "state": "error",
+        "text": "DWD warning evidence is unavailable. A missing reply does not mean no warnings.\n\nDWD refresh failed: DWD requested a pause before retrying\n\n© Deutscher Wetterdienst · Germany · original German text · CC BY 4.0 . CAP polygons converted to GeoJSON. Separate from NWS/USGS reports and recorded Replay.",
+        "rows": 0
+      },
+      "closedByRunner": true,
+      "finishedAt": "2026-11-12T01:34:57.726Z"
+    },
+    {
+      "phase": "no-prior-unmatched-304",
+      "result": "PASS",
+      "startedAt": "2026-11-12T01:34:57.727Z",
+      "profile": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\no-prior-304\\profile",
+      "database": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\no-prior-304\\qa.sqlite",
+      "rendererErrors": [],
+      "screenshots": [
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-controlled-no-prior-unmatched-304-final.png"
+      ],
+      "pid": 37436,
+      "security": {
+        "isPackaged": true,
+        "appPath": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+        "userData": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\no-prior-304\\profile",
+        "noSandbox": false,
+        "disableWebSecurity": false,
+        "ignoreCertificateErrors": false,
+        "windows": [
+          {
+            "contextIsolation": true,
+            "sandbox": true,
+            "nodeIntegration": false,
+            "webSecurity": true
+          }
+        ]
+      },
+      "snapshot": {
+        "status": {
+          "id": "dwd",
+          "enabled": true,
+          "state": "error",
+          "lastAttemptAt": "2026-11-12T01:34:59.313Z",
+          "lastSuccessAt": null,
+          "sourceUpdatedAt": null,
+          "error": "DWD returned 304 without a matching complete local archive. The next request will fetch a full copy.",
+          "consecutiveFailures": 1,
+          "nextAttemptAt": "2026-11-12T01:35:29.620Z",
+          "recordCount": 0,
+          "skippedRecords": 0,
+          "freshness": "unavailable",
+          "note": null
+        },
+        "mapped": 0
+      },
+      "checks": {
+        "unmatched304DoesNotInventEmptyArchive": true,
+        "noSourceEvidenceInvented": true
+      },
+      "requests": [
+        {
+          "url": "https://opendata.dwd.de/weather/alerts/cap/COMMUNEUNION_DWD_STAT/Z_CAP_C_EDZW_LATEST_PVW_STATUS_PREMIUMDWD_COMMUNEUNION_DE.zip",
+          "at": "2026-11-12T01:34:59.313Z",
+          "method": "GET",
+          "redirect": "manual",
+          "validators": {
+            "etag": null,
+            "modifiedSince": null
+          },
+          "replyStatus": 304
+        }
+      ],
+      "ui": {
+        "state": "error",
+        "text": "DWD warning evidence is unavailable. A missing reply does not mean no warnings.\n\nDWD refresh failed: DWD returned 304 without a matching complete local archive. The next request will fetch a full copy.\n\n© Deutscher Wetterdienst · Germany · original German text · CC BY 4.0 . CAP polygons converted to GeoJSON. Separate from NWS/USGS reports and recorded Replay.",
+        "rows": 0
+      },
+      "closedByRunner": true,
+      "finishedAt": "2026-11-12T01:35:00.750Z"
+    },
+    {
+      "phase": "complete-200",
+      "result": "PASS",
+      "startedAt": "2026-11-12T01:35:00.753Z",
+      "profile": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\retained\\profile",
+      "database": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\retained\\qa.sqlite",
+      "rendererErrors": [],
+      "screenshots": [
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-controlled-complete-200-final.png"
+      ],
+      "pid": 40428,
+      "security": {
+        "isPackaged": true,
+        "appPath": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+        "userData": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\retained\\profile",
+        "noSandbox": false,
+        "disableWebSecurity": false,
+        "ignoreCertificateErrors": false,
+        "windows": [
+          {
+            "contextIsolation": true,
+            "sandbox": true,
+            "nodeIntegration": false,
+            "webSecurity": true
+          }
+        ]
+      },
+      "snapshot": {
+        "status": {
+          "id": "dwd",
+          "enabled": true,
+          "state": "ok",
+          "lastAttemptAt": "2026-11-12T01:35:02.314Z",
+          "lastSuccessAt": "2026-11-12T01:35:02.317Z",
+          "sourceUpdatedAt": "2026-11-12T01:34:30.000Z",
+          "error": null,
+          "consecutiveFailures": 0,
+          "nextAttemptAt": "2026-11-12T01:40:02.317Z",
+          "recordCount": 2,
+          "skippedRecords": 0,
+          "freshness": "fresh",
+          "note": "DWD STATUS received 2026-11-12T01:35:02.317Z. 2 unexpired or open-ended bulletins, 1 with map geometry."
+        },
+        "warnings": [
+          {
+            "id": "dwd:8636b85060942ecfd72f67d3a43374249514d016efd3c9c145415566cb8f67dd",
+            "capIdentifier": "atlas-test-named.DEU",
+            "sent": "2026-11-12T01:34:00.751Z",
+            "expires": null
+          },
+          {
+            "id": "dwd:a2b19b241cbb51a7721d8369b933c823e176054b29c07d4e8cc0b1866618c959",
+            "capIdentifier": "atlas-test-area.DEU",
+            "sent": "2026-11-12T01:33:00.751Z",
+            "expires": "2026-11-12T01:36:30.751Z"
+          }
+        ],
+        "mapped": 1
+      },
+      "checks": {
+        "syntheticCompleteArchiveThroughPackagedHttpAndParser": true,
+        "twoWarningsOneSuppliedGeometry": true
+      },
+      "requests": [
+        {
+          "url": "https://opendata.dwd.de/weather/alerts/cap/COMMUNEUNION_DWD_STAT/Z_CAP_C_EDZW_LATEST_PVW_STATUS_PREMIUMDWD_COMMUNEUNION_DE.zip",
+          "at": "2026-11-12T01:35:02.315Z",
+          "method": "GET",
+          "redirect": "manual",
+          "validators": {
+            "etag": null,
+            "modifiedSince": null
+          },
+          "replyStatus": 200
+        }
+      ],
+      "ui": {
+        "state": "current",
+        "text": "DWD: current reply. 2 warnings; 1 with supplied map geometry; 1 without usable geometry.\n\nLast successful check Nov 11, 8:35 PM EST · archive publication Nov 11, 8:34 PM EST.\n\nArchive receipt and coverage details\n\nUnlocated warning areas remain geographically unknown.\n\n© Deutscher Wetterdienst · Germany · original German text · CC BY 4.0 . CAP polygons converted to GeoJSON. Separate from NWS/USGS reports and recorded Replay.",
+        "rows": 2
+      },
+      "closedByRunner": true,
+      "finishedAt": "2026-11-12T01:35:03.730Z"
+    },
+    {
+      "phase": "restart-304",
+      "result": "PASS",
+      "startedAt": "2026-11-12T01:35:03.730Z",
+      "profile": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\retained\\profile",
+      "database": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\retained\\qa.sqlite",
+      "rendererErrors": [],
+      "screenshots": [
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-controlled-restart-304-final.png"
+      ],
+      "pid": 35048,
+      "security": {
+        "isPackaged": true,
+        "appPath": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+        "userData": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\retained\\profile",
+        "noSandbox": false,
+        "disableWebSecurity": false,
+        "ignoreCertificateErrors": false,
+        "windows": [
+          {
+            "contextIsolation": true,
+            "sandbox": true,
+            "nodeIntegration": false,
+            "webSecurity": true
+          }
+        ]
+      },
+      "snapshot": {
+        "status": {
+          "id": "dwd",
+          "enabled": true,
+          "state": "ok",
+          "lastAttemptAt": "2026-11-12T01:35:04.924Z",
+          "lastSuccessAt": "2026-11-12T01:35:04.932Z",
+          "sourceUpdatedAt": "2026-11-12T01:34:30.000Z",
+          "error": null,
+          "consecutiveFailures": 0,
+          "nextAttemptAt": "2026-11-12T01:40:04.932Z",
+          "recordCount": 2,
+          "skippedRecords": 0,
+          "freshness": "fresh",
+          "note": "DWD STATUS received 2026-11-12T01:35:02.317Z. 2 unexpired or open-ended bulletins, 1 with map geometry."
+        },
+        "warnings": [
+          {
+            "id": "dwd:8636b85060942ecfd72f67d3a43374249514d016efd3c9c145415566cb8f67dd",
+            "capIdentifier": "atlas-test-named.DEU",
+            "sent": "2026-11-12T01:34:00.751Z",
+            "expires": null
+          },
+          {
+            "id": "dwd:a2b19b241cbb51a7721d8369b933c823e176054b29c07d4e8cc0b1866618c959",
+            "capIdentifier": "atlas-test-area.DEU",
+            "sent": "2026-11-12T01:33:00.751Z",
+            "expires": "2026-11-12T01:36:30.751Z"
+          }
+        ],
+        "mapped": 1
+      },
+      "checks": {
+        "originalArchiveRestoredFromSqlite": true,
+        "validatorsSent": true,
+        "sourceAndMessageAndReceiptClocksPreserved": true,
+        "conditionalCheckClockAdvanced": true
+      },
+      "requests": [
+        {
+          "url": "https://opendata.dwd.de/weather/alerts/cap/COMMUNEUNION_DWD_STAT/Z_CAP_C_EDZW_LATEST_PVW_STATUS_PREMIUMDWD_COMMUNEUNION_DE.zip",
+          "at": "2026-11-12T01:35:04.932Z",
+          "method": "GET",
+          "redirect": "manual",
+          "validators": {
+            "etag": "\"controlled-cap-v1\"",
+            "modifiedSince": "Thu, 12 Nov 2026 01:34:30 GMT"
+          },
+          "replyStatus": 304
+        }
+      ],
+      "ui": {
+        "state": "current",
+        "text": "DWD: current reply. 2 warnings; 1 with supplied map geometry; 1 without usable geometry.\n\nLast successful check Nov 11, 8:35 PM EST · archive publication Nov 11, 8:34 PM EST.\n\nArchive receipt and coverage details\n\nUnlocated warning areas remain geographically unknown.\n\n© Deutscher Wetterdienst · Germany · original German text · CC BY 4.0 . CAP polygons converted to GeoJSON. Separate from NWS/USGS reports and recorded Replay.",
+        "rows": 2
+      },
+      "closedByRunner": true,
+      "finishedAt": "2026-11-12T01:35:06.004Z"
+    },
+    {
+      "phase": "retained-failure-expiry",
+      "result": "PASS",
+      "startedAt": "2026-11-12T01:35:06.005Z",
+      "profile": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\retained\\profile",
+      "database": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\retained\\qa.sqlite",
+      "rendererErrors": [],
+      "screenshots": [
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-controlled-retained-failure-expiry-retained-before-expiry.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-controlled-retained-failure-expiry-final.png"
+      ],
+      "pid": 40756,
+      "security": {
+        "isPackaged": true,
+        "appPath": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+        "userData": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\retained\\profile",
+        "noSandbox": false,
+        "disableWebSecurity": false,
+        "ignoreCertificateErrors": false,
+        "windows": [
+          {
+            "contextIsolation": true,
+            "sandbox": true,
+            "nodeIntegration": false,
+            "webSecurity": true
+          }
+        ]
+      },
+      "snapshot": {
+        "status": {
+          "id": "dwd",
+          "enabled": true,
+          "state": "error",
+          "lastAttemptAt": "2026-11-12T01:35:07.143Z",
+          "lastSuccessAt": "2026-11-12T01:35:04.932Z",
+          "sourceUpdatedAt": "2026-11-12T01:34:30.000Z",
+          "error": "HTTP 500",
+          "consecutiveFailures": 1,
+          "nextAttemptAt": "2026-11-12T01:36:37.153Z",
+          "recordCount": 2,
+          "skippedRecords": 0,
+          "freshness": "fresh",
+          "note": "DWD STATUS received 2026-11-12T01:35:02.317Z. 2 unexpired or open-ended bulletins, 1 with map geometry."
+        },
+        "warnings": [
+          {
+            "id": "dwd:8636b85060942ecfd72f67d3a43374249514d016efd3c9c145415566cb8f67dd",
+            "capIdentifier": "atlas-test-named.DEU",
+            "sent": "2026-11-12T01:34:00.751Z",
+            "expires": null
+          },
+          {
+            "id": "dwd:a2b19b241cbb51a7721d8369b933c823e176054b29c07d4e8cc0b1866618c959",
+            "capIdentifier": "atlas-test-area.DEU",
+            "sent": "2026-11-12T01:33:00.751Z",
+            "expires": "2026-11-12T01:36:30.751Z"
+          }
+        ],
+        "mapped": 1
+      },
+      "afterExpiry": {
+        "status": {
+          "id": "dwd",
+          "enabled": true,
+          "state": "error",
+          "lastAttemptAt": "2026-11-12T01:35:07.143Z",
+          "lastSuccessAt": "2026-11-12T01:35:04.932Z",
+          "sourceUpdatedAt": "2026-11-12T01:34:30.000Z",
+          "error": "HTTP 500",
+          "consecutiveFailures": 1,
+          "nextAttemptAt": "2026-11-12T01:36:37.153Z",
+          "recordCount": 1,
+          "skippedRecords": 0,
+          "freshness": "fresh",
+          "note": "DWD STATUS received 2026-11-12T01:35:02.317Z. 1 unexpired or open-ended bulletins, 0 with map geometry."
+        },
+        "warningIds": [
+          "atlas-test-named.DEU"
+        ],
+        "mapped": 0,
+        "at": "2026-11-12T01:36:30.946Z"
+      },
+      "checks": {
+        "failedRefreshRetainsEvidenceAndClocks": true,
+        "failureNeverReportsCurrentAllClear": true,
+        "actualLocalExpiryRepaintsWithoutNewRequest": true,
+        "openEndedWarningNotSilentlyExpired": true
+      },
+      "requests": [
+        {
+          "url": "https://opendata.dwd.de/weather/alerts/cap/COMMUNEUNION_DWD_STAT/Z_CAP_C_EDZW_LATEST_PVW_STATUS_PREMIUMDWD_COMMUNEUNION_DE.zip",
+          "at": "2026-11-12T01:35:07.151Z",
+          "method": "GET",
+          "redirect": "manual",
+          "validators": {
+            "etag": "\"controlled-cap-v1\"",
+            "modifiedSince": "Thu, 12 Nov 2026 01:34:30 GMT"
+          },
+          "replyStatus": 500
+        }
+      ],
+      "ui": {
+        "state": "last-observed",
+        "text": "DWD: last observed reply; current warning coverage is unknown. 1 warnings; 0 with supplied map geometry; 1 without usable geometry.\n\nLast successful check Nov 11, 8:35 PM EST · archive publication Nov 11, 8:34 PM EST.\n\nArchive receipt and coverage details\n\nUnlocated warning areas remain geographically unknown.\n\nDWD refresh failed: HTTP 500\n\n© Deutscher Wetterdienst · Germany · original German text · CC BY 4.0 . CAP polygons converted to GeoJSON. Separate from NWS/USGS reports and recorded Replay.",
+        "rows": 1
+      },
+      "closedByRunner": true,
+      "finishedAt": "2026-11-12T01:36:31.774Z"
+    },
+    {
+      "phase": "complete-empty-200",
+      "result": "PASS",
+      "startedAt": "2026-11-12T01:36:38.711Z",
+      "profile": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\retained\\profile",
+      "database": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\retained\\qa.sqlite",
+      "rendererErrors": [],
+      "screenshots": [
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-controlled-complete-empty-200-final.png"
+      ],
+      "pid": 43396,
+      "security": {
+        "isPackaged": true,
+        "appPath": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+        "userData": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\retained\\profile",
+        "noSandbox": false,
+        "disableWebSecurity": false,
+        "ignoreCertificateErrors": false,
+        "windows": [
+          {
+            "contextIsolation": true,
+            "sandbox": true,
+            "nodeIntegration": false,
+            "webSecurity": true
+          }
+        ]
+      },
+      "snapshot": {
+        "status": {
+          "id": "dwd",
+          "enabled": true,
+          "state": "ok",
+          "lastAttemptAt": "2026-11-12T01:36:39.963Z",
+          "lastSuccessAt": "2026-11-12T01:36:39.973Z",
+          "sourceUpdatedAt": "2026-11-12T01:36:38.000Z",
+          "error": null,
+          "consecutiveFailures": 0,
+          "nextAttemptAt": "2026-11-12T01:41:39.973Z",
+          "recordCount": 0,
+          "skippedRecords": 0,
+          "freshness": "fresh",
+          "note": "DWD STATUS received 2026-11-12T01:36:39.973Z. 0 unexpired or open-ended bulletins, 0 with map geometry."
+        },
+        "warnings": [],
+        "mapped": 0
+      },
+      "checks": {
+        "validCompleteEmptyReplacesPriorReply": true,
+        "zeroQualifiedToReturnedSnapshot": true
+      },
+      "requests": [
+        {
+          "url": "https://opendata.dwd.de/weather/alerts/cap/COMMUNEUNION_DWD_STAT/Z_CAP_C_EDZW_LATEST_PVW_STATUS_PREMIUMDWD_COMMUNEUNION_DE.zip",
+          "at": "2026-11-12T01:36:39.972Z",
+          "method": "GET",
+          "redirect": "manual",
+          "validators": {
+            "etag": "\"controlled-cap-v1\"",
+            "modifiedSince": "Thu, 12 Nov 2026 01:34:30 GMT"
+          },
+          "replyStatus": 200
+        }
+      ],
+      "ui": {
+        "state": "current",
+        "text": "DWD: current reply. 0 warnings; 0 with supplied map geometry; 0 without usable geometry.\n\nLast successful check Nov 11, 8:36 PM EST · archive publication Nov 11, 8:36 PM EST.\n\nArchive receipt and coverage details\n\nThe last complete snapshot contains no remaining unexpired German warnings.\n\n© Deutscher Wetterdienst · Germany · original German text · CC BY 4.0 . CAP polygons converted to GeoJSON. Separate from NWS/USGS reports and recorded Replay.",
+        "rows": 0
+      },
+      "closedByRunner": true,
+      "finishedAt": "2026-11-12T01:36:41.264Z"
+    },
+    {
+      "phase": "empty-restart-304",
+      "result": "PASS",
+      "startedAt": "2026-11-12T01:36:41.265Z",
+      "profile": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\retained\\profile",
+      "database": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\retained\\qa.sqlite",
+      "rendererErrors": [],
+      "screenshots": [
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\dwd\\audit-dwd-controlled-empty-restart-304-final.png"
+      ],
+      "pid": 33768,
+      "security": {
+        "isPackaged": true,
+        "appPath": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+        "userData": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-dwd-conditions-UEyHZr\\retained\\profile",
+        "noSandbox": false,
+        "disableWebSecurity": false,
+        "ignoreCertificateErrors": false,
+        "windows": [
+          {
+            "contextIsolation": true,
+            "sandbox": true,
+            "nodeIntegration": false,
+            "webSecurity": true
+          }
+        ]
+      },
+      "snapshot": {
+        "status": {
+          "id": "dwd",
+          "enabled": true,
+          "state": "ok",
+          "lastAttemptAt": "2026-11-12T01:36:42.482Z",
+          "lastSuccessAt": "2026-11-12T01:36:42.483Z",
+          "sourceUpdatedAt": "2026-11-12T01:36:38.000Z",
+          "error": null,
+          "consecutiveFailures": 0,
+          "nextAttemptAt": "2026-11-12T01:41:42.483Z",
+          "recordCount": 0,
+          "skippedRecords": 0,
+          "freshness": "fresh",
+          "note": "DWD STATUS received 2026-11-12T01:36:39.973Z. 0 unexpired or open-ended bulletins, 0 with map geometry."
+        },
+        "warnings": [],
+        "mapped": 0
+      },
+      "checks": {
+        "emptyArchiveSurvivesRestartAndConditionalValidation": true,
+        "emptyDistinguishedFromMissingReply": true
+      },
+      "requests": [
+        {
+          "url": "https://opendata.dwd.de/weather/alerts/cap/COMMUNEUNION_DWD_STAT/Z_CAP_C_EDZW_LATEST_PVW_STATUS_PREMIUMDWD_COMMUNEUNION_DE.zip",
+          "at": "2026-11-12T01:36:42.483Z",
+          "method": "GET",
+          "redirect": "manual",
+          "validators": {
+            "etag": "\"controlled-empty\"",
+            "modifiedSince": "Thu, 12 Nov 2026 01:36:38 GMT"
+          },
+          "replyStatus": 304
+        }
+      ],
+      "ui": {
+        "state": "current",
+        "text": "DWD: current reply. 0 warnings; 0 with supplied map geometry; 0 without usable geometry.\n\nLast successful check Nov 11, 8:36 PM EST · archive publication Nov 11, 8:36 PM EST.\n\nArchive receipt and coverage details\n\nThe last complete snapshot contains no remaining unexpired German warnings.\n\n© Deutscher Wetterdienst · Germany · original German text · CC BY 4.0 . CAP polygons converted to GeoJSON. Separate from NWS/USGS reports and recorded Replay.",
+        "rows": 0
+      },
+      "closedByRunner": true,
+      "finishedAt": "2026-11-12T01:36:43.783Z"
+    }
+  ],
+  "syntheticFixture": {
+    "createdAt": "2026-11-12T01:35:00.751Z",
+    "expiresAt": "2026-11-12T01:36:30.751Z",
+    "sourceTime": "2026-11-12T01:34:30.000Z",
+    "archiveSha256": "b49ebf5b80274554c0f663b7a9ec734cc3a631e09814a53ebbbe441e232a56b7",
+    "zipBytes": 1012,
+    "qualification": "Original explicit test XML fixtures; all source times deliberately shifted relative to this run. Not actual DWD observations."
+  },
+  "outagePauseHonoredUntil": "2026-11-12T01:36:38.711Z",
+  "archiveStableDuringRun": true,
+  "finishedAt": "2026-11-12T01:36:43.795Z"
+}

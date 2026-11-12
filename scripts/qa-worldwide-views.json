@@ -1,0 +1,13 @@
+[
+  { "name": "new-york", "lat": 40.7128, "lon": -74.0060, "h": 20000 },
+  { "name": "london", "lat": 51.5074, "lon": -0.1278, "h": 20000 },
+  { "name": "frankfurt", "lat": 50.1109, "lon": 8.6821, "h": 20000 },
+  { "name": "dubai", "lat": 25.2048, "lon": 55.2708, "h": 20000 },
+  { "name": "tokyo", "lat": 35.6762, "lon": 139.6503, "h": 20000 },
+  { "name": "singapore", "lat": 1.3521, "lon": 103.8198, "h": 20000 },
+  { "name": "sydney", "lat": -33.8688, "lon": 151.2093, "h": 20000 },
+  { "name": "cape-town", "lat": -33.9249, "lon": 18.4241, "h": 20000 },
+  { "name": "sao-paulo", "lat": -23.5505, "lon": -46.6333, "h": 20000 },
+  { "name": "alaska", "lat": 61.2181, "lon": -149.9003, "h": 20000 },
+  { "name": "antimeridian", "lat": -17, "lon": 180, "h": 3000000 }
+]

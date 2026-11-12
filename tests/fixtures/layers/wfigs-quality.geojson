@@ -1,0 +1,15 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature", "id": 0,
+      "geometry": {"type":"MultiPolygon","coordinates":[[[[0,0],[4,0],[4,4],[0,4],[0,0]],[[1,1],[1,2],[2,2],[2,1],[1,1]]],[[[10,10],[11,10],[11,11],[10,11],[10,10]]]]},
+      "properties": {"OBJECTID":0,"GlobalID":"{11111111-1111-1111-1111-111111111111}","poly_IncidentName":"Synthetic prescribed-fire perimeter A","attr_UniqueFireIdentifier":"TEST-SAME-INCIDENT","poly_IRWINID":"TEST-IRWIN","poly_GISAcres":0,"attr_IncidentSize":25,"attr_PercentContained":0,"attr_IncidentTypeCategory":"RX","poly_DateCurrent":1794355200000,"poly_PolygonDateTime":1794268800000,"attr_FireDiscoveryDateTime":1794182400000,"attr_POOState":"US-CA"}
+    },
+    {
+      "type":"Feature","id":1,
+      "geometry":{"type":"Polygon","coordinates":[[[20,20],[21,20],[21,21],[20,21],[20,20]]]},
+      "properties":{"OBJECTID":1,"GlobalID":"22222222-2222-2222-2222-222222222222","poly_IncidentName":"Synthetic wildfire perimeter B","attr_UniqueFireIdentifier":"TEST-SAME-INCIDENT","poly_IRWINID":"TEST-IRWIN","poly_GISAcres":5,"attr_IncidentSize":0,"attr_PercentContained":100,"attr_IncidentTypeCategory":"WF"}
+    }
+  ]
+}

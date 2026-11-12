@@ -47,14 +47,38 @@ export interface VehicleInfo {
 const str = (v: unknown, max = 120): string | null => (typeof v === 'string' && v.trim() ? v.trim().replace(/\s+/g, ' ').slice(0, max) : null);
 const stripHtml = (v: unknown, max = 120) => str(typeof v === 'string' ? v.replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'") : null, max);
 
-export function parseAdsbdb(body: unknown): AircraftModel | null {
+/** Optional year of manufacture from a readsb aircraft-database record. */
+export function parseAirframeYear(value: unknown, currentYear: number): number | null {
+  const year = typeof value === 'string' && /^\d{4}$/.test(value.trim()) ? Number(value.trim()) : value;
+  return typeof year === 'number' && Number.isInteger(year) && year >= 1903 && year <= currentYear ? year : null;
+}
+
+export function airframeAgeLabel(value: unknown, asOf = new Date()): string | null {
+  const currentYear = asOf.getUTCFullYear();
+  const built = parseAirframeYear(value, currentYear);
+  if (built === null) return null;
+  const years = currentYear - built;
+  if (years === 0) return `${built} · under one year old`;
+  return `${built} · about ${years} ${years === 1 ? 'year' : 'years'} old`;
+}
+
+export function parseAdsbdb(body: unknown, expected?: { hex?: string; registration?: string }): AircraftModel | null {
   const a = (body as { response?: { aircraft?: Record<string, unknown> } })?.response?.aircraft;
-  if (!a || typeof a !== 'object') return null;
+  if (!a || typeof a !== 'object' || Array.isArray(a)) return null;
+  const registration = str(a.registration, 12)?.toUpperCase() ?? null;
+  if (expected) {
+    const modeS = str(a.mode_s, 12)?.toLowerCase();
+    const hex = expected.hex?.toLowerCase();
+    const reg = expected.registration?.toUpperCase();
+    if (hex && modeS && hex !== modeS) return null;
+    if (reg && registration && reg !== registration) return null;
+    if (!(hex && hex === modeS) && !(reg && reg === registration)) return null;
+  }
   return {
     manufacturer: str(a.manufacturer, 60),
     model: str(a.type, 60),
-    icaoType: str(a.icao_type, 8),
-    registration: str(a.registration, 12),
+    icaoType: str(a.icao_type, 8)?.toUpperCase() ?? null,
+    registration,
     owner: str(a.registered_owner, 80),
     ownerCountry: str(a.registered_owner_country_name, 60),
     source: 'adsbdb.com',
@@ -137,9 +161,9 @@ export function parseAirportData(body: unknown): VehiclePhoto | null {
 
 /** One readable model line, e.g. "Airbus A321-231SL (ICAO A321)". */
 export function modelLine(m: AircraftModel | null, fallbackType: string | null): string | null {
-  if (m?.model || m?.manufacturer) {
+  if (m?.model) {
     const mf = m.manufacturer ?? '';
-    const model = (m.model ?? '').replace(/^(\S+)\s(\d)/, '$1-$2');
+    const model = m.model.replace(/^([A-Z]*\d[A-Z0-9]*)\s+(\d)/i, '$1-$2');
     const full = model.toLowerCase().startsWith(mf.toLowerCase()) ? model : `${mf} ${model}`.trim();
     return m.icaoType ? `${full} (ICAO ${m.icaoType})` : full;
   }

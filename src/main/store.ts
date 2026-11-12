@@ -4,7 +4,15 @@
 
 import { randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
-import { DEFAULT_SETTINGS } from '../shared/ipc';
+import { DEFAULT_SETTINGS, legacySavedViewSchema, savedViewSchema, sceneSchema, type AppliedScene, type RestoredView, type SavedView, type Scene } from '../shared/ipc';
+import { needsSurfaceChoice, surfaceSchema, type Investigation } from '../shared/investigation';
+import type { AnnotationWatchPlan } from './areaWatches';
+import { MAX_STORED_ANNOTATIONS, previewGeoJsonAnnotations, type AnnotationDocument, type GeoJsonImportResult } from '../shared/geojsonAnnotations';
+import { areaWatchEventSchema, areaWatchRuleSchema, MAX_AREA_WATCH_EVENTS, MAX_AREA_WATCH_RULES, type AreaWatchEvent, type AreaWatchRule, type AreaWatchState } from '../shared/areaWatch';
+import { TimelineArchive, type TimelineObservation, type TimelineStats } from './timeline';
+import type { TimelineHazards, TimelineRange } from '../shared/timeline';
+import type { VisitBriefing } from '../shared/visitBriefing';
+import { readFeedCoverage } from '../shared/monitoring';
 import type {
   Earthquake,
   HistoryPage,
@@ -16,6 +24,7 @@ import type {
   SavedLocation,
   Settings,
   WeatherAlert,
+  FeedCoverage,
 } from '../shared/types';
 
 const SCHEMA_VERSION = 1;
@@ -24,10 +33,14 @@ export interface FeedCacheEntry<T> {
   fetchedAt: string;
   sourceUpdatedAt: string | null;
   payload: T;
+  coverage?: FeedCoverage;
 }
 
 type Row = Record<string, unknown>;
 export type DocTable = 'annotations' | 'saved_views' | 'boards' | 'people';
+export interface StoredAreaWatchRule { rule: AreaWatchRule; geometryKey: string }
+export interface AreaWatchMatch { event: AreaWatchEvent; aliases: string[] }
+export const MAX_AREA_WATCH_SEEN = 50_000;
 
 function rowToHistory(r: Row): HistoryRecord {
   return {
@@ -54,11 +67,13 @@ function escapeLike(s: string): string {
 
 export class AtlasStore {
   readonly db: DatabaseSync;
+  private readonly timeline: TimelineArchive;
 
   constructor(path: string) {
     this.db = new DatabaseSync(path);
     this.db.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = ON;');
     this.migrate();
+    this.timeline = new TimelineArchive(this.db);
   }
 
   close(): void {
@@ -100,6 +115,21 @@ export class AtlasStore {
       CREATE INDEX IF NOT EXISTS idx_events_last_observed ON events(last_observed);
       CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind, source_id);
       CREATE TABLE IF NOT EXISTS annotations (id TEXT PRIMARY KEY, data TEXT NOT NULL, created_at TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS area_watch_rules (
+        area_id TEXT PRIMARY KEY REFERENCES annotations(id) ON DELETE CASCADE,
+        data TEXT NOT NULL, geometry_key TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS area_watch_events (
+        id TEXT PRIMARY KEY, area_id TEXT NOT NULL REFERENCES area_watch_rules(area_id) ON DELETE CASCADE,
+        detected_at TEXT NOT NULL, data TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_area_watch_event_time ON area_watch_events(detected_at);
+      CREATE TABLE IF NOT EXISTS area_watch_seen (
+        area_id TEXT NOT NULL REFERENCES area_watch_rules(area_id) ON DELETE CASCADE,
+        quake_id TEXT NOT NULL, quake_time TEXT NOT NULL,
+        PRIMARY KEY (area_id, quake_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_area_watch_seen_time ON area_watch_seen(quake_time);
       CREATE TABLE IF NOT EXISTS saved_views (id TEXT PRIMARY KEY, data TEXT NOT NULL, created_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS boards (id TEXT PRIMARY KEY, data TEXT NOT NULL, created_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS people (id TEXT PRIMARY KEY, data TEXT NOT NULL, created_at TEXT NOT NULL);
@@ -113,6 +143,8 @@ export class AtlasStore {
     // Added later: whether an aircraft was reported on the ground (1/0); NULL for older rows and other layers.
     const cols = this.db.prepare('PRAGMA table_info(track_points)').all() as Row[];
     if (!cols.some((c) => c.name === 'ground')) this.db.exec('ALTER TABLE track_points ADD COLUMN ground INTEGER');
+    const cacheCols = this.db.prepare('PRAGMA table_info(feed_cache)').all() as Row[];
+    if (!cacheCols.some(column => column.name === 'coverage')) this.db.exec('ALTER TABLE feed_cache ADD COLUMN coverage TEXT');
     this.db.prepare('INSERT OR IGNORE INTO meta(key, value) VALUES (?, ?)').run('schema_version', String(SCHEMA_VERSION));
   }
 
@@ -155,6 +187,242 @@ export class AtlasStore {
     return Number(this.db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(id).changes) > 0;
   }
 
+  private ensureDocCapacity(table: 'annotations' | 'saved_views', ids: readonly string[], limit: number): void {
+    const count = Number((this.db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as Row).n);
+    const exists = this.db.prepare(`SELECT 1 FROM ${table} WHERE id = ?`);
+    const added = [...new Set(ids)].filter(id => !exists.get(id)).length;
+    if (added && count + added > limit) throw new Error(`Import would exceed ${limit.toLocaleString()} stored ${table === 'annotations' ? 'annotations' : 'saved views'}. Delete items or import fewer.`);
+  }
+
+  putSavedView(value: SavedView): void {
+    const view = savedViewSchema.parse(value);
+    this.tx(() => {
+      this.ensureDocCapacity('saved_views', [view.id], 500);
+      this.putDoc('saved_views', view.id, view, view.createdAt);
+    });
+  }
+
+  private sceneSettings(request: { basemap: string; layersEnabled: Settings['layersEnabled']; terrainEnabled?: boolean; visualMode?: Settings['visualMode']; investigation?: Investigation }, allowMeteredBasemap: boolean): { settings: Settings; warnings: string[]; skippedSurface: Settings['basemap'] | null } {
+    const current = this.getSettings();
+    const warnings: string[] = [];
+    let skippedSurface: Settings['basemap'] | null = null;
+    const parsedSurface = surfaceSchema.safeParse(request.basemap);
+    let basemap = current.basemap;
+    let imageryYear = request.investigation?.imageryYear ?? null;
+    if (!parsedSurface.success) {
+      warnings.push('The saved surface is unsupported; the current surface was retained.');
+      imageryYear ??= current.imageryYear;
+    } else if (imageryYear === null) {
+      if (needsSurfaceChoice(current.imageryYear == null ? current.basemap : 'atlas', parsedSurface.data) && !allowMeteredBasemap) {
+        skippedSurface = parsedSurface.data;
+        imageryYear = current.imageryYear;
+        warnings.push(`The ${parsedSurface.data} surface requires an explicit choice; the current surface was retained.`);
+      } else basemap = parsedSurface.data;
+    }
+    // An archived scene specifies its own imagery. Keep the user's Auto surface, including its billing choice.
+    const settings: Settings = { ...current, basemap, layersEnabled: request.layersEnabled, imageryYear };
+    if (request.terrainEnabled !== undefined) settings.terrainEnabled = request.terrainEnabled;
+    if (request.visualMode !== undefined) settings.visualMode = request.visualMode;
+    if (request.investigation) {
+      settings.quakesNearLocationsOnly = request.investigation.quakesNearLocationsOnly;
+      if (request.investigation.clock.mode === 'live') {
+        settings.quakeWindow = request.investigation.quakeWindow;
+        settings.quakeMinMagnitude = request.investigation.quakeMinMagnitude;
+      }
+    }
+    return { settings, warnings, skippedSurface };
+  }
+
+  /** Main revalidates the complete file, then merges every document and watch epoch atomically. */
+  applyScene(value: Scene, allowMeteredBasemap = false, planWatches?: (annotations: readonly AnnotationDocument[]) => AnnotationWatchPlan[]): AppliedScene {
+    const scene = sceneSchema.parse(value);
+    return this.tx(() => {
+      const annotations = [...new Map(scene.annotations.map(annotation => [annotation.id, annotation])).values()];
+      const views = [...new Map(scene.views.map(view => [view.id, view])).values()];
+      this.ensureDocCapacity('annotations', annotations.map(annotation => annotation.id), MAX_STORED_ANNOTATIONS);
+      this.ensureDocCapacity('saved_views', views.map(view => view.id), 500);
+      const plans = planWatches?.(annotations) ?? [];
+      // A caller must supply the watch planner when imported IDs already have rules.
+      // Otherwise geometry changes could retain a stale activation/compiled shape.
+      if (!planWatches && annotations.some(annotation => this.areaWatchRuleRecord(annotation.id)))
+        throw new Error('Watched annotations require atomic watch preparation.');
+      const result = this.sceneSettings({ ...scene, investigation: scene.version === 2 ? scene.investigation : undefined }, allowMeteredBasemap);
+      this.saveSettings(result.settings);
+      for (const annotation of annotations) this.putDoc('annotations', annotation.id, annotation, annotation.createdAt);
+      for (const plan of plans) {
+        if (plan.remove) this.db.prepare('DELETE FROM area_watch_rules WHERE area_id = ?').run(plan.areaId);
+        else if (plan.record) this.saveAreaWatchRule(plan.record);
+      }
+      if (plans.length) this.resetAreaWatchEvaluation();
+      const errors = [...new Set(plans.map(plan => plan.error).filter((error): error is string => !!error))];
+      if (errors.length) this.setAreaWatchError(errors.join(' '));
+      result.warnings.push(...errors);
+      for (const view of views) this.putDoc('saved_views', view.id, view, view.createdAt);
+      return { ...result, annotations: this.listDocs<AnnotationDocument>('annotations'), views: this.listDocs<SavedView>('saved_views') };
+    });
+  }
+
+  restoreView(id: string, allowMeteredBasemap = false): RestoredView {
+    return this.tx(() => {
+      const row = this.db.prepare('SELECT data FROM saved_views WHERE id = ?').get(id) as Row | undefined;
+      if (!row) throw new Error('Saved view not found.');
+      const raw: unknown = JSON.parse(String(row.data));
+      // v1 scene's original view schema preserves legacy rows without adding defaults.
+      const parsed = savedViewSchema.safeParse(raw);
+      const view: SavedView = parsed.success ? parsed.data : legacySavedViewSchema.parse(raw);
+      const result = this.sceneSettings(view, allowMeteredBasemap);
+      this.saveSettings(result.settings);
+      return { ...result, view };
+    });
+  }
+
+  /** Reparse/recheck current rows inside one transaction; never trust preview or source IDs. */
+  importGeoJsonAnnotations(text: string): GeoJsonImportResult {
+    return this.tx(() => {
+      const existing = this.listDocs<AnnotationDocument>('annotations');
+      const { candidates, ...report } = previewGeoJsonAnnotations(text, existing);
+      if (existing.length + candidates.length > MAX_STORED_ANNOTATIONS)
+        throw new Error(`Import would exceed ${MAX_STORED_ANNOTATIONS.toLocaleString()} stored annotations. Delete annotations or import fewer features.`);
+      const insert = this.db.prepare('INSERT INTO annotations(id, data, created_at) VALUES (?, ?, ?)');
+      const createdAt = new Date().toISOString();
+      for (const candidate of candidates) {
+        const annotation: AnnotationDocument = { ...candidate, id: randomUUID(), createdAt };
+        insert.run(annotation.id, JSON.stringify(annotation), createdAt);
+      }
+      return { ...report, imported: candidates.length, annotations: this.listDocs<AnnotationDocument>('annotations') };
+    });
+  }
+
+  // ---------- local earthquake area watches (separate from USGS event history) ----------
+  areaWatchRuleRecords(enabledOnly = false): StoredAreaWatchRule[] {
+    return (this.db.prepare(`SELECT data, geometry_key FROM area_watch_rules ${enabledOnly ? "WHERE json_extract(data, '$.enabled') = 1" : ''} ORDER BY area_id`).all() as Row[])
+      .map(row => ({ rule: areaWatchRuleSchema.parse(JSON.parse(String(row.data))), geometryKey: String(row.geometry_key) }));
+  }
+
+  areaWatchRuleRecord(areaId: string): StoredAreaWatchRule | null {
+    const row = this.db.prepare('SELECT data, geometry_key FROM area_watch_rules WHERE area_id = ?').get(areaId) as Row | undefined;
+    return row ? { rule: areaWatchRuleSchema.parse(JSON.parse(String(row.data))), geometryKey: String(row.geometry_key) } : null;
+  }
+
+  getAnnotation(id: string): AnnotationDocument | null {
+    const row = this.db.prepare('SELECT data FROM annotations WHERE id = ?').get(id) as Row | undefined;
+    return row ? JSON.parse(String(row.data)) as AnnotationDocument : null;
+  }
+
+  enabledAreaWatchAnnotations(): AnnotationDocument[] {
+    return (this.db.prepare("SELECT a.data FROM annotations a JOIN area_watch_rules r ON r.area_id = a.id WHERE json_extract(r.data, '$.enabled') = 1 LIMIT ?").all(MAX_AREA_WATCH_RULES) as Row[])
+      .map(row => JSON.parse(String(row.data)) as AnnotationDocument);
+  }
+
+  areaWatchState(): AreaWatchState {
+    const rules = (this.db.prepare('SELECT data FROM area_watch_rules ORDER BY area_id LIMIT ?').all(MAX_AREA_WATCH_RULES) as Row[])
+      .map(row => areaWatchRuleSchema.parse(JSON.parse(String(row.data))));
+    const events = (this.db.prepare("SELECT data FROM area_watch_events ORDER BY detected_at DESC, json_extract(data, '$.quakeTime') DESC, id DESC LIMIT ?").all(MAX_AREA_WATCH_EVENTS) as Row[])
+      .map(row => areaWatchEventSchema.parse(JSON.parse(String(row.data))));
+    return { rules, events, ...this.areaWatchEvaluation() };
+  }
+
+  private areaWatchEvaluation(): { lastEvaluatedAt: string | null; error: string | null } {
+    const raw = this.getMeta('area_watch_evaluation');
+    if (!raw) return { lastEvaluatedAt: null, error: null };
+    try {
+      const value = JSON.parse(raw);
+      if ((value.lastEvaluatedAt === null || (typeof value.lastEvaluatedAt === 'string' && Number.isFinite(Date.parse(value.lastEvaluatedAt)))) && (value.error === null || typeof value.error === 'string'))
+        return { lastEvaluatedAt: value.lastEvaluatedAt, error: value.error };
+    } catch { /* A damaged local status must not look like a successful evaluation. */ }
+    return { lastEvaluatedAt: null, error: 'Stored area-watch evaluation status is invalid.' };
+  }
+
+  private resetAreaWatchEvaluation(): void {
+    this.setMeta('area_watch_evaluation', JSON.stringify({ lastEvaluatedAt: null, error: null }));
+  }
+
+  private saveAreaWatchRule(record: StoredAreaWatchRule): void {
+    const rule = areaWatchRuleSchema.parse(record.rule);
+    const exists = this.db.prepare('SELECT 1 FROM area_watch_rules WHERE area_id = ?').get(rule.areaId);
+    const count = Number((this.db.prepare('SELECT COUNT(*) AS n FROM area_watch_rules').get() as Row).n);
+    if (!exists && count >= MAX_AREA_WATCH_RULES) throw new Error(`At most ${MAX_AREA_WATCH_RULES} area watches can be stored.`);
+    this.db.prepare('INSERT INTO area_watch_rules(area_id, data, geometry_key) VALUES (?, ?, ?) ON CONFLICT(area_id) DO UPDATE SET data = excluded.data, geometry_key = excluded.geometry_key')
+      .run(rule.areaId, JSON.stringify(rule), record.geometryKey);
+  }
+
+  putAreaWatchRule(record: StoredAreaWatchRule): void { this.tx(() => { this.saveAreaWatchRule(record); this.resetAreaWatchEvaluation(); }); }
+
+  /** Annotation edits and any watch re-arm/invalidation commit together. */
+  putAnnotationWithAreaWatch(annotation: AnnotationDocument, record: StoredAreaWatchRule | null, removeRule = false, error?: string): void {
+    this.tx(() => {
+      this.putDoc('annotations', annotation.id, annotation, annotation.createdAt);
+      if (removeRule) this.db.prepare('DELETE FROM area_watch_rules WHERE area_id = ?').run(annotation.id);
+      else if (record) this.saveAreaWatchRule(record);
+      if (record || removeRule) this.resetAreaWatchEvaluation();
+      if (error) this.setAreaWatchError(error);
+    });
+  }
+
+  deleteAreaWatch(areaId: string): boolean {
+    return this.tx(() => {
+      const removed = Number(this.db.prepare('DELETE FROM area_watch_rules WHERE area_id = ?').run(areaId).changes) > 0;
+      if (removed) this.resetAreaWatchEvaluation();
+      return removed;
+    });
+  }
+
+  deleteAnnotationWithAreaWatch(areaId: string): boolean {
+    return this.tx(() => {
+      const watched = this.db.prepare('SELECT 1 FROM area_watch_rules WHERE area_id = ?').get(areaId);
+      const removed = this.deleteDoc('annotations', areaId);
+      if (watched) this.resetAreaWatchEvaluation();
+      return removed;
+    });
+  }
+
+  setAreaWatchError(error: string): void {
+    const previous = this.areaWatchEvaluation();
+    this.setMeta('area_watch_evaluation', JSON.stringify({ lastEvaluatedAt: previous.lastEvaluatedAt, error: error.slice(0, 400) }));
+  }
+
+  pruneAreaWatchSeen(cutoff: string): void { this.db.prepare('DELETE FROM area_watch_seen WHERE quake_time < ?').run(cutoff); }
+
+  areaWatchSeenKeys(): Set<string> {
+    return new Set((this.db.prepare('SELECT area_id, quake_id FROM area_watch_seen LIMIT ?').all(MAX_AREA_WATCH_SEEN) as Row[])
+      .map(row => `${row.area_id}\0${row.quake_id}`));
+  }
+
+  /** Dedup and evidence insertion are atomic, including an alias/preferred-ID change. */
+  commitAreaWatchMatches(matches: AreaWatchMatch[], evaluatedAt: string, error: string | null): void {
+    this.tx(() => {
+      const seen = this.db.prepare('SELECT 1 FROM area_watch_seen WHERE area_id = ? AND quake_id = ?');
+      const remember = this.db.prepare('INSERT OR IGNORE INTO area_watch_seen(area_id, quake_id, quake_time) VALUES (?, ?, ?)');
+      const insert = this.db.prepare('INSERT INTO area_watch_events(id, area_id, detected_at, data) VALUES (?, ?, ?, ?)');
+      let size = Number((this.db.prepare('SELECT COUNT(*) AS n FROM area_watch_seen').get() as Row).n);
+      for (const match of matches) {
+        const event = areaWatchEventSchema.parse(match.event);
+        const aliases = [...new Set([event.quakeId, ...match.aliases])];
+        const duplicate = aliases.some(alias => seen.get(event.areaId, alias));
+        const missing = aliases.filter(alias => !seen.get(event.areaId, alias));
+        if (size + missing.length > MAX_AREA_WATCH_SEEN) throw new Error('Area-watch deduplication capacity reached; remove watches or wait for old observations to expire.');
+        for (const alias of missing) remember.run(event.areaId, alias, event.quakeTime);
+        size += missing.length;
+        if (!duplicate) insert.run(event.id, event.areaId, event.detectedAt, JSON.stringify(event));
+      }
+      this.db.prepare("DELETE FROM area_watch_events WHERE id IN (SELECT id FROM area_watch_events ORDER BY detected_at DESC, json_extract(data, '$.quakeTime') DESC, id DESC LIMIT -1 OFFSET ?)").run(MAX_AREA_WATCH_EVENTS);
+      const previous = this.areaWatchEvaluation();
+      this.setMeta('area_watch_evaluation', JSON.stringify({ lastEvaluatedAt: error ? previous.lastEvaluatedAt : evaluatedAt, error }));
+    });
+  }
+
+  readAreaWatchEvents(ids: readonly string[]): void {
+    if (ids.length > MAX_AREA_WATCH_EVENTS) throw new Error('Too many area-watch event IDs.');
+    this.tx(() => {
+      const get = this.db.prepare('SELECT data FROM area_watch_events WHERE id = ?');
+      const put = this.db.prepare('UPDATE area_watch_events SET data = ? WHERE id = ?');
+      for (const id of new Set(ids)) {
+        const row = get.get(id) as Row | undefined;
+        if (row) put.run(JSON.stringify({ ...areaWatchEventSchema.parse(JSON.parse(String(row.data))), read: true }), id);
+      }
+    });
+  }
+
   // ---------- recorded track points (observed positions only) ----------
   addTrackPoints(layer: string, pts: { rid: string; t: string; lat: number; lon: number; alt: number | null; heading: number | null; ground?: boolean | null }[]): number {
     if (pts.length === 0) return 0;
@@ -176,6 +444,27 @@ export class AtlasStore {
     const r = this.db.prepare('SELECT MIN(t) AS o, MAX(t) AS n, COUNT(*) AS c FROM track_points').get() as Row;
     return { oldest: (r.o as string | null) ?? null, newest: (r.n as string | null) ?? null, points: Number(r.c) };
   }
+
+  recordTimelineObservation(observation: TimelineObservation): void {
+    const settings = this.getSettings();
+    this.timeline.record(observation, { days: settings.historyRetentionDays, maxRecords: settings.historyMaxRecords });
+  }
+
+  recordTimelineGap(feed: 'nws' | 'usgs', at: string, scope: string, reason: string): void {
+    const settings = this.getSettings();
+    this.timeline.gap(feed, at, scope, reason, { days: settings.historyRetentionDays, maxRecords: settings.historyMaxRecords });
+  }
+
+  timelineRange(): TimelineRange {
+    const tracks = this.trackRange(), feeds = this.timeline.range();
+    const times = [tracks.oldest, tracks.newest, feeds.oldest, feeds.newest].filter((time): time is string => time !== null).sort();
+    return { oldest: times[0] ?? null, newest: times.at(-1) ?? null, points: tracks.points, nwsFrames: feeds.nwsFrames, usgsFrames: feeds.usgsFrames };
+  }
+
+  timelineFrame(t: string): TimelineHazards { return this.timeline.frame(t); }
+  timelineStats(): TimelineStats { return this.timeline.stats(); }
+  beginVisit(at: string): void { this.timeline.beginVisit(at); }
+  visitBriefing(at: string): VisitBriefing { return this.timeline.visitBriefing(at); }
 
   /** Latest recorded fix per object at or before `t`, no older than `windowMs`. */
   trackSnapshot(layer: string, t: string, windowMs: number): { rid: string; t: string; lat: number; lon: number; altM: number | null; heading: number | null; onGround: boolean | null }[] {
@@ -313,10 +602,15 @@ export class AtlasStore {
 
   // ---------- feed cache ----------
   getFeedCache<T>(feed: string): FeedCacheEntry<T> | null {
-    const r = this.db.prepare('SELECT fetched_at, source_updated_at, payload FROM feed_cache WHERE feed = ?').get(feed) as Row | undefined;
+    const r = this.db.prepare('SELECT fetched_at, source_updated_at, payload, coverage FROM feed_cache WHERE feed = ?').get(feed) as Row | undefined;
     if (!r) return null;
     try {
-      return { fetchedAt: String(r.fetched_at), sourceUpdatedAt: (r.source_updated_at as string | null) ?? null, payload: JSON.parse(String(r.payload)) as T };
+      const result: FeedCacheEntry<T> = { fetchedAt: String(r.fetched_at), sourceUpdatedAt: (r.source_updated_at as string | null) ?? null, payload: JSON.parse(String(r.payload)) as T };
+      if (r.coverage !== null) {
+        try { result.coverage = readFeedCoverage(JSON.parse(String(r.coverage))); }
+        catch { result.coverage = readFeedCoverage(null); }
+      }
+      return result;
     } catch {
       return null;
     }
@@ -325,9 +619,9 @@ export class AtlasStore {
   setFeedCache<T>(feed: string, entry: FeedCacheEntry<T>): void {
     this.db
       .prepare(
-        'INSERT INTO feed_cache(feed, fetched_at, source_updated_at, payload) VALUES (?, ?, ?, ?) ON CONFLICT(feed) DO UPDATE SET fetched_at = excluded.fetched_at, source_updated_at = excluded.source_updated_at, payload = excluded.payload',
+        'INSERT INTO feed_cache(feed, fetched_at, source_updated_at, payload, coverage) VALUES (?, ?, ?, ?, ?) ON CONFLICT(feed) DO UPDATE SET fetched_at = excluded.fetched_at, source_updated_at = excluded.source_updated_at, payload = excluded.payload, coverage = excluded.coverage',
       )
-      .run(feed, entry.fetchedAt, entry.sourceUpdatedAt, JSON.stringify(entry.payload));
+      .run(feed, entry.fetchedAt, entry.sourceUpdatedAt, JSON.stringify(entry.payload), entry.coverage === undefined ? null : JSON.stringify(readFeedCoverage(entry.coverage)));
   }
 
   // ---------- event history ----------
@@ -494,8 +788,11 @@ export class AtlasStore {
   }
 
   clearHistory(): number {
-    const r = this.db.prepare('DELETE FROM events').run();
-    return Number(r.changes);
+    return this.tx(() => {
+      const removed = Number(this.db.prepare('DELETE FROM events').run().changes);
+      this.timeline.clearWithinTransaction();
+      return removed;
+    });
   }
 
   /** Applies retention: drops records not observed within `retentionDays`, then trims to `maxRecords` (oldest observed first). */
@@ -510,6 +807,7 @@ export class AtlasStore {
           .run(count - maxRecords).changes,
       );
     }
+    this.timeline.prune({ days: retentionDays, maxRecords }, now.toISOString());
     return removed;
   }
 }

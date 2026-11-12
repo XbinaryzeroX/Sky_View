@@ -1,0 +1,52 @@
+{
+  "tag": "before",
+  "utc": "2026-11-12T04:55:15.365Z",
+  "result": "PASS",
+  "asar": "c7a61a99bef1b217e37c5300b98a9c28ff1b9e5d8384dfd29875b6f61dd33718",
+  "source": "Synthetic slotted 3D mesh, public OSM mask. All Google requests intercepted.",
+  "stages": [
+    {
+      "place": "land",
+      "lon": 24.938,
+      "lat": 60.173,
+      "z": -22,
+      "globe": false,
+      "meshVisible": true,
+      "meshHeight": -22.000000000451237,
+      "cameraAltitude": 99.74632816841626,
+      "pitch": -4.1143875968814445,
+      "pixels": 408856,
+      "skyThroughGround": 100509,
+      "rustMeshPixels": 248953
+    },
+    {
+      "place": "sea",
+      "lon": 26.9797,
+      "lat": 60.0214,
+      "z": 5,
+      "globe": false,
+      "meshVisible": true,
+      "meshHeight": 5.00000000126879,
+      "cameraAltitude": 105.22550183851436,
+      "pitch": -3.3875132646666577,
+      "pixels": 408856,
+      "skyThroughGround": 112587,
+      "rustMeshPixels": 236228
+    },
+    {
+      "place": "back on land",
+      "lon": 24.938,
+      "lat": 60.173,
+      "z": -22,
+      "globe": false,
+      "meshVisible": true,
+      "meshHeight": -22.000000000451237,
+      "cameraAltitude": 105.0440317955289,
+      "pitch": -4.293416349453416,
+      "pixels": 408856,
+      "skyThroughGround": 99024,
+      "rustMeshPixels": 275093
+    }
+  ],
+  "errors": []
+}

@@ -1,0 +1,13 @@
+Blue Marble (August 2004, Shaded Relief and Bathymetry)
+MODIS / NASA Earth Observatory, distributed by NASA Global Imagery Browse Services (GIBS).
+
+Source metadata
+https://gibs.earthdata.nasa.gov/layer-metadata/v1.0/BlueMarble_ShadedRelief_Bathymetry.json
+
+NASA imagery usage guidelines
+https://www.nasa.gov/nasa-brand-center/images-and-media/
+
+Atlas Watch tiles this historical composite for an offline globe overview. The main tiles use Web Mercator.
+The north and south caps use geographic coordinates. Atlas Watch downsamples the overview to smaller levels
+and corrects source edge artifacts when detected. The accompanying project source manifest records the
+requests, checksums and independent location/detail checks.

@@ -1,0 +1,3 @@
+
+SMOKE_SCRIPT {"result":"PASS","phase":"second","sourceMode":"real public NWS/USGS; offline phase uses genuine prior cache","noSavedPlacesRequired":true,"actualPreviewHeadingsAndTablesVisible":true,"frozenHtmlMatchesVisiblePreview":true,"exportedHtmlPaths":["C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\visit\\visit-second-1.html","C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\visit\\visit-second-3.html"],"pendingProviderObserved":false,"controlledPreviewRaceAndRetry":false,"originalLocationBriefingAndIdempotentControls":true,"analystLastVisitRoute":true,"rendererErrors":[]}
+SMOKE_RESULT {"globeReady":true,"errors":[],"locations":1,"alerts":516,"quakes":211,"nws":"ok","usgs":"ok"}

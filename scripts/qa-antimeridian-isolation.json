@@ -1,0 +1,6 @@
+[
+  { "name": "anti-current", "lat": -17, "lon": 180, "h": 3000000 },
+  { "name": "anti-no-overlays", "lat": -17, "lon": 180, "h": 3000000, "js": "(async()=>{await window.atlas.updateSettings({labelsOverlay:false});const rows=[...document.querySelectorAll('label')];const switched=[];for(const name of ['State & country boundaries','Earthquakes']){const row=rows.find(r=>r.textContent.trim()===name);const input=row?.querySelector('input[type=checkbox]');if(input?.checked){input.click();switched.push(name);}}await new Promise(r=>setTimeout(r,4000));return {switched};})()" },
+  { "name": "anti-imagery-only", "lat": -17, "lon": 180, "h": 3000000, "js": "(async()=>{await window.atlas.updateSettings({terrainEnabled:false,buildings3d:false});await new Promise(r=>setTimeout(r,4000));return 'terrain off';})()" },
+  { "name": "anti-neutral", "lat": -17, "lon": 180, "h": 3000000, "js": "(async()=>{await window.atlas.updateSettings({basemap:'neutral'});await new Promise(r=>setTimeout(r,4000));return 'no imagery';})()" }
+]

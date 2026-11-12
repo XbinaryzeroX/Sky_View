@@ -1,0 +1,10 @@
+{
+  "id": "existing_investigation",
+  "name": "Harbour investigation 港",
+  "notes": "Preserve this note and the aircraft pin.",
+  "createdAt": "2026-11-11T12:00:00.000Z",
+  "items": [
+    { "kind": "aircraft", "id": "camera-1", "label": "Existing aircraft" },
+    { "kind": "vessel", "id": "211000001", "label": "Existing ship" }
+  ]
+}

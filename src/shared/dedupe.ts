@@ -58,7 +58,8 @@ interface Revisioned {
 }
 
 /** Computes added / updated / removed ids between two refreshes. */
-export function computeDiff(feed: FeedId, prev: Revisioned[] | null, next: Revisioned[], at: string, previousAt: string | null): FeedDiff {
+export function computeDiff(feed: FeedId, prev: Revisioned[] | null, next: Revisioned[], at: string, previousAt: string | null, unavailableReason?: string): FeedDiff {
+  if (unavailableReason) return { feed, at, previousAt, unavailableReason, added: [], updated: [], removed: [] };
   const prevMap = new Map((prev ?? []).map((r) => [r.id, r.rev]));
   const nextMap = new Map(next.map((r) => [r.id, r.rev]));
   const added: string[] = [];
@@ -72,6 +73,13 @@ export function computeDiff(feed: FeedId, prev: Revisioned[] | null, next: Revis
     for (const id of prevMap.keys()) if (!nextMap.has(id)) removed.push(id);
   }
   return { feed, at, added, updated, removed, previousAt };
+}
+
+export function describeFeedDiff(diff: FeedDiff | undefined): string | null {
+  if (!diff?.previousAt) return null;
+  const name = diff.feed === 'nws' ? 'Alerts' : 'Earthquakes';
+  if (diff.unavailableReason) return `${name}: change counts unknown`;
+  return `${name}: ${diff.added.length} new, ${diff.updated.length} updated, ${diff.removed.length} no longer returned`;
 }
 
 export function alertRevisions(alerts: WeatherAlert[]): Revisioned[] {

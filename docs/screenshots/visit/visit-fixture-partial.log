@@ -1,0 +1,3 @@
+
+SMOKE_SCRIPT {"result":"PASS","phase":"fixture-partial","sourceMode":"EXPLICIT SYNTHETIC QA PROVIDER RESPONSES — never live observations","noSavedPlacesRequired":true,"actualPreviewHeadingsAndTablesVisible":true,"frozenHtmlMatchesVisiblePreview":true,"exportedHtmlPaths":["C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\visit\\visit-fixture-partial-1.html"],"pendingProviderObserved":false,"controlledPreviewRaceAndRetry":false,"originalLocationBriefingAndIdempotentControls":false,"analystLastVisitRoute":false,"rendererErrors":[]}
+SMOKE_RESULT {"globeReady":true,"errors":[],"locations":0,"alerts":8,"quakes":8,"nws":"ok","usgs":"ok"}

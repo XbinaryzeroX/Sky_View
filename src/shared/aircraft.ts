@@ -3,6 +3,8 @@
 // observations: callers receive the estimate age so the UI can label it.
 
 import type { GeoRecord } from './layers';
+import { geodesicDistanceKm } from './geo';
+import { publicAirlineCallsign } from './route';
 
 export const STALE_AFTER_S = 60;
 export const EXPIRE_AFTER_S = 300;
@@ -99,7 +101,8 @@ export function passesFilter(r: GeoRecord, f: AircraftFilter): boolean {
 }
 
 export function ageSeconds(r: GeoRecord, nowMs: number): number | null {
-  return r.observedAt ? Math.max(0, (nowMs - Date.parse(r.observedAt)) / 1000) : null;
+  const observed = r.observedAt ? Date.parse(r.observedAt) : NaN;
+  return Number.isFinite(observed) ? Math.max(0, (nowMs - observed) / 1000) : null;
 }
 
 export type TrackState = 'fresh' | 'stale' | 'expired';
@@ -120,10 +123,18 @@ export function trackState(r: GeoRecord, nowMs: number): TrackState {
  */
 export function deadReckon(r: GeoRecord, nowMs: number): { lat: number; lon: number; estimatedS: number } {
   const age = ageSeconds(r, nowMs);
-  if (age === null || r.heading === null || r.speedKts === null || r.props.onGround === true || r.speedKts < 30) return { lat: r.lat, lon: r.lon, estimatedS: 0 };
-  const t = Math.min(age, MAX_EXTRAPOLATION_S);
-  const distM = r.speedKts * 0.514444 * t;
-  const brg = (r.heading * Math.PI) / 180;
+  if (age === null || age <= 0 || !canExtrapolate(r)) return { lat: r.lat, lon: r.lon, estimatedS: 0 };
+  return projectTrack(r, Math.min(age, MAX_EXTRAPOLATION_S));
+}
+
+function canExtrapolate(r: GeoRecord): boolean {
+  return r.props.onGround !== true && r.props.snapshot !== true && r.props.directionSource !== 'true-heading'
+    && Number.isFinite(r.heading) && r.speedKts !== null && Number.isFinite(r.speedKts) && r.speedKts >= 30;
+}
+
+function projectTrack(r: GeoRecord, t: number): { lat: number; lon: number; estimatedS: number } {
+  const distM = r.speedKts! * 0.514444 * t;
+  const brg = (r.heading! * Math.PI) / 180;
   const R = 6371008.8;
   const lat1 = (r.lat * Math.PI) / 180;
   const lon1 = (r.lon * Math.PI) / 180;
@@ -133,13 +144,70 @@ export function deadReckon(r: GeoRecord, nowMs: number): { lat: number; lon: num
   return { lat: (lat2 * 180) / Math.PI, lon: ((((lon2 * 180) / Math.PI + 540) % 360) - 180), estimatedS: Math.round(t) };
 }
 
+/** The existing prediction horizon, for public passenger flights eligible for frame animation. */
+export function passengerMotionEndMs(r: GeoRecord): number | null {
+  if (!canExtrapolate(r) || !publicAirlineCallsign('aircraft', r)) return null;
+  const observed = r.observedAt ? Date.parse(r.observedAt) : NaN;
+  return Number.isFinite(observed) ? observed + MAX_EXTRAPOLATION_S * 1000 : null;
+}
+
+export interface FlightDisplayPose { lat: number; lon: number; altM: number | null; heading: number }
+export interface PassengerMotion {
+  report: GeoRecord;
+  endMs: number;
+  correction?: { start: number; end: number; lat: number; lon: number; altM: number; heading: number };
+}
+
+const shortestAngle = (degrees: number) => ((degrees % 360 + 540) % 360) - 180;
+
+/** Sample a visual pose only. Altitude blends between reported heights and is never forecast. */
+export function passengerPose(motion: PassengerMotion, now: number): FlightDisplayPose {
+  const r = motion.report;
+  const age = Math.max(0, Math.min(MAX_EXTRAPOLATION_S, MAX_EXTRAPOLATION_S + (now - motion.endMs) / 1000));
+  const point = age > 0 ? projectTrack(r, age) : r;
+  const pose = { lat: point.lat, lon: point.lon, altM: r.altM, heading: r.heading! };
+  const c = motion.correction;
+  if (!c || now >= c.end) return pose;
+  const u = Math.max(0, (now - c.start) / (c.end - c.start));
+  const remaining = 1 - u * u * (3 - 2 * u);
+  pose.lat = Math.min(90, Math.max(-90, pose.lat + c.lat * remaining));
+  pose.lon = shortestAngle(pose.lon + c.lon * remaining);
+  if (pose.altM !== null) pose.altM += c.altM * remaining;
+  pose.heading = (pose.heading + c.heading * remaining + 360) % 360;
+  return pose;
+}
+
+/** Reconcile a fresh fix with the pose already on screen. Duplicated polls keep the blend in progress. */
+export function updatePassengerMotion(previous: PassengerMotion | undefined, r: GeoRecord, endMs: number, now: number): PassengerMotion {
+  const next: PassengerMotion = { report: r, endMs };
+  if (!previous || previous.report.props.callsign !== r.props.callsign) return next;
+  if (previous.endMs - MAX_EXTRAPOLATION_S * 1000 > now) return next;
+  const old = previous.report;
+  if (endMs < previous.endMs) return previous;
+  if (endMs === previous.endMs && old.lat === r.lat && old.lon === r.lon && old.altM === r.altM &&
+      old.heading === r.heading && old.speedKts === r.speedKts) return previous;
+  // After a prolonged outage or a large position discontinuity, reacquire at the new fix.
+  if (now < endMs - MAX_EXTRAPOLATION_S * 1000 || now >= endMs ||
+      now - previous.endMs > (STALE_AFTER_S - MAX_EXTRAPOLATION_S) * 1000) return next;
+  const from = passengerPose(previous, now);
+  const to = passengerPose(next, now);
+  if (geodesicDistanceKm(from.lat, from.lon, to.lat, to.lon) > 15) return next;
+  next.correction = {
+    start: now, end: Math.min(now + 4000, endMs),
+    lat: from.lat - to.lat, lon: shortestAngle(from.lon - to.lon),
+    altM: from.altM !== null && to.altM !== null ? from.altM - to.altM : 0,
+    heading: shortestAngle(from.heading - to.heading),
+  };
+  return next;
+}
+
 /**
  * Where a vehicle is drawn at `nowMs`: with motion smoothing on, aircraft move along their last reported track
- * (deadReckon); history snapshots stay at their report when `snapshotsStay`; anything else sits at its report.
+ * (deadReckon); snapshots always stay at their reported position, in both entity and bulk rendering.
  * Every re-placement of a vehicle uses this, so a height change never moves it sideways.
  */
 export function drawnPosition(r: GeoRecord, nowMs: number, o: { aircraft: boolean; smooth: boolean; snapshotsStay: boolean }): { lat: number; lon: number } {
-  if (!o.aircraft || !o.smooth || (o.snapshotsStay && r.props.snapshot === true)) return { lat: r.lat, lon: r.lon };
+  if (!o.aircraft || !o.smooth || r.props.snapshot === true) return { lat: r.lat, lon: r.lon };
   const p = deadReckon(r, nowMs);
   return { lat: p.lat, lon: p.lon };
 }

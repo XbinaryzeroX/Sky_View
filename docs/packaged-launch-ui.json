@@ -1,0 +1,13 @@
+{
+  "verified": false,
+  "at": "2026-11-11T16:59:42.210Z",
+  "window": {
+    "app": "process:C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\Atlas Watch.exe",
+    "id": 14092788,
+    "title": "Atlas Watch"
+  },
+  "scope": "The newly spawned packaged executable window was listed by path/title. No screenshot or accessibility tree was returned.",
+  "toolFailure": "foreground window did not report a process id",
+  "recoveryFailure": "Packaged window is no longer uniquely available after the isolated runner timeout",
+  "furtherAttempts": false
+}

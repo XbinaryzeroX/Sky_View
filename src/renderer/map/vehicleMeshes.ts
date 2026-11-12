@@ -8,7 +8,7 @@
 
 import { CLASS_DEFAULTS, VESSEL_DEFAULTS, type AircraftShape } from '../../shared/vehicleDims';
 import type { VesselSymbol } from '../../shared/vehicleClass';
-import { box, boxAll, disc, lathe, loft, merge, mirrorX, slab, translate, triangle, zToUp, type Geometry, type GlbMaterial } from './glb';
+import { box, boxAll, disc, lathe, loft, merge, mirrorX, slab, translate, triangle, zToUp, type Geometry, type GlbMaterial, type V3 } from './glb';
 
 /** Texture slots the caller must provide, in this order. */
 export type TextureSlot = 'fuselage' | 'windows';
@@ -91,8 +91,24 @@ function buildAircraftCentred(s: AircraftShape): VehicleModelSpec {
   const tailM = b.mat('tail', { color: rgb(mil ? '#727c86' : '#f3f5f7'), metallic: 0.02, roughness: 0.5 });
   const propM = b.mat('prop', { color: rgb('#202428', 0.45), metallic: 0, roughness: 0.8, blend: true });
 
-  if (s.cls === 'helicopter') return helicopter(b, L, S, fus, tailM, propM, engM);
+  if (s.cls === 'helicopter' || s.cls === 'gyroplane') return helicopter(b, L, S, fus, tailM, propM, engM, s);
   if (s.cls === 'balloon') return balloon(b, L, S, mil);
+  if (s.cls === 'airship') {
+    const radius = S / 2;
+    b.add(tailM, lathe([{ z: L / 2, r: radius * 0.02 }, { z: L * 0.38, r: radius * 0.74 },
+      { z: L * 0.17, r: radius }, { z: -L * 0.17, r: radius * 0.95 }, { z: -L * 0.38, r: radius * 0.58 },
+      { z: -L / 2, r: radius * 0.06 }], 24));
+    b.add(engM, boxAll(0, -radius * 0.98, L * 0.11, S * 0.17, S * 0.16, L * 0.16));
+    b.add(wingM, ...both(slab([0, 0, -L * 0.32], L * 0.15, [S / 2, 0, -L * 0.42], L * 0.07, S * 0.04)));
+    b.add(wingM, slab([0, 0, -L * 0.32], L * 0.15, [0, S / 2, -L * 0.42], L * 0.07, S * 0.04, true));
+    return b.done();
+  }
+  if (s.cls === 'parachute') {
+    b.add(tailM, ...both(slab([0, S * 0.74, L / 2], L, [S / 2, S * 0.54, L * 0.36], L * 0.78, L * 0.16)));
+    b.add(engM, ...both(slab([S * 0.02, S * 0.12, 0], S * 0.012, [S * 0.47, S * 0.54, 0], S * 0.012, S * 0.01)));
+    b.add(engM, boxAll(0, S * 0.07, 0, S * 0.09, S * 0.14, L * 0.25));
+    return b.done();
+  }
 
   const R = (L * (DIAMETER[s.cls] ?? 0.103)) / 2;
   // Fuselage: nose at +L/2, tail cone rising at -L/2. u runs nose → tail for the window texture.
@@ -122,11 +138,28 @@ function buildAircraftCentred(s: AircraftShape): VehicleModelSpec {
   const dihedral = rad(s.highWing ? 1.5 : 5);
   const rootX = R * 0.7;
   const rootZ = (s.cls === 'light' || s.cls === 'glider' || s.cls === 'drone' ? 0.16 : s.mount === 'tail' ? 0.06 : 0.12) * L + rootChord / 2;
-  const tipX = S / 2;
+  const tipX = s.cls === 'poweredlift' ? S * 0.34 : S / 2;
   const reach = tipX - rootX;
   const wingAt = (x: number) => ({ y: wingY + (x - rootX) * Math.tan(dihedral), zLE: rootZ - (x - rootX) * Math.tan(sweep), chord: rootChord * (1 - (1 - taper) * ((x - rootX) / reach)) });
   const tip = wingAt(tipX);
   b.add(wingM, ...both(slab([rootX, wingY, rootZ], rootChord, [tipX, tip.y, tip.zLE], tip.chord, rootChord * 0.12)));
+  if (s.cls === 'seaplane') {
+    const floats = lathe([{ z: L * 0.36, r: L * 0.003, y: -R * 1.28 }, { z: L * 0.24, r: L * 0.039, y: -R * 1.48 },
+      { z: -L * 0.18, r: L * 0.038, y: -R * 1.5 }, { z: -L * 0.37, r: L * 0.014, y: -R * 1.42 }], 12);
+    b.add(wingM, ...both(translate(floats, S * 0.105, 0, 0)));
+    for (const z of [-0.12 * L, 0.18 * L])
+      b.add(engM, ...both(slab([R * 0.6, -R * 0.42, z], L * 0.025, [S * 0.105, -R * 1.45, z], L * 0.025, L * 0.014)));
+  }
+  if (s.cls === 'poweredlift') {
+    // Representative lift-rotor layout. Propulsor orientation in flight is not observed.
+    const count = Math.max(1, Math.floor(s.engines / 2));
+    for (let i = 0; i < count; i++) {
+      const z = count === 1 ? tip.zLE : L * (0.28 - i * 0.56 / (count - 1));
+      b.add(engM, ...both(boxAll(tipX, tip.y, z, L * 0.06, L * 0.08, L * 0.23)));
+      b.add(propM, ...both(disc([tipX, tip.y + L * 0.06, z + L * 0.06], S * 0.16, 'y', 24)));
+    }
+    if (count > 1) b.add(engM, ...both(boxAll(tipX, tip.y, 0, L * 0.045, L * 0.045, L * 0.64)));
+  }
 
   // Tail: vertical fin and horizontal stabiliser (conventional or T-tail).
   const finH = L * (s.cls === 'widebody' ? 0.15 : s.cls === 'light' ? 0.17 : 0.18);
@@ -150,7 +183,8 @@ function buildAircraftCentred(s: AircraftShape): VehicleModelSpec {
   if (s.mount === 'wing' && s.engines >= 2) {
     const jetLen = L * (s.cls === 'widebody' ? 0.1 : 0.12);
     const jetR = L * (s.cls === 'widebody' ? 0.034 : 0.03);
-    const fractions = s.engines >= 4 ? [0.36, 0.64] : [s.prop ? 0.3 : 0.34];
+    const pairs = Math.floor(s.engines / 2);
+    const fractions = pairs === 1 ? [s.prop ? 0.3 : 0.34] : Array.from({length: pairs}, (_, i) => 0.36 + 0.28 * i / (pairs - 1));
     for (const f of fractions) {
       const x = rootX + f * reach;
       const w = wingAt(x);
@@ -173,7 +207,8 @@ function buildAircraftCentred(s: AircraftShape): VehicleModelSpec {
     const z = -L / 2 + 0.24 * L;
     if (s.engines === 1) b.add(engM, translate(nacelle(len, r), 0, R * 1.05, z));
     else b.add(engM, ...both(translate(nacelle(len, r), R + r * 1.1, R * 0.35, z)));
-  } else if (s.mount === 'nose') {
+  }
+  if (s.mount === 'nose' || (s.mount === 'wing' && s.prop && s.engines % 2 === 1)) {
     b.add(engM, lathe([{ z: L / 2 + L * 0.05, r: R * 0.05 }, { z: L / 2, r: R * 0.35 }], 10));
     b.add(propM, disc([0, 0, L / 2 + L * 0.035], L * 0.11, 'z'));
   }
@@ -181,7 +216,7 @@ function buildAircraftCentred(s: AircraftShape): VehicleModelSpec {
   return b.done();
 }
 
-function helicopter(b: Builder, L: number, rotorD: number, fus: number, tailM: number, rotorM: number, engM: number): VehicleModelSpec {
+function helicopter(b: Builder, L: number, rotorD: number, fus: number, tailM: number, rotorM: number, engM: number, shape: AircraftShape): VehicleModelSpec {
   const R = L * 0.115;
   b.add(fus, lathe([{ z: L * 0.42, r: R * 0.1, y: -R * 0.2 }, { z: L * 0.36, r: R * 0.75, y: -R * 0.05 }, { z: L * 0.22, r: R }, { z: L * 0.02, r: R * 0.95, y: R * 0.05 }, { z: -L * 0.08, r: R * 0.45, y: R * 0.3 }], 18));
   b.add(tailM, lathe([{ z: -L * 0.06, r: L * 0.035, y: R * 0.35 }, { z: -L * 0.5, r: L * 0.018, y: R * 0.55 }], 10));
@@ -189,8 +224,31 @@ function helicopter(b: Builder, L: number, rotorD: number, fus: number, tailM: n
   b.add(tailM, ...both(slab([L * 0.01, R * 0.5, -L * 0.36], L * 0.05, [L * 0.07, R * 0.5, -L * 0.37], L * 0.035, L * 0.006)));
   b.add(engM, boxAll(0, R * 1.1, L * 0.08, R * 0.9, R * 0.4, L * 0.22));
   b.add(engM, boxAll(0, R * 1.45, L * 0.1, L * 0.02, R * 0.4, L * 0.02)); // rotor mast
-  b.add(rotorM, disc([0, R * 1.65, L * 0.1], rotorD / 2, 'y', 28));
-  b.add(rotorM, disc([L * 0.03, R * 0.6 + L * 0.05, -L * 0.48], L * 0.08, 'x', 14));
+  if (shape.rotorBlades) {
+    const blade = b.mat('rotor-blades', { color: rgb('#47525c'), metallic: 0.3, roughness: 0.55 });
+    for (let n = 0; n < shape.rotorBlades; n++) {
+      const angle = 2 * Math.PI * n / shape.rotorBlades;
+      const point = (radial: number, chord: number): V3 => [
+        rotorD * (radial * Math.cos(angle) - chord * Math.sin(angle)), R * 1.65,
+        L * 0.1 + rotorD * (radial * Math.sin(angle) + chord * Math.cos(angle)),
+      ];
+      const a = point(0.015, 0), c = point(0.5, -0.022);
+      b.add(blade, triangle(a, point(0.5, 0), c), triangle(a, c, point(0.015, -0.016)));
+    }
+  } else b.add(rotorM, disc([0, R * 1.65, L * 0.1], rotorD / 2, 'y', 28));
+  if (shape.cls === 'gyroplane') b.add(rotorM, disc([0, R * 0.45, -L * 0.11], L * 0.19, 'z', 20));
+  else if (shape.tailRotor !== 'none') {
+    const tipY = R * 0.6 + L * 0.05, tipZ = -L * 0.48;
+    const radius = L * (shape.tailRotor === 'ducted' ? 0.049 : 0.08);
+    b.add(rotorM, disc([L * 0.03, tipY, tipZ], radius, 'x', 20));
+    if (shape.tailRotor === 'ducted') {
+      const rim = (i: number, r: number): V3 => [L * 0.031, tipY + r * Math.sin(i * Math.PI / 10), tipZ + r * Math.cos(i * Math.PI / 10)];
+      for (let i = 0; i < 20; i++) {
+        const a = rim(i, radius * 1.24), c = rim(i + 1, radius);
+        b.add(tailM, triangle(a, rim(i, radius), c), triangle(a, c, rim(i + 1, radius * 1.24)));
+      }
+    }
+  }
   // Skids.
   for (const x of [R * 0.65, -R * 0.65]) {
     b.add(engM, boxAll(x, -R * 1.25, L * 0.1, L * 0.012, L * 0.012, L * 0.42));
@@ -234,6 +292,9 @@ const HULL: Record<VesselSymbol, { upper: string; deck: string; bow: number; ste
   sailing: { upper: '#f4f5f6', deck: '#a5845c', bow: 0.3, stern: 0.7, freeboard: 0.08 },
   pleasure: { upper: '#f4f5f6', deck: '#a5845c', bow: 0.28, stern: 0.8, freeboard: 0.1 },
   service: { upper: '#d4571c', deck: '#4b4d50', bow: 0.22, stern: 0.85, freeboard: 0.09 },
+  pilot: { upper: '#263c58', deck: '#52575d', bow: 0.25, stern: 0.81, freeboard: 0.075 },
+  workboat: { upper: '#2b5260', deck: '#646363', bow: 0.16, stern: 0.92, freeboard: 0.065 },
+  wingInGround: { upper: '#cbd5db', deck: '#d8e1e4', bow: 0.25, stern: 0.64, freeboard: 0.085 },
   military: { upper: '#6d7883', deck: '#59626b', bow: 0.16, stern: 0.85, freeboard: 0.07 },
   unknown: { upper: '#4a5560', deck: '#5b6167', bow: 0.14, stern: 0.88, freeboard: 0.06 },
 };
@@ -247,7 +308,7 @@ export function buildVessel(cls: VesselSymbol): VehicleModelSpec {
   const h = HULL[cls];
   const fb = Math.max(0.8, h.freeboard * L);
   const draft = Math.max(0.5, 0.035 * L);
-  const top = hullOutline(L, B, h.bow, h.stern);
+  const top = hullOutline(L, cls === 'wingInGround' ? B * 0.28 : B, h.bow, h.stern);
   const keel = top.map(([x, z]) => [x * 0.72, z * 0.94] as [number, number]);
   const anti = b.mat('antifouling', { color: rgb('#8c2a22'), metallic: 0.1, roughness: 0.7 });
   const upper = b.mat('hull', { color: rgb(h.upper), metallic: 0.1, roughness: 0.6 });
@@ -274,6 +335,20 @@ export function buildVessel(cls: VesselSymbol): VehicleModelSpec {
   };
 
   switch (cls) {
+    case 'workboat': {
+      block(0, fb, L * 0.13, B * 0.78, L * 0.12, L * 0.25);
+      block(0, fb + L * 0.12, L * 0.16, B * 0.82, L * 0.045, L * 0.12);
+      // A clear working deck and stern lifting frame shared by several support-vessel types.
+      for (const side of [-1, 1]) b.add(dark, boxAll(side * B * 0.37, fb + L * 0.08, -L * 0.36, B * 0.035, L * 0.16, B * 0.045));
+      b.add(dark, boxAll(0, fb + L * 0.16, -L * 0.36, B * 0.78, B * 0.04, B * 0.045));
+      break;
+    }
+    case 'wingInGround': {
+      block(0, fb, L * 0.17, B * 0.20, L * 0.045, L * 0.23, glass, white);
+      b.add(white, ...both(slab([B * 0.10, fb * 0.7, L * 0.15], L * 0.35, [B / 2, fb * 0.46, -L * 0.04], L * 0.15, fb * 0.14)));
+      b.add(white, slab([0, fb, -L * 0.34], L * 0.13, [0, fb + L * 0.14, -L * 0.42], L * 0.07, B * 0.028, true));
+      break;
+    }
     case 'cargo': {
       bridgeAft(0.11 * L, 0.06 * L);
       // Container bays from just ahead of the bridge to the forecastle; 2–4 tiers, deterministic colours.
@@ -314,6 +389,11 @@ export function buildVessel(cls: VesselSymbol): VehicleModelSpec {
       b.add(dark, boxAll(0, fb + 0.2 * L, -0.06 * L, 0.012 * L, 0.4 * L, 0.012 * L));
       b.add(dark, slab([0, fb + 0.38 * L, -0.06 * L], 0.012 * L, [0, fb + 0.06 * L, -0.42 * L], 0.012 * L, 0.012 * L, true));
       block(0, fb, -0.44 * L, B * 0.8, 0.12 * L, 0.02 * L, dark, dark); // stern gantry
+      break;
+    }
+    case 'pilot': {
+      block(0, fb, L * 0.02, B * 0.66, L * 0.14, L * 0.38, glass, white);
+      for (const side of [-1, 1]) b.add(dark, boxAll(side * B * 0.48, fb * 0.7, -L * 0.14, B * 0.045, fb * 0.28, L * 0.52));
       break;
     }
     case 'tug':

@@ -1,0 +1,4 @@
+{
+  "annotation": {"id":"watch-area","kind":"area","name":"Local test area","color":"#ffd166","points":[[-2,-2],[2,-2],[2,2],[-2,2]],"visible":true,"createdAt":"2026-11-11T16:00:00.000Z"},
+  "quake": {"id":"fixture-quake","ids":["fixture-quake"],"mag":3,"magType":"ml","place":"Local fixture, not a provider observation","title":"Local watch test fixture","time":"2026-11-11T16:00:01.000Z","updated":"2026-11-11T16:00:01.000Z","lat":0,"lon":0,"depthKm":5,"url":"https://earthquake.usgs.gov/earthquakes/eventpage/fixture-quake","status":"reviewed","tsunami":false,"sig":1,"alert":null,"eventType":"earthquake"}
+}

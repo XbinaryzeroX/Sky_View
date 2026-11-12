@@ -20,6 +20,7 @@ export function SettingsDialog({ settings, onClose }: { settings: Settings; onCl
     try {
       const patch: Partial<Settings> = {};
       for (const k of Object.keys(s) as (keyof Settings)[]) if (s[k] !== settings[k]) (patch as Record<string, unknown>)[k] = s[k];
+      if (patch.basemap) patch.imageryYear = null;
       await api.updateSettings(patch);
       setSaved(true);
       setError(null);
@@ -224,13 +225,10 @@ export function SettingsDialog({ settings, onClose }: { settings: Settings; onCl
             <input type="checkbox" checked={s.smoothMotion} onChange={(e) => set('smoothMotion', e.target.checked)} /> Smooth aircraft motion between reports (estimated positions, max 45 s, clearly marked)
           </label>
           <label className="check">
-            <input type="checkbox" checked={s.vehicleModels} onChange={(e) => set('vehicleModels', e.target.checked)} /> 3D models for nearby aircraft and ships (3D view, below 400 km; up to 60 at once, 150 with Maximum quality). Representative shapes sized to each type, with generic paint, not airline liveries
+            <input type="checkbox" checked={s.vehicleModels} onChange={(e) => set('vehicleModels', e.target.checked)} /> 3D models for nearby aircraft and ships (3D view, below 400 km; up to 60 at once, 150 with Maximum quality). Aircraft use a credited model when the pack has their type. Model paint may differ from the selected aircraft.
           </label>
           <label className="check">
             <input type="checkbox" checked={s.buildingFacades} onChange={(e) => set('buildingFacades', e.target.checked)} /> Stylized window façades on 3D buildings (decorative pattern, not the real building’s windows or floors)
-          </label>
-          <label className="check">
-            <input type="checkbox" checked={s.evenOcean} onChange={(e) => set('evenOcean', e.target.checked)} /> Even out open-ocean water on Google, Esri, Mapbox and EOX imagery (draws one smoothed sea more than 1.5 km offshore)
           </label>
           <label className="check">
             <input type="checkbox" checked={s.terrainEnabled} onChange={(e) => set('terrainEnabled', e.target.checked)} /> 3D terrain (keyless Terrain Tiles on AWS)

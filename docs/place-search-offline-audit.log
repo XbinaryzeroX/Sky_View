@@ -1,0 +1,1256 @@
+{
+  "result": "PASS_OFFLINE_SCOPE",
+  "scope": "Completed packaged bundled-place/coordinate/keyboard workflow only. Later controlled Google setup was interrupted by a QA close-button/reload race; Google and real Census acceptance are separate.",
+  "startedAt": "2026-11-12T02:09:03.274Z",
+  "finishedAt": "2026-11-12T02:12:50.497Z",
+  "archiveSha256": "a73c47119705d17a325fcdcd84b1b909e02b1dc671108bf812905316c818fee2",
+  "security": {
+    "isPackaged": true,
+    "version": "0.7.0",
+    "appPath": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+    "userData": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-place-search-after-H0siN4\\profile",
+    "noSandbox": false,
+    "ignoreCertificateErrors": false,
+    "windows": [
+      {
+        "contextIsolation": true,
+        "sandbox": true,
+        "nodeIntegration": false,
+        "webSecurity": true
+      }
+    ]
+  },
+  "catalog": {
+    "source": "Natural Earth 10m populated places (public domain), naturalearthdata.com",
+    "rows": 7342,
+    "sha256": "c4b9b3ec19390d041d7167adaf1ff6a79f633ae1d5833ca992dc8d23a7a90315"
+  },
+  "queries": [
+    {
+      "text": "São Paulo",
+      "codePoints": [
+        "53",
+        "e3",
+        "6f",
+        "20",
+        "50",
+        "61",
+        "75",
+        "6c",
+        "6f"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "São Paulo",
+          "detail": "São Paulo, Brazil",
+          "selected": "true"
+        },
+        {
+          "label": "São Paulo/Guarulhos–Governor André Franco Montoro International Airport (GRU)",
+          "detail": "Airport · São Paulo, BR",
+          "selected": "false"
+        },
+        {
+          "label": "São Paulo Catarina Executive Airport (JHF)",
+          "detail": "Airport · São Roque, BR",
+          "selected": "false"
+        }
+      ]
+    },
+    {
+      "text": "Sao Paulo",
+      "codePoints": [
+        "53",
+        "61",
+        "6f",
+        "20",
+        "50",
+        "61",
+        "75",
+        "6c",
+        "6f"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "Sao Paulo (São Paulo)",
+          "detail": "São Paulo, Brazil",
+          "selected": "true"
+        }
+      ]
+    },
+    {
+      "text": "São Paulo",
+      "codePoints": [
+        "53",
+        "61",
+        "303",
+        "6f",
+        "20",
+        "50",
+        "61",
+        "75",
+        "6c",
+        "6f"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "São Paulo",
+          "detail": "São Paulo, Brazil",
+          "selected": "true"
+        }
+      ]
+    },
+    {
+      "text": "東京",
+      "codePoints": [
+        "6771",
+        "4eac"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "東京 (Tokyo)",
+          "detail": "Tokyo, Japan",
+          "selected": "true"
+        }
+      ]
+    },
+    {
+      "text": "دبي",
+      "codePoints": [
+        "62f",
+        "628",
+        "64a"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "دبي (Dubai)",
+          "detail": "Dubay, United Arab Emirates",
+          "selected": "true"
+        }
+      ]
+    },
+    {
+      "text": "Tokyo, Japan",
+      "codePoints": [
+        "54",
+        "6f",
+        "6b",
+        "79",
+        "6f",
+        "2c",
+        "20",
+        "4a",
+        "61",
+        "70",
+        "61",
+        "6e"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "Tokyo",
+          "detail": "Tokyo, Japan",
+          "selected": "true"
+        },
+        {
+          "label": "Tokyo/Hachioji (Hachiōji)",
+          "detail": "Tokyo, Japan",
+          "selected": "false"
+        }
+      ]
+    },
+    {
+      "text": "London, Ontario",
+      "codePoints": [
+        "4c",
+        "6f",
+        "6e",
+        "64",
+        "6f",
+        "6e",
+        "2c",
+        "20",
+        "4f",
+        "6e",
+        "74",
+        "61",
+        "72",
+        "69",
+        "6f"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "London",
+          "detail": "Ontario, Canada",
+          "selected": "true"
+        }
+      ]
+    },
+    {
+      "text": "Tokyo",
+      "codePoints": [
+        "54",
+        "6f",
+        "6b",
+        "79",
+        "6f"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "Tokyo",
+          "detail": "Tokyo, Japan",
+          "selected": "true"
+        },
+        {
+          "label": "Tokyo Haneda International Airport (HND)",
+          "detail": "Airport · Tokyo, JP",
+          "selected": "false"
+        },
+        {
+          "label": "Tokyo/Hachioji (Hachiōji)",
+          "detail": "Tokyo, Japan",
+          "selected": "false"
+        }
+      ]
+    },
+    {
+      "text": "New York",
+      "codePoints": [
+        "4e",
+        "65",
+        "77",
+        "20",
+        "59",
+        "6f",
+        "72",
+        "6b"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "New York",
+          "detail": "New York, United States of America",
+          "selected": "true"
+        },
+        {
+          "label": "New York Stewart International Airport (SWF)",
+          "detail": "Airport · Newburgh, US",
+          "selected": "false"
+        }
+      ]
+    },
+    {
+      "text": "London",
+      "codePoints": [
+        "4c",
+        "6f",
+        "6e",
+        "64",
+        "6f",
+        "6e"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "London",
+          "detail": "Westminster, United Kingdom",
+          "selected": "true"
+        },
+        {
+          "label": "London",
+          "detail": "Ontario, Canada",
+          "selected": "false"
+        },
+        {
+          "label": "London",
+          "detail": "Kentucky, United States of America",
+          "selected": "false"
+        },
+        {
+          "label": "London International Airport (YXU)",
+          "detail": "Airport · London, CA",
+          "selected": "false"
+        },
+        {
+          "label": "London Luton Airport (LTN)",
+          "detail": "Airport · Luton, Luton, GB",
+          "selected": "false"
+        },
+        {
+          "label": "London Biggin Hill Airport (BQH)",
+          "detail": "Airport · London, GB",
+          "selected": "false"
+        },
+        {
+          "label": "Londonderry (Londonderry/Derry)",
+          "detail": "Derry, United Kingdom",
+          "selected": "false"
+        }
+      ]
+    },
+    {
+      "text": "Frankfurt",
+      "codePoints": [
+        "46",
+        "72",
+        "61",
+        "6e",
+        "6b",
+        "66",
+        "75",
+        "72",
+        "74"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "Frankfurt",
+          "detail": "Hessen, Germany",
+          "selected": "true"
+        },
+        {
+          "label": "Frankfurt Main Airport (FRA)",
+          "detail": "Airport · Frankfurt am Main, DE",
+          "selected": "false"
+        },
+        {
+          "label": "Frankfurt-Egelsbach Airport (EDFE)",
+          "detail": "Airport · Egelsbach, DE",
+          "selected": "false"
+        },
+        {
+          "label": "Frankfurt-Hahn Airport (HHN)",
+          "detail": "Airport · Frankfurt am Main (Lautzenhausen), DE",
+          "selected": "false"
+        }
+      ]
+    },
+    {
+      "text": "Dubai",
+      "codePoints": [
+        "44",
+        "75",
+        "62",
+        "61",
+        "69"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "Dubai",
+          "detail": "Dubay, United Arab Emirates",
+          "selected": "true"
+        },
+        {
+          "label": "Dubai International Airport (DXB)",
+          "detail": "Airport · Dubai, AE",
+          "selected": "false"
+        }
+      ]
+    },
+    {
+      "text": "Tokyo",
+      "codePoints": [
+        "54",
+        "6f",
+        "6b",
+        "79",
+        "6f"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "Tokyo",
+          "detail": "Tokyo, Japan",
+          "selected": "true"
+        },
+        {
+          "label": "Tokyo Haneda International Airport (HND)",
+          "detail": "Airport · Tokyo, JP",
+          "selected": "false"
+        },
+        {
+          "label": "Tokyo/Hachioji (Hachiōji)",
+          "detail": "Tokyo, Japan",
+          "selected": "false"
+        }
+      ]
+    },
+    {
+      "text": "Singapore",
+      "codePoints": [
+        "53",
+        "69",
+        "6e",
+        "67",
+        "61",
+        "70",
+        "6f",
+        "72",
+        "65"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "Singapore",
+          "detail": "Singapore",
+          "selected": "true"
+        },
+        {
+          "label": "Singapore Changi Airport (SIN)",
+          "detail": "Airport · Singapore, SG",
+          "selected": "false"
+        }
+      ]
+    },
+    {
+      "text": "Sydney",
+      "codePoints": [
+        "53",
+        "79",
+        "64",
+        "6e",
+        "65",
+        "79"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "Sydney",
+          "detail": "New South Wales, Australia",
+          "selected": "true"
+        },
+        {
+          "label": "Sydney",
+          "detail": "Nova Scotia, Canada",
+          "selected": "false"
+        },
+        {
+          "label": "Western Sydney International (Nancy-Bird Walton) Airport (WSI)",
+          "detail": "Airport · Sydney, AU",
+          "selected": "false"
+        },
+        {
+          "label": "Sydney / J.A. Douglas McCurdy Airport (YQY)",
+          "detail": "Airport · Sydney, CA",
+          "selected": "false"
+        },
+        {
+          "label": "Sydney Bankstown Airport (BWU)",
+          "detail": "Airport · Sydney, AU",
+          "selected": "false"
+        }
+      ]
+    },
+    {
+      "text": "Cape Town",
+      "codePoints": [
+        "43",
+        "61",
+        "70",
+        "65",
+        "20",
+        "54",
+        "6f",
+        "77",
+        "6e"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "Cape Town",
+          "detail": "Western Cape, South Africa",
+          "selected": "true"
+        },
+        {
+          "label": "Cape Town International Airport (CPT)",
+          "detail": "Airport · Cape Town, ZA",
+          "selected": "false"
+        }
+      ]
+    },
+    {
+      "text": "São Paulo",
+      "codePoints": [
+        "53",
+        "e3",
+        "6f",
+        "20",
+        "50",
+        "61",
+        "75",
+        "6c",
+        "6f"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "São Paulo",
+          "detail": "São Paulo, Brazil",
+          "selected": "true"
+        },
+        {
+          "label": "São Paulo/Guarulhos–Governor André Franco Montoro International Airport (GRU)",
+          "detail": "Airport · São Paulo, BR",
+          "selected": "false"
+        },
+        {
+          "label": "São Paulo Catarina Executive Airport (JHF)",
+          "detail": "Airport · São Roque, BR",
+          "selected": "false"
+        }
+      ]
+    },
+    {
+      "text": "Anchorage",
+      "codePoints": [
+        "41",
+        "6e",
+        "63",
+        "68",
+        "6f",
+        "72",
+        "61",
+        "67",
+        "65"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "Anchorage",
+          "detail": "Alaska, United States of America",
+          "selected": "true"
+        },
+        {
+          "label": "Ted Stevens Anchorage International Airport (ANC)",
+          "detail": "Airport · Anchorage, US",
+          "selected": "false"
+        }
+      ]
+    },
+    {
+      "text": "東京",
+      "codePoints": [
+        "6771",
+        "4eac"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "東京 (Tokyo)",
+          "detail": "Tokyo, Japan",
+          "selected": "true"
+        }
+      ]
+    },
+    {
+      "text": "دبي",
+      "codePoints": [
+        "62f",
+        "628",
+        "64a"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "دبي (Dubai)",
+          "detail": "Dubay, United Arab Emirates",
+          "selected": "true"
+        }
+      ]
+    },
+    {
+      "text": "Sao Paulo",
+      "codePoints": [
+        "53",
+        "61",
+        "6f",
+        "20",
+        "50",
+        "61",
+        "75",
+        "6c",
+        "6f"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "Sao Paulo (São Paulo)",
+          "detail": "São Paulo, Brazil",
+          "selected": "true"
+        }
+      ]
+    },
+    {
+      "text": "São Paulo",
+      "codePoints": [
+        "53",
+        "61",
+        "303",
+        "6f",
+        "20",
+        "50",
+        "61",
+        "75",
+        "6c",
+        "6f"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "São Paulo",
+          "detail": "São Paulo, Brazil",
+          "selected": "true"
+        }
+      ]
+    },
+    {
+      "text": "London, Ontario",
+      "codePoints": [
+        "4c",
+        "6f",
+        "6e",
+        "64",
+        "6f",
+        "6e",
+        "2c",
+        "20",
+        "4f",
+        "6e",
+        "74",
+        "61",
+        "72",
+        "69",
+        "6f"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "London",
+          "detail": "Ontario, Canada",
+          "selected": "true"
+        }
+      ]
+    },
+    {
+      "text": "London, United Kingdom",
+      "codePoints": [
+        "4c",
+        "6f",
+        "6e",
+        "64",
+        "6f",
+        "6e",
+        "2c",
+        "20",
+        "55",
+        "6e",
+        "69",
+        "74",
+        "65",
+        "64",
+        "20",
+        "4b",
+        "69",
+        "6e",
+        "67",
+        "64",
+        "6f",
+        "6d"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "London",
+          "detail": "Westminster, United Kingdom",
+          "selected": "true"
+        },
+        {
+          "label": "Londonderry (Londonderry/Derry)",
+          "detail": "Derry, United Kingdom",
+          "selected": "false"
+        }
+      ]
+    },
+    {
+      "text": "-17, 180",
+      "codePoints": [
+        "2d",
+        "31",
+        "37",
+        "2c",
+        "20",
+        "31",
+        "38",
+        "30"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "Go to -17.00000, 180.00000",
+          "detail": "WGS84 horizontal coordinates",
+          "selected": "true"
+        }
+      ]
+    },
+    {
+      "text": "London",
+      "codePoints": [
+        "4c",
+        "6f",
+        "6e",
+        "64",
+        "6f",
+        "6e"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "London",
+          "detail": "Westminster, United Kingdom",
+          "selected": "true"
+        },
+        {
+          "label": "London",
+          "detail": "Ontario, Canada",
+          "selected": "false"
+        },
+        {
+          "label": "London",
+          "detail": "Kentucky, United States of America",
+          "selected": "false"
+        },
+        {
+          "label": "London International Airport (YXU)",
+          "detail": "Airport · London, CA",
+          "selected": "false"
+        },
+        {
+          "label": "London Luton Airport (LTN)",
+          "detail": "Airport · Luton, Luton, GB",
+          "selected": "false"
+        },
+        {
+          "label": "London Biggin Hill Airport (BQH)",
+          "detail": "Airport · London, GB",
+          "selected": "false"
+        },
+        {
+          "label": "Londonderry (Londonderry/Derry)",
+          "detail": "Derry, United Kingdom",
+          "selected": "false"
+        }
+      ]
+    },
+    {
+      "text": "Tokyo",
+      "codePoints": [
+        "54",
+        "6f",
+        "6b",
+        "79",
+        "6f"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "Tokyo",
+          "detail": "Tokyo, Japan",
+          "selected": "true"
+        },
+        {
+          "label": "Tokyo Haneda International Airport (HND)",
+          "detail": "Airport · Tokyo, JP",
+          "selected": "false"
+        },
+        {
+          "label": "Tokyo/Hachioji (Hachiōji)",
+          "detail": "Tokyo, Japan",
+          "selected": "false"
+        }
+      ]
+    },
+    {
+      "text": "Tokyo",
+      "codePoints": [
+        "54",
+        "6f",
+        "6b",
+        "79",
+        "6f"
+      ],
+      "expanded": "true",
+      "options": [
+        {
+          "label": "Tokyo",
+          "detail": "Tokyo, Japan",
+          "selected": "true"
+        },
+        {
+          "label": "Tokyo Haneda International Airport (HND)",
+          "detail": "Airport · Tokyo, JP",
+          "selected": "false"
+        },
+        {
+          "label": "Tokyo/Hachioji (Hachiōji)",
+          "detail": "Tokyo, Japan",
+          "selected": "false"
+        }
+      ]
+    },
+    {
+      "text": "zzqa-no-such-place",
+      "codePoints": [
+        "7a",
+        "7a",
+        "71",
+        "61",
+        "2d",
+        "6e",
+        "6f",
+        "2d",
+        "73",
+        "75",
+        "63",
+        "68",
+        "2d",
+        "70",
+        "6c",
+        "61",
+        "63",
+        "65"
+      ],
+      "expanded": "true",
+      "options": []
+    }
+  ],
+  "flights": [
+    {
+      "query": "Tokyo",
+      "expected": {
+        "name": "Tokyo",
+        "admin": "Tokyo",
+        "country": "Japan",
+        "lat": 35.687,
+        "lon": 139.7495
+      },
+      "inputMethod": "keyboard Enter",
+      "camera": {
+        "lat": 35.687000000000005,
+        "lon": 139.7495,
+        "heightM": 29999.999999988675,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "observedFlightWaitMs": 3062.718499999999,
+      "geocodingRequests": 0
+    },
+    {
+      "query": "New York",
+      "expected": {
+        "name": "New York",
+        "admin": "New York",
+        "country": "United States of America",
+        "lat": 40.7216,
+        "lon": -73.9957
+      },
+      "inputMethod": "actual result click",
+      "camera": {
+        "lat": 40.721599999999995,
+        "lon": -73.99569999999999,
+        "heightM": 29999.999999982854,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "observedFlightWaitMs": 3026.545100000003,
+      "geocodingRequests": 0
+    },
+    {
+      "query": "London",
+      "expected": {
+        "name": "London",
+        "admin": "Westminster",
+        "country": "United Kingdom",
+        "lat": 51.5019,
+        "lon": -0.1187
+      },
+      "inputMethod": "keyboard Enter",
+      "camera": {
+        "lat": 51.5019,
+        "lon": -0.11870000000000612,
+        "heightM": 29999.999999984688,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "observedFlightWaitMs": 2990.165000000001,
+      "geocodingRequests": 0
+    },
+    {
+      "query": "Frankfurt",
+      "expected": {
+        "name": "Frankfurt",
+        "admin": "Hessen",
+        "country": "Germany",
+        "lat": 50.1,
+        "lon": 8.675
+      },
+      "inputMethod": "actual result click",
+      "camera": {
+        "lat": 50.09999999999999,
+        "lon": 8.674999999999983,
+        "heightM": 29999.999999989483,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "observedFlightWaitMs": 3008.6008,
+      "geocodingRequests": 0
+    },
+    {
+      "query": "Dubai",
+      "expected": {
+        "name": "Dubai",
+        "admin": "Dubay",
+        "country": "United Arab Emirates",
+        "lat": 25.2149,
+        "lon": 55.2869
+      },
+      "inputMethod": "actual result click",
+      "camera": {
+        "lat": 25.2149,
+        "lon": 55.28690000000002,
+        "heightM": 29999.999999994794,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "observedFlightWaitMs": 3059.3718999999983,
+      "geocodingRequests": 0
+    },
+    {
+      "query": "Tokyo",
+      "expected": {
+        "name": "Tokyo",
+        "admin": "Tokyo",
+        "country": "Japan",
+        "lat": 35.687,
+        "lon": 139.7495
+      },
+      "inputMethod": "actual result click",
+      "camera": {
+        "lat": 35.687,
+        "lon": 139.7495,
+        "heightM": 29999.99999998922,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "observedFlightWaitMs": 3017.397299999997,
+      "geocodingRequests": 0
+    },
+    {
+      "query": "Singapore",
+      "expected": {
+        "name": "Singapore",
+        "admin": "",
+        "country": "Singapore",
+        "lat": 1.295,
+        "lon": 103.8539
+      },
+      "inputMethod": "actual result click",
+      "camera": {
+        "lat": 1.2950000000000004,
+        "lon": 103.8539,
+        "heightM": 30000.000000000553,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "observedFlightWaitMs": 3067.3947999999946,
+      "geocodingRequests": 0
+    },
+    {
+      "query": "Sydney",
+      "expected": {
+        "name": "Sydney",
+        "admin": "New South Wales",
+        "country": "Australia",
+        "lat": -33.8714,
+        "lon": 151.2125
+      },
+      "inputMethod": "actual result click",
+      "camera": {
+        "lat": -33.871399999999994,
+        "lon": 151.2125,
+        "heightM": 29999.999999986452,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "observedFlightWaitMs": 2997.6001000000106,
+      "geocodingRequests": 0
+    },
+    {
+      "query": "Cape Town",
+      "expected": {
+        "name": "Cape Town",
+        "admin": "Western Cape",
+        "country": "South Africa",
+        "lat": -33.9181,
+        "lon": 18.433
+      },
+      "inputMethod": "actual result click",
+      "camera": {
+        "lat": -33.91809999999999,
+        "lon": 18.433,
+        "heightM": 29999.99999998908,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "observedFlightWaitMs": 2999.339500000002,
+      "geocodingRequests": 0
+    },
+    {
+      "query": "São Paulo",
+      "expected": {
+        "name": "São Paulo",
+        "admin": "São Paulo",
+        "country": "Brazil",
+        "lat": -23.5567,
+        "lon": -46.627
+      },
+      "inputMethod": "actual result click",
+      "camera": {
+        "lat": -23.5567,
+        "lon": -46.62700000000002,
+        "heightM": 29999.999999998174,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "observedFlightWaitMs": 2998.4146000000037,
+      "geocodingRequests": 0
+    },
+    {
+      "query": "Anchorage",
+      "expected": {
+        "name": "Anchorage",
+        "admin": "Alaska",
+        "country": "United States of America",
+        "lat": 61.214,
+        "lon": -149.8874
+      },
+      "inputMethod": "actual result click",
+      "camera": {
+        "lat": 61.213999999999984,
+        "lon": -149.8874,
+        "heightM": 29999.99999999132,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "observedFlightWaitMs": 2998.6012000000046,
+      "geocodingRequests": 0
+    },
+    {
+      "query": "東京",
+      "expected": {
+        "name": "Tokyo",
+        "admin": "Tokyo",
+        "country": "Japan",
+        "lat": 35.687,
+        "lon": 139.7495
+      },
+      "inputMethod": "keyboard Enter",
+      "camera": {
+        "lat": 35.687000000000005,
+        "lon": 139.7495,
+        "heightM": 29999.99999999324,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "observedFlightWaitMs": 2995.7883,
+      "geocodingRequests": 0
+    },
+    {
+      "query": "دبي",
+      "expected": {
+        "name": "Dubai",
+        "admin": "Dubay",
+        "country": "United Arab Emirates",
+        "lat": 25.2149,
+        "lon": 55.2869
+      },
+      "inputMethod": "actual result click",
+      "camera": {
+        "lat": 25.214900000000004,
+        "lon": 55.28690000000002,
+        "heightM": 29999.99999998895,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "observedFlightWaitMs": 3020.897199999992,
+      "geocodingRequests": 0
+    },
+    {
+      "query": "Sao Paulo",
+      "expected": {
+        "name": "São Paulo",
+        "admin": "São Paulo",
+        "country": "Brazil",
+        "lat": -23.5567,
+        "lon": -46.627
+      },
+      "inputMethod": "actual result click",
+      "camera": {
+        "lat": -23.556699999999996,
+        "lon": -46.62700000000002,
+        "heightM": 29999.999999995387,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "observedFlightWaitMs": 3006.5155000000086,
+      "geocodingRequests": 0
+    },
+    {
+      "query": "São Paulo",
+      "expected": {
+        "name": "São Paulo",
+        "admin": "São Paulo",
+        "country": "Brazil",
+        "lat": -23.5567,
+        "lon": -46.627
+      },
+      "inputMethod": "keyboard Enter",
+      "camera": {
+        "lat": -23.556699999999996,
+        "lon": -46.62700000000002,
+        "heightM": 29999.999999995387,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "observedFlightWaitMs": 3.0059999999939464,
+      "geocodingRequests": 0
+    },
+    {
+      "query": "London, Ontario",
+      "expected": {
+        "name": "London",
+        "admin": "Ontario",
+        "country": "Canada",
+        "lat": 42.97,
+        "lon": -81.25
+      },
+      "inputMethod": "actual result click",
+      "camera": {
+        "lat": 42.97,
+        "lon": -81.25,
+        "heightM": 29999.999999980402,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "observedFlightWaitMs": 3071.755600000004,
+      "geocodingRequests": 0
+    },
+    {
+      "query": "London, United Kingdom",
+      "expected": {
+        "name": "London",
+        "admin": "Westminster",
+        "country": "United Kingdom",
+        "lat": 51.5019,
+        "lon": -0.1187
+      },
+      "inputMethod": "keyboard Enter",
+      "camera": {
+        "lat": 51.5019,
+        "lon": -0.11870000000000612,
+        "heightM": 29999.999999987307,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "observedFlightWaitMs": 3000.461099999986,
+      "geocodingRequests": 0
+    },
+    {
+      "query": "-17, 180",
+      "expected": {
+        "lat": -17,
+        "lon": 180,
+        "heightM": 10000
+      },
+      "camera": {
+        "lat": -16.999999999999996,
+        "lon": 180,
+        "heightM": 9999.999999993945,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "inputMethod": "actual coordinate result click"
+    },
+    {
+      "query": "Tokyo",
+      "expected": {
+        "name": "Tokyo",
+        "admin": "Tokyo",
+        "country": "Japan",
+        "lat": 35.687,
+        "lon": 139.7495
+      },
+      "inputMethod": "actual result click",
+      "camera": {
+        "lat": 35.687000000000005,
+        "lon": 139.7495,
+        "heightM": 29999.999999987067,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "observedFlightWaitMs": 2995.6035000000265,
+      "geocodingRequests": 0
+    }
+  ],
+  "keyboard": {
+    "afterArrowDown": [
+      "LondonWestminster, United Kingdom",
+      "LondonOntario, Canada",
+      "LondonKentucky, United States of America",
+      "London International Airport (YXU)Airport · London, CA",
+      "London Luton Airport (LTN)Airport · Luton, Luton, GB",
+      "London Biggin Hill Airport (BQH)Airport · London, GB",
+      "Londonderry (Londonderry/Derry)Derry, United Kingdom"
+    ],
+    "selectedIndex": 1,
+    "escapeClosedPopup": true,
+    "closedEnterDidNotFly": true,
+    "activeDescendant": "search-option-0",
+    "compositionEnterDidNotChoose": true
+  },
+  "nonGlobePlaceSelectionReturnsToGlobe": true,
+  "emptySearchNotice": "No matching bundled place.\nNatural Earth · offline. Add a region or country after a comma to narrow a place name.",
+  "geocodingRequests": [],
+  "screenshots": [
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\place-search\\audit-place-search-after-sao-ascii.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\place-search\\audit-place-search-after-sao-decomposed.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\place-search\\audit-place-search-after-tokyo-native.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\place-search\\audit-place-search-after-dubai-native.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\place-search\\audit-place-search-after-tokyo-flight.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\place-search\\audit-place-search-after-london-flight.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\place-search\\audit-place-search-after-sydney-flight.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\place-search\\audit-place-search-after-cape-town-flight.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\place-search\\audit-place-search-after-anchorage-flight.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\place-search\\audit-place-search-after-date-line-flight.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\place-search\\audit-place-search-after-from-discover-flight.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\place-search\\audit-place-search-after-catalog-limit.png"
+  ],
+  "errors": [],
+  "closedByRunner": true,
+  "archiveStableDuringRun": true,
+  "originalTrial": {
+    "path": "C:/Users/infob/AppData/Local/Temp/atlas-place-search-after-H0siN4/place-search-failure.log",
+    "result": "FAIL",
+    "failure": {
+      "message": "locator.click: Timeout 12000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('dialog', { name: 'Provider settings', exact: true }).getByRole('button', { name: 'Close', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <button aria-label=\"Close\" class=\"icon-btn modal-close\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m  - element was detached from the DOM, retrying\u001b[22m\n",
+      "stack": "locator.click: Timeout 12000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('dialog', { name: 'Provider settings', exact: true }).getByRole('button', { name: 'Close', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <button aria-label=\"Close\" class=\"icon-btn modal-close\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m  - element was detached from the DOM, retrying\u001b[22m\n\n    at closeProviders (C:\\Users\\infob\\Documents\\Claude\\Sky_View\\scripts\\qa-place-geocoding.mjs:76:132)\n    at checkControlledGeocoding (C:\\Users\\infob\\Documents\\Claude\\Sky_View\\scripts\\qa-place-geocoding.mjs:112:9)\n    at async file:///C:/Users/infob/Documents/Claude/Sky_View/scripts/check-place-search-packaged.mjs:280:34"
+    }
+  }
+}

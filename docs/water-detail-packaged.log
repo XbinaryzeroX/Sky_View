@@ -1,0 +1,28 @@
+{
+  "startedAt": "2026-11-12T04:38:57.871Z",
+  "result": "PASS",
+  "archive": "c7a61a99bef1b217e37c5300b98a9c28ff1b9e5d8384dfd29875b6f61dd33718",
+  "errors": [],
+  "water": {
+    "x": 74601,
+    "y": 38005,
+    "z": 17,
+    "coveredFraction": 0.9871673583984375,
+    "distinctAlpha": 126
+  },
+  "lake": {
+    "x": 21833,
+    "y": 50046,
+    "z": 17,
+    "coveredFraction": 0.9923095703125,
+    "distinctAlpha": 125
+  },
+  "land": {
+    "x": 74616,
+    "y": 37937,
+    "z": 17,
+    "coveredFraction": 0,
+    "distinctAlpha": 1
+  },
+  "changedFraction": 0.8213148788927336
+}

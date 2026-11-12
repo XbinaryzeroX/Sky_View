@@ -1,0 +1,15 @@
+
+> atlas-watch@0.7.0 smoke
+> node scripts/smoke.mjs docs/screenshots/audit-antimeridian-after.png 250000
+
+SMOKE_VIEW anti-current settledMs=8126 {"h":2999999.999999997,"level":4,"maxHere":8,"atLimit":false,"pending":0,"errors":0,"lastErr":null,"renderErrors":0,"lastRenderError":null,"terrain":{"loaded":539,"failed":0,"deepest":6}}
+SMOKE_VIEWJS anti-no-overlays {"switched":["State & country boundaries","Earthquakes"]}
+SMOKE_VIEW anti-no-overlays settledMs=7067 {"h":2999999.999999997,"level":4,"maxHere":8,"atLimit":false,"pending":0,"errors":0,"lastErr":null,"renderErrors":0,"lastRenderError":null,"terrain":{"loaded":539,"failed":0,"deepest":6}}
+SMOKE_VIEWJS anti-imagery-only "terrain off"
+SMOKE_VIEW anti-imagery-only settledMs=7077 {"h":2999999.999999997,"level":4,"maxHere":8,"atLimit":false,"pending":0,"errors":0,"lastErr":null,"renderErrors":0,"lastRenderError":null,"terrain":{"loaded":539,"failed":0,"deepest":6}}
+SMOKE_VIEWJS anti-neutral "no imagery"
+SMOKE_VIEW anti-neutral settledMs=6962 {"h":2999999.999999997,"level":4,"maxHere":8,"atLimit":false,"pending":0,"errors":0,"lastErr":null,"renderErrors":0,"lastRenderError":null,"terrain":null}
+SMOKE_NET [{"host":"tiles.openfreemap.org","requests":592,"ok":592,"failed":0,"cancelled":0,"lastStatus":200,"lastError":null,"lastSuccessAt":"2026-11-11T15:43:53.649Z","lastFailureAt":null},{"host":"s3.amazonaws.com","requests":539,"ok":539,"failed":0,"cancelled":0,"lastStatus":200,"lastError":null,"lastSuccessAt":"2026-11-11T15:43:57.986Z","lastFailureAt":null},{"host":"gibs.earthdata.nasa.gov","requests":539,"ok":539,"failed":0,"cancelled":0,"lastStatus":200,"lastError":null,"lastSuccessAt":"2026-11-11T15:44:11.652Z","lastFailureAt":null}]
+SMOKE_PROF {"cesium.frame":{"ms":4606.8,"n":2283},"labels.layout":{"ms":2.8,"n":15},"labels.parse":{"ms":16.4,"n":25},"labels.sync":{"ms":40.6,"n":6},"terrain.resample":{"ms":504,"n":230},"vector.draw":{"ms":58.7,"n":104}}
+SMOKE_PERF {"cpuSeconds":{"Browser":2.4,"GPU":10.9,"Utility":2.6,"Tab":16.6},"longTasks":{"count":9,"totalMs":1157,"maxMs":242},"gpu":{"gpu_compositing":"enabled","rasterization":"enabled_force","video_decode":"enabled"}}
+exit=0 screenshot=C:\Users\infob\Documents\Claude\Sky_View\docs\screenshots\audit-antimeridian-after.png

@@ -1,0 +1,115 @@
+{
+  "result": "PASS",
+  "phase": "before",
+  "startedAt": "2026-11-12T00:26:36.149Z",
+  "executable": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\Atlas Watch.exe",
+  "archive": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+  "archiveSha256": "0836B993B33CDE8EE3E4D6984EB3F781EF0CB88D1D32FC69A0E807A995CC9EAE",
+  "framework": "playwright-core 1.62.1",
+  "frameworkSource": "bundled Codex runtime; no application dependency added",
+  "documentation": "https://playwright.dev/docs/api/class-electron",
+  "chromiumSandbox": true,
+  "bypassCSP": false,
+  "ignoreHTTPSErrors": false,
+  "isolatedInstrumentedProcess": true,
+  "normalUninstrumentedLaunch": false,
+  "profile": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-packaged-playwright-before-0aW5o8\\profile",
+  "database": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-packaged-playwright-before-0aW5o8\\live.sqlite",
+  "genuineProfileAccessed": false,
+  "installerExecuted": false,
+  "nativePickerOperated": false,
+  "defaultBrowserOpened": false,
+  "checks": {
+    "packagedArchive": true,
+    "isolatedProfile": true,
+    "securityPreserved": true,
+    "noActiveSmokeActions": true,
+    "dataToBriefing": true,
+    "renderedLocationReport": true
+  },
+  "screenshots": [
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\packaged-playwright\\before-data.png"
+  ],
+  "errors": [],
+  "pid": 25900,
+  "security": {
+    "isPackaged": true,
+    "appPath": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+    "userData": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-packaged-playwright-before-0aW5o8\\profile",
+    "noSandbox": false,
+    "disableWebSecurity": false,
+    "ignoreCertificateErrors": false,
+    "testEnvironmentNames": [
+      "ATLAS_WATCH_DB"
+    ],
+    "instrumentedArguments": [
+      "--inspect=0",
+      "--remote-debugging-port=0",
+      "--user-data-dir=C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-packaged-playwright-before-0aW5o8\\profile"
+    ],
+    "windows": [
+      {
+        "contextIsolation": true,
+        "sandbox": true,
+        "nodeIntegration": false,
+        "webSecurity": true,
+        "url": "app://atlas/index.html"
+      }
+    ]
+  },
+  "renderer": {
+    "url": "app://atlas/index.html",
+    "requireType": "undefined",
+    "processType": "undefined",
+    "passiveSmokeStatusPresent": true,
+    "smokeFunctionNames": [],
+    "smokeStatusKeys": [
+      "globeReady",
+      "errors",
+      "locations",
+      "alerts",
+      "quakes",
+      "nws",
+      "usgs"
+    ]
+  },
+  "smokeHookLimit": "The package exposes passive renderer status counters under __atlasSmoke; no callable actions were present. Main smoke/offline/script execution is guarded by app.isPackaged and no enabling environment variables were passed.",
+  "locationBriefing": {
+    "heading": "Atlas Watch location briefing",
+    "excerpt": "Atlas Watch location briefing\nGenerated Nov 11, 2026, 7:26 PM EST (2026-11-12 00:26 UTC) · 0 location(s) · Atlas Watch 0.7.0\nThis briefing summarizes public data retrieved by Atlas Watch. It is not an official warning product and may be incomplete or delayed. For emergencies, follow official alerts from the National Weather Service and local authorities.\nData sources and freshness\nSource\tStatus\tLast successful retrieval\tSource-reported update\tRecords\nNational Weather Service — active alerts (api.weather.gov)\tCurrent\tNov 11, 2026, 7:26 PM EST (2026-11-12 00:26 UTC)\tNov 11, 2026, 7:25 PM EST (2026-11-12 00:25 UTC)\t512\nUSGS Earthquake Hazards Program — GeoJSON summary feed\tCurrent\tNov 11, 2026, 7:26 PM EST (2026-11-12 00:26 UTC)\tNov 11, 2026, 7:25 PM EST (2026-11-12 00:25 UTC)\t335\nSummary\nLocation\tWeather alerts (confirmed)\tAlerts not determinable\tEarthquakes within radius\nCoverage limitations\nWeather alert intersection uses the alert polygon when NWS supplies one. Alerts without a polygon are matched using the NWS forecast, county, and fire-weather zones reported for the location. If zones are unknown, the alert is reported as not determinable rather than as not affecting the location.\nEarthquake distance is the geodesic distance from the location to the reported epicenter. It is not an estimate of shaking, damage, or personal danger.\nEarthquakes are limited to the selected USGS summary feed window and minimum magnitude.\nData reflects the last successful retrieval shown above and may be delayed, revised, or incomplete. Atlas Watch only observes records while it is running.\nLocations outside NWS coverage (outside the U.S. and its territories) cannot be evaluated for NWS alerts.\nAttribution\n\nWeather alerts: National Weather Service / NOAA (public domain). Earthquakes: U.S. ",
+    "dialogTitle": "Location briefing"
+  },
+  "closedByRunner": true,
+  "exit": {
+    "code": 0,
+    "signal": null
+  },
+  "finishedAt": "2026-11-12T00:26:39.443Z",
+  "archiveStableDuringRun": true,
+  "localDatabase": {
+    "caches": [
+      {
+        "feed": "nws",
+        "fetched_at": "2026-11-12T00:26:36.492Z",
+        "source_updated_at": "2026-11-12T00:25:58.000Z"
+      },
+      {
+        "feed": "usgs",
+        "fetched_at": "2026-11-12T00:26:36.431Z",
+        "source_updated_at": "2026-11-12T00:25:59.000Z"
+      }
+    ],
+    "epochs": [
+      {
+        "feed": "nws",
+        "observations": 1
+      },
+      {
+        "feed": "usgs",
+        "observations": 1
+      }
+    ],
+    "savedPlaces": 0,
+    "customerCredentialRows": 0
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "time": "2026-11-12T05:01:02.775Z",
+  "result": "PASS",
+  "asar": "6e29aad3576da0f6a3ce1d650b6a83ffcb471b3cb908227db6dc204cfc94b486",
+  "assetsChecked": [
+    {
+      "symbol": "NVDA",
+      "articles": 12,
+      "error": []
+    }
+  ],
+  "errors": [],
+  "ranking": {
+    "source": "Yahoo Finance",
+    "retrieved": "2026-11-12T05:01:04.771Z",
+    "symbols": [
+      "NVDA",
+      "CRWV",
+      "INTC",
+      "SPCX",
+      "IREN",
+      "NOK",
+      "NU",
+      "GRAB",
+      "CIFR",
+      "MARA"
+    ]
+  },
+  "selected": {
+    "symbol": "NVDA",
+    "summaryCharacters": 95,
+    "destination": "stocktwits.com",
+    "externalHandoff": "captured after main validation"
+  },
+  "watchlist": {
+    "preservedDuringTrending": true,
+    "providerConfigured": false,
+    "opened": true
+  }
+}

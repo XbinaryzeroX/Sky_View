@@ -1,0 +1,180 @@
+{
+  "result": "PASS",
+  "phase": "after",
+  "startedAt": "2026-11-12T02:37:00.719Z",
+  "executable": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\Atlas Watch.exe",
+  "archive": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+  "archiveSha256": "529645772a071b5302c072b863ed09856fcb15f94a0b04b06ab950d49e0c8aae",
+  "acceptanceScope": "Full before/after workflow",
+  "bundles": [
+    {
+      "path": "dist/renderer/assets/index-CUnw5lOt.css",
+      "bytes": 72439,
+      "sha256": "baef0757a85791c9d743172dd5475fb4dbcec89caeefaa3c90761a268eb1c550"
+    },
+    {
+      "path": "dist/renderer/assets/index-h1ni_2ra.js",
+      "bytes": 6895834,
+      "sha256": "7fca7c1f8062f96ba3386aad0d0644135b3c57d9be7d5aca29f7dc1404d52a1e"
+    },
+    {
+      "path": "dist/renderer/assets/placeSearchWorker-Di7oSPS6.js",
+      "bytes": 2253817,
+      "sha256": "ee6c2776508799529b41e9fbdb4ac008d56620040c7f373a71fcb81a9bf9e2bf"
+    }
+  ],
+  "reducedMotion": true,
+  "independentLiveCensusProcess": true,
+  "temporary": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-place-search-after-7j07mE",
+  "profile": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-place-search-after-7j07mE\\profile",
+  "database": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-place-search-after-7j07mE\\qa.sqlite",
+  "framework": "playwright-core 1.62.1",
+  "catalog": {
+    "source": "Natural Earth 10m populated places (public domain), naturalearthdata.com",
+    "rows": 7342,
+    "sha256": "c4b9b3ec19390d041d7167adaf1ff6a79f633ae1d5833ca992dc8d23a7a90315"
+  },
+  "syntheticPlaceData": false,
+  "genuineProfileAccessed": false,
+  "installerExecuted": false,
+  "providerBoundary": "Bundled place/coordinate workflow; passive geocoding HTTP observation. Other core startup feeds are unrelated and are not used as place-search evidence.",
+  "queries": [],
+  "flights": [],
+  "screenshots": [
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\place-search\\audit-place-search-after-live-census-result.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\place-search\\audit-place-search-after-live-census-flight.png"
+  ],
+  "errors": [],
+  "pid": 33308,
+  "security": {
+    "isPackaged": true,
+    "version": "0.7.0",
+    "appPath": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+    "userData": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-place-search-after-7j07mE\\profile",
+    "noSandbox": false,
+    "ignoreCertificateErrors": false,
+    "windows": [
+      {
+        "contextIsolation": true,
+        "sandbox": true,
+        "nodeIntegration": false,
+        "webSecurity": true
+      }
+    ]
+  },
+  "liveCensus": {
+    "result": "PASS",
+    "provider": "U.S. Census Geocoder",
+    "evidenceKind": "actual official HTTPS response, passively observed and never replaced",
+    "query": "1600 Pennsylvania Ave NW, Washington, DC 20500",
+    "startedAt": "2026-11-12T02:37:01.894Z",
+    "requestCount": 1,
+    "rawReply": {
+      "path": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-place-search-after-7j07mE\\actual-census-response.json",
+      "bytes": 680,
+      "sha256": "564897002b006ab1e7c68107213ac31a0f61ecf611e0a11c4e52434ee782a88b"
+    },
+    "response": {
+      "host": "geocoding.geo.census.gov",
+      "path": "/geocoder/locations/onelineaddress",
+      "status": 200,
+      "at": "2026-11-12T02:37:02.248Z",
+      "receivedAt": "2026-11-12T02:37:02.424Z"
+    },
+    "publisherMatch": {
+      "label": "1600 PENNSYLVANIA AVE NW, WASHINGTON, DC, 20500",
+      "lat": 38.898702605245,
+      "lon": -77.035189204737
+    },
+    "camera": {
+      "lat": 38.898702605245,
+      "lon": -77.035189204737,
+      "heightM": 1999.9999999987174,
+      "heading": 6.283185307179586,
+      "pitch": -1.5707963267948966
+    },
+    "finishedAt": "2026-11-12T02:37:03.082Z"
+  },
+  "diagnostics": {
+    "cameraHeightM": 1999.9999999987174,
+    "cameraLat": 38.898702605245,
+    "cameraLon": -77.035189204737,
+    "tilesPending": 0,
+    "maxRenderedLevel": 15,
+    "imageryMaxLevelHere": 0,
+    "imageryAtLimit": false,
+    "imageryErrors": 0,
+    "globeShown": true,
+    "renderErrors": 0,
+    "lastRenderError": null,
+    "imageryLayerCount": 0,
+    "photorealLoaded": false,
+    "lastImageryError": null,
+    "basemapSources": [],
+    "terrain": null,
+    "vector": {
+      "requested": 4,
+      "loaded": 4,
+      "failed": 0,
+      "lastError": null,
+      "lastSuccessAt": "2026-11-12T02:37:02.165Z",
+      "overlayOn": false
+    },
+    "usgs": {
+      "noDataTiles": 0,
+      "blankTiles": 0,
+      "imageryTiles": 0,
+      "oceanMasked": 0,
+      "maskUnavailable": 0,
+      "mixedWhiteTiles": 0
+    },
+    "models": {
+      "variants": 0,
+      "loaded": 0,
+      "shown": 0,
+      "created": 0,
+      "removed": 0,
+      "flips": 0,
+      "failed": 0,
+      "textureBytes": [],
+      "lastError": null,
+      "pack": {
+        "state": "none",
+        "models": 0,
+        "rejected": 0,
+        "error": null
+      },
+      "geoid": {
+        "state": "ready",
+        "error": null
+      }
+    },
+    "sea": {
+      "maskedTiles": 0,
+      "maskUnavailable": 0,
+      "unavailableTiles": [],
+      "reasons": {}
+    },
+    "buildings": {
+      "tilesLoaded": 0,
+      "buildingsDrawn": 0,
+      "lastError": null,
+      "visible": false,
+      "enabled": false,
+      "maxCameraM": 4000
+    },
+    "geoSat": {
+      "enabled": false,
+      "product": "infrared",
+      "frames": {},
+      "checks": 0,
+      "failedChecks": 0,
+      "lastError": null,
+      "layers": 0
+    },
+    "missingRequirement": null
+  },
+  "closedByRunner": true,
+  "finishedAt": "2026-11-12T02:37:03.221Z",
+  "archiveStableDuringRun": true
+}

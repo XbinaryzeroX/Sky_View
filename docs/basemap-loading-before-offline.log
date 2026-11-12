@@ -1,0 +1,372 @@
+{
+  "startedAt": "2026-11-12T04:26:28.769Z",
+  "mode": "Chromium offline",
+  "result": "PASS",
+  "asar": "5eacf4b1d1a0c77cba3914ca968d5052d3c6d7d406b79a2883c92ce0a507c682",
+  "views": [
+    {
+      "label": "us",
+      "lat": 38.4,
+      "lon": -99,
+      "heightM": 5200000,
+      "samples": [
+        {
+          "elapsedMs": 138,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 0,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 0,
+            "failed": 4
+          }
+        },
+        {
+          "elapsedMs": 3226,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 0,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 0,
+            "failed": 4
+          }
+        },
+        {
+          "elapsedMs": 6316,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 0,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 0,
+            "failed": 4
+          }
+        },
+        {
+          "elapsedMs": 9412,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 0,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 0,
+            "failed": 4
+          }
+        },
+        {
+          "elapsedMs": 12510,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 0,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 0,
+            "failed": 4
+          }
+        },
+        {
+          "elapsedMs": 15582,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 0,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 0,
+            "failed": 4
+          }
+        }
+      ],
+      "final": {
+        "terrainLevel": null,
+        "layers": [],
+        "visible": 0,
+        "pending": 0,
+        "renderedMax": null,
+        "imageryErrors": 0,
+        "lastError": null,
+        "renderErrors": 0,
+        "terrain": {
+          "requested": 4,
+          "loaded": 0,
+          "failed": 4
+        }
+      },
+      "responses": {
+        "tiles.openfreemap.org net::ERR_INTERNET_DISCONNECTED": 1
+      },
+      "firstResponses": [
+        {
+          "atMs": 138,
+          "path": "/planet",
+          "status": "net::ERR_INTERNET_DISCONNECTED"
+        }
+      ]
+    },
+    {
+      "label": "regional",
+      "lat": 39,
+      "lon": -106,
+      "heightM": 350000,
+      "samples": [
+        {
+          "elapsedMs": 2,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 0,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 0,
+            "failed": 4
+          }
+        },
+        {
+          "elapsedMs": 3127,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 0,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 0,
+            "failed": 4
+          }
+        },
+        {
+          "elapsedMs": 6231,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 0,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 0,
+            "failed": 4
+          }
+        },
+        {
+          "elapsedMs": 9317,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 0,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 0,
+            "failed": 4
+          }
+        }
+      ],
+      "final": {
+        "terrainLevel": null,
+        "layers": [],
+        "visible": 0,
+        "pending": 0,
+        "renderedMax": null,
+        "imageryErrors": 0,
+        "lastError": null,
+        "renderErrors": 0,
+        "terrain": {
+          "requested": 4,
+          "loaded": 0,
+          "failed": 4
+        }
+      },
+      "responses": {
+        "tiles.openfreemap.org net::ERR_INTERNET_DISCONNECTED": 1
+      },
+      "firstResponses": [
+        {
+          "atMs": 2,
+          "path": "/planet",
+          "status": "net::ERR_INTERNET_DISCONNECTED"
+        }
+      ]
+    },
+    {
+      "label": "city",
+      "lat": 39.74,
+      "lon": -104.99,
+      "heightM": 18000,
+      "samples": [
+        {
+          "elapsedMs": 2,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 0,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 0,
+            "failed": 4
+          }
+        },
+        {
+          "elapsedMs": 3148,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 0,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 0,
+            "failed": 4
+          }
+        },
+        {
+          "elapsedMs": 6254,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 0,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 0,
+            "failed": 4
+          }
+        },
+        {
+          "elapsedMs": 9360,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 0,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 0,
+            "failed": 4
+          }
+        },
+        {
+          "elapsedMs": 12464,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 0,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 0,
+            "failed": 4
+          }
+        },
+        {
+          "elapsedMs": 15575,
+          "terrainLevel": null,
+          "layers": [],
+          "visible": 0,
+          "pending": 0,
+          "renderedMax": null,
+          "imageryErrors": 0,
+          "lastError": null,
+          "renderErrors": 0,
+          "terrain": {
+            "requested": 4,
+            "loaded": 0,
+            "failed": 4
+          }
+        }
+      ],
+      "final": {
+        "terrainLevel": null,
+        "layers": [],
+        "visible": 0,
+        "pending": 0,
+        "renderedMax": null,
+        "imageryErrors": 0,
+        "lastError": null,
+        "renderErrors": 0,
+        "terrain": {
+          "requested": 4,
+          "loaded": 0,
+          "failed": 4
+        }
+      },
+      "responses": {
+        "tiles.openfreemap.org net::ERR_INTERNET_DISCONNECTED": 1
+      },
+      "firstResponses": [
+        {
+          "atMs": 0,
+          "path": "/planet",
+          "status": "net::ERR_INTERNET_DISCONNECTED"
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "globeReadyMs": 882,
+  "settings": {
+    "basemap": "atlas",
+    "renderQuality": "balanced",
+    "terrainEnabled": true,
+    "labelsOverlay": true,
+    "radarEnabled": false
+  }
+}

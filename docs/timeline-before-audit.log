@@ -1,0 +1,4 @@
+SMOKE_SCRIPT {"result":"PASS","beforeState":true,"movementOnlyReplay":true,"separateEventHistory":true,"text":"No recorded movement yet. Turn on Aircraft, Vessels or Transit and leave the app running to record positions.Close","timelineRangeBridgePresent":false,"rendererErrors":[]}
+SMOKE_RESULT {"globeReady":true,"errors":[],"locations":0,"alerts":414,"quakes":321,"nws":"ok","usgs":"ok"}
+SMOKE_FEEDS {"nws":"ok","nwsCount":414,"usgs":"ok","usgsCount":325,"nwsErr":null,"usgsErr":null}
+exit=0 screenshot=C:\Users\infob\Documents\Claude\Sky_View\docs\screenshots\timeline\audit-timeline-before.png

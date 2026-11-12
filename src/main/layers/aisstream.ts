@@ -9,7 +9,9 @@ import { aisCog, aisDimensions, aisHeading, aisSog, formatEta, shipTypeLabel, ty
 
 const URL_AIS = 'wss://stream.aisstream.io/v0/stream';
 const TTL_MS = 60 * 60_000;
+const STATIC_TTL_MS = 24 * 60 * 60_000;
 const MAX_VESSELS = 20000;
+const SUBSCRIPTION_INTERVAL_MS = 1000;
 
 export interface AisStatus {
   connected: boolean;
@@ -18,16 +20,20 @@ export interface AisStatus {
   vessels: number;
 }
 
-type WS = { send(d: string): void; close(): void; onopen: (() => void) | null; onmessage: ((e: { data: unknown }) => void) | null; onerror: ((e: unknown) => void) | null; onclose: ((e: { code?: number; reason?: string }) => void) | null };
+type WS = { binaryType?: string; send(d: string): void; close(): void; onopen: (() => void) | null; onmessage: ((e: { data: unknown }) => void) | null; onerror: ((e: unknown) => void) | null; onclose: ((e: { code?: number; reason?: string }) => void) | null };
 
 export class AisStreamClient {
   private ws: WS | null = null;
   private bbox: [number, number, number, number] | null = null;
   private vessels = new Map<string, GeoRecord>();
   /** Static/voyage data (message 5 / 24) keyed by MMSI, merged into positions. */
-  private statics = new Map<string, VesselStatic>();
+  private statics = new Map<string, { data: VesselStatic; receivedAt: number; sourceAt: number }>();
   private retryMs = 5000;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
+  private subscriptionTimer: ReturnType<typeof setTimeout> | null = null;
+  private subscribedBbox: [number, number, number, number] | null = null;
+  private lastSubscriptionAt = -Infinity;
+  private lastPruneAt = -Infinity;
   private stopped = true;
   status: AisStatus = { connected: false, lastMessageAt: null, error: null, vessels: 0 };
 
@@ -38,36 +44,73 @@ export class AisStreamClient {
   ) {}
 
   start(bbox: [number, number, number, number]): void {
+    const [w, s, e, n] = bbox;
+    if (!isValidLon(w) || !isValidLon(e) || !isValidLat(s) || !isValidLat(n) || s > n) return;
     this.stopped = false;
-    const changed = !this.bbox || bbox.some((v, i) => Math.abs(v - this.bbox![i]) > 0.05);
-    this.bbox = bbox;
-    if (!this.ws) this.connect();
-    else if (changed) this.subscribe();
+    this.bbox = [...bbox];
+    // View updates must not bypass a pending reconnect backoff.
+    if (!this.ws && !this.retryTimer) this.connect();
+    else if (!this.subscribedBbox || bbox.some((v, i) => Math.abs(v - this.subscribedBbox![i]) > 0.05)) this.subscribe();
   }
 
   stop(): void {
     this.stopped = true;
     if (this.retryTimer) clearTimeout(this.retryTimer);
     this.retryTimer = null;
-    this.ws?.close();
+    this.cancelSubscription();
+    const ws = this.ws;
     this.ws = null;
+    // Delayed close/open events from this socket cannot affect a later connection.
+    ws?.close();
     this.status = { ...this.status, connected: false };
   }
 
   records(now: number): GeoRecord[] {
-    for (const [k, v] of this.vessels) if (now - Date.parse(v.observedAt ?? '') > TTL_MS) this.vessels.delete(k);
+    this.prune(now);
     this.status.vessels = this.vessels.size;
     return [...this.vessels.values()];
   }
 
+  private prune(now: number): void {
+    for (const [k, v] of this.vessels) if (now - Date.parse(v.observedAt ?? '') > TTL_MS) this.vessels.delete(k);
+    for (const [k, v] of this.statics) if (now - v.receivedAt > STATIC_TTL_MS) this.statics.delete(k);
+    this.lastPruneAt = now;
+  }
+
+  private cancelSubscription(): void {
+    if (this.subscriptionTimer) clearTimeout(this.subscriptionTimer);
+    this.subscriptionTimer = null;
+    this.subscribedBbox = null;
+    this.lastSubscriptionAt = -Infinity;
+  }
+
   private subscribe(): void {
     const key = this.getKey();
-    if (!this.ws || !key || !this.bbox) return;
+    if (!this.ws || !this.status.connected || this.stopped || !key || !this.bbox) return;
+    // AISStream closes connections when subscriptions are replaced more than once per second.
+    // Keep only the latest view while the replacement is waiting.
+    const delay = this.lastSubscriptionAt + SUBSCRIPTION_INTERVAL_MS - Date.now();
+    if (delay > 0) {
+      if (!this.subscriptionTimer) this.subscriptionTimer = setTimeout(() => {
+        this.subscriptionTimer = null;
+        this.subscribe();
+      }, delay);
+      return;
+    }
     const [w, s, e, n] = this.bbox;
-    this.ws.send(JSON.stringify({ APIKey: key, BoundingBoxes: [[[s, w], [n, e]]], FilterMessageTypes: ['PositionReport', 'StandardClassBPositionReport', 'ShipStaticData'] }));
+    const boxes = w <= e ? [[[s, w], [n, e]]] : [[[s, w], [n, 180]], [[s, -180], [n, e]]];
+    try {
+      this.ws.send(JSON.stringify({ APIKey: key, BoundingBoxes: boxes, FilterMessageTypes: ['PositionReport', 'StandardClassBPositionReport', 'ExtendedClassBPositionReport', 'ShipStaticData', 'StaticDataReport'] }));
+      this.lastSubscriptionAt = Date.now();
+      this.subscribedBbox = [...this.bbox];
+    } catch {
+      this.status.error = 'AISStream subscription could not be sent';
+      this.ws.close();
+    }
   }
 
   private connect(): void {
+    if (this.stopped || this.ws) return;
     const key = this.getKey();
     if (!key) {
       this.status = { ...this.status, connected: false, error: 'No AISStream key configured' };
@@ -76,19 +119,26 @@ export class AisStreamClient {
     let ws: WS;
     try {
       ws = this.makeSocket(URL_AIS);
-    } catch (e) {
-      this.status.error = (e as Error).message;
+    } catch {
+      this.status.error = 'AISStream connection could not be opened';
+      this.onChange();
       this.scheduleRetry();
       return;
     }
     this.ws = ws;
+    // The provider sends binary UTF-8 JSON. Node's default Blob cannot be passed to Buffer.from.
+    ws.binaryType = 'arraybuffer';
+    const active = () => this.ws === ws && !this.stopped;
     ws.onopen = () => {
+      if (!active()) return;
       this.status = { ...this.status, connected: true, error: null };
-      this.retryMs = 5000;
+      // A WebSocket handshake alone does not mean the API key/subscription was accepted.
+      // Keep failure backoff until a usable AIS report actually arrives.
       this.subscribe();
       this.onChange();
     };
     ws.onmessage = (ev) => {
+      if (!active()) return;
       try {
         this.handle(JSON.parse(typeof ev.data === 'string' ? ev.data : Buffer.from(ev.data as ArrayBuffer).toString('utf8')));
       } catch {
@@ -96,10 +146,14 @@ export class AisStreamClient {
       }
     };
     ws.onerror = () => {
+      if (!active()) return;
       this.status.error = 'AISStream connection error (check the API key)';
+      this.onChange();
     };
     ws.onclose = (e) => {
+      if (!active()) return;
       this.ws = null;
+      this.cancelSubscription();
       this.status = { ...this.status, connected: false, error: this.status.error ?? (e?.reason ? cleanText(e.reason, 200) : `Connection closed (${e?.code ?? '?'})`) };
       this.onChange();
       if (!this.stopped) this.scheduleRetry();
@@ -123,17 +177,25 @@ export class AisStreamClient {
       return;
     }
     const meta = m?.MetaData ?? {};
-    const mmsi = typeof meta.MMSI === 'number' ? meta.MMSI : null;
+    const mmsi = typeof meta.MMSI === 'number' && Number.isInteger(meta.MMSI) && meta.MMSI > 0 && meta.MMSI <= 999999999 ? meta.MMSI : null;
     if (mmsi === null) return;
     const id = String(mmsi);
     const type = m.MessageType;
     const body = typeof type === 'string' ? m.Message?.[type] : undefined;
-    if (!body) return;
-    const now = new Date().toISOString();
+    if (!body || typeof body !== 'object' || body.Valid === false) return;
+    const nowMs = Date.now();
+    const now = new Date(nowMs).toISOString();
+    if (nowMs - this.lastPruneAt >= 60_000) this.prune(nowMs);
+    const reportedAt = toIso(typeof meta.time_utc === 'string' ? meta.time_utc.replace(' +0000 UTC', 'Z').replace(' ', 'T') : null);
+    const sourceAt = reportedAt ? Date.parse(reportedAt) : nowMs;
+    // A future report must not pin an object in the cache or suppress later real updates.
+    if (sourceAt > nowMs + 5 * 60_000) return;
     this.status.lastMessageAt = now;
     const existing = this.vessels.get(id);
     if (type === 'ShipStaticData' || type === 'StaticDataReport') {
-      const prev = this.statics.get(id) ?? { name: null, shipType: null, destination: null, callSign: null };
+      const cached = this.statics.get(id);
+      if (cached && sourceAt < cached.sourceAt) return;
+      const prev = cached?.data ?? { name: null, shipType: null, destination: null, callSign: null };
       let st: VesselStatic = prev;
       if (type === 'ShipStaticData') {
         const dim = (body.Dimension ?? {}) as Record<string, unknown>;
@@ -147,24 +209,31 @@ export class AisStreamClient {
           imo: typeof body.ImoNumber === 'number' && body.ImoNumber > 0 ? body.ImoNumber : (prev.imo ?? null),
           draughtM: typeof body.MaximumStaticDraught === 'number' && body.MaximumStaticDraught > 0 ? body.MaximumStaticDraught : (prev.draughtM ?? null),
           etaText: formatEta(Number(eta.Month) || 0, Number(eta.Day) || 0, Number(eta.Hour ?? 24), Number(eta.Minute ?? 60)) ?? prev.etaText ?? null,
-          ...aisDimensions(dim.A, dim.B, dim.C, dim.D),
+          ...(body.Dimension ? aisDimensions(dim.A, dim.B, dim.C, dim.D) : {}),
         };
       } else {
         const a = (body.ReportA ?? {}) as Record<string, unknown>;
         const b = (body.ReportB ?? {}) as Record<string, unknown>;
         const dim = (b.Dimension ?? {}) as Record<string, unknown>;
+        const validB = body.ReportB != null && b.Valid !== false;
         st = {
           ...prev,
           name: (a.Valid !== false ? cleanText(a.Name, 60) : null) ?? prev.name,
-          shipType: b.Valid !== false && typeof b.ShipType === 'number' ? b.ShipType : prev.shipType,
-          callSign: (b.Valid !== false ? cleanText(b.CallSign, 12) : null) ?? prev.callSign,
-          ...(b.Valid !== false ? aisDimensions(dim.A, dim.B, dim.C, dim.D) : {}),
+          shipType: validB && typeof b.ShipType === 'number' ? b.ShipType : prev.shipType,
+          callSign: (validB ? cleanText(b.CallSign, 12) : null) ?? prev.callSign,
+          ...(validB && b.Dimension ? aisDimensions(dim.A, dim.B, dim.C, dim.D) : {}),
         };
       }
-      this.statics.set(id, st);
+      // Retain useful metadata without allowing a worldwide subscription to grow forever.
+      this.statics.delete(id);
+      if (this.statics.size >= MAX_VESSELS) this.statics.delete(this.statics.keys().next().value!);
+      this.statics.set(id, { data: st, receivedAt: nowMs, sourceAt });
       if (existing) this.vessels.set(id, this.withStatic(existing, st));
+      this.retryMs = 5000;
       return;
     }
+    if (type !== 'PositionReport' && type !== 'StandardClassBPositionReport' && type !== 'ExtendedClassBPositionReport') return;
+    if (nowMs - sourceAt > TTL_MS || (existing && sourceAt <= Date.parse(existing.observedAt ?? ''))) return;
     const lat = body.Latitude;
     const lon = body.Longitude;
     if (!isValidLat(lat) || !isValidLon(lon)) return;
@@ -179,13 +248,14 @@ export class AisStreamClient {
       speedKts: aisSog(body.Sog),
       label: cleanText(meta.ShipName, 60) ?? existing?.label ?? `MMSI ${mmsi}`,
       category: existing?.category ?? null,
-      observedAt: toIso(typeof meta.time_utc === 'string' ? meta.time_utc.replace(' +0000 UTC', 'Z').replace(' ', 'T') : null) ?? now,
+      observedAt: reportedAt ?? now,
       sourceUrl: 'https://aisstream.io/',
       source: 'AISStream.io (customer key)',
       props: { mmsi, courseDeg: aisCog(body.Cog), headingDeg: aisHeading(body.TrueHeading), navStatus: typeof body.NavigationalStatus === 'number' ? body.NavigationalStatus : null },
     };
     const st = this.statics.get(id);
-    this.vessels.set(id, st ? this.withStatic(rec, st) : rec);
+    this.vessels.set(id, st ? this.withStatic(rec, st.data) : rec);
+    this.retryMs = 5000;
   }
 
   private withStatic(r: GeoRecord, st: VesselStatic): GeoRecord {

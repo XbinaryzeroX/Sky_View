@@ -1,0 +1,395 @@
+{
+  "startedAt": "2026-11-12T04:38:49.959Z",
+  "packageSha256": "c7a61a99bef1b217e37c5300b98a9c28ff1b9e5d8384dfd29875b6f61dd33718",
+  "views": [
+    {
+      "name": "baltic-coast",
+      "lat": 60.104,
+      "lon": 24.947,
+      "h": 700,
+      "pitch": -16,
+      "samples": [
+        {
+          "probedPixels": 467852,
+          "missing": 0,
+          "rendered": 18,
+          "samePairs": 19,
+          "mixedPairs": 12,
+          "worstSameMeters": 0,
+          "worstMixedMeters": 23.44,
+          "exceedsSkirtMeters": 0,
+          "worst": {
+            "mixed": {
+              "dz": 23.44205665588462,
+              "a": [
+                145,
+                21,
+                7
+              ],
+              "b": [
+                582,
+                83,
+                9
+              ],
+              "ha": 69.52252006530867,
+              "hb": 46.08046340942405,
+              "lat": 60.46875,
+              "lon": 24.955444335937507,
+              "au": false,
+              "bu": false
+            },
+            "same": {
+              "dz": 0,
+              "a": [
+                145,
+                21,
+                7
+              ],
+              "b": [
+                146,
+                21,
+                7
+              ],
+              "ha": 89.7315902709961,
+              "hb": 89.7315902709961,
+              "lat": 59.06250000000001,
+              "lon": 25.31249999999999,
+              "au": false,
+              "bu": false
+            }
+          },
+          "skirts": true,
+          "pending": 74,
+          "elapsedTick": 0
+        },
+        {
+          "probedPixels": 467852,
+          "missing": 0,
+          "rendered": 168,
+          "samePairs": 246,
+          "mixedPairs": 74,
+          "worstSameMeters": 0.03,
+          "worstMixedMeters": 50.12,
+          "exceedsSkirtMeters": 2.83,
+          "worst": {
+            "mixed": {
+              "dz": 50.117729187004954,
+              "a": [
+                2328,
+                334,
+                11
+              ],
+              "b": [
+                1163,
+                167,
+                10
+              ],
+              "ha": 162.90469360350113,
+              "hb": 112.78696441649618,
+              "lat": 60.60195922851562,
+              "lon": 24.609374999999993,
+              "au": false,
+              "bu": false
+            },
+            "same": {
+              "dz": 0.02577049795030817,
+              "a": [
+                9326,
+                1356,
+                13
+              ],
+              "b": [
+                9325,
+                1356,
+                13
+              ],
+              "ha": 31.807852887405286,
+              "hb": 31.833623385355594,
+              "lat": 60.18482208251954,
+              "lon": 24.9169921875,
+              "au": false,
+              "bu": false
+            }
+          },
+          "skirts": true,
+          "pending": 43,
+          "elapsedTick": 2
+        },
+        {
+          "probedPixels": 467852,
+          "missing": 0,
+          "rendered": 217,
+          "samePairs": 316,
+          "mixedPairs": 97,
+          "worstSameMeters": 0.03,
+          "worstMixedMeters": 50.12,
+          "exceedsSkirtMeters": 0,
+          "worst": {
+            "same": {
+              "dz": 0.02577049795030817,
+              "a": [
+                9326,
+                1356,
+                13
+              ],
+              "b": [
+                9325,
+                1356,
+                13
+              ],
+              "ha": 31.807852887405286,
+              "hb": 31.833623385355594,
+              "lat": 60.18482208251954,
+              "lon": 24.9169921875,
+              "au": false,
+              "bu": false
+            },
+            "mixed": {
+              "dz": 50.117729187004954,
+              "a": [
+                2328,
+                334,
+                11
+              ],
+              "b": [
+                1163,
+                167,
+                10
+              ],
+              "ha": 162.90469360350113,
+              "hb": 112.78696441649618,
+              "lat": 60.60195922851562,
+              "lon": 24.609374999999993,
+              "au": false,
+              "bu": false
+            }
+          },
+          "skirts": true,
+          "pending": 0,
+          "elapsedTick": 4
+        }
+      ]
+    },
+    {
+      "name": "rainier",
+      "lat": 46.752,
+      "lon": -121.76,
+      "h": 6500,
+      "pitch": -18,
+      "samples": [
+        {
+          "probedPixels": 467852,
+          "missing": 0,
+          "rendered": 55,
+          "samePairs": 72,
+          "mixedPairs": 28,
+          "worstSameMeters": 0,
+          "worstMixedMeters": 489.54,
+          "exceedsSkirtMeters": 0,
+          "worst": {
+            "same": {
+              "dz": 4.547473508864641e-13,
+              "a": [
+                167,
+                119,
+                9
+              ],
+              "b": [
+                167,
+                118,
+                9
+              ],
+              "ha": 2049.6406250000073,
+              "hb": 2049.640625000007,
+              "lat": 48.16406250000001,
+              "lon": -120.9539794921875,
+              "au": false,
+              "bu": false
+            },
+            "mixed": {
+              "dz": 489.5429992675012,
+              "a": [
+                78,
+                56,
+                8
+              ],
+              "b": [
+                38,
+                28,
+                7
+              ],
+              "ha": 949.259277343665,
+              "hb": 459.71627807616375,
+              "lat": 50.438232421875,
+              "lon": -125.15625000000001,
+              "au": false,
+              "bu": false
+            }
+          },
+          "skirts": true,
+          "pending": 92,
+          "elapsedTick": 0
+        },
+        {
+          "probedPixels": 467852,
+          "missing": 0,
+          "rendered": 155,
+          "samePairs": 223,
+          "mixedPairs": 70,
+          "worstSameMeters": 0.42,
+          "worstMixedMeters": 489.54,
+          "exceedsSkirtMeters": 0,
+          "worst": {
+            "same": {
+              "dz": 0.41887233964098414,
+              "a": [
+                2650,
+                1965,
+                13
+              ],
+              "b": [
+                2650,
+                1964,
+                13
+              ],
+              "ha": 2729.31759994289,
+              "hb": 2728.898727603249,
+              "lat": 46.82373046875,
+              "lon": -121.77108764648439,
+              "au": false,
+              "bu": false
+            },
+            "mixed": {
+              "dz": 489.5429992675012,
+              "a": [
+                78,
+                56,
+                8
+              ],
+              "b": [
+                38,
+                28,
+                7
+              ],
+              "ha": 949.259277343665,
+              "hb": 459.71627807616375,
+              "lat": 50.438232421875,
+              "lon": -125.15625000000001,
+              "au": false,
+              "bu": false
+            }
+          },
+          "skirts": true,
+          "pending": 0,
+          "elapsedTick": 2
+        },
+        {
+          "probedPixels": 467852,
+          "missing": 0,
+          "rendered": 155,
+          "samePairs": 223,
+          "mixedPairs": 70,
+          "worstSameMeters": 0.42,
+          "worstMixedMeters": 489.54,
+          "exceedsSkirtMeters": 0,
+          "worst": {
+            "same": {
+              "dz": 0.41887233964098414,
+              "a": [
+                2650,
+                1965,
+                13
+              ],
+              "b": [
+                2650,
+                1964,
+                13
+              ],
+              "ha": 2729.31759994289,
+              "hb": 2728.898727603249,
+              "lat": 46.82373046875,
+              "lon": -121.77108764648439,
+              "au": false,
+              "bu": false
+            },
+            "mixed": {
+              "dz": 489.5429992675012,
+              "a": [
+                78,
+                56,
+                8
+              ],
+              "b": [
+                38,
+                28,
+                7
+              ],
+              "ha": 949.259277343665,
+              "hb": 459.71627807616375,
+              "lat": 50.438232421875,
+              "lon": -125.15625000000001,
+              "au": false,
+              "bu": false
+            }
+          },
+          "skirts": true,
+          "pending": 0,
+          "elapsedTick": 3
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "result": "PASS",
+  "negativeControl": {
+    "probedPixels": 467852,
+    "missing": 467852,
+    "rendered": 155,
+    "samePairs": 223,
+    "mixedPairs": 70,
+    "worstSameMeters": 0.42,
+    "worstMixedMeters": 489.54,
+    "exceedsSkirtMeters": 0,
+    "worst": {
+      "same": {
+        "dz": 0.41887233964098414,
+        "a": [
+          2650,
+          1965,
+          13
+        ],
+        "b": [
+          2650,
+          1964,
+          13
+        ],
+        "ha": 2729.31759994289,
+        "hb": 2728.898727603249,
+        "lat": 46.82373046875,
+        "lon": -121.77108764648439,
+        "au": false,
+        "bu": false
+      },
+      "mixed": {
+        "dz": 489.5429992675012,
+        "a": [
+          78,
+          56,
+          8
+        ],
+        "b": [
+          38,
+          28,
+          7
+        ],
+        "ha": 949.259277343665,
+        "hb": 459.71627807616375,
+        "lat": 50.438232421875,
+        "lon": -125.15625000000001,
+        "au": false,
+        "bu": false
+      }
+    },
+    "skirts": true
+  }
+}

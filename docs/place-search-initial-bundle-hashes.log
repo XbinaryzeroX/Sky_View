@@ -1,0 +1,21 @@
+{
+  "at": "2026-11-12T02:12:52.721Z",
+  "archiveSha256": "a73c47119705d17a325fcdcd84b1b909e02b1dc671108bf812905316c818fee2",
+  "files": [
+    {
+      "path": "dist/renderer/assets/index-BZGwMTtm.js",
+      "bytes": 6895755,
+      "sha256": "ac42617b4740be47dda9d6815c173c6c9fbd1a7128272ff2b4df71a360887cf5"
+    },
+    {
+      "path": "dist/renderer/assets/index-CUnw5lOt.css",
+      "bytes": 72439,
+      "sha256": "baef0757a85791c9d743172dd5475fb4dbcec89caeefaa3c90761a268eb1c550"
+    },
+    {
+      "path": "dist/renderer/assets/placeSearchWorker-Di7oSPS6.js",
+      "bytes": 2253817,
+      "sha256": "ee6c2776508799529b41e9fbdb4ac008d56620040c7f373a71fcb81a9bf9e2bf"
+    }
+  ]
+}

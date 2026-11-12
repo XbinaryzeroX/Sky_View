@@ -1,0 +1,5 @@
+
+[feeds] nws refresh failed (1): Network unavailable or host unreachable
+[feeds] usgs refresh failed (1): Network unavailable or host unreachable
+SMOKE_SCRIPT {"result":"PASS","phase":"offline","sourceMode":"real public NWS/USGS; offline phase uses genuine prior cache","noSavedPlacesRequired":true,"actualPreviewHeadingsAndTablesVisible":true,"frozenHtmlMatchesVisiblePreview":true,"exportedHtmlPaths":["C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\visit\\visit-offline-1.html"],"pendingProviderObserved":false,"controlledPreviewRaceAndRetry":false,"originalLocationBriefingAndIdempotentControls":false,"analystLastVisitRoute":false,"rendererErrors":[]}
+SMOKE_RESULT {"globeReady":true,"errors":[],"locations":1,"alerts":516,"quakes":211,"nws":"error","usgs":"error"}

@@ -1,0 +1,27 @@
+{
+  "result": "FAIL",
+  "baseline": true,
+  "startedAt": "2026-11-12T03:42:44.979Z",
+  "executable": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\flight-card\\win-unpacked\\Atlas Watch.exe",
+  "archiveSha256": "c20fc8e2aab8fd03411b59f927327ebc7483cee7602af18dbf6431996062900c",
+  "source": "Two synthetic ADS-B observations in an isolated profile. Production rendering, selection, provider adapter, tracking and recorded history. No subscription or external aircraft source is used.",
+  "errors": [],
+  "first": {
+    "frames": 3,
+    "changedPoses": 2,
+    "elapsedSec": 2,
+    "planeTravelM": 226.66,
+    "cameraTravelM": 0,
+    "peakStepM": 113.44,
+    "maxReportedFrameGapMs": 1001,
+    "maxCenterErrorPixels": 211.32,
+    "kinds": [
+      "model"
+    ]
+  },
+  "failure": {
+    "stage": "click Follow and measure drawn model and camera",
+    "message": "The aircraft moved in discrete polling steps"
+  },
+  "finishedAt": "2026-11-12T03:42:54.047Z"
+}

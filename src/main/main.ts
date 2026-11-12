@@ -8,7 +8,8 @@ import { join } from 'node:path';
 import { buildBriefing } from '../shared/briefing';
 import { IPC, ipcArgSchemas, type InvokeChannel } from '../shared/ipc';
 import { AppCore } from './core';
-import { FeedHttpError, fetchJson as realFetchJson, fetchText as realFetchText, type FetchJson, type FetchText } from './feeds/http';
+import { FeedHttpError, fetchDwdArchive, fetchJson as realFetchJson, fetchText as realFetchText, type FetchJson, type FetchText } from './feeds/http';
+import { DwdSource } from './layers/dwdSource';
 import { AisStreamClient } from './layers/aisstream';
 import { LayerManager } from './layers/manager';
 import { makeAisTester, ProviderService } from './providerService';
@@ -61,12 +62,25 @@ function scheduleLayerEmit(id: LayerId): void {
   }, 150);
 }
 
-async function openTextFile(filters: { name: string; extensions: string[] }[]): Promise<string | null> {
+async function openTextFile(filters: { name: string; extensions: string[] }[], maxBytes = 20 * 1024 * 1024): Promise<string | null> {
   const res = mainWindow ? await dialog.showOpenDialog(mainWindow, { properties: ['openFile'], filters }) : await dialog.showOpenDialog({ properties: ['openFile'], filters });
   if (res.canceled || !res.filePaths[0]) return null;
   const st = await (await import('node:fs/promises')).stat(res.filePaths[0]);
-  if (st.size > 20 * 1024 * 1024) throw new Error('File is larger than 20 MB.');
-  return readFile(res.filePaths[0], 'utf8');
+  if (!st.isFile()) throw new Error('Choose a local regular text file.');
+  if (st.size > maxBytes) throw new Error(`File is larger than ${maxBytes / (1024 * 1024)} MiB.`);
+  // Read at most the limit plus one byte even if the file grows after stat.
+  const file = await (await import('node:fs/promises')).open(res.filePaths[0], 'r');
+  try {
+    const buffer = Buffer.alloc(maxBytes + 1);
+    let size = 0;
+    while (size <= maxBytes) {
+      const { bytesRead } = await file.read(buffer, size, buffer.length - size, null);
+      if (bytesRead === 0) break;
+      size += bytesRead;
+    }
+    if (size > maxBytes) throw new Error(`File is larger than ${maxBytes / (1024 * 1024)} MiB.`);
+    return new TextDecoder('utf-8', { fatal: true }).decode(buffer.subarray(0, size));
+  } finally { await file.close(); }
 }
 
 function scheduleStateEmit(): void {
@@ -226,6 +240,10 @@ app.whenReady().then(async () => {
 
   const secrets = new SecretStore(store, safeStorage);
   const providers = new ProviderService(store, secrets, fetchJson, fetchText, ua, makeAisTester());
+  const dwd = new DwdSource(store, devHooks && process.env.ATLAS_WATCH_SIMULATE_OFFLINE === '1'
+    ? async () => { throw new FeedHttpError('Simulated offline', null, null, 'network'); }
+    : fetchDwdArchive, () => buildUserAgent(version, ''), () => new Date());
+  providers.dwd = dwd;
   const markets = new MarketService(secrets, () => core!.settings, store, providers.credentials);
   providers.marketService = markets;
   const lemmy = new LemmyService(secrets, () => core!.settings);
@@ -233,6 +251,7 @@ app.whenReady().then(async () => {
   setRendererRemoteOptions(remoteOptions());
   const ais = new AisStreamClient(() => secrets.get('aisstream'), () => scheduleLayerEmit('vessels'));
   layers = new LayerManager({
+    dwd,
     store,
     fetchJson,
     fetchText,

@@ -2,14 +2,46 @@
 import type { Settings } from '../shared/types';
 import {
   normalizeCandles, normalizeQuote, normalizeSearch, rangeSpec, newsQuery, parseGdelt, buildMarketPrompt,
-  type MarketProvider, type MarketRange, type MarketResult,
+  equityNewsUrl, MOST_ACTIVE_URL, normalizeMostActive, type Headline,
+  type MarketProvider, type MarketRange, type MarketResult, type TrendingMarkets,
 } from '../shared/markets';
-import { registerFeedLinks } from '../shared/sanitize';
+import { observedFeedUrl, registerFeedLinks } from '../shared/sanitize';
+import { MAX_RSS, readItems } from './feeds/rss';
 import { fetchJson, fetchText } from './feeds/http';
 import { redactSecrets, type SecretStore } from './secrets';
 import { getAiStatus, ollamaEndpoint } from './ollama';
 import { CredentialService, type Credential } from './credentials';
 import type { AtlasStore } from './store';
+
+function previewText(raw: string, limit: number): string {
+  const text = raw.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/\s+/g, ' ').trim();
+  if (text.length <= limit) return text;
+  return text.slice(0, limit - 1).replace(/\s+\S*$/, '') + '…';
+}
+
+/** Keep the publisher's teaser separate from the headline. RSS content is rendered as plain text. */
+export function parseEquityNews(xml: string, symbol: string, name: string | null): Headline[] {
+  equityNewsUrl(symbol);
+  const channel = new RegExp('^Yahoo!? Finance: ' + symbol.replace(/\./g, '\\.') + ' News$', 'i');
+  const rows = new Map<string, Headline>();
+  for (const item of readItems(xml, channel)) {
+    const title = previewText(item.title?.[0] ?? '', 300);
+    const summary = previewText(item.description?.[0] ?? '', 450);
+    const url = observedFeedUrl(item.link?.[0] ?? '');
+    const time = Date.parse(item.pubDate?.[0] ?? '');
+    if (!title || !url || !Number.isFinite(time) || rows.has(url.href)) continue;
+    rows.set(url.href, { title, summary: summary && summary !== title ? summary : null,
+      url: url.href, domain: url.hostname, seenAt: new Date(time).toISOString() });
+  }
+  // A ticker feed also contains market-wide roundups. Show explicit mentions ahead of those broader stories.
+  const words = (value: string) => ' ' + value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim() + ' ';
+  const company = words((name ?? '').replace(/\b(?:class [a-z]|incorporated|corporation|corp|holdings?|inc|limited|ltd|plc|oyj)\b/gi, ' '));
+  const ticker = new RegExp('(?:^|[^A-Za-z0-9])' + symbol.replace(/\./g, '\\.') + '(?:$|[^A-Za-z0-9])');
+  const mentions = (text: string) => (company.trim().length > 2 && words(text).includes(company)) || ticker.test(text);
+  const relevance = (row: Headline) => mentions(row.title) ? 2 : mentions(row.summary ?? '') ? 1 : 0;
+  return [...rows.values()].sort((a, b) => relevance(b) - relevance(a) || b.seenAt.localeCompare(a.seenAt)).slice(0, 12);
+}
 
 export class MarketService {
   private cache = new Map<string, { expires: number; value: unknown }>();
@@ -168,7 +200,27 @@ export class MarketService {
     return this.request(provider, 'quote', provider === 'twelvedata' ? 'AAPL' : 'IBM', undefined, normalizeQuote);
   }
 
-  news(symbol: string, name: string | null) {
+  trending(): Promise<TrendingMarkets> {
+    return this.cached('trending:us:volume', 5 * 60_000, async () => {
+      const response = await fetchJson(MOST_ACTIVE_URL, { maxBytes: 1024 * 1024, timeoutMs: 10_000, rejectRedirects: true,
+        headers: { Accept: 'application/json', 'User-Agent': 'AtlasWatch/0.7.0' } });
+      if (response.status !== 200) throw new Error('Yahoo Finance did not return a complete ranking.');
+      return { items: normalizeMostActive(response.body), source: 'Yahoo Finance', fetchedAt: new Date().toISOString() };
+    });
+  }
+
+  async news(symbol: string, name: string | null, selection?: 'trending') {
+    if (selection === 'trending') {
+      const url = equityNewsUrl(symbol);
+      const result = await this.cached('news:yahoo:' + symbol, 15 * 60_000, async () => {
+        const response = await fetchText(url, { maxBytes: MAX_RSS, timeoutMs: 10_000, rejectRedirects: true,
+          headers: { Accept: 'application/rss+xml, application/xml', 'User-Agent': 'AtlasWatch/0.7.0' } });
+        if (response.status !== 200) throw new Error('Yahoo Finance did not return a complete news feed.');
+        return { articles: parseEquityNews(response.text, symbol, name), source: 'Yahoo Finance', fetchedAt: new Date().toISOString() };
+      });
+      registerFeedLinks(result.articles.map(article => article.url));
+      return result;
+    }
     const query = newsQuery(symbol, name);
     return this.cached(`news:${query}`, 900000, async () => {
       if (this.newsQueued >= 10) throw new Error('GDELT request queue is full; try again shortly.');
@@ -197,7 +249,7 @@ export class MarketService {
           }
         }
         registerFeedLinks(articles.map(article => article.url));
-        return { articles, fetchedAt: new Date().toISOString() };
+        return { articles, source: 'GDELT Project', fetchedAt: new Date().toISOString() };
       }).finally(() => { this.newsQueued--; });
       this.newsTail = run;
       return run;

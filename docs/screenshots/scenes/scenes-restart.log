@@ -1,0 +1,6 @@
+
+[feeds] nws refresh failed (1): Network unavailable or host unreachable
+[feeds] usgs refresh failed (1): Network unavailable or host unreachable
+SMOKE_SCRIPT {"result":"PASS","restartOffline":true,"unavailableMessage":"There is no valid recorded reply for this source at the selected time.","selectedIdAfterClear":"us7000txc3","checks":{"quakeRestore":true,"alertRestore":true,"exactCameraAndCursor":true,"filtersAndImageryRuntimeRoundTrip":true,"closedDataRemainsClosed":true,"archiveClearedOnlyInTempProfile":true,"unavailableKeepsClockAndSelection":true,"noLiveSubstitution":true,"privateLocationPreserved":true},"rendererErrors":[]}
+SMOKE_RESULT {"globeReady":true,"errors":[],"locations":1,"alerts":410,"quakes":160,"nws":"error","usgs":"error"}
+SCENES_GIBS_REQUESTS 0

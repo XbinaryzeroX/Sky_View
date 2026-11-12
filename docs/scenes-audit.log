@@ -1,0 +1,371 @@
+{
+  "result": "PASS",
+  "initial": {
+    "result": "PASS",
+    "checks": {
+      "actualSupportedSources": true,
+      "saveFromRecordedDataInPlace": true,
+      "exactRecordedCursorAndSelection": true,
+      "actualMapRestored": true,
+      "filtersAndPublicImageryRestored": true,
+      "liveQueryUnaffectedByRecordedRestore": true,
+      "actualMode2dAnd3dRestore": true,
+      "closedDataRemainsClosed": true,
+      "exportImportV2": true,
+      "v1Compatible": true,
+      "legacyViewPreservesContext": true,
+      "liveDistinctFromRecorded": true,
+      "panelsAboveReplayAndControlsReachable": true
+    },
+    "recordedSaveLayout": {
+      "scenesBottom": 630,
+      "dataBottom": 630,
+      "playbackTop": 636.609375,
+      "saveInputAndButtonReachable": true,
+      "exportReachableWithPanelScroll": true,
+      "dataCloseReachable": true
+    },
+    "recordedNwsLayout": {
+      "scenesBottom": 630,
+      "dataBottom": 630,
+      "playbackTop": 636.609375,
+      "saveInputAndButtonReachable": true,
+      "exportReachableWithPanelScroll": true,
+      "dataCloseReachable": true
+    },
+    "actualObservedAt": {
+      "nws": "2026-11-11T17:18:46.265Z",
+      "usgs": "2026-11-11T17:18:45.978Z"
+    },
+    "actualSourceUpdatedAt": {
+      "nws": "2026-11-11T17:15:06.000Z",
+      "usgs": "2026-11-11T17:18:30.000Z"
+    },
+    "selectedRecords": [
+      {
+        "kind": "quake",
+        "id": "us7000txc3",
+        "mag": 5.2,
+        "lat": -20.7528,
+        "lon": 68.4755
+      },
+      {
+        "kind": "alert",
+        "id": "urn:oid:2.49.0.1.840.0.27c4a3005b47304126e42a25d6cb6d3b48d027c6.002.1",
+        "sent": "2026-11-11T14:33:00.000Z"
+      }
+    ],
+    "inactiveRecordedQuery": {
+      "quakeWindow": "day",
+      "quakeMinMagnitude": -1
+    },
+    "activeLiveQueryAfterMove": {
+      "quakeWindow": "week",
+      "quakeMinMagnitude": 3.5
+    },
+    "quakeView": {
+      "id": "26a4cb2e-50cf-4037-88d5-961a3e372b9a",
+      "name": "QA recorded USGS investigation",
+      "camera": {
+        "lat": -20.75280000000001,
+        "lon": 68.47549999999998,
+        "heightM": 999999.9999996247,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "basemap": "neutral",
+      "layersEnabled": [],
+      "createdAt": "2026-11-11T17:18:51.299Z",
+      "terrainEnabled": false,
+      "visualMode": "normal",
+      "investigation": {
+        "version": 1,
+        "clock": {
+          "mode": "recorded",
+          "t": "2026-11-11T17:18:46.265Z"
+        },
+        "selection": {
+          "kind": "quake",
+          "id": "us7000txc3"
+        },
+        "severityFilter": [
+          "Severe"
+        ],
+        "alertsAffectingOnly": true,
+        "quakesNearLocationsOnly": false,
+        "quakeWindow": "day",
+        "quakeMinMagnitude": -1,
+        "layers": {
+          "alerts": true,
+          "quakes": true,
+          "locations": false,
+          "radii": false,
+          "boundaries": true
+        },
+        "sceneMode": "3d",
+        "dataOpen": true,
+        "hudOn": true,
+        "showAirports": false,
+        "imagery": {
+          "product": "True color|MODIS_Terra_CorrectedReflectance_TrueColor",
+          "date": "2020-07-01",
+          "compare": true,
+          "compareDate": "2020-07-08",
+          "opacity": 0.55,
+          "split": 0.34
+        }
+      }
+    },
+    "alertView": {
+      "id": "f3d1fb38-5c99-44cf-b5cd-8b7c43f5bfac",
+      "name": "QA recorded NWS investigation in 2D",
+      "camera": {
+        "lat": 29.86000000000003,
+        "lon": -101.06571428571428,
+        "heightM": 1499999.9999988852,
+        "heading": 6.283185302212415,
+        "pitch": -1.5707963267948966
+      },
+      "basemap": "neutral",
+      "layersEnabled": [],
+      "createdAt": "2026-11-11T17:18:55.988Z",
+      "terrainEnabled": false,
+      "visualMode": "normal",
+      "investigation": {
+        "version": 1,
+        "clock": {
+          "mode": "recorded",
+          "t": "2026-11-11T17:18:46.265Z"
+        },
+        "selection": {
+          "kind": "alert",
+          "id": "urn:oid:2.49.0.1.840.0.27c4a3005b47304126e42a25d6cb6d3b48d027c6.002.1"
+        },
+        "severityFilter": [
+          "Severe"
+        ],
+        "alertsAffectingOnly": false,
+        "quakesNearLocationsOnly": false,
+        "quakeWindow": "day",
+        "quakeMinMagnitude": -1,
+        "layers": {
+          "alerts": true,
+          "quakes": true,
+          "locations": false,
+          "radii": false,
+          "boundaries": true
+        },
+        "sceneMode": "2d",
+        "dataOpen": true,
+        "hudOn": false,
+        "showAirports": false,
+        "imagery": {
+          "product": "True color|MODIS_Terra_CorrectedReflectance_TrueColor",
+          "date": "2020-07-01",
+          "compare": true,
+          "compareDate": "2020-07-08",
+          "opacity": 0.55,
+          "split": 0.34
+        }
+      }
+    },
+    "closedView": {
+      "id": "ebeca5b1-faef-48fb-8d49-383cc5db79ce",
+      "name": "QA recorded investigation with Data closed",
+      "camera": {
+        "lat": -20.75280000000001,
+        "lon": 68.47549999999998,
+        "heightM": 999999.9999996247,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "basemap": "neutral",
+      "layersEnabled": [],
+      "createdAt": "2026-11-11T17:18:52.538Z",
+      "terrainEnabled": false,
+      "visualMode": "normal",
+      "investigation": {
+        "version": 1,
+        "clock": {
+          "mode": "recorded",
+          "t": "2026-11-11T17:18:46.265Z"
+        },
+        "selection": {
+          "kind": "quake",
+          "id": "us7000txc3"
+        },
+        "severityFilter": [
+          "Severe"
+        ],
+        "alertsAffectingOnly": true,
+        "quakesNearLocationsOnly": false,
+        "quakeWindow": "day",
+        "quakeMinMagnitude": -1,
+        "layers": {
+          "alerts": true,
+          "quakes": true,
+          "locations": false,
+          "radii": false,
+          "boundaries": true
+        },
+        "sceneMode": "3d",
+        "dataOpen": false,
+        "hudOn": true,
+        "showAirports": false,
+        "imagery": {
+          "product": "True color|MODIS_Terra_CorrectedReflectance_TrueColor",
+          "date": "2020-07-01",
+          "compare": true,
+          "compareDate": "2020-07-08",
+          "opacity": 0.55,
+          "split": 0.34
+        }
+      }
+    },
+    "liveView": {
+      "id": "5863d354-b907-499b-856f-721d7a921cdb",
+      "name": "QA separate live investigation",
+      "camera": {
+        "lat": -33.90000000000001,
+        "lon": 18.4,
+        "heightM": 1999999.9999989872,
+        "heading": 6.283185307179586,
+        "pitch": -1.5707963267948966
+      },
+      "basemap": "neutral",
+      "layersEnabled": [],
+      "createdAt": "2026-11-11T17:18:59.061Z",
+      "terrainEnabled": false,
+      "visualMode": "normal",
+      "investigation": {
+        "version": 1,
+        "clock": {
+          "mode": "live"
+        },
+        "selection": null,
+        "severityFilter": [
+          "Severe"
+        ],
+        "alertsAffectingOnly": false,
+        "quakesNearLocationsOnly": false,
+        "quakeWindow": "week",
+        "quakeMinMagnitude": 3.5,
+        "layers": {
+          "alerts": true,
+          "quakes": true,
+          "locations": false,
+          "radii": false,
+          "boundaries": true
+        },
+        "sceneMode": "3d",
+        "dataOpen": false,
+        "hudOn": false,
+        "showAirports": false,
+        "imagery": {
+          "product": null,
+          "date": "2020-08-01",
+          "compare": false,
+          "compareDate": "2020-08-08",
+          "opacity": 1,
+          "split": 0.5
+        }
+      }
+    },
+    "rendererErrors": []
+  },
+  "restarted": {
+    "result": "PASS",
+    "restartOffline": true,
+    "unavailableMessage": "There is no valid recorded reply for this source at the selected time.",
+    "selectedIdAfterClear": "us7000txc3",
+    "checks": {
+      "quakeRestore": true,
+      "alertRestore": true,
+      "exactCameraAndCursor": true,
+      "filtersAndImageryRuntimeRoundTrip": true,
+      "closedDataRemainsClosed": true,
+      "archiveClearedOnlyInTempProfile": true,
+      "unavailableKeepsClockAndSelection": true,
+      "noLiveSubstitution": true,
+      "privateLocationPreserved": true
+    },
+    "rendererErrors": []
+  },
+  "nativeFileDialogInteraction": false,
+  "fileDialogAdapter": "TEMP chooser/save results only",
+  "publicGibsProduct": {
+    "product": "True color|MODIS_Terra_CorrectedReflectance_TrueColor",
+    "date": "2020-07-01",
+    "compare": true,
+    "compareDate": "2020-07-08",
+    "opacity": 0.55,
+    "split": 0.34
+  },
+  "rendererGibsRequests": 0,
+  "actualSourceSelectionValuesVerified": true,
+  "sourceAudit": [
+    {
+      "requestUrl": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+      "httpStatus": 200,
+      "responseDate": "Wed, 11 Nov 2026 17:18:30 GMT",
+      "receivedAt": "2026-11-11T17:18:45.975Z",
+      "sourceUpdatedAt": "2026-11-11T17:18:30.000Z",
+      "sourceTimestampField": "USGS metadata.generated",
+      "featureCount": 204,
+      "payloadSha256": "9ae71db33be67d674af18da02dce26e0b528253740a4e983bc9093d485bda910"
+    },
+    {
+      "requestUrl": "https://api.weather.gov/alerts/active?status=actual",
+      "httpStatus": 200,
+      "responseDate": "Wed, 11 Nov 2026 17:18:45 GMT",
+      "receivedAt": "2026-11-11T17:18:46.253Z",
+      "sourceUpdatedAt": "2026-11-11T17:15:06.000Z",
+      "sourceTimestampField": "NWS updated",
+      "featureCount": 410,
+      "payloadSha256": "b90988a50ab64f4d9ed8134fa97c61832976c0d897102b8b12960c30ab789f97"
+    },
+    {
+      "requestUrl": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_week.geojson",
+      "httpStatus": 200,
+      "responseDate": "Wed, 11 Nov 2026 17:17:59 GMT",
+      "receivedAt": "2026-11-11T17:18:58.650Z",
+      "sourceUpdatedAt": "2026-11-11T17:17:59.000Z",
+      "sourceTimestampField": "USGS metadata.generated",
+      "featureCount": 324,
+      "payloadSha256": "a0101ada0e4e6350623d72252959945538b1d334bea929ca07e22199516a291c"
+    }
+  ],
+  "builtAssetsUnchanged": true,
+  "assetSha256": {
+    "dist/main/main.cjs": "818a46887ad20eaed6e21c09e1fa4fb92566416ed850835917684a82256310df",
+    "dist/preload/preload.cjs": "1b3f2eb762b2a7b0e8a80e8af7229afaccd5d60bb162500994c7c9fd5db2c957",
+    "dist/renderer/index.html": "7506d76866b8b154dafd493942b4bd083e593e934b70c8085804544d0cd26328",
+    "dist/renderer/assets/index-DMAVxYj4.js": "b3a36a38ab948f84b005189ef7a46ce5c559c2674a6916ffb48f7cd1537c4a7e",
+    "dist/renderer/assets/index-C2YhFTUq.css": "3818672609b252fd4f677ab74d5660b08f9811668640a6a68b51532b2e611a6a"
+  },
+  "exportVersion": 2,
+  "exportSha256": "c050b663ae79b3a9c951fffd14736ebcbba66c2732f0c6f6efc29a80bec19c7f",
+  "session": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-scenes-ui-zrE1tq",
+  "output": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\scenes",
+  "runtimeCameraCheckpointAudit": {
+    "count": 8,
+    "maximumAbsoluteError": {
+      "latitudeDegrees": 1.4210854715202004e-14,
+      "longitudeDegrees": 0,
+      "heightMeters": 0.0000011147931218147278,
+      "headingRadians": 0,
+      "pitchRadians": 0
+    }
+  },
+  "screenshots": {
+    "before": "screenshots/scenes/audit-scenes-before-restored.png",
+    "overlapBeforeFix": "screenshots/scenes/audit-scenes-overlap-before-fix.png",
+    "recordedSave": "screenshots/scenes/audit-scenes-recorded-save.png",
+    "recordedNws2d": "screenshots/scenes/audit-scenes-recorded-nws-save.png",
+    "restored": "screenshots/scenes/audit-scenes-restored-recorded.png",
+    "closedData": "screenshots/scenes/audit-scenes-closed-data.png",
+    "offlineRestart": "screenshots/scenes/audit-scenes-restart.png",
+    "archiveUnavailable": "screenshots/scenes/audit-scenes-unavailable.png"
+  },
+  "visualReview": "Final recorded-save, 2D NWS-save, closed-Data and unavailable screenshots inspected; both panels clear Replay and text/controls are readable."
+}

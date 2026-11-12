@@ -4,7 +4,7 @@ import { FeedHttpError } from '../src/main/feeds/http';
 import type { AlertSource, QuakeSource } from '../src/main/feeds/sources';
 import { AtlasStore } from '../src/main/store';
 import { normalizeNwsAlerts, normalizeUsgsFeed } from '../src/shared/normalize';
-import type { LocationZones } from '../src/shared/types';
+import type { FeedCoverage, LocationZones } from '../src/shared/types';
 import { fixture, tempDbPath } from './helpers';
 
 class Clock {
@@ -35,6 +35,43 @@ function sources(state: { failAlerts?: Error | null; failQuakes?: Error | null; 
 }
 
 describe('feed failures and cached data', () => {
+  it.each(['nws', 'usgs'] as const)('withholds %s refresh change totals when either reply was partial, then resumes on two complete replies', async (feed) => {
+    const clock = new Clock();
+    const src = sources({});
+    const alert = normalizeNwsAlerts(fixture('nws-alerts.json')).alerts[0];
+    const quake = normalizeUsgsFeed(fixture('usgs-week.json')).quakes[0];
+    const full: FeedCoverage = { completeness: 'complete', skippedRecords: 0, note: null };
+    const partial: FeedCoverage = { completeness: 'partial', skippedRecords: 0, note: 'Only a subset was received.' };
+    let coverage = full;
+    let include = true;
+    src.alertSource.fetchActiveAlerts = async () => ({ alerts: include ? [alert] : [], skipped: 0, sourceUpdatedAt: null, coverage });
+    src.quakeSource.fetchRecent = async () => ({ quakes: include ? [quake] : [], skipped: 0, sourceUpdatedAt: null, coverage, feedKey: '2.5_week' });
+    const store = new AtlasStore(tempDbPath());
+    const core = new AppCore({ store, ...src, now: clock.now });
+    try {
+      core.init();
+      await core.refresh(feed);
+      clock.advance(60_000);
+      include = false;
+      coverage = partial;
+      await core.refresh(feed);
+      expect(core.diffs[feed]).toMatchObject({ unavailableReason: expect.stringContaining('latest'), removed: [] });
+      clock.advance(60_000);
+      include = true;
+      coverage = full;
+      await core.refresh(feed);
+      expect(core.diffs[feed]).toMatchObject({ unavailableReason: expect.stringContaining('earlier'), added: [] });
+      clock.advance(60_000);
+      include = false;
+      await core.refresh(feed);
+      expect(core.diffs[feed]!.unavailableReason).toBeUndefined();
+      expect(core.diffs[feed]!.removed).toEqual([feed === 'nws' ? alert.id : quake.id]);
+    } finally {
+      core.stop();
+      store.close();
+    }
+  });
+
   it('keeps last-known data with its original retrieval time when a refresh fails', async () => {
     const clock = new Clock();
     const st: { failAlerts: Error | null } = { failAlerts: null };
@@ -128,7 +165,7 @@ describe('location monitoring end to end', () => {
     await core.runZoneQueue();
     const ev = core.evaluations[tulsa.id];
     expect(ev.alertsInside.map((m) => m.alertId)).toEqual(['urn:oid:fixture.zone.1']);
-    expect(ev.alertsUnknown).toHaveLength(0);
+    expect(ev.alertsUnknown.map(match => match.alertId)).toEqual(['urn:oid:fixture.badgeom']);
   });
 
   it('applies the magnitude filter and per-location radius', async () => {

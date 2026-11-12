@@ -1,0 +1,130 @@
+{
+  "result": "PASS",
+  "phase": "after",
+  "startedAt": "2026-11-12T00:30:27.972Z",
+  "executable": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\Atlas Watch.exe",
+  "archive": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+  "archiveSha256": "BE2589191190D82C4155DFC4B091E819F2BCD56273450035EF315E76E9394FAB",
+  "framework": "playwright-core 1.62.1",
+  "frameworkSource": "bundled Codex runtime; no application dependency added",
+  "documentation": "https://playwright.dev/docs/api/class-electron",
+  "chromiumSandbox": true,
+  "bypassCSP": false,
+  "ignoreHTTPSErrors": false,
+  "isolatedInstrumentedProcess": true,
+  "normalUninstrumentedLaunch": false,
+  "profile": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-packaged-playwright-after-L34xfJ\\profile",
+  "database": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-packaged-playwright-after-L34xfJ\\live.sqlite",
+  "genuineProfileAccessed": false,
+  "installerExecuted": false,
+  "nativePickerOperated": false,
+  "defaultBrowserOpened": false,
+  "checks": {
+    "packagedArchive": true,
+    "isolatedProfile": true,
+    "securityPreserved": true,
+    "noActiveSmokeActions": true,
+    "dataToBriefing": true,
+    "renderedVisitReport": true,
+    "emptyLocationModeExplicit": true,
+    "renderedLocationReport": true
+  },
+  "screenshots": [
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\packaged-playwright\\after-visit.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\packaged-playwright\\after-location.png"
+  ],
+  "errors": [],
+  "pid": 39300,
+  "security": {
+    "isPackaged": true,
+    "appPath": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+    "userData": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-packaged-playwright-after-L34xfJ\\profile",
+    "noSandbox": false,
+    "disableWebSecurity": false,
+    "ignoreCertificateErrors": false,
+    "testEnvironmentNames": [
+      "ATLAS_WATCH_DB"
+    ],
+    "instrumentedArguments": [
+      "--inspect=0",
+      "--remote-debugging-port=0",
+      "--user-data-dir=C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-packaged-playwright-after-L34xfJ\\profile"
+    ],
+    "windows": [
+      {
+        "contextIsolation": true,
+        "sandbox": true,
+        "nodeIntegration": false,
+        "webSecurity": true,
+        "url": "app://atlas/index.html"
+      }
+    ]
+  },
+  "renderer": {
+    "url": "app://atlas/index.html",
+    "requireType": "undefined",
+    "processType": "undefined",
+    "passiveSmokeStatusPresent": true,
+    "smokeFunctionNames": [],
+    "smokeStatusKeys": [
+      "globeReady",
+      "errors",
+      "locations",
+      "alerts",
+      "quakes",
+      "nws",
+      "usgs"
+    ]
+  },
+  "smokeHookLimit": "The package exposes passive renderer status counters under __atlasSmoke; no callable actions were present. Main smoke/offline/script execution is guarded by app.isPackaged and no enabling environment variables were passed.",
+  "visitBriefing": {
+    "heading": "Atlas Watch — Since last visit",
+    "excerpt": "Atlas Watch — Since last visit\nGenerated Nov 11, 2026, 7:30 PM EST (2026-11-12 00:30 UTC) · Atlas Watch 0.7.0\nThis compares recorded source replies from two visits. It is not a complete log of events while Atlas Watch was closed, an official warning, or an estimate of shaking, damage or safety.\n\nCurrent visit started: Nov 11, 2026, 7:30:28 PM EST\n2026-11-12T00:30:28.123Z\nPrevious visit started: Unknown\nComparison data generated: Nov 11, 2026, 7:30:31 PM EST\n2026-11-12T00:30:31.114Z\n\nNo previous visit baseline is available. Unknown change totals are not zero changes.\nRECORDED ENDPOINT CHANGES\nSource\tNew\tUpdated\tNo longer returned\nNWS active alerts\tUnknown\tUnknown\tUnknown\nUSGS earthquakes\tUnknown\tUnknown\tUnknown\n\nTotals compare distinct source IDs in two recorded replies, not every intervening revision. Unknown is not zero: missing, partial, pruned or differently scoped evidence can prevent comparison. Expired endpoints may support qualified endpoint counts, not continuous coverage. Per-source status and limits below apply to these counts.\n\nNATIONAL WEATHER SERVICE — ACTIVE ALERTS (API.WEATHER.GOV)\n\nComparison unavailable\n\nEvidence\tBaseline\tCurrent\nState\tunavailable\nNo earlier tracked app visit exists. Earlier cache/history is not backfilled into a visit.\n\trecorded\nApp observation\tUnknown\tNov 11, 2026, 7:30:28 PM EST\n2026-11-12T00:30:28.640Z\nSource update\tUnknown\tNov 11, 2026, 7:30:00 PM EST\n2026-11-12T00:30:00.000Z\nScope\tUnknown\tactive-US\nReply members\tUnknown\t511\nFrame validity limit\tUnknown\tNov 11, 2026, 7:40:28 PM EST\n2026-11-12T00:40:28.640Z\nThis is the first tracked app visit.\nUSGS EARTHQUAKE HAZARDS PROGRAM — GEOJSON SUMMARY FEED\n\nComparison unavailable\n\nEvidence\tBaseline\tCurrent\nState\tunavailable\nNo earlier tracked app visit exists. Earlier cache/history is not backfilled into a visit.\n\trecorded\nApp observation\tUnknown\tNov 11, 2026, 7:30:28 PM EST\n2026-11-12T00:30:28.246Z\nSource update\tUnknown\tNov 11, 2026, 7:29:59 PM EST\n2026-11-12T00:29:59.000Z\nScope\tUnknown\t2.5_week\nReply members\tUnknown\t335\nFrame validity limit\tUnknown\tNov 11, 2026, 7:45:28 PM EST\n2026-11-12T00:45:28.246Z\nThis is the first tracked app visit.\nINTERPRETATION AND SOURCES\n\nNo longer returned means only absent from the current recorded reply. It does not establish that an event ended, was cancelled or resolved, or that conditions are safe. Rolling feed windows and source revisions can remove identifiers.\n\nUSGS coverage follows the recorded summary window and magnitude bucket. NWS active-alert coverage is the United States and its territories. The app may have missed changes between observations or while closed; only successful recorded replies support current endpoint evidence.\n\nWeather alerts: National Weather Service / NOAA. Earthquakes: USGS Earthquake Hazards Program. Publisher record links appear with retained examples when available. Deterministic templates; no AI was used."
+  },
+  "manualTestLocation": {
+    "id": "8b345ac3-907a-4d64-bd68-1c237b6cdfe3",
+    "name": "QA packaged UI location — Washington",
+    "lat": 38.9,
+    "lon": -77.03,
+    "radiusKm": 1,
+    "source": "Manual local test setup; not a provider observation"
+  },
+  "locationBriefing": {
+    "heading": "Atlas Watch location briefing",
+    "excerpt": "Atlas Watch location briefing\nGenerated Nov 11, 2026, 7:30 PM EST (2026-11-12 00:30 UTC) · 1 location(s) · Atlas Watch 0.7.0\nThis briefing summarizes public data retrieved by Atlas Watch. It is not an official warning product and may be incomplete or delayed. For emergencies, follow official alerts from the National Weather Service and local authorities.\nDATA SOURCES AND FRESHNESS\nSource\tStatus\tLast successful retrieval\tSource-reported update\tRecords\nNational Weather Service — active alerts (api.weather.gov)\tCurrent\tNov 11, 2026, 7:30 PM EST (2026-11-12 00:30 UTC)\tNov 11, 2026, 7:30 PM EST (2026-11-12 00:30 UTC)\t511\nUSGS Earthquake Hazards Program — GeoJSON summary feed\tCurrent\tNov 11, 2026, 7:30 PM EST (2026-11-12 00:30 UTC)\tNov 11, 2026, 7:29 PM EST (2026-11-12 00:29 UTC)\t335\nSUMMARY\nLocation\tWeather alerts (confirmed)\tAlerts not determinable\tEarthquakes within radius\nQA packaged UI location — Washington\t0\t0\t0 (≤ 1 km)\nQA PACKAGED UI LOCATION — WASHINGTON\n38.90000, -77.03000 · Manual isolated test fixture · Monitoring radius 1 km · Evaluated Nov 11, 2026, 7:30 PM EST (2026-11-12 00:30 UTC)\nWeather alerts\n\nNo active alerts confirmed for this point.\n\nEarthquakes within 1 km (distance to epicenter)\n\nNo earthquakes in the selected feed window within 1 km.\n\nCOVERAGE LIMITATIONS\nWeather alert intersection uses the alert polygon when NWS supplies one. Alerts without a polygon are matched using the NWS forecast, county, and fire-weather zones reported for the location. If zones are unknown, the alert is reported as not determinable rather than as not affecting the location.\nEarthquake distance is the geodesic distance from the location to the reported epicenter. It is not an estimate of shaking, damage, or personal danger.\nEarthquakes are limited to the selected USGS summary feed window and minimum magnitude.\nData reflects the last successful retrieval shown above and may be delayed, revised, or incomplete. Atlas Watch only observes records while it is running.\nLocations outside NWS coverage (outside the U.S. and its territories) cannot be evaluated for NWS alerts.\nATTRIBUTION\n\nWeather alerts: National Weather Service / NOAA (public domain). Earthquakes: U.S. Geological Survey Earthquake Hazards Program (public domain). Generated by Atlas Watch from deterministic templates; no AI was used to produce this document.",
+    "dialogTitle": "Location briefing"
+  },
+  "closedByRunner": true,
+  "exit": {
+    "code": 0,
+    "signal": null
+  },
+  "finishedAt": "2026-11-12T00:30:32.541Z",
+  "archiveStableDuringRun": true,
+  "localDatabase": {
+    "caches": [
+      {
+        "feed": "nws",
+        "fetched_at": "2026-11-12T00:30:28.640Z",
+        "source_updated_at": "2026-11-12T00:30:00.000Z"
+      },
+      {
+        "feed": "usgs",
+        "fetched_at": "2026-11-12T00:30:28.246Z",
+        "source_updated_at": "2026-11-12T00:29:59.000Z"
+      }
+    ],
+    "epochs": [
+      {
+        "feed": "nws",
+        "observations": 1
+      },
+      {
+        "feed": "usgs",
+        "observations": 1
+      }
+    ],
+    "savedPlaces": 1,
+    "customerCredentialRows": 0
+  }
+}

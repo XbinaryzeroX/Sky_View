@@ -1,0 +1,712 @@
+{
+  "result": "PASS",
+  "startedAt": "2026-11-12T00:59:40.126Z",
+  "completedAt": "2026-11-12T01:00:33.758Z",
+  "appVersion": "0.7.0",
+  "temporary": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-location-evidence-ui-YldnEj",
+  "output": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence",
+  "assetSha256": {
+    "dist/main/main.cjs": "0affd9c6a360c0a6c8fd7c92baf516b3d0d1ba635aaf4cb6e5f4f9ce7b4b7927",
+    "dist/preload/preload.cjs": "632ca69c9b1b0e89fbb1962df65f4a4a5b720f2af5b5109592bc268265213655",
+    "dist/renderer/index.html": "aec12deab94be70a931c93195f99407bfb4e4b72e1b9492042e1764032e7a21b",
+    "dist/renderer/assets/index-BlG2E8Yx.js": "fd2cfd86ddd1b9c402808ce667d5a9abcb33126c004b8f81cad7aed3d3a64872",
+    "dist/renderer/assets/index-CUnw5lOt.css": "baef0757a85791c9d743172dd5475fb4dbcec89caeefaa3c90761a268eb1c550"
+  },
+  "builtAssetsUnchanged": true,
+  "instrumentation": "Existing QA entry; explicit synthetic HTTP adapters and earlier-clock fixture cache only in TEMP profiles; actual production normalizers/core/persistence/UI/export paths",
+  "genuineProfileAccessed": false,
+  "installerExecuted": false,
+  "nativePickerOperated": false,
+  "realProviderObservations": false,
+  "phases": [
+    {
+      "kind": "missing",
+      "explicitSynthetic": true,
+      "scenario": {
+        "result": "PASS",
+        "kind": "missing",
+        "explicitSyntheticProfile": true,
+        "feeds": {
+          "nws": {
+            "feed": "nws",
+            "state": "error",
+            "lastAttemptAt": "2026-11-12T00:59:40.475Z",
+            "lastSuccessAt": null,
+            "sourceUpdatedAt": null,
+            "fromCache": false,
+            "error": "Network unavailable or host unreachable",
+            "consecutiveFailures": 1,
+            "nextAttemptAt": "2026-11-12T01:00:10.478Z",
+            "recordCount": 0,
+            "skippedRecords": 0,
+            "coverage": {
+              "completeness": "unknown",
+              "skippedRecords": null,
+              "note": "Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out."
+            },
+            "scope": null
+          },
+          "usgs": {
+            "feed": "usgs",
+            "state": "error",
+            "lastAttemptAt": "2026-11-12T00:59:40.478Z",
+            "lastSuccessAt": null,
+            "sourceUpdatedAt": null,
+            "fromCache": false,
+            "error": "Network unavailable or host unreachable",
+            "consecutiveFailures": 1,
+            "nextAttemptAt": "2026-11-12T01:00:10.479Z",
+            "recordCount": 0,
+            "skippedRecords": 0,
+            "coverage": {
+              "completeness": "unknown",
+              "skippedRecords": null,
+              "note": "Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out."
+            },
+            "scope": null
+          }
+        },
+        "freshness": {
+          "nws": "unavailable",
+          "usgs": "unavailable"
+        },
+        "evaluation": {
+          "locationId": "2c02b87d-a228-4770-a449-cb0418c761b4",
+          "evaluatedAt": "2026-11-12T00:59:40.479Z",
+          "alertsInside": [],
+          "alertsUnknown": [],
+          "alertsOutsideCount": 0,
+          "nwsFreshness": "unavailable",
+          "nwsObservedAt": null,
+          "nwsLifecycleAt": "2026-11-12T00:59:40.479Z",
+          "nwsHistorical": false,
+          "alertCoverageNote": "Weather alert data is unavailable; alert status cannot be determined. Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out.",
+          "quakesNearby": [],
+          "usgsFreshness": "unavailable"
+        },
+        "evidence": [
+          {
+            "source": "NWS",
+            "state": "unknown",
+            "text": "NWS: unknown. No compatible reply establishes the selected source scope. Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out."
+          },
+          {
+            "source": "USGS",
+            "state": "unknown",
+            "text": "USGS: unknown. No compatible reply establishes the selected source scope. Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out."
+          }
+        ],
+        "summaryRows": [
+          [
+            "QA offline saved place — Washington",
+            "Unknown",
+            "Unknown",
+            "Unknown (≤ 25 km)"
+          ],
+          [
+            "QA independent control — Washington",
+            "Unknown",
+            "Unknown",
+            "Unknown (≤ 25 km)"
+          ]
+        ],
+        "summaryBounds": {
+          "x": 488,
+          "y": 400.90625,
+          "width": 706,
+          "height": 147.0625,
+          "preview": {
+            "x": 467,
+            "y": 215.84375,
+            "width": 758,
+            "height": 516.609375
+          }
+        },
+        "dataText": "Data BriefingOverviewWhat is happening around your placesActive weather alertsUnknownEarthquakes in feedUnknown (selected: past day, M-1+)Saved locations2NWS: unknown. No compatible reply establishes the selected source scope. Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out.USGS: unknown. No compatible reply establishes the selected source scope. Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out.Locations with confirmed alertsUnknown — saved-location alert coverage is incomplete or based on an earlier observation.Select a location, alert polygon, or earthquake marker for details and source records.Legend          Legend▲▲ Extreme▲ Severe◆ Moderate● Minor○ Unknown Quake < M4.5 M4.5–5.9 M6+ Saved locationMarker size scales with magnitude.",
+        "detailText": "Saved locationQA offline saved place — WashingtonIsolated QA setup · 38.90000, -77.03000FocusEditBriefingDeleteMonitoring radius25 kmNWS zonesLookup turned offLast evaluatedNov 11, 7:59 PM ESTNotesManual saved place; no provider observationsWeather alerts at this pointNWS: unknown. No compatible reply establishes the selected source scope. Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out.Weather alert data is unavailable; alert status cannot be determined. Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out.Unknown — this evidence does not establish that no alerts apply.Earthquakes within 25 kmUSGS: unknown. No compatible reply establishes the selected source scope. Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out.Distance is to the reported epicenter, not an estimate of shaking or damage.Unknown — this evidence does not establish that no earthquakes occurred within the radius.",
+        "briefingText": "Atlas Watch location briefing\nGenerated Nov 11, 2026, 7:59 PM EST (2026-11-12 00:59 UTC) · 2 location(s) · Atlas Watch 0.7.0\nThis briefing summarizes public data retrieved by Atlas Watch. It is not an official warning product and may be incomplete or delayed. For emergencies, follow official alerts from the National Weather Service and local authorities.\nData sources and freshnessSourceStatusLast successful retrievalSource-reported updateRecords\nNational Weather Service — active alerts (api.weather.gov)UnknownLast error: Network unavailable or host unreachableNo compatible reply establishes the selected source scope. Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out.——Unknown\nUSGS Earthquake Hazards Program — GeoJSON summary feedUnknownLast error: Network unavailable or host unreachableNo compatible reply establishes the selected source scope. Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out.——Unknown\n\nSummaryLocationWeather alerts (confirmed)Alerts not determinableEarthquakes within radius\nQA offline saved place — WashingtonUnknownUnknownUnknown (≤ 25 km)\nQA independent control — WashingtonUnknownUnknownUnknown (≤ 25 km)\n\nQA offline saved place — Washington\n38.90000, -77.03000 · Isolated QA setup · Monitoring radius 25 km · Evaluated Nov 11, 2026, 7:59 PM EST (2026-11-12 00:59 UTC)\nNotes: Manual saved place; no provider observations\nWeather alerts\nNWS: Unknown. No compatible reply establishes the selected source scope. Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out.\nWeather alert data is unavailable; alert status cannot be determined. Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out.\nWeather alert status unknown. This evidence does not establish that no alerts apply.\nEarthquakes within 25 km (distance to epicenter)\nUSGS: Unknown. No compatible reply establishes the selected source scope. Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out.\nEarthquake count unknown. This evidence does not establish that no earthquakes occurred within the radius.\n\nQA independent control — Washington\n38.90000, -77.03000 · Explicit synthetic QA setup · Monitoring radius 25 km · Evaluated Nov 11, 2026, 7:59 PM EST (2026-11-12 00:59 UTC)\nNotes: Independent zero/unknown control\nWeather alerts\nNWS: Unknown. No compatible reply establishes the selected source scope. Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out. This point is outside NWS zone-service coverage; independent polygon matches remain observed evidence. This does not establish the absence of weather hazards.\nWeather alert data is unavailable; alert status cannot be determined. Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out. This point is outside NWS zone-service coverage; polygon evidence is independent and weather hazards are not ruled out.\nWeather alert status unknown. This evidence does not establish that no alerts apply.\nEarthquakes within 25 km (distance to epicenter)\nUSGS: Unknown. No compatible reply establishes the selected source scope. Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out.\nEarthquake count unknown. This evidence does not establish that no earthquakes occurred within the radius.\n\nCoverage limitations\nWeather alert intersection uses the alert polygon when NWS supplies one. Alerts without a polygon are matched using the NWS forecast, county, and fire-weather zones reported for the location. If zones are unknown, the alert is reported as not determinable rather than as not affecting the location.\nEarthquake distance is the geodesic distance from the location to the reported epicenter. It is not an estimate of shaking, damage, or personal danger.\nEarthquakes are limited to the selected USGS summary feed window and minimum magnitude.\nData reflects the last successful retrieval shown above and may be delayed, revised, or incomplete. Atlas Watch only observes records while it is running.\nA point outside the NWS zone service has unknown overall NWS alert coverage. Supplied polygons are still tested and confirmed intersections are retained; a missing zone match is not evidence of no alerts.\n\nAttributionWeather alerts: National Weather Service / NOAA (public domain). Earthquakes: U.S. Geological Survey Earthquake Hazards Program (public domain). Generated by Atlas Watch from deterministic templates; no AI was used to produce this document.",
+        "analystAlertText": "AnalystAnalystQuestions are answered by ordinary code over loaded data. Every row links to a real record. Say “in this area” to limit to the current view.AskWhich aircraft are above 30,000 feet?Show cargo vessels in this areaWhich of my saved places intersect an active alert?Any emergency squawks?Earthquakes above magnitude 4.5What changed since the last refresh?What changed since my last visit?Saved places with alerts: unknownNo compatible reply establishes the selected source scope. Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out. Coverage is incomplete or out of date for 2 of 2 saved places.",
+        "analystQuakeText": "AnalystAnalystQuestions are answered by ordinary code over loaded data. Every row links to a real record. Say “in this area” to limit to the current view.AskWhich aircraft are above 30,000 feet?Show cargo vessels in this areaWhich of my saved places intersect an active alert?Any emergency squawks?Earthquakes above magnitude 4.5What changed since the last refresh?What changed since my last visit?Saved places with nearby earthquakes: unknownNo compatible reply establishes the selected source scope. Reply completeness was not recorded or is invalid; omitted observations cannot be ruled out. Each place uses its saved radius and the selected USGS day feed, M-1+. Coverage is incomplete or out of date for 2 of 2 saved places.",
+        "rendererErrors": []
+      },
+      "exports": [
+        {
+          "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-missing-1.html",
+          "format": "html",
+          "request": {
+            "previewId": "ce425b4c-1caf-4219-8670-48ad1e2d4342"
+          },
+          "bytes": 7892,
+          "sha256": "7728ac6a41cfc4ff90fef4ee6f4b6c4ee94cb7a8d93ea75e50817308a563e14b"
+        },
+        {
+          "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-missing-2.pdf",
+          "format": "pdf",
+          "request": {
+            "previewId": "ce425b4c-1caf-4219-8670-48ad1e2d4342"
+          },
+          "bytes": 36584,
+          "sha256": "dd413b45aea56de4d86fd2c13af6e023e10ee3041c90ee064900a27dc29f7f5e"
+        }
+      ]
+    },
+    {
+      "kind": "mixed",
+      "explicitSynthetic": true,
+      "scenario": {
+        "result": "PASS",
+        "kind": "mixed",
+        "explicitSyntheticProfile": true,
+        "feeds": {
+          "nws": {
+            "feed": "nws",
+            "state": "ok",
+            "lastAttemptAt": "2026-11-12T00:59:50.548Z",
+            "lastSuccessAt": "2026-11-12T00:59:50.562Z",
+            "sourceUpdatedAt": "2026-11-12T00:59:50.260Z",
+            "fromCache": false,
+            "error": null,
+            "consecutiveFailures": 0,
+            "nextAttemptAt": "2026-11-12T01:59:50.565Z",
+            "recordCount": 2,
+            "skippedRecords": 1,
+            "coverage": {
+              "completeness": "partial",
+              "skippedRecords": 1,
+              "note": "Normalization omitted 1 record(s); the reply may be incomplete."
+            },
+            "scope": "active-US"
+          },
+          "usgs": {
+            "feed": "usgs",
+            "state": "error",
+            "lastAttemptAt": "2026-11-12T00:59:50.565Z",
+            "lastSuccessAt": "2026-11-11T20:59:50.331Z",
+            "sourceUpdatedAt": "2026-11-11T20:59:50.260Z",
+            "fromCache": true,
+            "error": "Network unavailable or host unreachable",
+            "consecutiveFailures": 1,
+            "nextAttemptAt": "2026-11-12T01:00:20.567Z",
+            "recordCount": 1,
+            "skippedRecords": 0,
+            "coverage": {
+              "completeness": "complete",
+              "skippedRecords": 0,
+              "note": null
+            },
+            "scope": "all_day"
+          }
+        },
+        "freshness": {
+          "nws": "fresh",
+          "usgs": "stale"
+        },
+        "evaluation": {
+          "locationId": "c58b9c97-3edd-40e9-a5a6-5bd0bbacae9f",
+          "evaluatedAt": "2026-11-12T00:59:50.567Z",
+          "alertsInside": [
+            {
+              "alertId": "qa-location-polygon",
+              "status": "inside",
+              "method": "polygon"
+            }
+          ],
+          "alertsUnknown": [
+            {
+              "alertId": "qa-location-county",
+              "status": "unknown",
+              "method": "none"
+            }
+          ],
+          "alertsOutsideCount": 0,
+          "nwsFreshness": "fresh",
+          "nwsObservedAt": "2026-11-12T00:59:50.562Z",
+          "nwsLifecycleAt": "2026-11-12T00:59:50.567Z",
+          "nwsHistorical": false,
+          "alertCoverageNote": "Normalization omitted 1 record(s); the reply may be incomplete. Available point-zone data does not establish every zone type or reference required by the returned alerts.",
+          "quakesNearby": [
+            {
+              "quakeId": "qa-location-quake",
+              "distanceKm": 0
+            }
+          ],
+          "usgsFreshness": "stale"
+        },
+        "evidence": [
+          {
+            "source": "NWS",
+            "state": "partial",
+            "text": "NWS: partial · retrieved Nov 11, 7:59 PM EST · scope active-US. Normalization omitted 1 record(s); the reply may be incomplete. Some alert intersections at this point cannot be determined."
+          },
+          {
+            "source": "USGS",
+            "state": "last-observed",
+            "text": "USGS: last observed · retrieved Nov 11, 3:59 PM EST · scope all_day. Last observed reply loaded from local cache is stale; the latest completed refresh failed; current conditions are unknown."
+          }
+        ],
+        "summaryRows": [
+          [
+            "QA independent control — Washington",
+            "Unknown",
+            "≥1 in retrieved subset",
+            "0 last observed; current unknown (≤ 25 km)"
+          ],
+          [
+            "QA primary saved place — Bay Area",
+            "≥1 in retrieved subset",
+            "≥1 in retrieved subset",
+            "1 last observed; current unknown (≤ 25 km)"
+          ]
+        ],
+        "summaryBounds": {
+          "x": 488,
+          "y": 401.09375,
+          "width": 706,
+          "height": 147.0625,
+          "preview": {
+            "x": 467,
+            "y": 215.84375,
+            "width": 758,
+            "height": 516.609375
+          }
+        },
+        "dataText": "Data BriefingOverviewWhat is happening around your placesActive weather alerts≥2 in retrieved subset (1 with polygons, 1 without polygons)Earthquakes in feed1 last observed; current unknown (selected: past day, M-1+)Saved locations2NWS: partial · retrieved Nov 11, 7:59 PM EST · scope active-US. Normalization omitted 1 record(s); the reply may be incomplete.USGS: last observed · retrieved Nov 11, 3:59 PM EST · scope all_day. Last observed reply loaded from local cache is stale; the latest completed refresh failed; current conditions are unknown.Locations with confirmed alerts◆ ModerateQA primary saved place — Bay AreaNWS alerts: ≥1 in retrieved subsetSelect a location, alert polygon, or earthquake marker for details and source records.Legend          Legend▲▲ Extreme▲ Severe◆ Moderate● Minor○ Unknown Quake < M4.5 M4.5–5.9 M6+ Saved locationMarker size scales with magnitude. 1 zone-based alert(s) have no polygon and are not drawn; they are still evaluated for saved locations.Since previous refresh — Alerts: change counts unknown",
+        "detailText": "Saved locationQA primary saved place — Bay AreaExplicit synthetic QA setup · 37.50000, -122.00000FocusEditBriefingDeleteMonitoring radius25 kmNWS zonesforecast/CAZ006Last evaluatedNov 11, 7:59 PM ESTNotesNo real observations in this profileWeather alerts at this pointNWS: partial · retrieved Nov 11, 7:59 PM EST · scope active-US. Normalization omitted 1 record(s); the reply may be incomplete. Some alert intersections at this point cannot be determined.Normalization omitted 1 record(s); the reply may be incomplete. Available point-zone data does not establish every zone type or reference required by the returned alerts.Known NWS matches: ≥1 in retrieved subset.◆ ModerateQA SYNTHETIC EVIDENCE polygon alertInside polygon · ends Nov 11, 8:59 PM ESTKnown alerts not including this point: Unknown; ≥1 in retrieved subset could not be determined.Earthquakes within 25 kmUSGS: last observed · retrieved Nov 11, 3:59 PM EST · scope all_day. Last observed reply loaded from local cache is stale; the latest completed refresh failed; current conditions are unknown.Distance is to the reported epicenter, not an estimate of shaking or damage.Known USGS matches: 1 last observed; current unknown.M3.2QA SYNTHETIC EVIDENCE earthquake0.0 km to epicenter · 4 h ago",
+        "briefingText": "Atlas Watch location briefing\nGenerated Nov 11, 2026, 7:59 PM EST (2026-11-12 00:59 UTC) · 2 location(s) · Atlas Watch 0.7.0\nThis briefing summarizes public data retrieved by Atlas Watch. It is not an official warning product and may be incomplete or delayed. For emergencies, follow official alerts from the National Weather Service and local authorities.\nData sources and freshnessSourceStatusLast successful retrievalSource-reported updateRecords\nNational Weather Service — active alerts (api.weather.gov)Partial evidenceNormalization omitted 1 record(s); the reply may be incomplete.Nov 11, 2026, 7:59 PM EST (2026-11-12 00:59 UTC)Nov 11, 2026, 7:59 PM EST (2026-11-12 00:59 UTC)≥2 in retrieved subset\nUSGS Earthquake Hazards Program — GeoJSON summary feedStale (loaded from local cache) · last observedLast error: Network unavailable or host unreachableLast observed reply loaded from local cache is stale; the latest completed refresh failed; current conditions are unknown.Nov 11, 2026, 3:59 PM EST (2026-11-11 20:59 UTC)Nov 11, 2026, 3:59 PM EST (2026-11-11 20:59 UTC)1 last observed; current unknown\n\nSummaryLocationWeather alerts (confirmed)Alerts not determinableEarthquakes within radius\nQA independent control — WashingtonUnknown≥1 in retrieved subset0 last observed; current unknown (≤ 25 km)\nQA primary saved place — Bay Area≥1 in retrieved subset≥1 in retrieved subset1 last observed; current unknown (≤ 25 km)\n\nQA independent control — Washington\n38.90000, -77.03000 · Explicit synthetic QA setup · Monitoring radius 25 km · Evaluated Nov 11, 2026, 7:59 PM EST (2026-11-12 00:59 UTC)\nNotes: Independent zero/unknown control\nWeather alerts\nNWS: Partial evidence · retrieved Nov 11, 2026, 7:59 PM EST (2026-11-12 00:59 UTC) · scope active-US. Normalization omitted 1 record(s); the reply may be incomplete. This point is outside NWS zone-service coverage; independent polygon matches remain observed evidence. This does not establish the absence of weather hazards. Some alert intersections at this point cannot be determined.\nNormalization omitted 1 record(s); the reply may be incomplete. This point is outside NWS zone-service coverage; polygon evidence is independent and weather hazards are not ruled out. Zone-based alerts cannot be fully evaluated at this point.\nWeather alert status unknown. This evidence does not establish that no alerts apply.\nEarthquakes within 25 km (distance to epicenter)\nUSGS: Last observed · retrieved Nov 11, 2026, 3:59 PM EST (2026-11-11 20:59 UTC) · scope all_day. Last observed reply loaded from local cache is stale; the latest completed refresh failed; current conditions are unknown.\nEarthquake count unknown. This evidence does not establish that no earthquakes occurred within the radius.\n\nQA primary saved place — Bay Area\n37.50000, -122.00000 · Explicit synthetic QA setup · Monitoring radius 25 km · Evaluated Nov 11, 2026, 7:59 PM EST (2026-11-12 00:59 UTC)\nNotes: No real observations in this profile\nWeather alerts\nNWS: Partial evidence · retrieved Nov 11, 2026, 7:59 PM EST (2026-11-12 00:59 UTC) · scope active-US. Normalization omitted 1 record(s); the reply may be incomplete. Some alert intersections at this point cannot be determined.\nNormalization omitted 1 record(s); the reply may be incomplete. Available point-zone data does not establish every zone type or reference required by the returned alerts.\nEventSeverity / urgencyOnset → endsBasisSource\nQA SYNTHETIC EVIDENCE polygon alertExplicit isolated acceptance fixtureModerate ExpectedNov 11, 2026, 7:59 PM EST (2026-11-12 00:59 UTC)→ Nov 11, 2026, 8:59 PM EST (2026-11-12 01:59 UTC)Point inside alert polygonExplicit QA fixtureqa-location-polygon\n\nEarthquakes within 25 km (distance to epicenter)\nUSGS: Last observed · retrieved Nov 11, 2026, 3:59 PM EST (2026-11-11 20:59 UTC) · scope all_day. Last observed reply loaded from local cache is stale; the latest completed refresh failed; current conditions are unknown.\nEarthquake data is stale; results reflect the last successful retrieval.\nMagnitudeLocationTimeDepthDistance to epicenterSource\nM3.2QA SYNTHETIC EVIDENCE earthquakeNov 11, 2026, 3:58 PM EST (2026-11-11 20:58 UTC)8.0 km0.0 kmUSGS event pageqa-location-quake\n\n\nCoverage limitations\nWeather alert intersection uses the alert polygon when NWS supplies one. Alerts without a polygon are matched using the NWS forecast, county, and fire-weather zones reported for the location. If zones are unknown, the alert is reported as not determinable rather than as not affecting the location.\nEarthquake distance is the geodesic distance from the location to the reported epicenter. It is not an estimate of shaking, damage, or personal danger.\nEarthquakes are limited to the selected USGS summary feed window and minimum magnitude.\nData reflects the last successful retrieval shown above and may be delayed, revised, or incomplete. Atlas Watch only observes records while it is running.\nA point outside the NWS zone service has unknown overall NWS alert coverage. Supplied polygons are still tested and confirmed intersections are retained; a missing zone match is not evidence of no alerts.\n\nAttributionWeather alerts: National Weather Service / NOAA (public domain). Earthquakes: U.S. Geological Survey Earthquake Hazards Program (public domain). Generated by Atlas Watch from deterministic templates; no AI was used to produce this document.",
+        "analystAlertText": "AnalystAnalystQuestions are answered by ordinary code over loaded data. Every row links to a real record. Say “in this area” to limit to the current view.AskWhich aircraft are above 30,000 feet?Show cargo vessels in this areaWhich of my saved places intersect an active alert?Any emergency squawks?Earthquakes above magnitude 4.5What changed since the last refresh?What changed since my last visit?At least 1 saved place with alerts in the NWS replyNormalization omitted 1 record(s); the reply may be incomplete. Reply received at 2026-11-12T00:59:50.562Z. Coverage is incomplete or out of date for 2 of 2 saved places.QA primary saved place — Bay AreaQA SYNTHETIC EVIDENCE polygon alert (Moderate) · inside polygon · qa-location-polygon",
+        "analystQuakeText": "AnalystAnalystQuestions are answered by ordinary code over loaded data. Every row links to a real record. Say “in this area” to limit to the current view.AskWhich aircraft are above 30,000 feet?Show cargo vessels in this areaWhich of my saved places intersect an active alert?Any emergency squawks?Earthquakes above magnitude 4.5What changed since the last refresh?What changed since my last visit?At least 1 saved place with nearby earthquakes in the last observed USGS replyLast observed reply loaded from local cache is stale; the latest completed refresh failed; current conditions are unknown. Reply received at 2026-11-11T20:59:50.331Z. Each place uses its saved radius and the selected USGS day feed, M-1+. Coverage is incomplete or out of date for 2 of 2 saved places.QA primary saved place — Bay AreaM3.2 · 0 km to epicenter · 2026-11-11T20:58:50.260Z · qa-location-quake",
+        "rendererErrors": []
+      },
+      "exports": [
+        {
+          "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-mixed-1.html",
+          "format": "html",
+          "request": {
+            "previewId": "12e9fcfe-14a3-428d-85b8-7fe2373c0f7e"
+          },
+          "bytes": 9264,
+          "sha256": "e38d9f4e9609fe22eef6c6731ca8d021c570b1db6399fb093816aa1d29dbee63"
+        },
+        {
+          "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-mixed-2.pdf",
+          "format": "pdf",
+          "request": {
+            "previewId": "12e9fcfe-14a3-428d-85b8-7fe2373c0f7e"
+          },
+          "bytes": 49702,
+          "sha256": "10a1c0072564d727e90edd0ad36157b8bde726aadc8b3e53c267c7c43e404b96"
+        }
+      ]
+    },
+    {
+      "kind": "restart",
+      "explicitSynthetic": true,
+      "scenario": {
+        "result": "PASS",
+        "kind": "restart",
+        "explicitSyntheticProfile": true,
+        "feeds": {
+          "nws": {
+            "feed": "nws",
+            "state": "error",
+            "lastAttemptAt": "2026-11-12T01:00:02.094Z",
+            "lastSuccessAt": "2026-11-12T00:59:50.562Z",
+            "sourceUpdatedAt": "2026-11-12T00:59:50.260Z",
+            "fromCache": true,
+            "error": "Network unavailable or host unreachable",
+            "consecutiveFailures": 1,
+            "nextAttemptAt": "2026-11-12T01:00:34.006Z",
+            "recordCount": 2,
+            "skippedRecords": 1,
+            "coverage": {
+              "completeness": "partial",
+              "skippedRecords": 1,
+              "note": "Normalization omitted 1 record(s); the reply may be incomplete."
+            },
+            "scope": "active-US"
+          },
+          "usgs": {
+            "feed": "usgs",
+            "state": "error",
+            "lastAttemptAt": "2026-11-12T01:00:02.096Z",
+            "lastSuccessAt": "2026-11-11T20:59:50.331Z",
+            "sourceUpdatedAt": "2026-11-11T20:59:50.260Z",
+            "fromCache": true,
+            "error": "Network unavailable or host unreachable",
+            "consecutiveFailures": 1,
+            "nextAttemptAt": "2026-11-12T01:00:32.097Z",
+            "recordCount": 1,
+            "skippedRecords": 0,
+            "coverage": {
+              "completeness": "complete",
+              "skippedRecords": 0,
+              "note": null
+            },
+            "scope": "all_day"
+          }
+        },
+        "freshness": {
+          "nws": "fresh",
+          "usgs": "stale"
+        },
+        "evaluation": {
+          "locationId": "c58b9c97-3edd-40e9-a5a6-5bd0bbacae9f",
+          "evaluatedAt": "2026-11-12T01:00:02.097Z",
+          "alertsInside": [
+            {
+              "alertId": "qa-location-polygon",
+              "status": "inside",
+              "method": "polygon"
+            }
+          ],
+          "alertsUnknown": [
+            {
+              "alertId": "qa-location-county",
+              "status": "unknown",
+              "method": "none"
+            }
+          ],
+          "alertsOutsideCount": 0,
+          "nwsFreshness": "fresh",
+          "nwsObservedAt": "2026-11-12T00:59:50.562Z",
+          "nwsLifecycleAt": "2026-11-12T00:59:50.562Z",
+          "nwsHistorical": true,
+          "alertCoverageNote": "Matches use the retained reply at 2026-11-12T00:59:50.562Z; current conditions are unknown. Normalization omitted 1 record(s); the reply may be incomplete. Available point-zone data does not establish every zone type or reference required by the returned alerts.",
+          "quakesNearby": [
+            {
+              "quakeId": "qa-location-quake",
+              "distanceKm": 0
+            }
+          ],
+          "usgsFreshness": "stale"
+        },
+        "evidence": [
+          {
+            "source": "NWS",
+            "state": "partial",
+            "text": "NWS: partial, last observed · retrieved Nov 11, 7:59 PM EST · scope active-US. Last observed reply loaded from local cache; the latest completed refresh failed; current conditions are unknown. Normalization omitted 1 record(s); the reply may be incomplete. Some alert intersections at this point cannot be determined."
+          },
+          {
+            "source": "USGS",
+            "state": "last-observed",
+            "text": "USGS: last observed · retrieved Nov 11, 3:59 PM EST · scope all_day. Last observed reply loaded from local cache is stale; the latest completed refresh failed; current conditions are unknown."
+          }
+        ],
+        "summaryRows": [
+          [
+            "QA independent control — Washington",
+            "Unknown; last reply incomplete",
+            "≥1 in last reply; current unknown",
+            "0 last observed; current unknown (≤ 25 km)"
+          ],
+          [
+            "QA primary saved place — Bay Area",
+            "≥1 in last reply; current unknown",
+            "≥1 in last reply; current unknown",
+            "1 last observed; current unknown (≤ 25 km)"
+          ]
+        ],
+        "summaryBounds": {
+          "x": 488,
+          "y": 400.984375,
+          "width": 706,
+          "height": 147.0625,
+          "preview": {
+            "x": 467,
+            "y": 215.84375,
+            "width": 758,
+            "height": 516.609375
+          }
+        },
+        "dataText": "Data BriefingOverviewWhat is happening around your placesActive weather alerts≥2 in last reply; current unknown (1 with polygons, 1 without polygons)Earthquakes in feed1 last observed; current unknown (selected: past day, M-1+)Saved locations2NWS: partial, last observed · retrieved Nov 11, 7:59 PM EST · scope active-US. Last observed reply loaded from local cache; the latest completed refresh failed; current conditions are unknown. Normalization omitted 1 record(s); the reply may be incomplete.USGS: last observed · retrieved Nov 11, 3:59 PM EST · scope all_day. Last observed reply loaded from local cache is stale; the latest completed refresh failed; current conditions are unknown.Locations with confirmed alerts◆ ModerateQA primary saved place — Bay AreaNWS alerts: ≥1 in last reply; current unknownSelect a location, alert polygon, or earthquake marker for details and source records.Legend          Legend▲▲ Extreme▲ Severe◆ Moderate● Minor○ Unknown Quake < M4.5 M4.5–5.9 M6+ Saved locationMarker size scales with magnitude. 1 zone-based alert(s) have no polygon and are not drawn; they are still evaluated for saved locations.",
+        "detailText": "Saved locationQA primary saved place — Bay AreaExplicit synthetic QA setup · 37.50000, -122.00000FocusEditBriefingDeleteMonitoring radius25 kmNWS zonesforecast/CAZ006Last evaluatedNov 11, 8:00 PM ESTNotesNo real observations in this profileWeather alerts at this pointNWS: partial, last observed · retrieved Nov 11, 7:59 PM EST · scope active-US. Last observed reply loaded from local cache; the latest completed refresh failed; current conditions are unknown. Normalization omitted 1 record(s); the reply may be incomplete. Some alert intersections at this point cannot be determined.Matches use the retained reply at 2026-11-12T00:59:50.562Z; current conditions are unknown. Normalization omitted 1 record(s); the reply may be incomplete. Available point-zone data does not establish every zone type or reference required by the returned alerts.Known NWS matches: ≥1 in last reply; current unknown.◆ ModerateQA SYNTHETIC EVIDENCE polygon alertInside polygon · ends Nov 11, 8:59 PM ESTKnown alerts not including this point: Unknown; last reply incomplete; ≥1 in last reply; current unknown could not be determined.Earthquakes within 25 kmUSGS: last observed · retrieved Nov 11, 3:59 PM EST · scope all_day. Last observed reply loaded from local cache is stale; the latest completed refresh failed; current conditions are unknown.Distance is to the reported epicenter, not an estimate of shaking or damage.Known USGS matches: 1 last observed; current unknown.M3.2QA SYNTHETIC EVIDENCE earthquake0.0 km to epicenter · 4 h ago",
+        "briefingText": "Atlas Watch location briefing\nGenerated Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC) · 2 location(s) · Atlas Watch 0.7.0\nThis briefing summarizes public data retrieved by Atlas Watch. It is not an official warning product and may be incomplete or delayed. For emergencies, follow official alerts from the National Weather Service and local authorities.\nData sources and freshnessSourceStatusLast successful retrievalSource-reported updateRecords\nNational Weather Service — active alerts (api.weather.gov)Partial evidence (loaded from local cache) · last observedLast error: Network unavailable or host unreachableLast observed reply loaded from local cache; the latest completed refresh failed; current conditions are unknown. Normalization omitted 1 record(s); the reply may be incomplete.Nov 11, 2026, 7:59 PM EST (2026-11-12 00:59 UTC)Nov 11, 2026, 7:59 PM EST (2026-11-12 00:59 UTC)≥2 in last reply; current unknown\nUSGS Earthquake Hazards Program — GeoJSON summary feedStale (loaded from local cache) · last observedLast error: Network unavailable or host unreachableLast observed reply loaded from local cache is stale; the latest completed refresh failed; current conditions are unknown.Nov 11, 2026, 3:59 PM EST (2026-11-11 20:59 UTC)Nov 11, 2026, 3:59 PM EST (2026-11-11 20:59 UTC)1 last observed; current unknown\n\nSummaryLocationWeather alerts (confirmed)Alerts not determinableEarthquakes within radius\nQA independent control — WashingtonUnknown; last reply incomplete≥1 in last reply; current unknown0 last observed; current unknown (≤ 25 km)\nQA primary saved place — Bay Area≥1 in last reply; current unknown≥1 in last reply; current unknown1 last observed; current unknown (≤ 25 km)\n\nQA independent control — Washington\n38.90000, -77.03000 · Explicit synthetic QA setup · Monitoring radius 25 km · Evaluated Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC)\nNotes: Independent zero/unknown control\nWeather alerts\nNWS: Partial evidence · last observed · retrieved Nov 11, 2026, 7:59 PM EST (2026-11-12 00:59 UTC) · scope active-US. Last observed reply loaded from local cache; the latest completed refresh failed; current conditions are unknown. Normalization omitted 1 record(s); the reply may be incomplete. This point is outside NWS zone-service coverage; independent polygon matches remain observed evidence. This does not establish the absence of weather hazards. Some alert intersections at this point cannot be determined.\nMatches use the retained reply at 2026-11-12T00:59:50.562Z; current conditions are unknown. Normalization omitted 1 record(s); the reply may be incomplete. This point is outside NWS zone-service coverage; polygon evidence is independent and weather hazards are not ruled out. Zone-based alerts cannot be fully evaluated at this point.\nWeather alert status unknown. This evidence does not establish that no alerts apply.\nEarthquakes within 25 km (distance to epicenter)\nUSGS: Last observed · retrieved Nov 11, 2026, 3:59 PM EST (2026-11-11 20:59 UTC) · scope all_day. Last observed reply loaded from local cache is stale; the latest completed refresh failed; current conditions are unknown.\nEarthquake count unknown. This evidence does not establish that no earthquakes occurred within the radius.\n\nQA primary saved place — Bay Area\n37.50000, -122.00000 · Explicit synthetic QA setup · Monitoring radius 25 km · Evaluated Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC)\nNotes: No real observations in this profile\nWeather alerts\nNWS: Partial evidence · last observed · retrieved Nov 11, 2026, 7:59 PM EST (2026-11-12 00:59 UTC) · scope active-US. Last observed reply loaded from local cache; the latest completed refresh failed; current conditions are unknown. Normalization omitted 1 record(s); the reply may be incomplete. Some alert intersections at this point cannot be determined.\nMatches use the retained reply at 2026-11-12T00:59:50.562Z; current conditions are unknown. Normalization omitted 1 record(s); the reply may be incomplete. Available point-zone data does not establish every zone type or reference required by the returned alerts.\nEventSeverity / urgencyOnset → endsBasisSource\nQA SYNTHETIC EVIDENCE polygon alertExplicit isolated acceptance fixtureModerate ExpectedNov 11, 2026, 7:59 PM EST (2026-11-12 00:59 UTC)→ Nov 11, 2026, 8:59 PM EST (2026-11-12 01:59 UTC)Point inside alert polygonExplicit QA fixtureqa-location-polygon\n\nEarthquakes within 25 km (distance to epicenter)\nUSGS: Last observed · retrieved Nov 11, 2026, 3:59 PM EST (2026-11-11 20:59 UTC) · scope all_day. Last observed reply loaded from local cache is stale; the latest completed refresh failed; current conditions are unknown.\nEarthquake data is stale; results reflect the last successful retrieval.\nMagnitudeLocationTimeDepthDistance to epicenterSource\nM3.2QA SYNTHETIC EVIDENCE earthquakeNov 11, 2026, 3:58 PM EST (2026-11-11 20:58 UTC)8.0 km0.0 kmUSGS event pageqa-location-quake\n\n\nCoverage limitations\nWeather alert intersection uses the alert polygon when NWS supplies one. Alerts without a polygon are matched using the NWS forecast, county, and fire-weather zones reported for the location. If zones are unknown, the alert is reported as not determinable rather than as not affecting the location.\nEarthquake distance is the geodesic distance from the location to the reported epicenter. It is not an estimate of shaking, damage, or personal danger.\nEarthquakes are limited to the selected USGS summary feed window and minimum magnitude.\nData reflects the last successful retrieval shown above and may be delayed, revised, or incomplete. Atlas Watch only observes records while it is running.\nA point outside the NWS zone service has unknown overall NWS alert coverage. Supplied polygons are still tested and confirmed intersections are retained; a missing zone match is not evidence of no alerts.\n\nAttributionWeather alerts: National Weather Service / NOAA (public domain). Earthquakes: U.S. Geological Survey Earthquake Hazards Program (public domain). Generated by Atlas Watch from deterministic templates; no AI was used to produce this document.",
+        "analystAlertText": "AnalystAnalystQuestions are answered by ordinary code over loaded data. Every row links to a real record. Say “in this area” to limit to the current view.AskWhich aircraft are above 30,000 feet?Show cargo vessels in this areaWhich of my saved places intersect an active alert?Any emergency squawks?Earthquakes above magnitude 4.5What changed since the last refresh?What changed since my last visit?At least 1 saved place with alerts in the last observed NWS replyLast observed reply loaded from local cache; the latest completed refresh failed; current conditions are unknown. Normalization omitted 1 record(s); the reply may be incomplete. Reply received at 2026-11-12T00:59:50.562Z. Coverage is incomplete or out of date for 2 of 2 saved places.QA primary saved place — Bay AreaQA SYNTHETIC EVIDENCE polygon alert (Moderate) · inside polygon · qa-location-polygon",
+        "analystQuakeText": "AnalystAnalystQuestions are answered by ordinary code over loaded data. Every row links to a real record. Say “in this area” to limit to the current view.AskWhich aircraft are above 30,000 feet?Show cargo vessels in this areaWhich of my saved places intersect an active alert?Any emergency squawks?Earthquakes above magnitude 4.5What changed since the last refresh?What changed since my last visit?At least 1 saved place with nearby earthquakes in the last observed USGS replyLast observed reply loaded from local cache is stale; the latest completed refresh failed; current conditions are unknown. Reply received at 2026-11-11T20:59:50.331Z. Each place uses its saved radius and the selected USGS day feed, M-1+. Coverage is incomplete or out of date for 2 of 2 saved places.QA primary saved place — Bay AreaM3.2 · 0 km to epicenter · 2026-11-11T20:58:50.260Z · qa-location-quake",
+        "rendererErrors": []
+      },
+      "exports": [
+        {
+          "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-restart-1.html",
+          "format": "html",
+          "request": {
+            "previewId": "d84208ac-fdf5-4a0f-9308-ff34e7daad78"
+          },
+          "bytes": 10016,
+          "sha256": "6e5ea8c7e93545228c4bb0f5099aed102594fe75156c71e204ef628ab5548f15"
+        },
+        {
+          "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-restart-2.pdf",
+          "format": "pdf",
+          "request": {
+            "previewId": "d84208ac-fdf5-4a0f-9308-ff34e7daad78"
+          },
+          "bytes": 50023,
+          "sha256": "3b2ac259d727883c908d36f2badfde68f66925767d095b806f44cfc0c1db4cf2"
+        }
+      ]
+    },
+    {
+      "kind": "complete-empty",
+      "explicitSynthetic": true,
+      "scenario": {
+        "result": "PASS",
+        "kind": "complete-empty",
+        "explicitSyntheticProfile": true,
+        "feeds": {
+          "nws": {
+            "feed": "nws",
+            "state": "ok",
+            "lastAttemptAt": "2026-11-12T01:00:13.463Z",
+            "lastSuccessAt": "2026-11-12T01:00:13.474Z",
+            "sourceUpdatedAt": "2026-11-12T01:00:13.190Z",
+            "fromCache": false,
+            "error": null,
+            "consecutiveFailures": 0,
+            "nextAttemptAt": "2026-11-12T02:00:13.476Z",
+            "recordCount": 0,
+            "skippedRecords": 0,
+            "coverage": {
+              "completeness": "complete",
+              "skippedRecords": 0,
+              "note": null
+            },
+            "scope": "active-US"
+          },
+          "usgs": {
+            "feed": "usgs",
+            "state": "ok",
+            "lastAttemptAt": "2026-11-12T01:00:13.476Z",
+            "lastSuccessAt": "2026-11-12T01:00:13.476Z",
+            "sourceUpdatedAt": "2026-11-12T01:00:13.190Z",
+            "fromCache": false,
+            "error": null,
+            "consecutiveFailures": 0,
+            "nextAttemptAt": "2026-11-12T02:00:13.477Z",
+            "recordCount": 0,
+            "skippedRecords": 0,
+            "coverage": {
+              "completeness": "complete",
+              "skippedRecords": 0,
+              "note": null
+            },
+            "scope": "all_day"
+          }
+        },
+        "freshness": {
+          "nws": "fresh",
+          "usgs": "fresh"
+        },
+        "evaluation": {
+          "locationId": "0e409b44-7477-48a7-8dbb-cf9af961b552",
+          "evaluatedAt": "2026-11-12T01:00:13.477Z",
+          "alertsInside": [],
+          "alertsUnknown": [],
+          "alertsOutsideCount": 0,
+          "nwsFreshness": "fresh",
+          "nwsObservedAt": "2026-11-12T01:00:13.474Z",
+          "nwsLifecycleAt": "2026-11-12T01:00:13.477Z",
+          "nwsHistorical": false,
+          "alertCoverageNote": null,
+          "quakesNearby": [],
+          "usgsFreshness": "fresh"
+        },
+        "evidence": [
+          {
+            "source": "NWS",
+            "state": "current",
+            "text": "NWS: current · retrieved Nov 11, 8:00 PM EST · scope active-US. Current complete reply for the selected source scope."
+          },
+          {
+            "source": "USGS",
+            "state": "current",
+            "text": "USGS: current · retrieved Nov 11, 8:00 PM EST · scope all_day. Current complete reply for the selected source scope."
+          }
+        ],
+        "summaryRows": [
+          [
+            "QA primary saved place — Bay Area",
+            "0",
+            "0",
+            "0 (≤ 25 km)"
+          ],
+          [
+            "QA independent control — Washington",
+            "Unknown",
+            "Unknown",
+            "0 (≤ 25 km)"
+          ]
+        ],
+        "summaryBounds": {
+          "x": 488,
+          "y": 409.71875,
+          "width": 706,
+          "height": 128.21875,
+          "preview": {
+            "x": 467,
+            "y": 215.84375,
+            "width": 758,
+            "height": 516.609375
+          }
+        },
+        "dataText": "Data BriefingOverviewWhat is happening around your placesActive weather alerts0 (0 with polygons, 0 without polygons)Earthquakes in feed0 (selected: past day, M-1+)Saved locations2NWS: current · retrieved Nov 11, 8:00 PM EST · scope active-US. Current complete reply for the selected source scope.USGS: current · retrieved Nov 11, 8:00 PM EST · scope all_day. Current complete reply for the selected source scope.Locations with confirmed alertsUnknown — saved-location alert coverage is incomplete or based on an earlier observation.Select a location, alert polygon, or earthquake marker for details and source records.Legend          Legend▲▲ Extreme▲ Severe◆ Moderate● Minor○ Unknown Quake < M4.5 M4.5–5.9 M6+ Saved locationMarker size scales with magnitude.",
+        "detailText": "Saved locationQA primary saved place — Bay AreaExplicit synthetic QA setup · 37.50000, -122.00000FocusEditBriefingDeleteMonitoring radius25 kmNWS zonesforecast/CAZ006, county/CAC001, fire/CAZ006Last evaluatedNov 11, 8:00 PM ESTNotesNo real observations in this profileWeather alerts at this pointNWS: current · retrieved Nov 11, 8:00 PM EST · scope active-US. Current complete reply for the selected source scope.No active alerts confirmed for this point.Known alerts not including this point: 0.Earthquakes within 25 kmUSGS: current · retrieved Nov 11, 8:00 PM EST · scope all_day. Current complete reply for the selected source scope.Distance is to the reported epicenter, not an estimate of shaking or damage.None in the current feed window (day, M-1+).",
+        "briefingText": "Atlas Watch location briefing\nGenerated Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC) · 2 location(s) · Atlas Watch 0.7.0\nThis briefing summarizes public data retrieved by Atlas Watch. It is not an official warning product and may be incomplete or delayed. For emergencies, follow official alerts from the National Weather Service and local authorities.\nData sources and freshnessSourceStatusLast successful retrievalSource-reported updateRecords\nNational Weather Service — active alerts (api.weather.gov)CurrentCurrent complete reply for the selected source scope.Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC)Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC)0\nUSGS Earthquake Hazards Program — GeoJSON summary feedCurrentCurrent complete reply for the selected source scope.Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC)Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC)0\n\nSummaryLocationWeather alerts (confirmed)Alerts not determinableEarthquakes within radius\nQA primary saved place — Bay Area000 (≤ 25 km)\nQA independent control — WashingtonUnknownUnknown0 (≤ 25 km)\n\nQA primary saved place — Bay Area\n37.50000, -122.00000 · Explicit synthetic QA setup · Monitoring radius 25 km · Evaluated Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC)\nNotes: No real observations in this profile\nWeather alerts\nNWS: Current · retrieved Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC) · scope active-US. Current complete reply for the selected source scope.\nNo active alerts confirmed for this point.\nEarthquakes within 25 km (distance to epicenter)\nUSGS: Current · retrieved Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC) · scope all_day. Current complete reply for the selected source scope.\nNo earthquakes in the selected feed window within 25 km.\n\nQA independent control — Washington\n38.90000, -77.03000 · Explicit synthetic QA setup · Monitoring radius 25 km · Evaluated Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC)\nNotes: Independent zero/unknown control\nWeather alerts\nNWS: Partial evidence · retrieved Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC) · scope active-US. This point is outside NWS zone-service coverage; independent polygon matches remain observed evidence. This does not establish the absence of weather hazards.\nThis point is outside NWS zone-service coverage; polygon evidence is independent and weather hazards are not ruled out.\nWeather alert status unknown. This evidence does not establish that no alerts apply.\nEarthquakes within 25 km (distance to epicenter)\nUSGS: Current · retrieved Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC) · scope all_day. Current complete reply for the selected source scope.\nNo earthquakes in the selected feed window within 25 km.\n\nCoverage limitations\nWeather alert intersection uses the alert polygon when NWS supplies one. Alerts without a polygon are matched using the NWS forecast, county, and fire-weather zones reported for the location. If zones are unknown, the alert is reported as not determinable rather than as not affecting the location.\nEarthquake distance is the geodesic distance from the location to the reported epicenter. It is not an estimate of shaking, damage, or personal danger.\nEarthquakes are limited to the selected USGS summary feed window and minimum magnitude.\nData reflects the last successful retrieval shown above and may be delayed, revised, or incomplete. Atlas Watch only observes records while it is running.\nA point outside the NWS zone service has unknown overall NWS alert coverage. Supplied polygons are still tested and confirmed intersections are retained; a missing zone match is not evidence of no alerts.\n\nAttributionWeather alerts: National Weather Service / NOAA (public domain). Earthquakes: U.S. Geological Survey Earthquake Hazards Program (public domain). Generated by Atlas Watch from deterministic templates; no AI was used to produce this document.",
+        "analystAlertText": "AnalystAnalystQuestions are answered by ordinary code over loaded data. Every row links to a real record. Say “in this area” to limit to the current view.AskWhich aircraft are above 30,000 feet?Show cargo vessels in this areaWhich of my saved places intersect an active alert?Any emergency squawks?Earthquakes above magnitude 4.5What changed since the last refresh?What changed since my last visit?Saved places with alerts: unknownCurrent complete reply for the selected source scope. Reply received at 2026-11-12T01:00:13.474Z. Coverage is incomplete or out of date for 1 of 2 saved places.",
+        "analystQuakeText": "AnalystAnalystQuestions are answered by ordinary code over loaded data. Every row links to a real record. Say “in this area” to limit to the current view.AskWhich aircraft are above 30,000 feet?Show cargo vessels in this areaWhich of my saved places intersect an active alert?Any emergency squawks?Earthquakes above magnitude 4.5What changed since the last refresh?What changed since my last visit?0 saved places with nearby earthquakes in the USGS replyCurrent complete reply for the selected source scope. Reply received at 2026-11-12T01:00:13.476Z. Each place uses its saved radius and the selected USGS day feed, M-1+.",
+        "rendererErrors": []
+      },
+      "exports": [
+        {
+          "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-complete-empty-1.html",
+          "format": "html",
+          "request": {
+            "previewId": "ced474a1-89b1-4b34-8094-4fbcf2301cc4"
+          },
+          "bytes": 7066,
+          "sha256": "83e46b5ae31321a45ca9962eba3213d677df5a9e30cc6f23ba2fad19deb70213"
+        },
+        {
+          "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-complete-empty-2.pdf",
+          "format": "pdf",
+          "request": {
+            "previewId": "ced474a1-89b1-4b34-8094-4fbcf2301cc4"
+          },
+          "bytes": 36117,
+          "sha256": "29ddd32e4bfcc308e747b0bf13c218f8831c3d93ea226a795415f6b97486978f"
+        }
+      ]
+    },
+    {
+      "kind": "partial-zero",
+      "explicitSynthetic": true,
+      "scenario": {
+        "result": "PASS",
+        "kind": "partial-zero",
+        "explicitSyntheticProfile": true,
+        "feeds": {
+          "nws": {
+            "feed": "nws",
+            "state": "ok",
+            "lastAttemptAt": "2026-11-12T01:00:23.888Z",
+            "lastSuccessAt": "2026-11-12T01:00:23.902Z",
+            "sourceUpdatedAt": "2026-11-12T01:00:23.615Z",
+            "fromCache": false,
+            "error": null,
+            "consecutiveFailures": 0,
+            "nextAttemptAt": "2026-11-12T02:00:23.903Z",
+            "recordCount": 0,
+            "skippedRecords": 1,
+            "coverage": {
+              "completeness": "partial",
+              "skippedRecords": 1,
+              "note": "Normalization omitted 1 record(s); the reply may be incomplete."
+            },
+            "scope": "active-US"
+          },
+          "usgs": {
+            "feed": "usgs",
+            "state": "ok",
+            "lastAttemptAt": "2026-11-12T01:00:23.903Z",
+            "lastSuccessAt": "2026-11-12T01:00:23.903Z",
+            "sourceUpdatedAt": "2026-11-12T01:00:23.615Z",
+            "fromCache": false,
+            "error": null,
+            "consecutiveFailures": 0,
+            "nextAttemptAt": "2026-11-12T02:00:23.904Z",
+            "recordCount": 0,
+            "skippedRecords": 1,
+            "coverage": {
+              "completeness": "partial",
+              "skippedRecords": 1,
+              "note": "USGS reported count does not match the original returned feature count; source completeness cannot be established. Normalization omitted 1 record(s); the reply may be incomplete."
+            },
+            "scope": "all_day"
+          }
+        },
+        "freshness": {
+          "nws": "fresh",
+          "usgs": "fresh"
+        },
+        "evaluation": {
+          "locationId": "0213687b-17b8-4f61-91e9-235a30a679a2",
+          "evaluatedAt": "2026-11-12T01:00:23.904Z",
+          "alertsInside": [],
+          "alertsUnknown": [],
+          "alertsOutsideCount": 0,
+          "nwsFreshness": "fresh",
+          "nwsObservedAt": "2026-11-12T01:00:23.902Z",
+          "nwsLifecycleAt": "2026-11-12T01:00:23.904Z",
+          "nwsHistorical": false,
+          "alertCoverageNote": "Normalization omitted 1 record(s); the reply may be incomplete.",
+          "quakesNearby": [],
+          "usgsFreshness": "fresh"
+        },
+        "evidence": [
+          {
+            "source": "NWS",
+            "state": "partial",
+            "text": "NWS: partial · retrieved Nov 11, 8:00 PM EST · scope active-US. Normalization omitted 1 record(s); the reply may be incomplete."
+          },
+          {
+            "source": "USGS",
+            "state": "partial",
+            "text": "USGS: partial · retrieved Nov 11, 8:00 PM EST · scope all_day. USGS reported count does not match the original returned feature count; source completeness cannot be established. Normalization omitted 1 record(s); the reply may be incomplete."
+          }
+        ],
+        "summaryRows": [
+          [
+            "QA primary saved place — Bay Area",
+            "Unknown",
+            "Unknown",
+            "Unknown (≤ 25 km)"
+          ],
+          [
+            "QA independent control — Washington",
+            "Unknown",
+            "Unknown",
+            "Unknown (≤ 25 km)"
+          ]
+        ],
+        "summaryBounds": {
+          "x": 488,
+          "y": 409.703125,
+          "width": 706,
+          "height": 128.21875,
+          "preview": {
+            "x": 467,
+            "y": 215.84375,
+            "width": 758,
+            "height": 516.609375
+          }
+        },
+        "dataText": "Data BriefingOverviewWhat is happening around your placesActive weather alertsUnknown (0 with polygons, 0 without polygons)Earthquakes in feedUnknown (selected: past day, M-1+)Saved locations2NWS: partial · retrieved Nov 11, 8:00 PM EST · scope active-US. Normalization omitted 1 record(s); the reply may be incomplete.USGS: partial · retrieved Nov 11, 8:00 PM EST · scope all_day. USGS reported count does not match the original returned feature count; source completeness cannot be established. Normalization omitted 1 record(s); the reply may be incomplete.Locations with confirmed alertsUnknown — saved-location alert coverage is incomplete or based on an earlier observation.Select a location, alert polygon, or earthquake marker for details and source records.Legend          Legend▲▲ Extreme▲ Severe◆ Moderate● Minor○ Unknown Quake < M4.5 M4.5–5.9 M6+ Saved locationMarker size scales with magnitude.",
+        "detailText": "Saved locationQA primary saved place — Bay AreaExplicit synthetic QA setup · 37.50000, -122.00000FocusEditBriefingDeleteMonitoring radius25 kmNWS zonesforecast/CAZ006, county/CAC001, fire/CAZ006Last evaluatedNov 11, 8:00 PM ESTNotesNo real observations in this profileWeather alerts at this pointNWS: partial · retrieved Nov 11, 8:00 PM EST · scope active-US. Normalization omitted 1 record(s); the reply may be incomplete.Normalization omitted 1 record(s); the reply may be incomplete.Unknown — this evidence does not establish that no alerts apply.Known alerts not including this point: Unknown.Earthquakes within 25 kmUSGS: partial · retrieved Nov 11, 8:00 PM EST · scope all_day. USGS reported count does not match the original returned feature count; source completeness cannot be established. Normalization omitted 1 record(s); the reply may be incomplete.Distance is to the reported epicenter, not an estimate of shaking or damage.Unknown — this evidence does not establish that no earthquakes occurred within the radius.",
+        "briefingText": "Atlas Watch location briefing\nGenerated Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC) · 2 location(s) · Atlas Watch 0.7.0\nThis briefing summarizes public data retrieved by Atlas Watch. It is not an official warning product and may be incomplete or delayed. For emergencies, follow official alerts from the National Weather Service and local authorities.\nData sources and freshnessSourceStatusLast successful retrievalSource-reported updateRecords\nNational Weather Service — active alerts (api.weather.gov)Partial evidenceNormalization omitted 1 record(s); the reply may be incomplete.Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC)Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC)Unknown\nUSGS Earthquake Hazards Program — GeoJSON summary feedPartial evidenceUSGS reported count does not match the original returned feature count; source completeness cannot be established. Normalization omitted 1 record(s); the reply may be incomplete.Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC)Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC)Unknown\n\nSummaryLocationWeather alerts (confirmed)Alerts not determinableEarthquakes within radius\nQA primary saved place — Bay AreaUnknownUnknownUnknown (≤ 25 km)\nQA independent control — WashingtonUnknownUnknownUnknown (≤ 25 km)\n\nQA primary saved place — Bay Area\n37.50000, -122.00000 · Explicit synthetic QA setup · Monitoring radius 25 km · Evaluated Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC)\nNotes: No real observations in this profile\nWeather alerts\nNWS: Partial evidence · retrieved Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC) · scope active-US. Normalization omitted 1 record(s); the reply may be incomplete.\nNormalization omitted 1 record(s); the reply may be incomplete.\nWeather alert status unknown. This evidence does not establish that no alerts apply.\nEarthquakes within 25 km (distance to epicenter)\nUSGS: Partial evidence · retrieved Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC) · scope all_day. USGS reported count does not match the original returned feature count; source completeness cannot be established. Normalization omitted 1 record(s); the reply may be incomplete.\nEarthquake count unknown. This evidence does not establish that no earthquakes occurred within the radius.\n\nQA independent control — Washington\n38.90000, -77.03000 · Explicit synthetic QA setup · Monitoring radius 25 km · Evaluated Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC)\nNotes: Independent zero/unknown control\nWeather alerts\nNWS: Partial evidence · retrieved Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC) · scope active-US. Normalization omitted 1 record(s); the reply may be incomplete. This point is outside NWS zone-service coverage; independent polygon matches remain observed evidence. This does not establish the absence of weather hazards.\nNormalization omitted 1 record(s); the reply may be incomplete. This point is outside NWS zone-service coverage; polygon evidence is independent and weather hazards are not ruled out.\nWeather alert status unknown. This evidence does not establish that no alerts apply.\nEarthquakes within 25 km (distance to epicenter)\nUSGS: Partial evidence · retrieved Nov 11, 2026, 8:00 PM EST (2026-11-12 01:00 UTC) · scope all_day. USGS reported count does not match the original returned feature count; source completeness cannot be established. Normalization omitted 1 record(s); the reply may be incomplete.\nEarthquake count unknown. This evidence does not establish that no earthquakes occurred within the radius.\n\nCoverage limitations\nWeather alert intersection uses the alert polygon when NWS supplies one. Alerts without a polygon are matched using the NWS forecast, county, and fire-weather zones reported for the location. If zones are unknown, the alert is reported as not determinable rather than as not affecting the location.\nEarthquake distance is the geodesic distance from the location to the reported epicenter. It is not an estimate of shaking, damage, or personal danger.\nEarthquakes are limited to the selected USGS summary feed window and minimum magnitude.\nData reflects the last successful retrieval shown above and may be delayed, revised, or incomplete. Atlas Watch only observes records while it is running.\nA point outside the NWS zone service has unknown overall NWS alert coverage. Supplied polygons are still tested and confirmed intersections are retained; a missing zone match is not evidence of no alerts.\n\nAttributionWeather alerts: National Weather Service / NOAA (public domain). Earthquakes: U.S. Geological Survey Earthquake Hazards Program (public domain). Generated by Atlas Watch from deterministic templates; no AI was used to produce this document.",
+        "analystAlertText": "AnalystAnalystQuestions are answered by ordinary code over loaded data. Every row links to a real record. Say “in this area” to limit to the current view.AskWhich aircraft are above 30,000 feet?Show cargo vessels in this areaWhich of my saved places intersect an active alert?Any emergency squawks?Earthquakes above magnitude 4.5What changed since the last refresh?What changed since my last visit?Saved places with alerts: unknownNormalization omitted 1 record(s); the reply may be incomplete. Reply received at 2026-11-12T01:00:23.902Z. Coverage is incomplete or out of date for 2 of 2 saved places.",
+        "analystQuakeText": "AnalystAnalystQuestions are answered by ordinary code over loaded data. Every row links to a real record. Say “in this area” to limit to the current view.AskWhich aircraft are above 30,000 feet?Show cargo vessels in this areaWhich of my saved places intersect an active alert?Any emergency squawks?Earthquakes above magnitude 4.5What changed since the last refresh?What changed since my last visit?Saved places with nearby earthquakes: unknownUSGS reported count does not match the original returned feature count; source completeness cannot be established. Normalization omitted 1 record(s); the reply may be incomplete. Reply received at 2026-11-12T01:00:23.903Z. Each place uses its saved radius and the selected USGS day feed, M-1+. Coverage is incomplete or out of date for 2 of 2 saved places.",
+        "rendererErrors": []
+      },
+      "exports": [
+        {
+          "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-partial-zero-1.html",
+          "format": "html",
+          "request": {
+            "previewId": "aa2b6d76-d1fd-4318-af40-f8043705d690"
+          },
+          "bytes": 7900,
+          "sha256": "ee832d6bdfabbd261e161324aec968b2b5440028ad3217f4405dde74e31f5f4f"
+        },
+        {
+          "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-partial-zero-2.pdf",
+          "format": "pdf",
+          "request": {
+            "previewId": "aa2b6d76-d1fd-4318-af40-f8043705d690"
+          },
+          "bytes": 36739,
+          "sha256": "b687967f44b26e68c7b6e022e9ec4988b94aedeeca7b839673c6a3ebe38777b3"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+  <identifier>atlas-test-area.DEU</identifier>
+  <sender>opendata@dwd.de</sender>
+  <sent>2026-11-11T12:00:00Z</sent>
+  <status>Actual</status><msgType>Alert</msgType><scope>Public</scope>
+  <info>
+    <language>de-DE</language><category>Met</category><event>Testgebiet</event>
+    <urgency>Expected</urgency><severity>Moderate</severity><certainty>Likely</certainty>
+    <effective>2026-11-11T12:03:00Z</effective><onset>2026-11-11T12:01:30Z</onset><expires>2026-11-11T12:08:00Z</expires>
+    <headline>Beispiel für den automatisierten Test</headline>
+    <area><areaDesc>Testfläche</areaDesc><polygon>50,8 51,8 51,9 50,9 50,8</polygon></area>
+  </info>
+</alert>

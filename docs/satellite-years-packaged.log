@@ -1,0 +1,52 @@
+{
+  "time": "2026-11-12T05:51:28.884Z",
+  "result": "PASS",
+  "asar": "03bafa005199fc31acfcf055934308bd7b71a75412fe7c243802cb6fb1c339b8",
+  "views": [
+    {
+      "year": 2001,
+      "drawn": [
+        "6 · NASA Terra/MODIS true colour · 2001-07-03 UTC"
+      ],
+      "sources": [
+        "Terra/MODIS true colour"
+      ],
+      "buildings": false,
+      "photoreal": false
+    },
+    {
+      "year": 2020,
+      "drawn": [
+        "2 · Satellite surface: ESA CCI Ocean Colour / PML, NASA Terra MODIS (2020)",
+        "12 · © ESA WorldCover project 2020 / Contains modified Copernicus Sentinel data (2020) processed by ESA WorldCover consortium"
+      ],
+      "sources": [
+        "Optical Earth overview",
+        "Sentinel-2 true colour"
+      ],
+      "buildings": false,
+      "photoreal": false
+    },
+    {
+      "year": 2021,
+      "drawn": [
+        "2 · Satellite surface: ESA CCI Ocean Colour / PML, NASA Terra MODIS (2021)",
+        "12 · © ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium"
+      ],
+      "sources": [
+        "Optical Earth overview",
+        "Sentinel-2 true colour"
+      ],
+      "buildings": false,
+      "photoreal": false
+    }
+  ],
+  "errors": [],
+  "paidRequests": 0,
+  "blockedMaskRequests": 0,
+  "harbourEdgeFractions": [
+    0.34100502512562814,
+    0.37202680067001676
+  ],
+  "changedPixelFraction": 0.6490333333333334
+}

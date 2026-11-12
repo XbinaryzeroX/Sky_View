@@ -1,0 +1,41 @@
+{
+  "time": "2026-11-12T05:51:29.899Z",
+  "asar": "03bafa005199fc31acfcf055934308bd7b71a75412fe7c243802cb6fb1c339b8",
+  "result": "PASS",
+  "errors": [],
+  "network": {
+    "bundled": 3,
+    "gibs": 148
+  },
+  "samples": [
+    {
+      "mode": "3D",
+      "night": 51.44708333333333,
+      "unlitTerrain": 7.917129629629629,
+      "day": 26.481597222222224,
+      "nightLightsDelta": 43.99490740740741,
+      "dayLightsDelta": 0,
+      "layers": 2,
+      "loadedFineTiles": true,
+      "clockUnchanged": true
+    },
+    {
+      "mode": "2D",
+      "night": 62.35826388888889,
+      "unlitTerrain": 8.383298611111112,
+      "day": 28.06826388888889,
+      "nightLightsDelta": 54.31105324074074,
+      "dayLightsDelta": 0,
+      "layers": 2,
+      "loadedFineTiles": true,
+      "clockUnchanged": true
+    }
+  ],
+  "archivedDaylightWith2016Lights": true,
+  "replay": {
+    "before": "2026-11-12T05:51:30.665Z",
+    "after": "2026-11-12T05:51:30.665Z",
+    "active": true
+  },
+  "restoredOfflineOverview": true
+}

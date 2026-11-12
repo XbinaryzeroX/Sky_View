@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import type { AlertSeverity, AppSnapshot, HistoryPage, HistoryQuery, HistoryRecordDetail } from '../../shared/types';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { AlertSeverity, AppSnapshot, HistoryPage, HistoryQuery, HistoryRecord, HistoryRecordDetail } from '../../shared/types';
 import { api, errorText } from '../lib/api';
 import { quakeClass, SEVERITY_META, SEVERITY_ORDER } from '../lib/format';
 import { Empty, Time } from './common';
@@ -10,6 +10,7 @@ interface Props {
   onToggle(): void;
   search: string;
   onOpenRecord(r: HistoryRecordDetail): void;
+  onReplay(r: HistoryRecord): void;
   onOpenSettings(): void;
 }
 
@@ -25,8 +26,10 @@ export function HistoryDrawer(p: Props) {
   const [limit, setLimit] = useState(PAGE);
   const [error, setError] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const querySequence = useRef(0);
 
   const load = useCallback(async () => {
+    const sequence = ++querySequence.current;
     const q: HistoryQuery = {
       text: p.search || undefined,
       kind,
@@ -38,16 +41,19 @@ export function HistoryDrawer(p: Props) {
       offset: 0,
     };
     try {
-      setPage(await api.queryHistory(q));
+      const result = await api.queryHistory(q);
+      if (sequence !== querySequence.current) return;
+      setPage(result);
       setError(null);
     } catch (e) {
-      setError(errorText(e));
+      if (sequence === querySequence.current) setError(errorText(e));
     }
   }, [p.search, kind, severity, minMag, since, includeSuperseded, limit]);
 
   // Reload when filters change, the drawer opens, or feeds refresh.
   useEffect(() => {
     if (p.open) void load();
+    return () => { querySequence.current++; };
   }, [p.open, load, p.snap.feeds.nws.lastSuccessAt, p.snap.feeds.usgs.lastSuccessAt]);
 
   async function open(key: string) {
@@ -60,9 +66,13 @@ export function HistoryDrawer(p: Props) {
   }
 
   async function clear() {
-    await api.clearHistory();
-    setConfirmClear(false);
-    void load();
+    try {
+      await api.clearHistory();
+      setConfirmClear(false);
+      void load();
+    } catch (e) {
+      setError(errorText(e));
+    }
   }
 
   return (
@@ -119,7 +129,7 @@ export function HistoryDrawer(p: Props) {
             </span>
             {confirmClear ? (
               <span className="confirm">
-                Delete all stored history?{' '}
+                Delete stored alert and earthquake history, including their replay frames?{' '}
                 <button className="btn danger small-btn" onClick={() => void clear()}>
                   Delete
                 </button>{' '}
@@ -128,7 +138,7 @@ export function HistoryDrawer(p: Props) {
                 </button>
               </span>
             ) : (
-              <button className="btn small-btn" onClick={() => setConfirmClear(true)} disabled={!page || page.storedTotal === 0}>
+              <button className="btn small-btn" onClick={() => setConfirmClear(true)} disabled={!page}>
                 Clear history
               </button>
             )}
@@ -182,6 +192,7 @@ export function HistoryDrawer(p: Props) {
                         </td>
                         <td>
                           <Time iso={r.lastObservedAt} relative />
+                          <button className="link-btn small" onClick={() => p.onReplay(r)}>Replay at last observation</button>
                         </td>
                       </tr>
                     );

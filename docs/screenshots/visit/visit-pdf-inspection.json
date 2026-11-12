@@ -1,0 +1,196 @@
+[
+  {
+    "pdf": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\visit\\visit-first-2.pdf",
+    "bytes": 35391,
+    "sha256": "1ed68d645e5baf84bf8b0d6fcd1c81770df0ea798e19686ecd35348a63427d6c",
+    "pages": 2,
+    "textCharacters": [
+      1601,
+      1289
+    ],
+    "exactObservationTimesChecked": [
+      "2026-11-12T00:40:05.000Z",
+      "2026-11-12T00:42:32.000Z",
+      "2026-11-12T00:42:40.420Z",
+      "2026-11-12T00:42:45.580Z",
+      "2026-11-12T00:42:46.104Z",
+      "2026-11-12T00:42:46.171Z",
+      "2026-11-12T03:42:45.580Z",
+      "2026-11-12T03:42:46.104Z"
+    ],
+    "headingAndSemanticsVerified": true,
+    "pageBounds": [
+      {
+        "page": 1,
+        "pageWidthPt": 612,
+        "pageHeightPt": 792,
+        "textMarginsPt": {
+          "left": 39.74999834375,
+          "top": 43.888181731325744,
+          "right": 51.90620834724234,
+          "bottom": 211.02358379735165
+        }
+      },
+      {
+        "page": 2,
+        "pageWidthPt": 612,
+        "pageHeightPt": 792,
+        "textMarginsPt": {
+          "left": 39.74999834375,
+          "top": 43.13525208269766,
+          "right": 42.40633406557049,
+          "bottom": 379.77357676610177
+        }
+      }
+    ],
+    "renderedPages": [
+      "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\visit\\visit-first-2-page-1.png",
+      "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\visit\\visit-first-2-page-2.png"
+    ]
+  },
+  {
+    "pdf": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\visit\\visit-second-2.pdf",
+    "bytes": 34652,
+    "sha256": "b4ca6f911df7c925851136260bb29edcdd3b2daf7d0a9e7e011e7120a97253d1",
+    "pages": 2,
+    "textCharacters": [
+      1539,
+      1300
+    ],
+    "exactObservationTimesChecked": [
+      "2026-11-12T00:40:05.000Z",
+      "2026-11-12T00:42:32.000Z",
+      "2026-11-12T00:42:40.420Z",
+      "2026-11-12T00:42:45.580Z",
+      "2026-11-12T00:42:46.104Z",
+      "2026-11-12T00:42:53.527Z",
+      "2026-11-12T00:42:53.654Z",
+      "2026-11-12T00:42:53.952Z",
+      "2026-11-12T00:42:57.144Z",
+      "2026-11-12T03:42:45.580Z",
+      "2026-11-12T03:42:46.104Z",
+      "2026-11-12T03:42:53.654Z",
+      "2026-11-12T03:42:53.952Z"
+    ],
+    "headingAndSemanticsVerified": true,
+    "pageBounds": [
+      {
+        "page": 1,
+        "pageWidthPt": 612,
+        "pageHeightPt": 792,
+        "textMarginsPt": {
+          "left": 39.74999834375,
+          "top": 43.888181731325744,
+          "right": 55.933799233176046,
+          "bottom": 259.02358179735165
+        }
+      },
+      {
+        "page": 2,
+        "pageWidthPt": 612,
+        "pageHeightPt": 792,
+        "textMarginsPt": {
+          "left": 39.74999834375,
+          "top": 43.13525208269766,
+          "right": 42.40633406557049,
+          "bottom": 409.0235755473518
+        }
+      }
+    ],
+    "renderedPages": [
+      "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\visit\\visit-second-2-page-1.png",
+      "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\visit\\visit-second-2-page-2.png"
+    ]
+  },
+  {
+    "pdf": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\visit\\visit-second-4.pdf",
+    "bytes": 33987,
+    "sha256": "42454d0f18bc6b97aef24c2c0998eba8fb305ec462e202d84f6c7e54f727918b",
+    "pages": 1,
+    "textCharacters": [
+      2475
+    ],
+    "exactObservationTimesChecked": [],
+    "headingAndSemanticsVerified": true,
+    "pageBounds": [
+      {
+        "page": 1,
+        "pageWidthPt": 612,
+        "pageHeightPt": 792,
+        "textMarginsPt": {
+          "left": 39.74999834375,
+          "top": 43.888181731325744,
+          "right": 40.6919174432544,
+          "bottom": 142.0235866723517
+        }
+      }
+    ],
+    "renderedPages": [
+      "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\visit\\visit-second-4-page-1.png"
+    ]
+  },
+  {
+    "pdf": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\visit\\visit-fixture-positive-2.pdf",
+    "bytes": 48408,
+    "sha256": "dee201926ff3f0ae77518ebff11b45d8ab168e3e4c5d98d28a2790d0fef12c73",
+    "pages": 3,
+    "textCharacters": [
+      2092,
+      1981,
+      888
+    ],
+    "exactObservationTimesChecked": [
+      "2026-11-12T00:38:10.480Z",
+      "2026-11-12T00:38:11.480Z",
+      "2026-11-12T00:43:11.480Z",
+      "2026-11-12T00:43:11.763Z",
+      "2026-11-12T00:43:11.815Z",
+      "2026-11-12T00:43:11.818Z",
+      "2026-11-12T00:43:15.359Z",
+      "2026-11-12T03:38:11.480Z",
+      "2026-11-12T03:43:11.815Z",
+      "2026-11-12T03:43:11.818Z"
+    ],
+    "headingAndSemanticsVerified": true,
+    "pageBounds": [
+      {
+        "page": 1,
+        "pageWidthPt": 612,
+        "pageHeightPt": 792,
+        "textMarginsPt": {
+          "left": 39.74999834375,
+          "top": 43.888181731325744,
+          "right": 55.933799233176046,
+          "bottom": 43.773590766101734
+        }
+      },
+      {
+        "page": 2,
+        "pageWidthPt": 612,
+        "pageHeightPt": 792,
+        "textMarginsPt": {
+          "left": 39.74999834375,
+          "top": 42.947019670540726,
+          "right": 119.07808054841422,
+          "bottom": 46.0235906723517
+        }
+      },
+      {
+        "page": 3,
+        "pageWidthPt": 612,
+        "pageHeightPt": 792,
+        "textMarginsPt": {
+          "left": 39.74999834375,
+          "top": 42.75878725838356,
+          "right": 42.40633406557049,
+          "bottom": 577.0235685473519
+        }
+      }
+    ],
+    "renderedPages": [
+      "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\visit\\visit-fixture-positive-2-page-1.png",
+      "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\visit\\visit-fixture-positive-2-page-2.png",
+      "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\visit\\visit-fixture-positive-2-page-3.png"
+    ]
+  }
+]

@@ -1,0 +1,177 @@
+{
+  "result": "PASS",
+  "historicalFixtures": "EXPLICIT SYNTHETIC HISTORICAL QA — never actual NWS/USGS observations",
+  "historicalFixtureCacheClearedBeforeLaunch": true,
+  "hazardOnlyRange": {
+    "oldest": "2026-11-11T11:51:49.000Z",
+    "newest": "2026-11-11T16:51:50.030Z",
+    "points": 0,
+    "nwsFrames": 5,
+    "usgsFrames": 4
+  },
+  "checks": {
+    "retainedRevisions": true,
+    "unknownNotEmpty": true,
+    "recordedEmptyNotUnknown": true,
+    "expiredGap": true,
+    "partialDisclosed": true,
+    "failureGap": true,
+    "actualCesiumSelection": true,
+    "genuineLivePollDidNotReplaceHistoricalFrame": true,
+    "nativeMillisecondSliderBoundary": true,
+    "latestSeekWins": true,
+    "queryErrorKeepsReplayIsolated": true,
+    "retry": true,
+    "delayedResponseAfterExitDiscarded": true,
+    "exactHistoryJump": true,
+    "liveRestored": true
+  },
+  "historical": {
+    "firstNwsAt": "2026-11-11T11:51:49.000Z",
+    "firstBothAt": "2026-11-11T11:52:49.000Z",
+    "revisedAt": "2026-11-11T12:51:49.000Z",
+    "emptyAt": "2026-11-11T13:51:49.000Z",
+    "oldPick": {
+      "active": true,
+      "cursor": "2026-11-11T11:52:49.000Z",
+      "alertCount": 1,
+      "quakeCount": 1,
+      "positions": [
+        [
+          -122,
+          37.49999999999999
+        ]
+      ],
+      "screen": {
+        "x": 753.9999999999985,
+        "y": 472.47656093825185
+      }
+    },
+    "newPick": {
+      "active": true,
+      "cursor": "2026-11-11T12:51:49.000Z",
+      "alertCount": 1,
+      "quakeCount": 1,
+      "positions": [
+        [
+          -156,
+          20
+        ]
+      ],
+      "screen": {
+        "x": 753.9999999999994,
+        "y": 472.6513340406346
+      }
+    }
+  },
+  "actual": {
+    "cursor": "2026-11-11T16:51:55.429Z",
+    "nws": {
+      "state": "recorded",
+      "observedAt": "2026-11-11T16:51:50.030Z",
+      "sourceUpdatedAt": "2026-11-11T16:45:22.000Z",
+      "scope": "active-US",
+      "validUntil": "2026-11-11T17:01:50.030Z",
+      "reason": null,
+      "records": 414
+    },
+    "usgs": {
+      "state": "recorded",
+      "observedAt": "2026-11-11T16:51:55.429Z",
+      "sourceUpdatedAt": "2026-11-11T16:51:30.000Z",
+      "scope": "all_day",
+      "validUntil": "2026-11-11T17:06:55.429Z",
+      "reason": null,
+      "records": 199
+    },
+    "selectedQuake": "us7000txc3",
+    "selectedQuakeNearestAngularDegrees": 57.76084599232037,
+    "actualPick": {
+      "active": true,
+      "cursor": "2026-11-11T16:51:55.429Z",
+      "alertCount": 11,
+      "quakeCount": 199,
+      "positions": [
+        [
+          68.4755,
+          -20.752800000000004
+        ]
+      ],
+      "screen": {
+        "x": 754.0000000000005,
+        "y": 473.35945159088226
+      }
+    }
+  },
+  "finalLiveCounts": {
+    "alerts": 414,
+    "quakes": 199
+  },
+  "rendererErrors": [],
+  "actualProviderValuesVerified": {
+    "nws": 414,
+    "usgs": 199
+  },
+  "adapters": "TEMP historical fixture seed; real timeline IPC result timing/error injection only; actual native Electron canvas mouse input",
+  "syntheticProviderFallbackUsed": false,
+  "builtAssetsUnchanged": true,
+  "assetSha256": {
+    "dist/main/main.cjs": "f5e116a87596079b47da989ffb29529d8cbe0c64b0b080ade6a4ce4af7c173dd",
+    "dist/preload/preload.cjs": "d2a31a9aba90d515e2a5da3bff4fcb03109e8a26ea237eda8f08ff0dd9665cb7",
+    "dist/renderer/index.html": "182a388001bc5b0923f0fb455a25d46072d014b0cc3c93eaa920c4761631794a",
+    "dist/renderer/assets/index-DtajYI2X.js": "c639ad93f812e4a0d3161e793265e1a05a47d44a7286b17435b01cf53a7bfb4d",
+    "dist/renderer/assets/index-CgHK4gBg.css": "4a223bf5f5ac07904473369ec2e303fffa8bbac8c31b3e07aa47306280c78868"
+  },
+  "sourceAudit": [
+    {
+      "requestUrl": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+      "httpStatus": 200,
+      "responseDate": "Wed, 11 Nov 2026 16:51:30 GMT",
+      "receivedAt": "2026-11-11T16:51:49.655Z",
+      "featureCount": 199,
+      "payloadSha256": "2e164e305d8b732dc63dfa89b7c808e0f1c7a18aaaceffa7daa9c95e3390b77c",
+      "sourceUpdatedAt": "2026-11-11T16:51:30.000Z",
+      "sourceTimestampField": "USGS metadata.generated"
+    },
+    {
+      "requestUrl": "https://api.weather.gov/alerts/active?status=actual",
+      "httpStatus": 200,
+      "responseDate": "Wed, 11 Nov 2026 16:51:49 GMT",
+      "receivedAt": "2026-11-11T16:51:50.013Z",
+      "featureCount": 414,
+      "payloadSha256": "2c65ada1b97bdf9b33eae5b0d9fe3227aa67c998ba67eb201711325e8d3f5540",
+      "sourceUpdatedAt": "2026-11-11T16:45:22.000Z",
+      "sourceTimestampField": "NWS updated"
+    },
+    {
+      "requestUrl": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+      "httpStatus": 200,
+      "responseDate": "Wed, 11 Nov 2026 16:51:30 GMT",
+      "receivedAt": "2026-11-11T16:51:55.421Z",
+      "featureCount": 199,
+      "payloadSha256": "2e164e305d8b732dc63dfa89b7c808e0f1c7a18aaaceffa7daa9c95e3390b77c",
+      "sourceUpdatedAt": "2026-11-11T16:51:30.000Z",
+      "sourceTimestampField": "USGS metadata.generated"
+    }
+  ],
+  "ipcAdapterCalls": [
+    {
+      "t": "2026-11-11T11:52:49.000Z",
+      "delayMs": 1800,
+      "requestedAt": "2026-11-11T16:52:00.433Z"
+    },
+    {
+      "t": "2026-11-11T11:52:49.000Z",
+      "error": true,
+      "requestedAt": "2026-11-11T16:52:02.365Z"
+    },
+    {
+      "t": "2026-11-11T12:51:49.000Z",
+      "delayMs": 1800,
+      "requestedAt": "2026-11-11T16:52:03.073Z"
+    }
+  ],
+  "session": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-timeline-ui-lICK1E",
+  "output": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\timeline",
+  "timestampNote": "Publisher field time, app observation time and earthquake origin time are distinct; NWS updated is not labelled as generation time."
+}

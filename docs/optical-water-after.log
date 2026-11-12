@@ -1,0 +1,122 @@
+{
+  "tag": "after",
+  "utc": "2026-11-12T06:15:14.275Z",
+  "asar": "b5d44038945a54e17c274b92b37b0d33d94564c70474add9bd0b0e006b3a2cad",
+  "stages": [
+    {
+      "label": "aland-loading",
+      "samples": 440,
+      "oldBluePixels": 0,
+      "blueFraction": 0,
+      "medianWater": [
+        2,
+        8,
+        6
+      ],
+      "regionalMesh": false,
+      "optical": true,
+      "sentinel": false,
+      "visibleTerrain": 26,
+      "level": 9,
+      "pending": 57
+    },
+    {
+      "label": "aland-regional",
+      "samples": 440,
+      "oldBluePixels": 0,
+      "blueFraction": 0,
+      "medianWater": [
+        3,
+        8,
+        6
+      ],
+      "regionalMesh": false,
+      "optical": true,
+      "sentinel": true,
+      "visibleTerrain": 33,
+      "level": 9,
+      "pending": 0,
+      "waterEdgeJumps": [
+        1,
+        1,
+        1,
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        1,
+        1
+      ],
+      "inlandDetail": [
+        0.495837669094693,
+        0.4625390218522373,
+        0.4084287200832466
+      ]
+    },
+    {
+      "label": "aland-oblique",
+      "samples": 77,
+      "oldBluePixels": 0,
+      "blueFraction": 0,
+      "medianWater": [
+        9,
+        18,
+        22
+      ],
+      "regionalMesh": false,
+      "optical": true,
+      "sentinel": true,
+      "visibleTerrain": 79,
+      "level": 12,
+      "pending": 0
+    },
+    {
+      "label": "atlantic-offline",
+      "samples": 81,
+      "oldBluePixels": 0,
+      "blueFraction": 0,
+      "medianWater": [
+        1,
+        5,
+        22
+      ],
+      "regionalMesh": false,
+      "optical": true,
+      "sentinel": false,
+      "visibleTerrain": 18,
+      "level": 6,
+      "pending": 0
+    },
+    {
+      "label": "superior-offline",
+      "samples": 4,
+      "oldBluePixels": 0,
+      "blueFraction": 0,
+      "medianWater": [
+        1,
+        5,
+        11
+      ],
+      "regionalMesh": false,
+      "optical": true,
+      "sentinel": false,
+      "visibleTerrain": 21,
+      "level": 10,
+      "pending": 0
+    }
+  ],
+  "errors": [],
+  "wmsUnavailable": {
+    "lat": 48.86,
+    "lon": 2.35,
+    "x": 2074,
+    "y": 1409,
+    "z": 12,
+    "opaque": 65536,
+    "redValues": 183,
+    "wmsRequestsRefused": 1
+  },
+  "result": "PASS"
+}

@@ -43,9 +43,40 @@ export interface MarketResult<T> {
 
 export interface Headline {
   title: string;
+  summary: string | null;
   url: string;
   domain: string;
   seenAt: string;
+}
+
+export interface TrendingMarket {
+  symbol: string;
+  name: string;
+  volume: number;
+  price: number | null;
+  changePct: number | null;
+  currency: string | null;
+  asOf: string | null;
+}
+
+export interface TrendingMarkets {
+  items: TrendingMarket[];
+  source: string;
+  fetchedAt: string;
+}
+
+export const MOST_ACTIVE_URL = 'https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?scrIds=most_actives&count=10';
+const equitySymbol = /^[A-Z0-9][A-Z0-9.-]{0,19}$/;
+
+export function equityNewsUrl(symbol: string): string {
+  if (!equitySymbol.test(symbol)) throw new Error('Invalid equity ticker.');
+  return 'https://feeds.finance.yahoo.com/rss/2.0/headline?s=' + encodeURIComponent(symbol) + '&region=US&lang=en-US';
+}
+
+export function isMarketFeedUrl(url: URL): boolean {
+  if (url.href === MOST_ACTIVE_URL) return true;
+  const symbol = url.searchParams.get('s');
+  return !!symbol && equitySymbol.test(symbol) && url.href === equityNewsUrl(symbol);
 }
 
 export const marketProviderName = (provider: MarketProvider) => provider === 'twelvedata' ? 'Twelve Data' : 'Alpha Vantage';
@@ -57,6 +88,35 @@ export function object(value: unknown): Obj {
 }
 
 const text = (value: unknown): string | null => typeof value === 'string' && value.trim() ? value : null;
+
+/** Yahoo's Most Actives screener is sorted by regular-session share volume. */
+export function normalizeMostActive(raw: unknown): TrendingMarket[] {
+  const finance = object(object(raw).finance);
+  if (finance.error || !Array.isArray(finance.result)) throw new Error('Yahoo Finance could not supply the Most Actives screener.');
+  const screen = object(finance.result[0]);
+  if (screen.canonicalName !== 'MOST_ACTIVES' || !Array.isArray(screen.quotes)) throw new Error('Unexpected Most Actives screener.');
+  const numeric = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? value : null;
+  const rows = new Map<string, TrendingMarket>();
+  for (const value of screen.quotes) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+    const row = object(value);
+    const symbol = text(row.symbol);
+    const volume = numeric(row.regularMarketVolume);
+    if (row.quoteType !== 'EQUITY' || row.market !== 'us_market' || !symbol || !equitySymbol.test(symbol)
+      || volume === null || !Number.isSafeInteger(volume) || volume <= 0 || rows.has(symbol)) continue;
+    const time = numeric(row.regularMarketTime);
+    const date = time !== null && time > 0 ? new Date(time * 1000) : null;
+    const price = numeric(row.regularMarketPrice);
+    rows.set(symbol, {
+      symbol, name: (text(row.longName) ?? text(row.shortName) ?? symbol).trim().slice(0, 200), volume,
+      price: price !== null && price > 0 ? price : null, changePct: numeric(row.regularMarketChangePercent),
+      currency: text(row.currency)?.slice(0, 10) ?? null,
+      asOf: date && Number.isFinite(date.getTime()) ? date.toISOString() : null,
+    });
+  }
+  if (screen.quotes.length && !rows.size) throw new Error('Yahoo Finance returned no usable ranked equities.');
+  return [...rows.values()].sort((a, b) => b.volume - a.volume).slice(0, 10);
+}
 
 export function finite(value: unknown): number {
   if ((typeof value !== 'number' && typeof value !== 'string') || (typeof value === 'string' && !value.trim())) {
@@ -224,7 +284,7 @@ export function parseGdelt(body: string): Headline[] {
       const seenAt = new Date(stamp).toISOString();
       // GDELT tokenizes titles with spaces before punctuation ("IBM , Atos"); tidy for display.
       const title = row.title.replace(/\s+([,.;:!?…'’)])/g, '$1').replace(/([(‘])\s+/g, '$1').replace(/\s+/g, ' ').trim();
-      articles.push({ title: title.slice(0, 300), url: url.href, domain: String(row.domain ?? url.hostname), seenAt });
+      articles.push({ title: title.slice(0, 300), summary: null, url: url.href, domain: String(row.domain ?? url.hostname), seenAt });
       if (articles.length === 25) break;
     } catch {
       // A malformed article must not discard otherwise valid news results.

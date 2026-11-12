@@ -1,0 +1,324 @@
+{
+  "result": "PASS",
+  "files": [
+    {
+      "pdf": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-before-2.pdf",
+      "html": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-before-1.html",
+      "bytes": 34212,
+      "sha256": "08b8b034310c9443646a5c4397e286b4f2d0b45ffe83122f01f65fbce1573eff",
+      "pages": 1,
+      "allBodyTextChunksVerified": 38,
+      "bounds": [
+        {
+          "page": 1,
+          "textMarginsPt": {
+            "left": 39.74999834375,
+            "top": 43.888181731325744,
+            "right": 40.6919174432544,
+            "bottom": 111.27358795360169
+          }
+        }
+      ],
+      "renderedPages": [
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-before-2-page-1.png"
+      ]
+    },
+    {
+      "pdf": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-missing-2.pdf",
+      "html": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-missing-1.html",
+      "bytes": 36636,
+      "sha256": "136f10362aa9136c6c93988f9ece4f8c8594400abe45f351f0c6adb98633ae89",
+      "pages": 2,
+      "allBodyTextChunksVerified": 60,
+      "bounds": [
+        {
+          "page": 1,
+          "textMarginsPt": {
+            "left": 39.74999834375,
+            "top": 43.888181731325744,
+            "right": 44.80574755934515,
+            "bottom": 44.52359073485172
+          }
+        },
+        {
+          "page": 2,
+          "textMarginsPt": {
+            "left": 39.74999834375,
+            "top": 42.10143865577322,
+            "right": 40.6919174432544,
+            "bottom": 409.7735755161018
+          }
+        }
+      ],
+      "renderedPages": [
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-missing-2-page-1.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-missing-2-page-2.png"
+      ]
+    },
+    {
+      "pdf": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-mixed-2.pdf",
+      "html": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-mixed-1.html",
+      "bytes": 49755,
+      "sha256": "324937dd11ae567e617cd005257daa225356df1e23779303e115552388e611e9",
+      "pages": 2,
+      "allBodyTextChunksVerified": 89,
+      "bounds": [
+        {
+          "page": 1,
+          "textMarginsPt": {
+            "left": 39.74999834375,
+            "top": 43.888181731325744,
+            "right": 47.062890322797216,
+            "bottom": 56.52359023485167
+          }
+        },
+        {
+          "page": 2,
+          "textMarginsPt": {
+            "left": 39.74999834375,
+            "top": 42.947019670540726,
+            "right": 40.6919174432544,
+            "bottom": 233.52358285985179
+          }
+        }
+      ],
+      "renderedPages": [
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-mixed-2-page-1.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-mixed-2-page-2.png"
+      ]
+    },
+    {
+      "pdf": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-restart-2.pdf",
+      "html": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-restart-1.html",
+      "bytes": 50057,
+      "sha256": "47a78f8748c407e4d94cd97db4da334296d037854cc04f4aa349a3519de93c7f",
+      "pages": 2,
+      "allBodyTextChunksVerified": 90,
+      "bounds": [
+        {
+          "page": 1,
+          "textMarginsPt": {
+            "left": 39.74999834375,
+            "top": 43.888181731325744,
+            "right": 44.62868570672242,
+            "bottom": 85.49124039786625
+          }
+        },
+        {
+          "page": 2,
+          "textMarginsPt": {
+            "left": 39.74999834375,
+            "top": 43.13525208269766,
+            "right": 40.6919174432544,
+            "bottom": 168.2735855786018
+          }
+        }
+      ],
+      "renderedPages": [
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-restart-2-page-1.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-restart-2-page-2.png"
+      ]
+    },
+    {
+      "pdf": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-complete-empty-2.pdf",
+      "html": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-complete-empty-1.html",
+      "bytes": 36185,
+      "sha256": "34973abb297dee31c55115af63dc2896c8aaf3f39e74afb5bd1d2a5e9f03b0fc",
+      "pages": 2,
+      "allBodyTextChunksVerified": 57,
+      "bounds": [
+        {
+          "page": 1,
+          "textMarginsPt": {
+            "left": 39.74999834375,
+            "top": 43.888181731325744,
+            "right": 45.68630344640508,
+            "bottom": 63.741241304116215
+          }
+        },
+        {
+          "page": 2,
+          "textMarginsPt": {
+            "left": 39.74999834375,
+            "top": 43.13525208269766,
+            "right": 40.6919174432544,
+            "bottom": 571.0235687973518
+          }
+        }
+      ],
+      "renderedPages": [
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-complete-empty-2-page-1.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-complete-empty-2-page-2.png"
+      ]
+    },
+    {
+      "pdf": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-partial-zero-2.pdf",
+      "html": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-partial-zero-1.html",
+      "bytes": 36804,
+      "sha256": "497572ff62502e0816164c783aca9c55b84574b2f865394ef5789e3963f8dfa4",
+      "pages": 2,
+      "allBodyTextChunksVerified": 62,
+      "bounds": [
+        {
+          "page": 1,
+          "textMarginsPt": {
+            "left": 39.74999834375,
+            "top": 43.888181731325744,
+            "right": 47.062890322797216,
+            "bottom": 76.02358942235173
+          }
+        },
+        {
+          "page": 2,
+          "textMarginsPt": {
+            "left": 39.74999834375,
+            "top": 46.03967091168022,
+            "right": 40.6919174432544,
+            "bottom": 439.02357429735184
+          }
+        }
+      ],
+      "renderedPages": [
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-partial-zero-2-page-1.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-partial-zero-2-page-2.png"
+      ]
+    },
+    {
+      "pdf": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-expired-cache-2.pdf",
+      "html": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-expired-cache-1.html",
+      "bytes": 50006,
+      "sha256": "a96f2ce1760d9c7d20c65937005c41845dc3d8f94037258334a7af6de2fdedc0",
+      "pages": 2,
+      "allBodyTextChunksVerified": 90,
+      "bounds": [
+        {
+          "page": 1,
+          "textMarginsPt": {
+            "left": 39.74999834375,
+            "top": 43.888181731325744,
+            "right": 48.76540053435929,
+            "bottom": 63.741241304116215
+          }
+        },
+        {
+          "page": 2,
+          "textMarginsPt": {
+            "left": 39.74999834375,
+            "top": 43.13525208269766,
+            "right": 40.6919174432544,
+            "bottom": 167.5235856098518
+          }
+        }
+      ],
+      "renderedPages": [
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-expired-cache-2-page-1.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-expired-cache-2-page-2.png"
+      ]
+    },
+    {
+      "pdf": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-packaged-live-2.pdf",
+      "html": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-packaged-live-1.html",
+      "bytes": 67527,
+      "sha256": "b9ecea4e4e6c983f659672ce8804eb1325331c0130c4cc094f19efd4d8bf9746",
+      "pages": 4,
+      "allBodyTextChunksVerified": 307,
+      "bounds": [
+        {
+          "page": 1,
+          "textMarginsPt": {
+            "left": 39.74999834375,
+            "top": 43.888181731325744,
+            "right": 51.915551273103006,
+            "bottom": 70.7735896411017
+          }
+        },
+        {
+          "page": 2,
+          "textMarginsPt": {
+            "left": 44.999998125,
+            "top": 45.85143849952328,
+            "right": 57.0152208881168,
+            "bottom": 60.27359007860173
+          }
+        },
+        {
+          "page": 3,
+          "textMarginsPt": {
+            "left": 39.74999834375,
+            "top": 45.851438499523056,
+            "right": 40.6919174432544,
+            "bottom": 66.2735898286021
+          }
+        },
+        {
+          "page": 4,
+          "textMarginsPt": {
+            "left": 39.74999834375,
+            "top": 43.13525208269789,
+            "right": 56.24910700503813,
+            "bottom": 707.5235631098519
+          }
+        }
+      ],
+      "renderedPages": [
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-packaged-live-2-page-1.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-packaged-live-2-page-2.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-packaged-live-2-page-3.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-packaged-live-2-page-4.png"
+      ]
+    },
+    {
+      "pdf": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-packaged-restart-2.pdf",
+      "html": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-packaged-restart-1.html",
+      "bytes": 67527,
+      "sha256": "bb23e1df8e11e937decc48a51410ca35775ddde668012c9b781195227122d3b6",
+      "pages": 4,
+      "allBodyTextChunksVerified": 307,
+      "bounds": [
+        {
+          "page": 1,
+          "textMarginsPt": {
+            "left": 39.74999834375,
+            "top": 43.888181731325744,
+            "right": 51.915551273103006,
+            "bottom": 70.7735896411017
+          }
+        },
+        {
+          "page": 2,
+          "textMarginsPt": {
+            "left": 44.999998125,
+            "top": 45.85143849952328,
+            "right": 57.0152208881168,
+            "bottom": 60.27359007860173
+          }
+        },
+        {
+          "page": 3,
+          "textMarginsPt": {
+            "left": 39.74999834375,
+            "top": 45.851438499523056,
+            "right": 40.6919174432544,
+            "bottom": 66.2735898286021
+          }
+        },
+        {
+          "page": 4,
+          "textMarginsPt": {
+            "left": 39.74999834375,
+            "top": 43.13525208269789,
+            "right": 56.24910700503813,
+            "bottom": 707.5235631098519
+          }
+        }
+      ],
+      "renderedPages": [
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-packaged-restart-2-page-1.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-packaged-restart-2-page-2.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-packaged-restart-2-page-3.png",
+        "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence\\location-packaged-restart-2-page-4.png"
+      ]
+    }
+  ],
+  "visualReview": "Rendered pages require separate human/agent visual review; text/bounds alone do not establish print appearance."
+}

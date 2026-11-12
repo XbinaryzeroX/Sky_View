@@ -1,0 +1,107 @@
+{
+  "tag": "before",
+  "utc": "2026-11-12T05:45:23.743Z",
+  "asar": "6e29aad3576da0f6a3ce1d650b6a83ffcb471b3cb908227db6dc204cfc94b486",
+  "stages": [
+    {
+      "label": "aland-loading",
+      "samples": 440,
+      "oldBluePixels": 417,
+      "blueFraction": 0.9477272727272728,
+      "medianWater": [
+        27,
+        70,
+        127
+      ],
+      "regionalMesh": false,
+      "optical": false,
+      "sentinel": false,
+      "visibleTerrain": 33,
+      "level": 9,
+      "pending": 35
+    },
+    {
+      "label": "aland-regional",
+      "samples": 440,
+      "oldBluePixels": 314,
+      "blueFraction": 0.7136363636363636,
+      "medianWater": [
+        26,
+        69,
+        126
+      ],
+      "regionalMesh": false,
+      "optical": false,
+      "sentinel": true,
+      "visibleTerrain": 33,
+      "level": 9,
+      "pending": 33,
+      "waterEdgeJumps": [
+        109,
+        109,
+        106,
+        107,
+        101,
+        109,
+        105,
+        104,
+        105,
+        106,
+        103
+      ]
+    },
+    {
+      "label": "aland-oblique",
+      "samples": 77,
+      "oldBluePixels": 75,
+      "blueFraction": 0.974025974025974,
+      "medianWater": [
+        31,
+        73,
+        130
+      ],
+      "regionalMesh": true,
+      "optical": false,
+      "sentinel": true,
+      "visibleTerrain": 79,
+      "level": 12,
+      "pending": 105
+    },
+    {
+      "label": "atlantic-offline",
+      "samples": 81,
+      "oldBluePixels": 58,
+      "blueFraction": 0.7160493827160493,
+      "medianWater": [
+        7,
+        20,
+        51
+      ],
+      "regionalMesh": false,
+      "optical": false,
+      "sentinel": false,
+      "visibleTerrain": 15,
+      "level": 6,
+      "pending": 0
+    },
+    {
+      "label": "superior-offline",
+      "samples": 4,
+      "oldBluePixels": 0,
+      "blueFraction": 0,
+      "medianWater": [
+        0,
+        4,
+        11
+      ],
+      "regionalMesh": false,
+      "optical": false,
+      "sentinel": false,
+      "visibleTerrain": 12,
+      "level": 10,
+      "pending": 0
+    }
+  ],
+  "errors": [],
+  "result": "PASS"
+}

@@ -1,0 +1,58 @@
+{
+  "result": "PASS",
+  "archive": "b5d44038945a54e17c274b92b37b0d33d94564c70474add9bd0b0e006b3a2cad",
+  "views": [
+    {
+      "year": 2000,
+      "sources": [
+        {
+          "id": "MODIS_Terra_CorrectedReflectance_TrueColor",
+          "name": "Terra/MODIS true colour",
+          "provider": "NASA GIBS",
+          "coverage": "Daylight swaths, with additional same-year observations filling gaps",
+          "captureDate": "2000-07-01 UTC",
+          "maxLevel": 9,
+          "bestResolution": "250–500 m",
+          "terms": "NASA open data",
+          "host": "gibs.earthdata.nasa.gov"
+        }
+      ],
+      "darkFraction": 0
+    },
+    {
+      "year": 2001,
+      "sources": [
+        {
+          "id": "MODIS_Terra_CorrectedReflectance_TrueColor",
+          "name": "Terra/MODIS true colour",
+          "provider": "NASA GIBS",
+          "coverage": "Daylight swaths, with additional same-year observations filling gaps",
+          "captureDate": "2001-07-03 UTC",
+          "maxLevel": 9,
+          "bestResolution": "250–500 m",
+          "terms": "NASA open data",
+          "host": "gibs.earthdata.nasa.gov"
+        }
+      ],
+      "darkFraction": 0
+    },
+    {
+      "year": 2026,
+      "sources": [
+        {
+          "id": "MODIS_Terra_CorrectedReflectance_TrueColor",
+          "name": "Terra/MODIS true colour",
+          "provider": "NASA GIBS",
+          "coverage": "Daylight swaths, with additional same-year observations filling gaps",
+          "captureDate": "2026-07-01 UTC",
+          "maxLevel": 9,
+          "bestResolution": "250–500 m",
+          "terms": "NASA open data",
+          "host": "gibs.earthdata.nasa.gov"
+        }
+      ],
+      "darkFraction": 0
+    }
+  ],
+  "errors": []
+}

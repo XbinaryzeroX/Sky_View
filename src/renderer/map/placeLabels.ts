@@ -330,7 +330,9 @@ export class PlaceLabelManager {
     if (!items.length) return;
     try {
       const carto = items.map((p) => Cartographic.fromDegrees(p.c.lon, p.c.lat));
-      const res = await sampleTerrain(this.widget.terrainProvider, Math.min(11, Math.max(6, this.level)), carto);
+      // Country-scale labels use overview terrain too. The old minimum of L6
+      // pulled remote height and coastline tiles for offscreen place names.
+      const res = await sampleTerrain(this.widget.terrainProvider, Math.min(11, this.level), carto);
       res.forEach((r, i) => {
         if (Number.isFinite(r.height) && r.height > 0 && !items[i].label.isDestroyed?.()) items[i].label.position = Cartesian3.fromDegrees(items[i].c.lon, items[i].c.lat, r.height + 15);
       });

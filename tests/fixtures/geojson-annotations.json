@@ -1,0 +1,15 @@
+{
+  "type": "FeatureCollection",
+  "apiKey": "must-not-survive",
+  "features": [
+    {"type":"Feature","id":"existing-id","properties":{"name":"ケープタウン / Кейптаун","color":"#5FD0E6","notes":"private-source-note","token":"source-secret"},"geometry":{"type":"Point","coordinates":[18.4241,-33.9249]}},
+    {"type":"Feature","properties":{"name":"Across the date line"},"geometry":{"type":"LineString","coordinates":[[179,-10],[-179,-11]]}},
+    {"type":"Feature","properties":{"name":"Southern boundary","visible":false},"geometry":{"type":"Polygon","coordinates":[[[-180,-30],[-179,-30],[-179,-29],[-180,-30]]]}},
+    {"type":"Feature","properties":{"name":"ケープタウン / Кейптаун","color":"#ffffff"},"geometry":{"type":"Point","coordinates":[18.4241,-33.9249]}},
+    {"type":"Feature","properties":{"name":"Hole must remain a rejection"},"geometry":{"type":"Polygon","coordinates":[[[0,0],[4,0],[4,4],[0,0]],[[1,1],[2,1],[2,2],[1,1]]]}},
+    {"type":"Feature","properties":null,"geometry":{"type":"MultiPoint","coordinates":[[1,2],[3,4]]}},
+    {"type":"Feature","crs":{"type":"name","properties":{"name":"EPSG:3857"}},"properties":null,"geometry":{"type":"Point","coordinates":[1,2]}},
+    {"type":"Feature","properties":null,"geometry":{"type":"Point","coordinates":[181,10]}},
+    {"type":"Feature","properties":null,"geometry":{"type":"Point","coordinates":[10,20,300]}}
+  ]
+}

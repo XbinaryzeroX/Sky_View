@@ -1,0 +1,61 @@
+{
+  "result": "PASS",
+  "phase": "before",
+  "startedAt": "2026-11-12T00:52:01.438Z",
+  "finishedAt": "2026-11-12T00:52:11.351Z",
+  "appVersion": "0.7.0",
+  "temporary": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-location-evidence-before-8OyxiJ",
+  "database": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-location-evidence-before-8OyxiJ\\qa.sqlite",
+  "instrumentation": "Existing isolated app QA entry; forced offline, zero provider observations, adapted save-picker results",
+  "genuineProfileAccessed": false,
+  "installerExecuted": false,
+  "assetsSha256": {
+    "dist/main/main.cjs": "9df7c085b4f906b24e87716682379aa7621c77c157e87e0c7c8b38e7f6fdfdfa",
+    "dist/preload/preload.cjs": "632ca69c9b1b0e89fbb1962df65f4a4a5b720f2af5b5109592bc268265213655",
+    "dist/renderer/index.html": "3e9ff06b225779f3682e19c6e52fd49406b70b8bd4813b904f8f312680782fe4",
+    "dist/renderer/assets/index-DTaMdsXe.js": "12cdc3fc67158f12de0301ddfefd448bb6d712ef74aa178e7181f8007b94ee28",
+    "dist/renderer/assets/index-CUnw5lOt.css": "baef0757a85791c9d743172dd5475fb4dbcec89caeefaa3c90761a268eb1c550"
+  },
+  "builtAssetsUnchanged": true,
+  "scenario": {
+    "result": "PASS",
+    "beforeState": true,
+    "savedPlace": {
+      "id": "ce7ae052-f499-4060-aca9-4f7b2917ec68",
+      "name": "QA offline saved place — Washington"
+    },
+    "evaluation": {
+      "locationId": "ce7ae052-f499-4060-aca9-4f7b2917ec68",
+      "evaluatedAt": "2026-11-12T00:52:01.599Z",
+      "alertsInside": [],
+      "alertsUnknown": [],
+      "alertsOutsideCount": 0,
+      "nwsFreshness": "unavailable",
+      "alertCoverageNote": "Weather alert data is unavailable; alert status cannot be determined.",
+      "quakesNearby": [],
+      "usgsFreshness": "unavailable"
+    },
+    "summaryCells": "QA offline saved place — Washington000 (≤ 25 km)",
+    "missingFeedsDisplayedAsZeroInSummary": true,
+    "dataText": "Data BriefingOverviewWhat is happening around your placesActive weather alertsUnavailableEarthquakes in feedUnavailableSaved locations1Locations with confirmed alertsNone of your saved locations are inside an active alert.Select a location, alert polygon, or earthquake marker for details and source records.Legend          Legend▲▲ Extreme▲ Severe◆ Moderate● Minor○ Unknown Quake < M4.5 M4.5–5.9 M6+ Saved locationMarker size scales with magnitude.",
+    "detailText": "Saved locationQA offline saved place — WashingtonIsolated QA setup · 38.90000, -77.03000FocusEditBriefingDeleteMonitoring radius25 kmNWS zonesLookup turned offLast evaluatedNov 11, 7:52 PM ESTNotesManual saved place; no provider observationsWeather alerts at this pointWeather alert data is unavailable; alert status cannot be determined.Unknown — weather alert data is unavailable.Earthquakes within 25 kmDistance is to the reported epicenter, not an estimate of shaking or damage.Unknown — earthquake data is unavailable.",
+    "briefingText": "Atlas Watch location briefing\nGenerated Nov 11, 2026, 7:52 PM EST (2026-11-12 00:52 UTC) · 1 location(s) · Atlas Watch 0.7.0\nThis briefing summarizes public data retrieved by Atlas Watch. It is not an official warning product and may be incomplete or delayed. For emergencies, follow official alerts from the National Weather Service and local authorities.\nData sources and freshnessSourceStatusLast successful retrievalSource-reported updateRecords\nNational Weather Service — active alerts (api.weather.gov)UnavailableLast error: Network unavailable or host unreachable——0\nUSGS Earthquake Hazards Program — GeoJSON summary feedUnavailableLast error: Network unavailable or host unreachable——0\n\nSummaryLocationWeather alerts (confirmed)Alerts not determinableEarthquakes within radius\nQA offline saved place — Washington000 (≤ 25 km)\n\nQA offline saved place — Washington\n38.90000, -77.03000 · Isolated QA setup · Monitoring radius 25 km · Evaluated Nov 11, 2026, 7:52 PM EST (2026-11-12 00:52 UTC)\nNotes: Manual saved place; no provider observations\nWeather alerts\nWeather alert data is unavailable; alert status cannot be determined.\nWeather alert status unknown (data unavailable).\nEarthquakes within 25 km (distance to epicenter)\nEarthquake data unavailable.\n\nCoverage limitations\nWeather alert intersection uses the alert polygon when NWS supplies one. Alerts without a polygon are matched using the NWS forecast, county, and fire-weather zones reported for the location. If zones are unknown, the alert is reported as not determinable rather than as not affecting the location.\nEarthquake distance is the geodesic distance from the location to the reported epicenter. It is not an estimate of shaking, damage, or personal danger.\nEarthquakes are limited to the selected USGS summary feed window and minimum magnitude.\nData reflects the last successful retrieval shown above and may be delayed, revised, or incomplete. Atlas Watch only observes records while it is running.\nLocations outside NWS coverage (outside the U.S. and its territories) cannot be evaluated for NWS alerts.\n\nAttributionWeather alerts: National Weather Service / NOAA (public domain). Earthquakes: U.S. Geological Survey Earthquake Hazards Program (public domain). Generated by Atlas Watch from deterministic templates; no AI was used to produce this document.",
+    "analystText": "AnalystAnalystQuestions are answered by ordinary code over loaded data. Every row links to a real record. Say “in this area” to limit to the current view.AskWhich aircraft are above 30,000 feet?Show cargo vessels in this areaWhich of my saved places intersect an active alert?Any emergency squawks?Earthquakes above magnitude 4.5What changed since the last refresh?What changed since my last visit?0 saved places inside active alertsNWS alerts (U.S. only), unavailable. 0 place(s) have alerts that could not be evaluated.",
+    "rendererErrors": []
+  },
+  "saved": [
+    {
+      "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-before-1.html",
+      "format": "html",
+      "bytes": 5249,
+      "sha256": "00cb50632fbc731c71fa41b96e0f676bbc5d8e4e88d1c064336c0fec691c5f13"
+    },
+    {
+      "path": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\location-evidence/location-before-2.pdf",
+      "format": "pdf",
+      "bytes": 34212,
+      "sha256": "08b8b034310c9443646a5c4397e286b4f2d0b45ffe83122f01f65fbce1573eff"
+    }
+  ],
+  "rawLog": "\r\n[feeds] nws refresh failed (1): Network unavailable or host unreachable\n[feeds] usgs refresh failed (1): Network unavailable or host unreachable\nSMOKE_SCRIPT {\"result\":\"PASS\",\"beforeState\":true,\"savedPlace\":{\"id\":\"ce7ae052-f499-4060-aca9-4f7b2917ec68\",\"name\":\"QA offline saved place — Washington\"},\"evaluation\":{\"locationId\":\"ce7ae052-f499-4060-aca9-4f7b2917ec68\",\"evaluatedAt\":\"2026-11-12T00:52:01.599Z\",\"alertsInside\":[],\"alertsUnknown\":[],\"alertsOutsideCount\":0,\"nwsFreshness\":\"unavailable\",\"alertCoverageNote\":\"Weather alert data is unavailable; alert status cannot be determined.\",\"quakesNearby\":[],\"usgsFreshness\":\"unavailable\"},\"summaryCells\":\"QA offline saved place — Washington000 (≤ 25 km)\",\"missingFeedsDisplayedAsZeroInSummary\":true,\"dataText\":\"Data BriefingOverviewWhat is happening around your placesActive weather alertsUnavailableEarthquakes in feedUnavailableSaved locations1Locations with confirmed alertsNone of your saved locations are inside an active alert.Select a location, alert polygon, or earthquake marker for details and source records.Legend          Legend▲▲ Extreme▲ Severe◆ Moderate● Minor○ Unknown Quake < M4.5 M4.5–5.9 M6+ Saved locationMarker size scales with magnitude.\",\"detailText\":\"Saved locationQA offline saved place — WashingtonIsolated QA setup · 38.90000, -77.03000FocusEditBriefingDeleteMonitoring radius25 kmNWS zonesLookup turned offLast evaluatedNov 11, 7:52 PM ESTNotesManual saved place; no provider observationsWeather alerts at this pointWeather alert data is unavailable; alert status cannot be determined.Unknown — weather alert data is unavailable.Earthquakes within 25 kmDistance is to the reported epicenter, not an estimate of shaking or damage.Unknown — earthquake data is unavailable.\",\"briefingText\":\"Atlas Watch location briefing\\nGenerated Nov 11, 2026, 7:52 PM EST (2026-11-12 00:52 UTC) · 1 location(s) · Atlas Watch 0.7.0\\nThis briefing summarizes public data retrieved by Atlas Watch. It is not an official warning product and may be incomplete or delayed. For emergencies, follow official alerts from the National Weather Service and local authorities.\\nData sources and freshnessSourceStatusLast successful retrievalSource-reported updateRecords\\nNational Weather Service — active alerts (api.weather.gov)UnavailableLast error: Network unavailable or host unreachable——0\\nUSGS Earthquake Hazards Program — GeoJSON summary feedUnavailableLast error: Network unavailable or host unreachable——0\\n\\nSummaryLocationWeather alerts (confirmed)Alerts not determinableEarthquakes within radius\\nQA offline saved place — Washington000 (≤ 25 km)\\n\\nQA offline saved place — Washington\\n38.90000, -77.03000 · Isolated QA setup · Monitoring radius 25 km · Evaluated Nov 11, 2026, 7:52 PM EST (2026-11-12 00:52 UTC)\\nNotes: Manual saved place; no provider observations\\nWeather alerts\\nWeather alert data is unavailable; alert status cannot be determined.\\nWeather alert status unknown (data unavailable).\\nEarthquakes within 25 km (distance to epicenter)\\nEarthquake data unavailable.\\n\\nCoverage limitations\\nWeather alert intersection uses the alert polygon when NWS supplies one. Alerts without a polygon are matched using the NWS forecast, county, and fire-weather zones reported for the location. If zones are unknown, the alert is reported as not determinable rather than as not affecting the location.\\nEarthquake distance is the geodesic distance from the location to the reported epicenter. It is not an estimate of shaking, damage, or personal danger.\\nEarthquakes are limited to the selected USGS summary feed window and minimum magnitude.\\nData reflects the last successful retrieval shown above and may be delayed, revised, or incomplete. Atlas Watch only observes records while it is running.\\nLocations outside NWS coverage (outside the U.S. and its territories) cannot be evaluated for NWS alerts.\\n\\nAttributionWeather alerts: National Weather Service / NOAA (public domain). Earthquakes: U.S. Geological Survey Earthquake Hazards Program (public domain). Generated by Atlas Watch from deterministic templates; no AI was used to produce this document.\",\"analystText\":\"AnalystAnalystQuestions are answered by ordinary code over loaded data. Every row links to a real record. Say “in this area” to limit to the current view.AskWhich aircraft are above 30,000 feet?Show cargo vessels in this areaWhich of my saved places intersect an active alert?Any emergency squawks?Earthquakes above magnitude 4.5What changed since the last refresh?What changed since my last visit?0 saved places inside active alertsNWS alerts (U.S. only), unavailable. 0 place(s) have alerts that could not be evaluated.\",\"rendererErrors\":[]}\nLOCATION_BASELINE_PROVIDER_FETCHES 0\n"
+}

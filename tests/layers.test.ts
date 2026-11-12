@@ -133,7 +133,7 @@ describe('other layer normalizers', () => {
   it('WFIGS perimeters: polygons with incident facts; missing geometry skipped', () => {
     const n = normalizeArcgisPolygons(fxJson('wfigs.geojson'), 'perimeter');
     expect(n.records).toHaveLength(1);
-    expect(n.records[0]).toMatchObject({ id: '2026-UTNWS-200030', label: 'South Street' });
+    expect(n.records[0]).toMatchObject({ id: 'wfigs:object:7', label: 'South Street', props: { incidentId: '2026-UTNWS-200030' } });
     expect(n.records[0].geometry?.type).toBe('Polygon');
     expect(n.records[0].props.percentContained).toBe(100);
   });

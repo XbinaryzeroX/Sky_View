@@ -1,0 +1,38 @@
+{
+  "result": "PASS",
+  "mode": "after",
+  "at": "2026-11-12T04:39:22.282Z",
+  "asar": "c7a61a99bef1b217e37c5300b98a9c28ff1b9e5d8384dfd29875b6f61dd33718",
+  "source": "Synthetic AIS, synthetic flat lake elevation, real renderer and pick path",
+  "stages": [
+    {
+      "label": "lake",
+      "terrain": 77.99964741263453,
+      "ready": true,
+      "hullWaterline": 77.99964741345043,
+      "heightReference": 3,
+      "meshPicked": true,
+      "testPoint": [
+        685.9993884089655,
+        423.181025616273
+      ]
+    },
+    {
+      "label": "refined-lake",
+      "terrain": 182.99951636468575,
+      "ready": true,
+      "hullWaterline": 182.9995163657526,
+      "heightReference": 3,
+      "meshPicked": true,
+      "testPoint": [
+        685.9987759755562,
+        418.76042004464654
+      ]
+    }
+  ],
+  "errors": [],
+  "ship": {
+    "id": "111000001",
+    "reportedType": 70
+  }
+}

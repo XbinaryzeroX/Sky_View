@@ -1,0 +1,5 @@
+
+SMOKE_SCRIPT_ERROR [checking genuine archived observations and actual map selection separately from fixtures] Error: Timeline desktop QA condition timed out
+    at waitFor (<anonymous>:8:11)
+    at async pickQuake (<anonymous>:42:5)
+    at async <anonymous>:143:22

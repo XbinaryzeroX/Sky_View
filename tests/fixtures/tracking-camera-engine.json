@@ -1,0 +1,13 @@
+{
+  "id": "engine-test-only",
+  "lat": 40,
+  "lon": -75,
+  "altM": 10000,
+  "heading": 90,
+  "speedKts": 400,
+  "label": "ISOLATED CAMERA TEST FIXTURE",
+  "category": null,
+  "source": "Synthetic camera integration fixture; never used by a production feed",
+  "sourceUrl": null,
+  "props": { "onGround": false, "groundTrackDeg": 90, "directionSource": "ground-track" }
+}

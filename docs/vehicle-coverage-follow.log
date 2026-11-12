@@ -1,0 +1,99 @@
+{
+  "result": "PASS",
+  "baseline": false,
+  "startedAt": "2026-11-12T04:20:37.732Z",
+  "executable": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\flight-card\\win-unpacked\\Atlas Watch.exe",
+  "archiveSha256": "5eacf4b1d1a0c77cba3914ca968d5052d3c6d7d406b79a2883c92ce0a507c682",
+  "source": "Two synthetic ADS-B observations in an isolated profile. Production rendering, selection, provider adapter, tracking and recorded history. No subscription or external aircraft source is used.",
+  "errors": [],
+  "first": {
+    "frames": 745,
+    "changedPoses": 744,
+    "elapsedSec": 2.66,
+    "planeTravelM": 301.84,
+    "cameraTravelM": 302.04,
+    "peakStepM": 0.45,
+    "maxReportedFrameGapMs": 4.1,
+    "maxCenterErrorPixels": 0,
+    "kinds": [
+      "model"
+    ]
+  },
+  "second": {
+    "frames": 1650,
+    "changedPoses": 1649,
+    "elapsedSec": 5.99,
+    "planeTravelM": 808.82,
+    "cameraTravelM": 809.25,
+    "peakStepM": 10.83,
+    "maxReportedFrameGapMs": 95,
+    "maxCenterErrorPixels": 0,
+    "kinds": [
+      "model"
+    ]
+  },
+  "stopped": {
+    "frames": 338,
+    "changedPoses": 337,
+    "elapsedSec": 1.2,
+    "planeTravelM": 136.84,
+    "cameraTravelM": 0,
+    "peakStepM": 0.57,
+    "maxReportedFrameGapMs": 4.4,
+    "maxCenterErrorPixels": 74.93,
+    "kinds": [
+      "model"
+    ]
+  },
+  "mapPick": {
+    "frames": 505,
+    "changedPoses": 504,
+    "elapsedSec": 1.81,
+    "planeTravelM": 205.31,
+    "cameraTravelM": 205.45,
+    "peakStepM": 1.36,
+    "maxReportedFrameGapMs": 11.3,
+    "maxCenterErrorPixels": 0,
+    "kinds": [
+      "billboard"
+    ]
+  },
+  "twoD": {
+    "frames": 447,
+    "changedPoses": 446,
+    "elapsedSec": 1.7,
+    "planeTravelM": 192.71,
+    "cameraTravelM": 301.55,
+    "peakStepM": 0.91,
+    "maxReportedFrameGapMs": 7.9,
+    "maxCenterErrorPixels": 0,
+    "kinds": [
+      "billboard"
+    ]
+  },
+  "restoredThreeD": {
+    "frames": 422,
+    "changedPoses": 421,
+    "elapsedSec": 1.5,
+    "planeTravelM": 170.79,
+    "cameraTravelM": 170.9,
+    "peakStepM": 0.57,
+    "maxReportedFrameGapMs": 4.7,
+    "maxCenterErrorPixels": 0,
+    "kinds": [
+      "billboard"
+    ]
+  },
+  "sourceCounts": {
+    "firstAt": 1794457239444,
+    "second": true,
+    "secondAt": 1794457246194,
+    "requests": 3,
+    "secondReports": 2
+  },
+  "observedHistory": {
+    "points": 2,
+    "exactSourceCoordinatesAndTimes": true
+  },
+  "finishedAt": "2026-11-12T04:21:01.165Z"
+}

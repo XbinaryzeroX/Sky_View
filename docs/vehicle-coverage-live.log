@@ -1,0 +1,19 @@
+{
+  "startedAt": "2026-11-12T04:19:15.809Z",
+  "result": "PASS",
+  "source": "Live public Fintraffic AIS",
+  "archiveSha256": "5eacf4b1d1a0c77cba3914ca968d5052d3c6d7d406b79a2883c92ce0a507c682",
+  "checks": [
+    {
+      "case": "tanker",
+      "caption": "Representative vessel model · Art Blender on Sketchfab  · CC BY 4.0 ",
+      "rotationTested": true
+    },
+    {
+      "case": "cargo",
+      "caption": "Representative vessel model · RM02 on Sketchfab  · CC BY 4.0 ",
+      "rotationTested": true
+    }
+  ],
+  "errors": []
+}

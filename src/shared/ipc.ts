@@ -5,8 +5,12 @@ import { KEYED_CAMERA_IDS } from './keyedCameras';
 import { z } from 'zod';
 import { validateInstance } from './lemmy';
 import { MAX_IMPORT_ROWS, MAX_RADIUS_KM } from './csv';
+import { GEOJSON_MAX_BYTES } from './geojsonAnnotations';
+import { areaWatchEventSchema, areaWatchRuleInputSchema, MAX_AREA_WATCH_EVENTS } from './areaWatch';
+import { investigationSchema, investigationQuakeMagnitudeSchema, investigationQuakeWindowSchema, surfaceSchema, visualModeSchema } from './investigation';
 import { LAYER_IDS, type LayerId } from './layers';
 import type { Settings } from './types';
+import { imageryYearSchema } from './satelliteYears';
 
 export const DEFAULT_SETTINGS: Settings = {
   marketProvider: 'twelvedata',
@@ -24,12 +28,14 @@ export const DEFAULT_SETTINGS: Settings = {
   historyMaxRecords: 5000,
   zoneLookupEnabled: true,
   basemap: 'atlas',
+  imageryYear: null,
   terrainEnabled: true,
   labelsOverlay: true,
   buildings3d: true,
   units: 'metric',
   smoothMotion: true,
-  evenOcean: true,
+  evenOcean: false,
+  waterDetail: false,
   buildingFacades: true,
   geoLabels: 'standard',
   streetLabels: true,
@@ -91,7 +97,7 @@ export const annotationSchema = z
   })
   .strict();
 
-export const savedViewSchema = z
+export const legacySavedViewSchema = z
   .object({
     id,
     name: z.string().trim().min(1).max(120),
@@ -102,28 +108,39 @@ export const savedViewSchema = z
   })
   .strict();
 
+export const savedViewSchema = legacySavedViewSchema.extend({ basemap: surfaceSchema, terrainEnabled: z.boolean().optional(), visualMode: visualModeSchema.optional(), investigation: investigationSchema.optional() }).strict();
+// Legacy rows allowed an opaque surface string. Keep those rows readable; only
+// the explicit known-surface schema can create a new extended view.
+export type SavedView = Omit<z.infer<typeof savedViewSchema>, 'basemap'> & { basemap: string };
+
 /** Shareable scene file. Contains no credentials, notes, or saved locations. */
-export const sceneSchema = z
+const sceneV1Schema = z
   .object({
     format: z.literal('atlas-watch-scene'),
     version: z.literal(1),
     createdAt: z.string().datetime(),
     camera: cameraSchema,
-    basemap: z.enum(['atlas', 'streets', 'usgsImageryTopo', 'usgsTopo', 'gibsDaily', 'esri', 'mapbox', 'eox', 'naturalEarth', 'neutral', 'google3d', 'google2d']),
+    basemap: surfaceSchema,
     terrainEnabled: z.boolean(),
     layersEnabled: z.array(layerId).max(20),
-    visualMode: z.enum(['normal', 'crt', 'nvg', 'thermal', 'anime', 'noir', 'snow']),
+    visualMode: visualModeSchema,
     annotations: z.array(annotationSchema).max(2000),
-    views: z.array(savedViewSchema).max(500),
+    views: z.array(legacySavedViewSchema).max(500),
   })
   .strict();
+
+const sceneV2Schema = sceneV1Schema.extend({ version: z.literal(2), views: z.array(z.union([savedViewSchema, legacySavedViewSchema])).max(500), investigation: investigationSchema }).strict();
+export const sceneSchema = z.discriminatedUnion('version', [sceneV1Schema, sceneV2Schema]);
+export type Scene = z.infer<typeof sceneSchema>;
+export interface AppliedScene { settings: Settings; annotations: z.infer<typeof annotationSchema>[]; views: SavedView[]; warnings: string[]; skippedSurface: Settings['basemap'] | null }
+export interface RestoredView { view: SavedView; settings: Settings; warnings: string[]; skippedSurface: Settings['basemap'] | null }
 
 export const watchItemSchema = z
   .object({ kind: z.enum(['aircraft', 'vessel']), id: z.string().min(1).max(40).regex(/^[A-Za-z0-9~_-]+$/), label: z.string().max(80), addedAt: z.string().datetime() })
   .strict();
 const docKind = z.enum(['boards', 'people']);
 
-const providerId = z.enum(['twelvedata', 'alphavantage', 'opensky', 'openfreemap', 'esri-imagery', 'mapbox', 'eox', 'ourairports', 'nws', 'usgs-quakes', 'usgs-basemap', 'nasa-gibs', 'terrain-tiles', 'adsblol', 'local-adsb', 'digitraffic', 'aisstream', 'celestrak', 'firms', 'nifc', 'awc', 'nhc', 'nowcoast', 'caltrans', 'fintraffic-cams', 'mbta', 'faa-sua', 'census-geocoder', 'google3d', 'ollama', ...KEYED_CAMERA_IDS]);
+const providerId = z.enum(['twelvedata', 'alphavantage', 'opensky', 'openfreemap', 'esri-imagery', 'mapbox', 'eox', 'ourairports', 'nws', 'dwd', 'usgs-quakes', 'usgs-basemap', 'nasa-gibs', 'terrain-tiles', 'adsblol', 'local-adsb', 'digitraffic', 'aisstream', 'celestrak', 'firms', 'nifc', 'awc', 'nhc', 'nowcoast', 'caltrans', 'fintraffic-cams', 'mbta', 'faa-sua', 'census-geocoder', 'aerodatabox', 'google3d', 'ollama', ...KEYED_CAMERA_IDS]);
 
 export const locationInputSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -152,19 +169,21 @@ export const settingsPatchSchema = z
     nwsContact: z.string().max(120).regex(/^[A-Za-z0-9 @._+\-:/()]*$/),
     nwsPollSeconds: z.number().int().min(60).max(3600),
     usgsPollSeconds: z.number().int().min(60).max(3600),
-    quakeWindow: z.enum(['hour', 'day', 'week', 'month']),
-    quakeMinMagnitude: z.number().finite().min(-1).max(10),
+    quakeWindow: investigationQuakeWindowSchema,
+    quakeMinMagnitude: investigationQuakeMagnitudeSchema,
     quakesNearLocationsOnly: z.boolean(),
     historyRetentionDays: z.number().int().min(1).max(365),
     historyMaxRecords: z.number().int().min(100).max(50000),
     zoneLookupEnabled: z.boolean(),
     basemap: z.enum(['atlas', 'streets', 'usgsImageryTopo', 'usgsTopo', 'gibsDaily', 'esri', 'mapbox', 'eox', 'naturalEarth', 'neutral', 'google3d', 'google2d']),
+    imageryYear: imageryYearSchema,
     terrainEnabled: z.boolean(),
     labelsOverlay: z.boolean(),
     buildings3d: z.boolean(),
     units: z.enum(['metric', 'imperial', 'nautical']),
     smoothMotion: z.boolean(),
     evenOcean: z.boolean(),
+    waterDetail: z.boolean(),
     buildingFacades: z.boolean(),
     geoLabels: z.enum(['off', 'minimal', 'standard', 'detailed']),
     streetLabels: z.boolean(),
@@ -211,6 +230,7 @@ export const historyQuerySchema = z
   .strict();
 
 export const IPC = {
+  marketsTrending: 'markets:trending',
   marketsSearch: 'markets:search',
   marketsQuote: 'markets:quote',
   marketsCandles: 'markets:candles',
@@ -248,6 +268,8 @@ export const IPC = {
   layersRefresh: 'layers:refresh',
   tracksTrail: 'tracks:trail',
   tracksRange: 'tracks:range',
+  timelineRange: 'timeline:range',
+  timelineFrame: 'timeline:frame',
   tracksSnapshot: 'tracks:snapshot',
   providersList: 'providers:list',
   providersSetCredential: 'providers:setCredential',
@@ -258,14 +280,25 @@ export const IPC = {
   annotationsList: 'annotations:list',
   annotationsPut: 'annotations:put',
   annotationsDelete: 'annotations:delete',
+  annotationsGeoJsonPreview: 'annotations:geojsonPreview',
+  annotationsGeoJsonImport: 'annotations:geojsonImport',
+  annotationsGeoJsonExport: 'annotations:geojsonExport',
+  areaWatchPut: 'areaWatch:put',
+  areaWatchDelete: 'areaWatch:delete',
+  areaWatchRead: 'areaWatch:read',
   viewsList: 'views:list',
   viewsPut: 'views:put',
   viewsDelete: 'views:delete',
   sceneExport: 'scene:export',
   sceneImport: 'scene:import',
+  sceneApply: 'scene:apply',
+  viewsRestore: 'views:restore',
   aircraftLookup: 'aircraft:lookup',
   aircraftNear: 'aircraft:near',
   aircraftRoute: 'aircraft:route',
+  airlineFlightStatus: 'aircraft:airline-status',
+  conflictReports: 'conflicts:reports',
+  conflictAssessments: 'conflicts:assessments',
   vehicleInfo: 'vehicle:info',
   watchlistGet: 'watchlist:get',
   watchlistSet: 'watchlist:set',
@@ -310,10 +343,11 @@ export const lemmyWriteSchema = z.discriminatedUnion('action', [
 ]);
 
 export const ipcArgSchemas = {
+  [IPC.marketsTrending]: z.tuple([]),
   [IPC.marketsSearch]: z.tuple([z.string().trim().min(1).max(80)]),
   [IPC.marketsQuote]: z.tuple([symbol]),
   [IPC.marketsCandles]: z.tuple([symbol, z.enum(['1D', '5D', '1M', '6M', '1Y', '5Y'])]),
-  [IPC.marketsNews]: z.tuple([symbol, z.string().max(200).nullable()]),
+  [IPC.marketsNews]: z.tuple([symbol, z.string().max(200).nullable(), z.literal('trending').optional()]),
   [IPC.marketsExplain]: z.tuple([symbol, z.array(z.string().max(300)).max(25), z.string().max(1500)]),
   [IPC.lemmyStatus]: z.tuple([]),
   [IPC.lemmyLogin]: z.tuple([z.object({
@@ -360,8 +394,14 @@ export const ipcArgSchemas = {
   [IPC.historyQuery]: z.tuple([historyQuerySchema]),
   [IPC.historyGet]: z.tuple([z.string().min(3).max(320)]),
   [IPC.historyClear]: z.tuple([]),
-  [IPC.briefingPreview]: z.tuple([z.array(id).max(5000)]),
-  [IPC.briefingExport]: z.tuple([z.array(id).min(1).max(5000), z.enum(['html', 'pdf'])]),
+  [IPC.briefingPreview]: z.tuple([z.union([
+    z.array(id).max(5000),
+    z.object({ mode: z.literal('locations'), locationIds: z.array(id).max(5000) }).strict(),
+    z.object({ mode: z.literal('visit') }).strict(),
+  ])]),
+  [IPC.briefingExport]: z.tuple([z.union([
+    z.array(id).min(1).max(5000), z.object({ previewId: id }).strict(),
+  ]), z.enum(['html', 'pdf'])]),
   [IPC.aiStatus]: z.tuple([]),
   [IPC.aiAsk]: z.tuple([
     z
@@ -379,6 +419,8 @@ export const ipcArgSchemas = {
   [IPC.tracksTrail]: z.tuple([layerId, recordId]),
   [IPC.tracksRange]: z.tuple([]),
   [IPC.tracksSnapshot]: z.tuple([layerId, z.string().datetime()]),
+  [IPC.timelineRange]: z.tuple([]),
+  [IPC.timelineFrame]: z.tuple([z.string().datetime({ precision: 3 })]),
   [IPC.providersList]: z.tuple([]),
   [IPC.providersSetCredential]: z.tuple([providerId, z.string().max(500).nullable()]),
   [IPC.providersTest]: z.tuple([providerId]),
@@ -388,11 +430,19 @@ export const ipcArgSchemas = {
   [IPC.annotationsList]: z.tuple([]),
   [IPC.annotationsPut]: z.tuple([annotationSchema]),
   [IPC.annotationsDelete]: z.tuple([id]),
+  [IPC.annotationsGeoJsonPreview]: z.tuple([]),
+  [IPC.annotationsGeoJsonImport]: z.tuple([z.string().max(GEOJSON_MAX_BYTES).refine(text => text.length <= GEOJSON_MAX_BYTES && new TextEncoder().encode(text).byteLength <= GEOJSON_MAX_BYTES, 'GeoJSON exceeds 2 MiB')]),
+  [IPC.annotationsGeoJsonExport]: z.tuple([]),
+  [IPC.areaWatchPut]: z.tuple([areaWatchRuleInputSchema]),
+  [IPC.areaWatchDelete]: z.tuple([id]),
+  [IPC.areaWatchRead]: z.tuple([z.array(areaWatchEventSchema.shape.id).min(1).max(MAX_AREA_WATCH_EVENTS)]),
   [IPC.viewsList]: z.tuple([]),
   [IPC.viewsPut]: z.tuple([savedViewSchema]),
   [IPC.viewsDelete]: z.tuple([id]),
   [IPC.sceneExport]: z.tuple([sceneSchema]),
   [IPC.sceneImport]: z.tuple([]),
+  [IPC.sceneApply]: z.tuple([sceneSchema, z.boolean().optional()]),
+  [IPC.viewsRestore]: z.tuple([id, z.boolean().optional()]),
   [IPC.aircraftLookup]: z.tuple([z.string().trim().min(2).max(12).regex(/^[A-Za-z0-9-]+$/)]),
   [IPC.aircraftNear]: z.tuple([lat, lon, z.number().int().min(1).max(100)]),
   [IPC.vehicleInfo]: z.tuple([
@@ -404,6 +454,9 @@ export const ipcArgSchemas = {
     }),
   ]),
   [IPC.aircraftRoute]: z.tuple([z.string().trim().min(2).max(8).regex(/^[A-Z0-9]+$/), lat, lon]),
+  [IPC.airlineFlightStatus]: z.tuple([z.string().regex(/^[0-9a-f]{6}$/i), z.string().trim().regex(/^[A-Z]{3}\d[A-Z0-9]{0,4}$/)]),
+  [IPC.conflictReports]: z.tuple([]),
+  [IPC.conflictAssessments]: z.tuple([]),
   [IPC.watchlistGet]: z.tuple([]),
   [IPC.watchlistSet]: z.tuple([z.array(watchItemSchema).max(500)]),
   [IPC.docsList]: z.tuple([docKind]),

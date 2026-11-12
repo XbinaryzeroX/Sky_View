@@ -1,0 +1,8 @@
+
+> atlas-watch@0.7.0 smoke
+> node scripts/smoke.mjs docs/screenshots/audit-camera-boards.png 150000
+
+SMOKE_SCRIPT {"savedReferences":6,"urlsStored":false,"firstPage":{"cards":4,"video":2,"players":4},"observedPlayback":[{"currentTime":7.291,"width":320,"readyState":4},{"currentTime":7.2989,"width":320,"readyState":4}],"pauseReleasedMedia":true,"hiddenReleasedMedia":true,"officialViewer":true,"closeReleasedMedia":true,"reopenedFromBoards":true,"rendererErrors":[]}
+SMOKE_RESULT {"globeReady":true,"errors":[],"locations":0,"alerts":391,"quakes":318,"nws":"ok","usgs":"ok"}
+SMOKE_FEEDS {"nws":"ok","nwsCount":391,"usgs":"ok","usgsCount":322,"nwsErr":null,"usgsErr":null}
+exit=0 screenshot=C:\Users\infob\Documents\Claude\Sky_View\docs\screenshots\audit-camera-boards.png

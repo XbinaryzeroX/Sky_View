@@ -5,62 +5,34 @@
 import { currentModelPack } from '../map/modelPack';
 import { packIdOf, shownModelVariant, subscribeShownModels } from '../map/shownModels';
 import { packCredit } from '../../shared/modelPack';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { GeoRecord } from '../../shared/layers';
 import type { RouteInfo } from '../../shared/route';
-import { classifyAircraft, classifyVessel } from '../../shared/vehicleClass';
+import { aircraftSymbolName, classifyAircraft, classifyVessel, vesselSymbolName } from '../../shared/vehicleClass';
 import { api, errorText } from '../lib/api';
-import { modelLine, type VehicleInfo } from '../../shared/vehicleInfo';
+import { modelLine } from '../../shared/vehicleInfo';
+import { useVehicleIdentification } from '../lib/useVehicleIdentification';
 import { icaoTypeName } from '../../shared/icaoTypes';
 import { shipTypeLabel } from '../../shared/layerNormalize';
-
-type InfoState = 'off' | 'loading' | 'done' | 'error';
-
-/** Exact model and a credited photo of this airframe / ship (only when the user opted in; see shared/vehicleInfo.ts). */
-function useVehicleInfo(q: { kind: 'aircraft' | 'vessel'; hex?: string; registration?: string; imo?: number } | null, enabled: boolean): { info: VehicleInfo | null; state: InfoState; err: string | null } {
-  const [state, setState] = useState<InfoState>('off');
-  const [info, setInfo] = useState<VehicleInfo | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const key = q ? JSON.stringify(q) : null;
-  useEffect(() => {
-    setInfo(null);
-    setErr(null);
-    if (!enabled || !q || (!q.hex && !q.imo && !q.registration)) {
-      setState('off');
-      return;
-    }
-    let cancelled = false;
-    setState('loading');
-    api
-      .vehicleInfo(q)
-      .then((v) => {
-        if (cancelled) return;
-        setInfo(v);
-        setState('done');
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        setErr(errorText(e));
-        setState('error');
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, enabled]);
-  return { info, state, err };
-}
+import { VehicleModelPreview } from './VehicleModelPreview';
+import { useVehiclePreview } from '../lib/useVehiclePreview';
+import { ExternalLink } from './common';
 
 export function VehicleExtras({ layer, r, photosEnabled, onEnablePhotos, onShowRoute }: { layer: string; r: GeoRecord; photosEnabled: boolean; onEnablePhotos(): void; onShowRoute(route: RouteInfo | null): void }) {
   const isAir = layer === 'aircraft' || layer === 'aircraftMil';
   const cls = isAir ? classifyAircraft(r.props.type as string | null, r.props.emitterCategory as string | null) : classifyVessel(typeof r.props.shipType === 'number' ? r.props.shipType : null);
-  const hex = String(r.props.icao24 ?? r.id).toLowerCase();
   const reg = typeof r.props.registration === 'string' ? r.props.registration.toUpperCase() : undefined;
   const imo = typeof r.props.imo === 'number' && r.props.imo >= 1000000 && r.props.imo <= 9999999 ? r.props.imo : undefined;
-  const { info, state, err } = useVehicleInfo(isAir ? { kind: 'aircraft', ...(/^[0-9a-f]{6}$/.test(hex) ? { hex } : {}), ...(reg && /^[A-Z0-9-]+$/.test(reg) ? { registration: reg } : {}) } : { kind: 'vessel', ...(imo ? { imo } : {}) }, photosEnabled);
+  const { info, state, err } = useVehicleIdentification(r, isAir, photosEnabled);
   const photo = info?.photo ?? null;
   const m = info?.model ?? null;
   const typeCode = typeof r.props.type === 'string' ? r.props.type : null;
+  const category = typeof r.props.emitterCategory === 'string' ? r.props.emitterCategory : null;
+  const shipType = typeof r.props.shipType === 'number' ? r.props.shipType : null;
+  const { model: preview, onError } = useVehiclePreview(isAir ? 'aircraft' : 'ship', typeCode, category,
+    layer === 'aircraftMil' || r.props.militaryFlag === true, shipType, r.props.lengthM, r.props.beamM);
+  const previewLabel = isAir ? aircraftSymbolName(classifyAircraft(typeCode, category).symbol)
+    : vesselSymbolName(classifyVessel(shipType).symbol);
   const desc = typeof r.props.description === 'string' ? r.props.description : null;
   const family = icaoTypeName(typeCode ?? m?.icaoType);
   const airModel = modelLine(m, null) ?? desc ?? (typeCode ? (family ? `${family} (ICAO ${typeCode})` : `ICAO type ${typeCode}`) : null);
@@ -69,15 +41,8 @@ export function VehicleExtras({ layer, r, photosEnabled, onEnablePhotos, onShowR
   const shownVariant = useSyncExternalStore(subscribeShownModels, () => shownModelVariant(`rec|${layer}|${r.id}`));
   const shownPackId = packIdOf(shownVariant);
   const packModel = shownPackId ? (currentModelPack()?.models.find((m) => m.id === shownPackId) ?? null) : null;
-  const shipKind = shipTypeLabel(typeof r.props.shipType === 'number' ? r.props.shipType : null);
+  const shipKind = shipTypeLabel(shipType);
   const dims = typeof r.props.lengthM === 'number' ? `${r.props.lengthM} m long${typeof r.props.beamM === 'number' ? ` × ${r.props.beamM} m beam` : ''}` : null;
-  const [route, setRoute] = useState<{ state: 'idle' | 'loading' | 'none' | 'ok' | 'error'; info: RouteInfo | null; err?: string }>({ state: 'idle', info: null });
-  const callsign = typeof r.props.callsign === 'string' ? r.props.callsign.replace(/\s+/g, '').toUpperCase() : null;
-  useEffect(() => {
-    setRoute({ state: 'idle', info: null });
-    onShowRoute(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [r.id]);
 
   return (
     <section className="veh-extras">
@@ -102,7 +67,12 @@ export function VehicleExtras({ layer, r, photosEnabled, onEnablePhotos, onShowR
         )}
       </div>
       <p className="muted small">Map symbol: {cls.explain}.</p>
-      {packModel && (
+      {preview ? <div className="flight-visual">
+        <VehicleModelPreview key={preview.variant} model={preview} title={preview.pack?.title ?? previewLabel} onError={onError}/>
+        {preview.pack ? <p className="flight-credit">{isAir ? 'Type model' : 'Representative vessel model'} · <ExternalLink url={preview.pack.sourceUrl}>{preview.pack.author} on Sketchfab</ExternalLink> · <ExternalLink url={preview.pack.licenseUrl}>{preview.pack.license}</ExternalLink></p>
+          : <p className="flight-credit">Representative 3D shape · {previewLabel}</p>}
+      </div> : <p className="small muted">The local 3D preview could not be displayed.</p>}
+      {packModel && packModel.id !== preview?.pack?.id && (
         <p className="muted small">
           {packCredit(packModel)} ·{' '}
           <a href={packModel.sourceUrl} target="_blank" rel="noreferrer">
@@ -155,7 +125,25 @@ export function VehicleExtras({ layer, r, photosEnabled, onEnablePhotos, onShowR
         )}
       </figure>
       {isAir && (
-        <div className="veh-route">
+        <ReportedJourney layer={layer} r={r} onShowRoute={onShowRoute} />
+      )}
+    </section>
+  );
+}
+
+export function ReportedJourney({ layer, r, onShowRoute }: { layer: string; r: GeoRecord; onShowRoute(route: RouteInfo | null): void }) {
+  const [route, setRoute] = useState<{ state: 'idle' | 'loading' | 'none' | 'ok' | 'error'; info: RouteInfo | null; err?: string }>({ state: 'idle', info: null });
+  const callsign = typeof r.props.callsign === 'string' ? r.props.callsign.replace(/\s+/g, '').toUpperCase() : null;
+  const routeRequest = useRef(0);
+  useEffect(() => {
+    setRoute({ state: 'idle', info: null });
+    onShowRoute(null);
+    return () => { routeRequest.current++; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layer, r.id, callsign]);
+
+  return (
+    <div className="veh-route">
           <h3 className="sub">Journey</h3>
           {route.state === 'ok' && route.info ? (
             <>
@@ -184,14 +172,18 @@ export function VehicleExtras({ layer, r, photosEnabled, onEnablePhotos, onShowR
               className="btn"
               disabled={route.state === 'loading'}
               onClick={() => {
+                const request = ++routeRequest.current;
                 setRoute({ state: 'loading', info: null });
                 api
                   .aircraftRoute(callsign, r.lat, r.lon)
                   .then((info) => {
+                    if (request !== routeRequest.current) return;
                     setRoute({ state: info ? 'ok' : 'none', info });
                     onShowRoute(info);
                   })
-                  .catch((e) => setRoute({ state: 'error', info: null, err: errorText(e) }));
+                  .catch((e) => {
+                    if (request === routeRequest.current) setRoute({ state: 'error', info: null, err: errorText(e) });
+                  });
               }}
             >
               {route.state === 'loading' ? 'Looking up…' : 'Look up reported route'}
@@ -206,7 +198,5 @@ export function VehicleExtras({ layer, r, photosEnabled, onEnablePhotos, onShowR
             </li>
           </ul>
         </div>
-      )}
-    </section>
   );
 }

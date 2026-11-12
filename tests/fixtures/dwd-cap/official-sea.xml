@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+  <identifier>2.49.0.0.276.0.DWD.PVW.1794438060000.6c67ffea-b992-4fe1-a3aa-c0492d86ede2.DEU</identifier>
+  <sender>opendata@dwd.de</sender>
+  <sent>2026-11-12T00:01:00+01:00</sent>
+  <status>Actual</status>
+  <msgType>Update</msgType>
+  <source>PVW</source>
+  <scope>Public</scope>
+  <code>id:2.49.0.0.276.0.DWD.PVW.1794438060000.6c67ffea-b992-4fe1-a3aa-c0492d86ede2</code>
+  <references>opendata@dwd.de,2.49.0.0.276.0.DWD.PVW.1794429240000.70d882fc-057a-4c94-bd46-aa2af7c8f343.DEU,2026-11-11T21:34:00+01:00</references>
+  <info>
+    <language>de-DE</language>
+    <category>Met</category>
+    <event>STARKWIND</event>
+    <responseType>Prepare</responseType>
+    <urgency>Immediate</urgency>
+    <severity>Minor</severity>
+    <certainty>Likely</certainty>
+    <eventCode>
+      <valueName>PROFILE_VERSION</valueName>
+      <value>2.1.14</value>
+    </eventCode>
+    <eventCode>
+      <valueName>LICENSE</valueName>
+      <value>© GeoBasis-DE / BKG 2021 (Daten modifiziert)</value>
+    </eventCode>
+    <eventCode>
+      <valueName>II</valueName>
+      <value>11</value>
+    </eventCode>
+    <eventCode>
+      <valueName>GROUP</valueName>
+      <value>WIND</value>
+    </eventCode>
+    <eventCode>
+      <valueName>AREA_COLOR</valueName>
+      <value>255 235 59</value>
+    </eventCode>
+    <effective>2026-11-12T00:01:00+01:00</effective>
+    <onset>2026-11-12T00:01:00+01:00</onset>
+    <senderName>DWD / Seewetterdienst Hamburg</senderName>
+    <headline>Amtliche Warnung des Seewetterdienstes Hamburg vor STARKWIND</headline>
+    <description>West bis Nordwest 6, dabei Böen von 7 Beaufort.</description>
+    <instruction/>
+    <web>https://dwd.de/warnungen</web>
+    <contact>Deutscher Wetterdienst</contact>
+    <area>
+      <areaDesc>Ostfriesische Küste</areaDesc>
+      <geocode>
+        <valueName>WARNCELLID</valueName>
+        <value>501000001</value>
+      </geocode>
+      <altitude>0.0</altitude>
+      <ceiling>9842.5197</ceiling>
+    </area>
+  </info>
+</alert>

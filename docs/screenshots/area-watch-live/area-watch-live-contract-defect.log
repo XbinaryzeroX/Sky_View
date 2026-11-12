@@ -1,0 +1,4 @@
+
+SMOKE_SCRIPT_ERROR Area watch desktop QA condition timed out
+SMOKE_RESULT {"globeReady":true,"errors":[],"locations":0,"alerts":408,"quakes":197,"nws":"ok","usgs":"ok"}
+SMOKE_FEEDS {"nws":"ok","nwsCount":408,"usgs":"ok","usgsCount":197,"nwsErr":null,"usgsErr":null}

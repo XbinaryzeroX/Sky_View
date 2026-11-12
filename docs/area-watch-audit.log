@@ -1,0 +1,107 @@
+{
+  "result": "PASS",
+  "mode": "live",
+  "fixtureOnly": false,
+  "liveProviderVerified": true,
+  "simulated": [
+    "prior rule activation clock and local QA area annotations"
+  ],
+  "initial": {
+    "result": "PASS",
+    "mode": "live",
+    "providerData": "actual USGS response",
+    "simulatedPriorActivation": "2020-01-01T00:00:00.000Z",
+    "providerRecordsSeeded": 0,
+    "sourceUpdatedAt": "2026-11-11T16:31:30.000Z",
+    "environmentNow": "2026-11-11T16:32:20.210Z",
+    "sourceClockDifferenceMs": 43752,
+    "clockNote": "Publisher and environment timestamps are recorded independently.",
+    "sourceCount": 198,
+    "initialEvents": 141,
+    "finalEvents": 141,
+    "uiCreation": true,
+    "noPriorOccurrenceBackfill": true,
+    "pause": true,
+    "thresholdEdit": 3.25,
+    "reenable": true,
+    "detail": {
+      "savedEvidenceOpened": true,
+      "focused": {
+        "lat": 38.82251182074196,
+        "lon": -122.74609523668582
+      },
+      "quakeId": "nc75465357"
+    },
+    "markAllRead": true,
+    "rendererErrors": []
+  },
+  "restarted": {
+    "result": "PASS",
+    "mode": "live",
+    "restartPersistentDedup": true,
+    "readStatePreserved": true,
+    "preservedEvidence": 141,
+    "currentEvidence": 142,
+    "sourceUpdatedAt": "2026-11-11T16:33:30.000Z",
+    "environmentNow": "2026-11-11T16:33:39.208Z",
+    "sourceClockDifferenceMs": 9208,
+    "clockNote": "Publisher and environment timestamps are recorded independently.",
+    "rendererErrors": []
+  },
+  "upstreamEvidenceValuesVerified": 141,
+  "sourceAudit": [
+    {
+      "mode": "live",
+      "requestUrl": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+      "httpStatus": 200,
+      "responseDate": "Wed, 11 Nov 2026 16:31:30 GMT",
+      "receivedAt": "2026-11-11T16:32:10.586Z",
+      "sourceGeneratedAt": "2026-11-11T16:31:30.000Z",
+      "featureCount": 198,
+      "payloadSha256": "14f31c91978988c591b62cd21f033d479a338a00c6668859e4b643abae61f1e1"
+    },
+    {
+      "mode": "live",
+      "requestUrl": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+      "httpStatus": 200,
+      "responseDate": "Wed, 11 Nov 2026 16:31:30 GMT",
+      "receivedAt": "2026-11-11T16:32:14.548Z",
+      "sourceGeneratedAt": "2026-11-11T16:31:30.000Z",
+      "featureCount": 198,
+      "payloadSha256": "14f31c91978988c591b62cd21f033d479a338a00c6668859e4b643abae61f1e1"
+    },
+    {
+      "mode": "live",
+      "requestUrl": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+      "httpStatus": 200,
+      "responseDate": "Wed, 11 Nov 2026 16:33:30 GMT",
+      "receivedAt": "2026-11-11T16:33:35.993Z",
+      "sourceGeneratedAt": "2026-11-11T16:33:30.000Z",
+      "featureCount": 199,
+      "payloadSha256": "749ad07ee8893a1eced671a4d57f0281e83ba99202021daa6e4b17c1e7d9cb7c"
+    }
+  ],
+  "session": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-area-watch-ui-5pLG2X",
+  "output": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\area-watch-live",
+  "finalBuiltAssetsUnchanged": true,
+  "finalBuiltAssetSha256": {
+    "dist/main/main.cjs": "33b79b08c6bf7f327b48771b8ff8914ef1a6652add55c672296dd3801569d8b6",
+    "dist/preload/preload.cjs": "a7ca48945684ad0201e38f6f9faf38c210dcff53465cc0c067feaa98a675759c",
+    "dist/renderer/index.html": "739c55afce498db1ec46e32826d5f4eb2a776aa9fa879801d4761198cd352777",
+    "dist/renderer/assets/index-GPJ0N0Mb.js": "19589251f934c84d51ce8183bd580734e048bc0a77270667a4c464673c76d975",
+    "dist/renderer/assets/index-ChUGeYyv.css": "bb92546f0a720b716f605d6b3dedc50992cffbf938a7d8db94c3ab2bb3b13901"
+  },
+  "restartAdditionalEvidenceUpstreamVerified": [
+    {
+      "areaId": "qa-watch-california",
+      "quakeId": "ci41360911",
+      "quakeTime": "2026-11-11T08:57:37.870Z",
+      "magnitude": 0.26,
+      "lat": 33.5356666666667,
+      "lon": -116.7065,
+      "detectedAt": "2026-11-11T16:33:35.997Z",
+      "read": false
+    }
+  ],
+  "totalCurrentEvidenceUpstreamVerified": 142
+}

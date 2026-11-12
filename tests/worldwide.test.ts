@@ -8,7 +8,7 @@ import { aisCog, aisDimensions, aisHeading, aisSog, decodePackedEta } from '../s
 import type { GeoRecord } from '../src/shared/layers';
 import { buildCsp, isAllowedRendererUrl } from '../src/shared/remoteHosts';
 import { clearNoDataPixels, whiteFraction } from '../src/shared/tilePixels';
-import type { AppSnapshot } from '../src/shared/types';
+import type { AppSnapshot, FeedStatus } from '../src/shared/types';
 import { fmtAltitudeM, fmtDistanceKm, fmtSpeedKts } from '../src/shared/units';
 
 function ac(over: Partial<GeoRecord> = {}): GeoRecord {
@@ -93,11 +93,11 @@ describe('aircraft', () => {
     const p = drawnPosition(r, now, on);
     expect(p).toEqual({ lat: deadReckon(r, now).lat, lon: deadReckon(r, now).lon });
     expect(geodesicDistanceKm(r.lat, r.lon, p.lat, p.lon)).toBeGreaterThan(6);
-    // Smoothing off, ships and other layers, and history snapshots on the bulk layer stay at their report.
+    // Smoothing off, ships and snapshots in either renderer stay at their report.
     expect(drawnPosition(r, now, { ...on, smooth: false })).toEqual({ lat: r.lat, lon: r.lon });
     expect(drawnPosition(r, now, { ...on, aircraft: false })).toEqual({ lat: r.lat, lon: r.lon });
     expect(drawnPosition(ac({ ...r, props: { snapshot: true } }), now, on)).toEqual({ lat: r.lat, lon: r.lon });
-    expect(drawnPosition(ac({ ...r, props: { snapshot: true } }), now, { ...on, snapshotsStay: false })).not.toEqual({ lat: r.lat, lon: r.lon });
+    expect(drawnPosition(ac({ ...r, props: { snapshot: true } }), now, { ...on, snapshotsStay: false })).toEqual({ lat: r.lat, lon: r.lon });
   });
   it('computes elevation angles and validates lookup queries', () => {
     expect(elevationAngleDeg(10, 10000)).toBeGreaterThan(44);
@@ -139,17 +139,22 @@ describe('AIS encodings and static data', () => {
 });
 
 describe('analyst (deterministic)', () => {
+  const source = (feed: 'nws' | 'usgs', scope: string): FeedStatus => ({
+    feed, scope, state: 'ok', lastAttemptAt: '2026-11-09T00:00:00Z', lastSuccessAt: '2026-11-09T00:00:00Z',
+    sourceUpdatedAt: null, fromCache: false, error: null, consecutiveFailures: 0, nextAttemptAt: null, recordCount: 1,
+    skippedRecords: 0, coverage: { completeness: 'complete', skippedRecords: 0, note: null },
+  });
   const snap = {
     locations: [],
     alerts: [],
     supersededAlertIds: [],
     quakes: [{ id: 'q1', ids: ['q1'], mag: 5.2, magType: 'mw', place: 'Test', title: 'M5.2', time: '2026-11-09T00:00:00.000Z', updated: '2026-11-09T00:00:00.000Z', lat: 1, lon: 1, depthKm: 10, url: null, status: null, tsunami: false, sig: null, alert: null, eventType: 'earthquake' }],
-    feeds: {},
+    feeds: { nws: source('nws', 'active-US'), usgs: source('usgs', '2.5_week') },
     freshness: { nws: 'fresh', usgs: 'fresh' },
     evaluations: {},
     diffs: {},
     settings: DEFAULT_SETTINGS,
-    generatedAt: '',
+    generatedAt: '2026-11-09T00:00:05Z',
   } as unknown as AppSnapshot;
   const layers = {
     aircraft: { records: [ac(), ac({ id: 'def456', label: 'LOW1', props: { altitudeFt: 4000 } }), ac({ id: 'eee111', label: 'SQK', props: { altitudeFt: 9000, squawk: '7700' } })], lastSuccessAt: null, freshness: 'fresh' },
@@ -168,6 +173,23 @@ describe('analyst (deterministic)', () => {
     expect(answerQuestion('any emergency squawks?', { snap, layers, viewBbox: null })!.note).toMatch(/not a confirmed incident/);
     expect(answerQuestion('earthquakes above magnitude 5', { snap, layers, viewBbox: null })!.rows).toHaveLength(1);
     expect(answerQuestion('what is the meaning of life', { snap, layers, viewBbox: null })).toBeNull();
+  });
+  it('sends explicit visit questions to the recorded briefing, including when the question names earthquakes', () => {
+    const data = { snap, layers: {}, viewBbox: null };
+    for (const question of ['What changed since my last visit?', 'New earthquakes since the previous session?', 'What changed since I last opened Atlas Watch?']) {
+      expect(answerQuestion(question, data)).toMatchObject({ openVisitBriefing: true, rows: [] });
+    }
+    const refresh = answerQuestion('What changed since the last refresh?', data)!;
+    expect(refresh.openVisitBriefing).toBeUndefined();
+    expect(refresh.title).toMatch(/waiting for comparable replies/i);
+  });
+  it('keeps missing refresh evidence distinct from an empty reply and labels records that left the feed', () => {
+    const nws = { feed: 'nws' as const, at: '2026-11-11T12:05:00Z', previousAt: '2026-11-11T12:00:00Z', added: [], updated: [], removed: ['a'] };
+    const answer = answerQuestion('What changed since the last refresh?', { snap: { ...snap, diffs: { nws } }, viewBbox: null, layers: {} })!;
+    expect(answer.title).toContain('1 no longer returned');
+    expect(answer.title).not.toContain('ended');
+    expect(answer.note).toContain('USGS has no comparable previous reply');
+    expect(answer.note).toContain(nws.previousAt);
   });
 });
 

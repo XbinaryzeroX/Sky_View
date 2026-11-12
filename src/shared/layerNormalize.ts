@@ -5,12 +5,17 @@ import type { LineString, MultiPolygon, Polygon } from 'geojson';
 import { isValidLat, isValidLon, sanitizePolygonGeometry } from './geo';
 import type { GeoRecord } from './layers';
 import { cleanText, toIso } from './normalize';
+import { parseAirframeYear } from './vehicleInfo';
+import { hasAirlinerProfile } from './airlinerProfile';
 
 export interface Normalized {
   records: GeoRecord[];
   skipped: number;
   sourceUpdatedAt: string | null;
 }
+
+/** Perimeter refresh bounds; never silently truncate the published feature set or shape. */
+export const WFIGS_PERIMETER_LIMITS = Object.freeze({ pages: 20, pageRecords: 1000, coordinates: 500_000, partsPerFeature: 10_000, ringsPerFeature: 20_000 });
 
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 const FT = 0.3048;
@@ -48,6 +53,7 @@ export function normalizeAdsb(body: unknown, source: string, nowMs: number, geoi
   const nowRaw = num(b.now);
   // adsb.lol `now` is ms; readsb aircraft.json `now` is seconds.
   const refMs = nowRaw === null ? nowMs : nowRaw > 1e12 ? nowRaw : nowRaw * 1000;
+  const reportYear = new Date(refMs).getUTCFullYear();
   const records: GeoRecord[] = [];
   let skipped = 0;
   const seen = new Set<string>();
@@ -69,12 +75,18 @@ export function normalizeAdsb(body: unknown, source: string, nowMs: number, geoi
     const flight = cleanText(a.flight, 12);
     const cat = cleanText(a.category, 3);
     const dbFlags = num(a.dbFlags) ?? 0;
+    const type = cleanText(a.t, 8);
+    // readsb's optional database metadata is distinct from its position reports.
+    // Bits 0, 2 and 3 mark military, PIA and LADD records.
+    const publicAirlinerMetadata = (a.year != null || a.ownOp != null) && (dbFlags & 13) === 0 && hasAirlinerProfile(type);
+    const groundTrack = num(a.track);
+    const trueHeading = num(a.true_heading);
     records.push({
       id: hex,
       lat,
       lon,
       altM,
-      heading: num(a.track) ?? num(a.true_heading),
+      heading: groundTrack ?? trueHeading,
       speedKts: num(a.gs),
       label: flight ?? cleanText(a.r, 12) ?? hex.toUpperCase(),
       category: cat && EMITTER_CATEGORY[cat] ? EMITTER_CATEGORY[cat] : null,
@@ -83,16 +95,22 @@ export function normalizeAdsb(body: unknown, source: string, nowMs: number, geoi
       source,
       props: {
         icao24: hex,
+        groundTrackDeg: groundTrack,
+        trueHeadingDeg: trueHeading,
+        directionSource: groundTrack !== null ? 'ground-track' : trueHeading !== null ? 'true-heading' : null,
         callsign: flight,
         registration: cleanText(a.r, 12),
-        type: cleanText(a.t, 8),
+        type,
         description: cleanText(a.desc, 60),
+        airframeYear: publicAirlinerMetadata ? parseAirframeYear(a.year, reportYear) : null,
+        ownerOperator: publicAirlinerMetadata ? cleanText(a.ownOp, 100) : null,
         emitterCategory: cat,
         altitudeFt: onGround ? 0 : baroFt ?? (altM === null ? null : Math.round(altM / FT)),
         onGround,
         squawk: cleanText(a.squawk, 4),
         emergency: cleanText(a.emergency, 20),
         militaryFlag: (dbFlags & 1) === 1,
+        restrictedTracking: (dbFlags & 12) !== 0,
         positionAgeS: Math.round(seenPos * 10) / 10,
         verticalRateFpm: num(a.baro_rate) ?? num(a.geom_rate),
       },
@@ -200,17 +218,23 @@ export function normalizeDigitrafficAis(locations: unknown, metadata: Map<number
 
 export function shipTypeLabel(t: number | null): string | null {
   if (t === null) return null;
+  if (Number.isInteger(t) && t >= 20 && t <= 29) return 'Wing-in-ground craft';
   if (t >= 70 && t <= 79) return 'Cargo';
   if (t >= 80 && t <= 89) return 'Tanker';
   if (t >= 60 && t <= 69) return 'Passenger';
   if (t === 30) return 'Fishing';
   if (t === 31 || t === 32 || t === 52) return 'Towing/tug';
+  if (t === 33) return 'Dredging or underwater operations';
+  if (t === 34) return 'Diving operations';
   if (t === 35) return 'Military operations';
   if (t === 36) return 'Sailing';
   if (t === 37) return 'Pleasure craft';
   if (t === 50) return 'Pilot vessel';
   if (t === 51) return 'Search and rescue';
+  if (t === 53) return 'Port tender';
+  if (t === 54) return 'Pollution response';
   if (t === 55) return 'Law enforcement';
+  if (t === 58) return 'Medical transport';
   if (t >= 40 && t <= 49) return 'High-speed craft';
   return 'Other';
 }
@@ -313,12 +337,26 @@ export function normalizeFirmsCsv(csv: string, region: string): Normalized {
 
 /** ArcGIS GeoJSON feature collection (WFIGS perimeters, FAA SUA). */
 export function normalizeArcgisPolygons(body: unknown, kind: 'perimeter' | 'airspace'): Normalized {
-  const b = body as { features?: unknown };
+  const b = body as { type?: unknown; features?: unknown; error?: unknown; crs?: { type?: unknown; properties?: { name?: unknown } } };
   if (!Array.isArray(b?.features)) throw new Error('Response is not a GeoJSON FeatureCollection');
+  if (kind === 'perimeter') {
+    if (b.type !== 'FeatureCollection' || b.error != null) throw new Error('NIFC did not supply a valid GeoJSON FeatureCollection.');
+    if (b.features.length > WFIGS_PERIMETER_LIMITS.pageRecords) throw new Error('NIFC perimeter page exceeds the feature limit.');
+    if (b.crs != null && (b.crs.type !== 'name' || !['urn:ogc:def:crs:EPSG::4326', 'urn:ogc:def:crs:OGC:1.3:CRS84', 'EPSG:4326', 'OGC:CRS84'].includes(String(b.crs.properties?.name))))
+      throw new Error('NIFC perimeter coordinates are not declared WGS84.');
+  }
   const records: GeoRecord[] = [];
-  let skipped = 0;
+  let skipped = 0, coordinates = 0;
   for (const f of b.features) {
     const feat = f as { id?: unknown; geometry?: unknown; properties?: Record<string, unknown> };
+    if (kind === 'perimeter') {
+      if (!feat || typeof feat !== 'object' || Array.isArray(feat) || !feat.properties || typeof feat.properties !== 'object' || Array.isArray(feat.properties)) { skipped++; continue; }
+      // Check lengths before walking untrusted coordinate tuples. Keep every part and every hole.
+      const count = perimeterCoordinateCount(feat?.geometry);
+      if (count === null) { skipped++; continue; }
+      coordinates += count;
+      if (coordinates > WFIGS_PERIMETER_LIMITS.coordinates) throw new Error('NIFC perimeter coordinates exceed the query limit.');
+    }
     const geom = sanitizePolygonGeometry(feat?.geometry);
     const p = feat?.properties ?? {};
     if (!geom) {
@@ -327,23 +365,37 @@ export function normalizeArcgisPolygons(body: unknown, kind: 'perimeter' | 'airs
     }
     const c = polygonCenter(geom);
     if (kind === 'perimeter') {
+      const identity = perimeterIdentity(feat.id, p);
+      if (!identity) { skipped++; continue; }
       const name = cleanText(p.poly_IncidentName, 120) ?? 'Unnamed incident';
-      const id = cleanText(p.attr_UniqueFireIdentifier, 60) ?? cleanText(p.poly_IRWINID, 60) ?? String(feat.id ?? `${c.lat},${c.lon}`);
+      const gisAcres = nonnegative(p.poly_GISAcres), incidentAcres = nonnegative(p.attr_IncidentSize);
+      const dateCurrent = toIso(num(p.poly_DateCurrent)), polygonDateTime = toIso(num(p.poly_PolygonDateTime));
+      const contained = num(p.attr_PercentContained), incidentType = cleanText(p.attr_IncidentTypeCategory, 20);
       records.push({
-        id,
+        id: identity.id,
         lat: c.lat,
         lon: c.lon,
         altM: null,
         heading: null,
         speedKts: null,
         label: name,
-        category: 'Wildfire perimeter',
-        observedAt: toIso(num(p.poly_DateCurrent) ?? num(p.poly_PolygonDateTime)),
-        sourceUrl: 'https://data-nifc.opendata.arcgis.com/',
+        category: incidentType === 'WF' ? 'Wildfire perimeter' : incidentType === 'RX' ? 'Prescribed fire perimeter' : 'Fire perimeter',
+        observedAt: dateCurrent ?? polygonDateTime,
+        sourceUrl: 'https://www.arcgis.com/home/item.html?id=d1c32af3212341869b3c810f1a215824',
         source: 'NIFC WFIGS',
         props: {
-          acres: num(p.attr_IncidentSize) ?? num(p.poly_GISAcres),
-          percentContained: num(p.attr_PercentContained),
+          // Legacy acres remains for existing callers. GIS footprint and reported incident size are separate facts.
+          acres: incidentAcres ?? gisAcres,
+          gisAcres,
+          incidentAcres,
+          incidentType,
+          percentContained: contained !== null && contained >= 0 && contained <= 100 ? contained : null,
+          incidentId: cleanText(p.attr_UniqueFireIdentifier, 100),
+          irwinId: cleanText(p.poly_IRWINID, 100),
+          globalId: identity.globalId,
+          objectId: identity.objectId,
+          dateCurrent,
+          polygonDateTime,
           discovered: toIso(num(p.attr_FireDiscoveryDateTime)),
           state: cleanText(p.attr_POOState, 12),
         },
@@ -376,6 +428,36 @@ export function normalizeArcgisPolygons(body: unknown, kind: 'perimeter' | 'airs
     }
   }
   return { records, skipped, sourceUpdatedAt: null };
+}
+
+function nonnegative(value: unknown): number | null { const n = num(value); return n !== null && n >= 0 ? n : null; }
+function perimeterIdentity(featureId: unknown, properties: Record<string, unknown>): { id: string; globalId: string | null; objectId: number | null } | null {
+  const rawGlobal = properties.GlobalID;
+  const globalText = typeof rawGlobal === 'string' && rawGlobal.startsWith('{') && rawGlobal.endsWith('}') ? rawGlobal.slice(1, -1) : rawGlobal;
+  const globalId = typeof globalText === 'string' && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(globalText) ? globalText.toLowerCase() : null;
+  const oid = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value
+    : typeof value === 'string' && /^\d{1,16}$/.test(value) && Number.isSafeInteger(Number(value)) ? Number(value) : null;
+  const objectId = oid(properties.OBJECTID) ?? oid(featureId);
+  if (globalId) return { id: `wfigs:global:${globalId}`, globalId, objectId };
+  return objectId === null ? null : { id: `wfigs:object:${objectId}`, globalId: null, objectId };
+}
+
+/** The entire supplied polygon is accepted or skipped; parts and exclusion rings are never flattened. */
+function perimeterCoordinateCount(value: unknown): number | null {
+  if (!value || typeof value !== 'object') return null;
+  const g = value as { type?: unknown; coordinates?: unknown };
+  const polygons = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' && Array.isArray(g.coordinates) ? g.coordinates : null;
+  if (!polygons?.length || polygons.length > WFIGS_PERIMETER_LIMITS.partsPerFeature) return null;
+  let count = 0, rings = 0;
+  for (const polygon of polygons) {
+    if (!Array.isArray(polygon) || !polygon.length) return null;
+    rings += polygon.length; if (rings > WFIGS_PERIMETER_LIMITS.ringsPerFeature) return null;
+    for (const ring of polygon) {
+      if (!Array.isArray(ring) || ring.length < 4) return null;
+      count += ring.length; if (count > WFIGS_PERIMETER_LIMITS.coordinates) return null;
+    }
+  }
+  return count;
 }
 
 function polygonCenter(g: Polygon | MultiPolygon): { lat: number; lon: number } {

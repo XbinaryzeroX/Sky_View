@@ -1,0 +1,100 @@
+{
+  "result": "PASS",
+  "startedAt": "2026-11-12T03:28:38.858Z",
+  "archiveSha256": "c20fc8e2aab8fd03411b59f927327ebc7483cee7602af18dbf6431996062900c",
+  "framework": "1.62.1",
+  "source": "Synthetic aircraft reports, registry replies and dated schedules in an isolated app. Standing route and packaged visual assets are the production copies. No paid provider was contacted.",
+  "executable": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\flight-card\\win-unpacked\\Atlas Watch.exe",
+  "profile": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-flight-card-uNBjQD\\profile",
+  "checks": [
+    "A20N loaded the verified a320.glb into the globe before selection; exactly one globe model shown and clicking it opened its own flight",
+    "Real map pick, registry variant, route header and endpoints, build year, local GLB load, rotation and photo toggle",
+    "No automatic paid requests, two explicit synthetic dated lookups, matching airframe and endpoints, actual/estimated/predicted UTC times, schedule differences, terminals/gates and diverted-route suppression",
+    "Second map click resets scroll and removes the previous route; CRJ1000 type dimensions and individual age",
+    "Closing details removes the actual route line; unknown airframe has no assigned year, model or specifications"
+  ],
+  "screenshots": [
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\flight-card\\controlled-a320neo-globe-model.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\flight-card\\controlled-a320neo-3d.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\flight-card\\controlled-a320neo-photo.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\flight-card\\controlled-a320neo-specifications.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\flight-card\\controlled-dated-flight-status.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\flight-card\\controlled-crj1000.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\flight-card\\controlled-diverted-flight-status.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\flight-card\\controlled-usual-route-overview.png"
+  ],
+  "errors": [],
+  "globeModel": {
+    "url": "app://atlas/vehicle-models/a320.glb",
+    "status": 200,
+    "bytes": 1306968,
+    "sha256": "88e7d28f2653b1885ce22055ced3bed00fe8e2fa4dd732ed5978280f3e9ca46a",
+    "shown": 1,
+    "loaded": 1,
+    "failed": 0,
+    "pack": "ready"
+  },
+  "model": {
+    "url": "app://atlas/vehicle-models/a320.glb",
+    "asset": "a320.glb",
+    "title": "A320neo",
+    "source": "https://sketchfab.com/3d-models/a320neo-b14863d4091e41e6abe25832a0af3b00",
+    "bytes": 1306968,
+    "status": 200,
+    "magic": "glTF",
+    "digest": "88e7d28f2653b1885ce22055ced3bed00fe8e2fa4dd732ed5978280f3e9ca46a",
+    "observedBrowserResponses": []
+  },
+  "dated": {
+    "departure": {
+      "Scheduled": "12 Nov, 01:48",
+      "Actual": "12 Nov, 02:33 · 45 min late",
+      "Terminal": "5",
+      "Gate": "B42"
+    },
+    "arrival": {
+      "Scheduled": "12 Nov, 06:08",
+      "Estimated": "12 Nov, 06:38 · 30 min late",
+      "Predicted": "12 Nov, 06:43",
+      "Terminal": "B",
+      "Gate": "B09"
+    },
+    "noAutomaticRequests": true,
+    "syntheticMatchedCallsign": "BAW117"
+  },
+  "routeOverview": {
+    "lat": 47.160759373169256,
+    "lon": -37.119615,
+    "heightM": 5581741.303457849,
+    "heading": 6.283185307179586,
+    "pitch": -1.5707963267948966
+  },
+  "transport": {
+    "counts": {
+      "api.adsb.lol/v2/point/50.3800/-4.1600/25": 1,
+      "api.adsbdb.com/v0/aircraft/aaaa01": 1,
+      "commons.wikimedia.org/w/api.php": 2,
+      "airport-data.com/api/ac_thumb.json": 3,
+      "api.aerodatabox.com/flights/callsign/BAW117": 1,
+      "api.adsbdb.com/v0/aircraft/aaaa02": 1,
+      "api.aerodatabox.com/flights/callsign/ANE1234": 1,
+      "api.adsbdb.com/v0/aircraft/aaaa03": 1
+    },
+    "paidRequestsBlocked": 0,
+    "datedRequests": [
+      {
+        "endpoint": "/flights/callsign/BAW117?withAircraftImage=false&withLocation=false&withFlightPlan=false",
+        "testKeyReceived": true,
+        "realProviderContacted": false
+      },
+      {
+        "endpoint": "/flights/callsign/ANE1234?withAircraftImage=false&withLocation=false&withFlightPlan=false",
+        "testKeyReceived": true,
+        "realProviderContacted": false
+      }
+    ]
+  },
+  "closedByRunner": true,
+  "archiveStable": true,
+  "finishedAt": "2026-11-12T03:28:45.488Z"
+}

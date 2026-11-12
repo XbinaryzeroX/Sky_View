@@ -1,0 +1,513 @@
+{
+  "result": "PASS",
+  "stage": "after",
+  "startedAt": "2026-11-12T01:55:33.568Z",
+  "executable": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\Atlas Watch.exe",
+  "archive": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+  "archiveSha256": "99b9681bb46e2cb590400600d18f76e5db8568a5ebd22fe3b420c9ababcfb5df",
+  "temporary": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-nifc-after-VRRTGg",
+  "profile": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-nifc-after-VRRTGg\\profile",
+  "database": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-nifc-after-VRRTGg\\qa.sqlite",
+  "framework": "playwright-core 1.62.1",
+  "sourceKind": "explicit controlled GeoJSON fixture; not a NIFC observation",
+  "sourcePath": "scripts/fixtures/nifc-multipart-qa.geojson",
+  "sourceBytes": 905,
+  "sourceSha256": "a550b62eeb3d3ac1e52e7d4328488895817df2f5d86416018fbf201e99c0ac30",
+  "providerResponsesReplaced": true,
+  "genuineProfileAccessed": false,
+  "installerExecuted": false,
+  "screenshots": [
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\nifc\\audit-nifc-after-source.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\nifc\\audit-nifc-after-same-scene.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\nifc\\audit-nifc-after-first-part.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\nifc\\audit-nifc-after-second-part.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\nifc\\audit-nifc-after-first-hole.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\nifc\\audit-nifc-after-second-hole.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\nifc\\audit-nifc-after-off.png",
+    "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\screenshots\\nifc\\audit-nifc-after-reenabled-second-part.png"
+  ],
+  "errors": [],
+  "checks": [
+    {
+      "name": "first-part",
+      "part": 0,
+      "point": [
+        -120.9,
+        39.1
+      ],
+      "expected": true,
+      "recordId": "wfigs:object:20261111",
+      "label": "CONTROLLED QA multipart fire — not a live observation",
+      "observedAt": "2026-11-11T22:00:00.000Z",
+      "category": "Fire perimeter",
+      "incidentType": null,
+      "clearanceM": 4000,
+      "heightM": 120000,
+      "polygonContainsPoint": true,
+      "picked": true,
+      "center": {
+        "x": 754,
+        "y": 473
+      },
+      "headlineVisible": true,
+      "displayedSourceFields": {
+        "Mapped perimeter area": {
+          "text": "Not provided by NIFC",
+          "time": null
+        },
+        "Reported incident size": {
+          "text": "1,234.5 acres",
+          "time": null
+        },
+        "Polygon captured": {
+          "text": "—",
+          "time": null
+        },
+        "Polygon record last edited": {
+          "text": "Nov 11, 5:00 PM EST",
+          "time": "2026-11-11T22:00:00.000Z"
+        },
+        "Supplied footprint": {
+          "text": "2 polygon parts · 2 interior rings",
+          "time": null
+        },
+        "Map focus coordinates": {
+          "text": "39.3000, -120.1000",
+          "time": null
+        },
+        "Fetched": {
+          "text": "Nov 11, 8:55 PM EST",
+          "time": "2026-11-12T01:55:35.469Z"
+        },
+        "Contained (%)": {
+          "text": "25",
+          "time": null
+        },
+        "Incident ID": {
+          "text": "QA|NIFC|two-parts",
+          "time": null
+        },
+        "NIFC feature OBJECTID": {
+          "text": "20261111",
+          "time": null
+        },
+        "State": {
+          "text": "US-CA",
+          "time": null
+        },
+        "Provider": {
+          "text": "NIFC WFIGS",
+          "time": null
+        },
+        "Dataset": {
+          "text": "Open source",
+          "time": null
+        },
+        "Record id": {
+          "text": "wfigs:object:20261111",
+          "time": null
+        },
+        "Terms": {
+          "text": "Public data under NIFC’s published terms",
+          "time": null
+        },
+        "Coverage": {
+          "text": "United States. NIFC publishes boundaries for some wildfires and prescribed fires.",
+          "time": null
+        }
+      }
+    },
+    {
+      "name": "second-part",
+      "part": 1,
+      "point": [
+        -119.7,
+        39.1
+      ],
+      "expected": true,
+      "recordId": "wfigs:object:20261111",
+      "label": "CONTROLLED QA multipart fire — not a live observation",
+      "observedAt": "2026-11-11T22:00:00.000Z",
+      "category": "Fire perimeter",
+      "incidentType": null,
+      "clearanceM": 4000,
+      "heightM": 120000,
+      "polygonContainsPoint": true,
+      "picked": true,
+      "center": {
+        "x": 754,
+        "y": 473
+      },
+      "headlineVisible": true,
+      "displayedSourceFields": {
+        "Mapped perimeter area": {
+          "text": "Not provided by NIFC",
+          "time": null
+        },
+        "Reported incident size": {
+          "text": "1,234.5 acres",
+          "time": null
+        },
+        "Polygon captured": {
+          "text": "—",
+          "time": null
+        },
+        "Polygon record last edited": {
+          "text": "Nov 11, 5:00 PM EST",
+          "time": "2026-11-11T22:00:00.000Z"
+        },
+        "Supplied footprint": {
+          "text": "2 polygon parts · 2 interior rings",
+          "time": null
+        },
+        "Map focus coordinates": {
+          "text": "39.3000, -120.1000",
+          "time": null
+        },
+        "Fetched": {
+          "text": "Nov 11, 8:55 PM EST",
+          "time": "2026-11-12T01:55:35.469Z"
+        },
+        "Contained (%)": {
+          "text": "25",
+          "time": null
+        },
+        "Incident ID": {
+          "text": "QA|NIFC|two-parts",
+          "time": null
+        },
+        "NIFC feature OBJECTID": {
+          "text": "20261111",
+          "time": null
+        },
+        "State": {
+          "text": "US-CA",
+          "time": null
+        },
+        "Provider": {
+          "text": "NIFC WFIGS",
+          "time": null
+        },
+        "Dataset": {
+          "text": "Open source",
+          "time": null
+        },
+        "Record id": {
+          "text": "wfigs:object:20261111",
+          "time": null
+        },
+        "Terms": {
+          "text": "Public data under NIFC’s published terms",
+          "time": null
+        },
+        "Coverage": {
+          "text": "United States. NIFC publishes boundaries for some wildfires and prescribed fires.",
+          "time": null
+        }
+      }
+    },
+    {
+      "name": "first-hole",
+      "part": 0,
+      "point": [
+        -120.7,
+        39.3
+      ],
+      "expected": false,
+      "recordId": "wfigs:object:20261111",
+      "label": "CONTROLLED QA multipart fire — not a live observation",
+      "observedAt": "2026-11-11T22:00:00.000Z",
+      "category": "Fire perimeter",
+      "incidentType": null,
+      "clearanceM": 4000,
+      "heightM": 120000,
+      "polygonContainsPoint": false,
+      "picked": false,
+      "center": {
+        "x": 754,
+        "y": 473
+      }
+    },
+    {
+      "name": "second-hole",
+      "part": 1,
+      "point": [
+        -119.5,
+        39.3
+      ],
+      "expected": false,
+      "recordId": "wfigs:object:20261111",
+      "label": "CONTROLLED QA multipart fire — not a live observation",
+      "observedAt": "2026-11-11T22:00:00.000Z",
+      "category": "Fire perimeter",
+      "incidentType": null,
+      "clearanceM": 4000,
+      "heightM": 120000,
+      "polygonContainsPoint": false,
+      "picked": false,
+      "center": {
+        "x": 754,
+        "y": 473
+      }
+    }
+  ],
+  "pid": 43540,
+  "security": {
+    "isPackaged": true,
+    "version": "0.7.0",
+    "appPath": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\resources\\app.asar",
+    "userData": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-nifc-after-VRRTGg\\profile",
+    "noSandbox": false,
+    "ignoreCertificateErrors": false,
+    "windows": [
+      {
+        "contextIsolation": true,
+        "sandbox": true,
+        "nodeIntegration": false,
+        "webSecurity": true
+      }
+    ]
+  },
+  "requests": [
+    {
+      "url": "https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query?where=1%3D1&outFields=OBJECTID,GlobalID,poly_IncidentName,poly_DateCurrent,poly_PolygonDateTime,poly_GISAcres,poly_IRWINID,attr_IncidentSize,attr_PercentContained,attr_FireDiscoveryDateTime,attr_UniqueFireIdentifier,attr_POOState,attr_IncidentTypeCategory&outSR=4326&geometryPrecision=5&maxAllowableOffset=0.0005&f=geojson&resultOffset=0&resultRecordCount=1000",
+      "at": "2026-11-12T01:55:35.469Z",
+      "controlled": true,
+      "status": 200,
+      "bytes": 905,
+      "sha256": "a550b62eeb3d3ac1e52e7d4328488895817df2f5d86416018fbf201e99c0ac30"
+    }
+  ],
+  "normalized": {
+    "id": "wfigs:object:20261111",
+    "lat": 39.239999999999995,
+    "lon": -120.75999999999999,
+    "altM": null,
+    "heading": null,
+    "speedKts": null,
+    "label": "CONTROLLED QA multipart fire — not a live observation",
+    "category": "Fire perimeter",
+    "observedAt": "2026-11-11T22:00:00.000Z",
+    "sourceUrl": "https://www.arcgis.com/home/item.html?id=d1c32af3212341869b3c810f1a215824",
+    "source": "NIFC WFIGS",
+    "props": {
+      "acres": 1234.5,
+      "gisAcres": null,
+      "incidentAcres": 1234.5,
+      "incidentType": null,
+      "percentContained": 25,
+      "incidentId": "QA|NIFC|two-parts",
+      "irwinId": null,
+      "globalId": null,
+      "objectId": 20261111,
+      "dateCurrent": "2026-11-11T22:00:00.000Z",
+      "polygonDateTime": null,
+      "discovered": null,
+      "state": "US-CA"
+    },
+    "geometry": {
+      "type": "MultiPolygon",
+      "coordinates": [
+        [
+          [
+            [
+              -121,
+              39
+            ],
+            [
+              -120.4,
+              39
+            ],
+            [
+              -120.4,
+              39.6
+            ],
+            [
+              -121,
+              39.6
+            ],
+            [
+              -121,
+              39
+            ]
+          ],
+          [
+            [
+              -120.8,
+              39.2
+            ],
+            [
+              -120.8,
+              39.4
+            ],
+            [
+              -120.6,
+              39.4
+            ],
+            [
+              -120.6,
+              39.2
+            ],
+            [
+              -120.8,
+              39.2
+            ]
+          ]
+        ],
+        [
+          [
+            [
+              -119.8,
+              39
+            ],
+            [
+              -119.2,
+              39
+            ],
+            [
+              -119.2,
+              39.6
+            ],
+            [
+              -119.8,
+              39.6
+            ],
+            [
+              -119.8,
+              39
+            ]
+          ],
+          [
+            [
+              -119.6,
+              39.2
+            ],
+            [
+              -119.6,
+              39.4
+            ],
+            [
+              -119.4,
+              39.4
+            ],
+            [
+              -119.4,
+              39.2
+            ],
+            [
+              -119.6,
+              39.2
+            ]
+          ]
+        ]
+      ]
+    }
+  },
+  "sourceStatus": {
+    "state": "current",
+    "text": "Latest successful reply · 1 perimeter features.\n\nLast successful reply received Nov 11, 8:55 PM EST. Boundary update times are supplied separately on each feature.\n\nNIFC WFIGS query completed in 1 page(s). 1 perimeter features; these are not distinct incident counts. Source polygons retain all supplied parts and holes.\n\nNext scheduled check Nov 11, 9:10 PM EST.\n\nFeatures are published boundaries for some wildfires and prescribed fires, not a count of distinct incidents or every fire.\n\nRefresh"
+  },
+  "scene": {
+    "point": [
+      -120.1,
+      39.3
+    ],
+    "heightM": 300000,
+    "camera": {
+      "lat": 39.30000000000002,
+      "lon": -120.09999999999998,
+      "heightM": 299999.99999957636,
+      "heading": 6.283185307179586,
+      "pitch": -1.5707963267948966
+    }
+  },
+  "retainedRecordsWhileDisabled": 1,
+  "disabledSourceStatus": "disabled",
+  "offRemovesSelection": true,
+  "reenableRestoresSecondPart": true,
+  "discover": {
+    "unavailableBecauseNoSourceMappedAcreage": true
+  },
+  "diagnostics": {
+    "cameraHeightM": 79999.99999996024,
+    "cameraLat": 39.099999999999994,
+    "cameraLon": -119.7,
+    "tilesPending": 0,
+    "maxRenderedLevel": 10,
+    "imageryMaxLevelHere": 0,
+    "imageryAtLimit": false,
+    "imageryErrors": 0,
+    "globeShown": true,
+    "renderErrors": 0,
+    "lastRenderError": null,
+    "imageryLayerCount": 0,
+    "photorealLoaded": false,
+    "lastImageryError": null,
+    "basemapSources": [],
+    "terrain": null,
+    "vector": {
+      "requested": 31,
+      "loaded": 31,
+      "failed": 0,
+      "lastError": null,
+      "lastSuccessAt": "2026-11-12T01:56:06.031Z",
+      "overlayOn": false
+    },
+    "usgs": {
+      "noDataTiles": 0,
+      "blankTiles": 0,
+      "imageryTiles": 0,
+      "oceanMasked": 0,
+      "maskUnavailable": 0,
+      "mixedWhiteTiles": 0
+    },
+    "models": {
+      "variants": 0,
+      "loaded": 0,
+      "shown": 0,
+      "created": 0,
+      "removed": 0,
+      "flips": 0,
+      "failed": 0,
+      "textureBytes": [],
+      "lastError": null,
+      "pack": {
+        "state": "none",
+        "models": 0,
+        "rejected": 0,
+        "error": null
+      },
+      "geoid": {
+        "state": "ready",
+        "error": null
+      }
+    },
+    "sea": {
+      "maskedTiles": 0,
+      "maskUnavailable": 0,
+      "unavailableTiles": [],
+      "reasons": {}
+    },
+    "buildings": {
+      "tilesLoaded": 0,
+      "buildingsDrawn": 0,
+      "lastError": null,
+      "visible": false,
+      "enabled": false,
+      "maxCameraM": 4000
+    },
+    "geoSat": {
+      "enabled": false,
+      "product": "infrared",
+      "frames": {},
+      "checks": 0,
+      "failedChecks": 0,
+      "lastError": null,
+      "layers": 0
+    },
+    "missingRequirement": null
+  },
+  "closedByRunner": true,
+  "archiveStableDuringRun": true,
+  "finishedAt": "2026-11-12T01:56:14.123Z"
+}

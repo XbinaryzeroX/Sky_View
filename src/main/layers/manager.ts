@@ -5,18 +5,22 @@
 // positions for playback. One timer per layer; no duplicate requests.
 
 import type { KeyedCameraId } from '../../shared/keyedCameras';
+import { trackState } from '../../shared/aircraft';
 import { LAYER_IDS, LAYERS, type GeoRecord, type LayerId, type LayerSnapshot, type LayerStatus, type ViewState } from '../../shared/layers';
 import { freshnessOf } from '../../shared/monitoring';
 import type { Settings } from '../../shared/types';
 import { computeBackoffMs, FeedHttpError, type FetchJson, type FetchText } from '../feeds/http';
+import { deadlineAfter, timerDelayUntil } from '../feeds/timing';
 import type { AtlasStore } from '../store';
 import type { AisStreamClient } from './aisstream';
-import { FETCHERS, type FetchResult, type SourceState } from './fetchers';
+import { aircraftProviderHost, FETCHERS, type FetchResult, type SourceState } from './fetchers';
+import { dwdFreshness, type DwdSource } from './dwdSource';
 
 const TRACKED_LAYERS: LayerId[] = ['aircraft', 'aircraftMil', 'vessels', 'transit'];
 const VIEW_REFETCH_MIN_MS: Partial<Record<LayerId, number>> = { aircraft: 8000, metar: 15_000 };
 
 export interface LayerManagerDeps {
+  dwd?: DwdSource;
   store: AtlasStore;
   fetchJson: FetchJson;
   fetchText: FetchText;
@@ -75,7 +79,10 @@ export class LayerManager {
   private view: ViewState | null = null;
   private viewTimer: ReturnType<typeof setTimeout> | null = null;
   private aisTimer: ReturnType<typeof setInterval> | null = null;
+  private dwdDisplayTimer: ReturnType<typeof setTimeout> | undefined;
+  private dwdDisplayDeadline = Infinity;
   private running = false;
+  private lastAircraftHost: string | null = null;
 
   constructor(private readonly d: LayerManagerDeps) {
     this.now = d.now ?? (() => new Date());
@@ -95,6 +102,7 @@ export class LayerManager {
 
   stop(): void {
     this.running = false;
+    this.scheduleDwdDisplay(Infinity);
     for (const t of this.timers.values()) clearTimeout(t);
     this.timers.clear();
     if (this.viewTimer) clearTimeout(this.viewTimer);
@@ -110,14 +118,25 @@ export class LayerManager {
       const snap = this.snaps.get(id)!;
       if (on && !snap.status.enabled) {
         snap.status = { ...snap.status, enabled: true };
+        if (id === 'dwd' && this.inFlight.has(id)) this.rerun.add(id);
         this.schedule(id, 0);
       } else if (!on && snap.status.enabled) {
         const t = this.timers.get(id);
         if (t) clearTimeout(t);
         this.timers.delete(id);
         snap.status = { ...snap.status, enabled: false, nextAttemptAt: null };
+        if (id === 'dwd') {
+          this.scheduleDwdDisplay(Infinity);
+          this.credentialGen.set(id, (this.credentialGen.get(id) ?? 0) + 1);
+          snap.status = emptyStatus(id, false);
+          snap.records = [];
+        }
         this.d.emit(id);
       }
+    }
+    if (this.isEnabled('aircraft') && this.lastAircraftHost && this.lastAircraftHost !== aircraftProviderHost(this.view, this.d.getSettings())) {
+      if (this.inFlight.has('aircraft')) this.rerun.add('aircraft');
+      else this.schedule('aircraft', 0);
     }
     this.syncAis();
   }
@@ -129,12 +148,14 @@ export class LayerManager {
     this.viewTimer = setTimeout(() => {
       for (const id of LAYER_IDS) {
         if (!LAYERS[id].viewport || !this.isEnabled(id)) continue;
-        if (!viewMovedEnough(this.lastFetchView.get(id) ?? null, v)) continue;
+        const changedProvider = id === 'aircraft' && this.lastAircraftHost !== aircraftProviderHost(v, this.d.getSettings());
+        if (!viewMovedEnough(this.lastFetchView.get(id) ?? null, v) && !changedProvider) continue;
+        if (changedProvider && this.inFlight.has(id)) { this.rerun.add(id); continue; }
         const since = this.now().getTime() - (this.lastFetchAt.get(id) ?? 0);
-        const min = VIEW_REFETCH_MIN_MS[id] ?? 30_000;
+        const min = changedProvider ? 0 : VIEW_REFETCH_MIN_MS[id] ?? 30_000;
         const st = this.snaps.get(id)!.status;
         // Never bypass failure backoff: keep the later of the backoff time and the view-refetch time.
-        const backoffWait = st.consecutiveFailures > 0 && st.nextAttemptAt ? Math.max(0, Date.parse(st.nextAttemptAt) - this.now().getTime()) : 0;
+        const backoffWait = !changedProvider && st.consecutiveFailures > 0 && st.nextAttemptAt ? Math.max(0, Date.parse(st.nextAttemptAt) - this.now().getTime()) : 0;
         this.schedule(id, Math.max(backoffWait, min - since, 0));
       }
       this.syncAis();
@@ -147,6 +168,16 @@ export class LayerManager {
 
   snapshot(id: LayerId): LayerSnapshot {
     const s = this.snaps.get(id)!;
+    if (id === 'dwd') {
+      const current = s.status.enabled ? this.d.dwd?.current() : null;
+      if (!current) return s;
+      const now = this.now().getTime();
+      const freshness = dwdFreshness(current, now);
+      if (this.running) this.scheduleDwdDisplay(this.d.dwd!.nextDisplayChange(now));
+      return { status: { ...s.status, freshness, recordCount: current.warnings.length, skippedRecords: current.skipped,
+        lastSuccessAt: current.checkedAt, sourceUpdatedAt: current.sourceUpdatedAt, note: current.note },
+        records: current.records, dwdWarnings: current.warnings };
+    }
     const poll = LAYERS[id].pollSeconds;
     s.status = { ...s.status, freshness: freshnessOf({ ...s.status, feed: 'nws', fromCache: false } as never, Math.min(poll, 3600), this.now().getTime()) };
     return s;
@@ -156,26 +187,55 @@ export class LayerManager {
     return LAYER_IDS.map((id) => this.snapshot(id).status);
   }
 
+  private scheduleDwdDisplay(deadline: number): void {
+    if (deadline === this.dwdDisplayDeadline) return;
+    clearTimeout(this.dwdDisplayTimer);
+    this.dwdDisplayDeadline = deadline;
+    if (Number.isFinite(deadline)) {
+      this.dwdDisplayTimer = setTimeout(() => {
+        this.dwdDisplayDeadline = Infinity;
+        if (this.running && this.isEnabled('dwd')) this.d.emit('dwd');
+      }, timerDelayUntil(deadline, this.now().getTime()));
+    }
+  }
+
   private schedule(id: LayerId, delayMs: number): void {
     if (!this.running || !this.isEnabled(id)) return;
+    const now = this.now().getTime();
+    delayMs = Math.max(delayMs, this.cooldownUntil(id) - now);
+    const deadline = deadlineAfter(now, delayMs);
     const t = this.timers.get(id);
     if (t) clearTimeout(t);
     const snap = this.snaps.get(id)!;
-    snap.status = { ...snap.status, nextAttemptAt: new Date(this.now().getTime() + delayMs).toISOString() };
-    this.timers.set(
-      id,
-      setTimeout(() => {
+    snap.status = { ...snap.status, nextAttemptAt: new Date(deadline).toISOString() };
+    // Node clamps overflowing delays to about 1 ms. Reach a long absolute deadline through bounded hops,
+    // while leaving the publisher's actual next-attempt time visible instead of the intermediate hop.
+    const arm = () => {
+      if (!this.running || !this.isEnabled(id)) return;
+      this.timers.set(id, setTimeout(() => {
         this.timers.delete(id);
+        if (!this.running || !this.isEnabled(id)) return;
+        if (this.now().getTime() < deadline) { arm(); return; }
         void this.refresh(id).catch(() => {});
-      }, delayMs),
-    );
+      }, timerDelayUntil(deadline, this.now().getTime())));
+    };
+    arm();
   }
 
   refresh(id: LayerId): Promise<void> {
+    if (id === 'dwd' && !this.isEnabled(id)) return Promise.resolve();
     const existing = this.inFlight.get(id);
     if (existing) return existing;
-    const until = this.rateLimitedUntil.get(id);
-    if (until && until > this.now().getTime()) return Promise.resolve();
+    const until = deadlineAfter(this.now().getTime(), this.cooldownUntil(id) - this.now().getTime());
+    if (until > this.now().getTime()) {
+      const snap = this.snaps.get(id)!;
+      if (snap.status.state !== 'error') {
+        snap.status = { ...snap.status, state: 'error', error: `Provider cooldown until ${new Date(until).toISOString()}`, consecutiveFailures: Math.max(1, snap.status.consecutiveFailures) };
+        this.d.emit(id);
+      }
+      this.schedule(id, until - this.now().getTime());
+      return Promise.resolve();
+    }
     const p = this.doRefresh(id).finally(() => {
       this.inFlight.delete(id);
       // Credentials changed mid-refresh: fetch once more with the current ones.
@@ -206,8 +266,10 @@ export class LayerManager {
     snap.status = { ...snap.status, state: 'loading', lastAttemptAt: started.toISOString() };
     this.d.emit(id);
     const view = this.view;
+    if (id === 'aircraft') this.lastAircraftHost = aircraftProviderHost(view, this.d.getSettings());
     try {
       const res: FetchResult = await FETCHERS[id]({
+        dwd: id === 'dwd' ? this.d.dwd : undefined,
         view,
         settings: this.d.getSettings(),
         fetchJson: this.d.fetchJson,
@@ -217,18 +279,22 @@ export class LayerManager {
         localReceiverUrl: id === 'aircraft' ? this.d.localReceiverUrl() : null,
         openskyClient: id === 'aircraft' ? (this.d.openskyClient?.() ?? null) : null,
         cameraKey: id === 'cameras' ? this.d.cameraKey : undefined,
-        sources: id === 'cameras' ? this.sourceState(id) : undefined,
+        sources: id === 'cameras' || id === 'aircraft' || id === 'aircraftMil' ? this.sourceState(id) : undefined,
         clock: () => this.now().getTime(),
         now: started,
       });
       if (stale()) {
         // Fetched with credentials that have since changed: never publish it (the queued refresh replaces it).
-        snap.status = { ...snap.status, state: before };
+        if (id !== 'dwd') snap.status = { ...snap.status, state: before };
         this.d.emit(id);
         return;
       }
       if (res.failure) {
         this.publishFailedResult(id, res);
+        return;
+      }
+      if (res.incomplete) {
+        this.publishIncompleteAircraft(id, res);
         return;
       }
       let records = res.records;
@@ -255,14 +321,16 @@ export class LayerManager {
       this.schedule(id, Math.min(LAYERS[id].pollSeconds * 1000, soon));
     } catch (e) {
       const failures = snap.status.consecutiveFailures + 1;
+      const retryAfter = e instanceof FeedHttpError ? e.retryAfterSec : null;
       const rl = e instanceof FeedHttpError && (e.status === 429 || e.status === 503);
-      const backoff = computeBackoffMs(failures, rl ? ((e as FeedHttpError).retryAfterSec ?? 60) : null);
-      if (rl) this.rateLimitedUntil.set(id, this.now().getTime() + backoff);
+      const publisherPause = rl || retryAfter !== null;
+      const backoff = computeBackoffMs(failures, rl ? (retryAfter ?? 60) : retryAfter);
+      if (publisherPause) this.rateLimitedUntil.set(id, deadlineAfter(this.now().getTime(), backoff));
       if (stale()) {
         // A failure under old credentials says nothing about the new ones; only a rate limit (which is
         // about the host) is kept, and the next attempt waits for it.
-        snap.status = { ...snap.status, state: before };
-        if (rl) this.schedule(id, backoff);
+        if (id !== 'dwd') snap.status = { ...snap.status, state: before };
+        if (publisherPause) this.schedule(id, backoff);
         this.d.emit(id);
         return;
       }
@@ -292,10 +360,53 @@ export class LayerManager {
     this.schedule(id, Math.min(LAYERS[id].pollSeconds * 1000, Math.max(backoff, limitEnds, Math.min(LAYERS[id].pollSeconds * 1000, 30_000))));
   }
 
+  /** A partial aircraft refresh cannot establish removals in areas/sources that did not answer. */
+  private publishIncompleteAircraft(id: LayerId, res: FetchResult): void {
+    const snap = this.snaps.get(id)!;
+    const now = this.now().getTime();
+    const failures = snap.status.consecutiveFailures + 1;
+    const merged = new Map(snap.records.map((r) => [r.id, r]));
+    for (const record of res.records) {
+      const old = merged.get(record.id);
+      if (!old || (record.observedAt ?? '') >= (old.observedAt ?? '')) merged.set(record.id, record);
+    }
+    // Keep original report times; expired observations must not accumulate through repeated partial pans.
+    snap.records = [...merged.values()].filter((r) => trackState(r, now) !== 'expired');
+    const times = [snap.status.sourceUpdatedAt, res.sourceUpdatedAt].filter((v): v is string => !!v);
+    snap.status = { ...snap.status, state: 'error', error: res.incomplete!.error, consecutiveFailures: failures,
+      sourceUpdatedAt: times.length ? times.sort()[0] : null, recordCount: snap.records.length, skippedRecords: res.skipped,
+      note: `${res.note ?? ''} Keeping last-known observations from sources or areas that did not answer; their report times are unchanged.`.trim() };
+    this.recordTracks(id, res.records);
+    const limit = res.incomplete!.retryAt ?? 0;
+    const localContinues = id === 'aircraft' && !!this.d.localReceiverUrl();
+    const delay = localContinues ? LAYERS[id].pollSeconds * 1000 : Math.max(computeBackoffMs(failures, null), limit - now);
+    if (limit > now && !localContinues) this.rateLimitedUntil.set(id, deadlineAfter(now, delay));
+    // Both aircraft adapters use the same public host. A layer toggle or force-refresh cannot bypass its wait.
+    const adsbLimit = this.sourceState('aircraft').backoff.get('api.adsb.lol')?.until ?? 0;
+    if (adsbLimit > now) {
+      this.rateLimitedUntil.set('aircraftMil', Math.max(this.rateLimitedUntil.get('aircraftMil') ?? 0, adsbLimit));
+      if (!this.d.localReceiverUrl()) this.rateLimitedUntil.set('aircraft', Math.max(this.rateLimitedUntil.get('aircraft') ?? 0, adsbLimit));
+    }
+    this.log(`[layers] ${id} incomplete (${failures}): ${res.incomplete!.error}`);
+    this.schedule(id, delay);
+    this.d.emit(id);
+  }
+
   private sourceState(id: LayerId): SourceState {
+    if (id === 'aircraftMil') id = 'aircraft';
     let s = this.sourceStates.get(id);
     if (!s) this.sourceStates.set(id, (s = { backoff: new Map(), cache: new Map() }));
     return s;
+  }
+
+  private cooldownUntil(id: LayerId): number {
+    if (id === 'aircraft') {
+      if (this.d.localReceiverUrl()) return 0;
+      const host = aircraftProviderHost(this.view, this.d.getSettings());
+      return this.sourceState(id).backoff.get(host)?.until ?? 0;
+    }
+    return Math.max(this.rateLimitedUntil.get(id) ?? 0,
+      id === 'aircraftMil' ? this.sourceState(id).backoff.get('api.adsb.lol')?.until ?? 0 : 0);
   }
 
   private recordTracks(id: LayerId, records: GeoRecord[]): void {

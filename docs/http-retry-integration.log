@@ -1,0 +1,20 @@
+{
+  "result": "PASS",
+  "transport": "real loopback HTTP + native fetch",
+  "publicRequests": 0,
+  "checks": [
+    "forty-day pause retained",
+    "same-origin alternate path blocked",
+    "independent origin usable",
+    "deadline resumes",
+    "huge delay serializable",
+    "redirect target not requested early"
+  ],
+  "hits": [
+    "A/limited",
+    "B/probe",
+    "A/probe",
+    "B/huge",
+    "C/redirect"
+  ]
+}

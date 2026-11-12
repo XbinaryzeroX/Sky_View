@@ -15,6 +15,8 @@ export const RENDERER_REMOTES: RendererRemote[] = [
   { prefix: 'https://gibs.earthdata.nasa.gov/wmts/', purpose: 'NASA GIBS imagery tiles' },
   { prefix: 'https://gibs.earthdata.nasa.gov/legends/', purpose: 'NASA GIBS product legends (SVG)' },
   { prefix: 'https://gibs.earthdata.nasa.gov/wms/epsg4326/', purpose: 'NASA GIBS polar caps (geographic projection, beyond the Web Mercator limit)' },
+  { prefix: 'https://titiler.terrascope.be/wms', purpose: 'ESA WorldCover true-colour overview and imagery coverage (WMS)' },
+  { prefix: 'https://wmts.terrascope.be/', purpose: 'ESA WorldCover Sentinel-2 2021 true-colour imagery (Terrascope WMTS)' },
   { prefix: 'https://basemap.nationalmap.gov/arcgis/rest/services/', purpose: 'USGS National Map tiles' },
   { prefix: 'https://s3.amazonaws.com/elevation-tiles-prod/', purpose: 'Terrain Tiles (AWS Open Data)' },
   { prefix: 'https://nowcoast.noaa.gov/geoserver/', purpose: 'NOAA nowCOAST radar (WMS)' },

@@ -370,7 +370,7 @@ describe('model download safety', () => {
 describe('model pack index', () => {
   const good = {
     id: 'a320', file: 'a320.glb', kind: 'aircraft', icao: ['A320', 'A20N'], military: false, lengthM: 37.6, widthM: 35.8, heightM: 11.8,
-    title: 'A320neo', author: 'someone', license: 'CC BY 4.0', licenseUrl: 'https://creativecommons.org/licenses/by/4.0/', sourceUrl: 'https://sketchfab.com/3d-models/b14863d4091e41e6abe25832a0af3b00', tris: 30000,
+    title: 'A320neo', author: 'someone', license: 'CC BY 4.0', licenseUrl: 'https://creativecommons.org/licenses/by/4.0/', sourceUrl: 'https://sketchfab.com/3d-models/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', tris: 30000,
   };
   const ship = { ...good, id: 'tug', file: 'tug.glb', kind: 'ship', icao: undefined, vessel: 'tug', lengthM: 30, widthM: 10, heightM: 12, title: 'Tug' };
   const heli = { ...good, id: 'sh60', file: 'sh60.glb', icao: ['H60'], military: true, lengthM: 19.8, widthM: 16.4, heightM: 5.2, title: 'Seahawk' };
@@ -425,6 +425,13 @@ describe('model pack index', () => {
     expect(packForVessel(pack, 'unknown')).toBeNull();
     expect(packForVessel(pack, 'cargo')).toBeNull();
     expect(packCredit(pack.models[0])).toContain('by someone (CC BY 4.0)');
+  });
+
+  it('uses a legacy CRJ-900 pack only for the CRJ-900, even when its old index also listed the CRJ-1000', () => {
+    const crj = { ...good, icao: ['CRJ9', 'CRJX'], sourceUrl: 'https://sketchfab.com/3d-models/airplane-crj-900-cityjet-02c4fa44604243c2bb48db64506a39af' };
+    const pack = parsePackIndex({ version: 1, models: [crj] });
+    expect(packForAircraft(pack, 'CRJ9', false)).toBeTruthy();
+    expect(packForAircraft(pack, 'CRJX', false)).toBeNull();
   });
 
   it('rejects a second entry with the same id (one id = one model file and credit)', () => {

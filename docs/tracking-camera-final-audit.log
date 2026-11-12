@@ -1,0 +1,10 @@
+
+> atlas-watch@0.7.0 smoke
+> node scripts/smoke.mjs docs/screenshots/audit-tracking-camera-final.png 110000
+
+[layers] aircraft failed (1): adsb.lol: Network error: fetch failed; adsb.lol: Network error: fetch failed; adsb.lol: Network error: fetch failed; adsb.lol: Network error: fetch failed; adsb.lol: Network error: fetch failed; adsb.lol: Network error: fetch failed; adsb.lol: Network error: fetch failed; adsb.lol: Network error: fetch failed; adsb.lol: Network error: fetch failed; adsb.lol: Network error: fetch failed; adsb.lol: Network error: fetch failed; adsb.lol: Network error: fetch failed
+SMOKE_SCRIPT_ERROR Tracking camera QA timed out
+[layers] aircraft failed (2): adsb.lol: Network error: fetch failed
+SMOKE_RESULT {"globeReady":true,"errors":[],"locations":0,"alerts":391,"quakes":318,"nws":"ok","usgs":"ok"}
+SMOKE_FEEDS {"nws":"ok","nwsCount":391,"usgs":"ok","usgsCount":322,"nwsErr":null,"usgsErr":null}
+exit=0 screenshot=C:\Users\infob\Documents\Claude\Sky_View\docs\screenshots\audit-tracking-camera-final.png

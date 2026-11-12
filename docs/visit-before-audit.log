@@ -1,0 +1,8 @@
+
+[feeds] nws refresh failed (1): Network unavailable or host unreachable
+[feeds] usgs refresh failed (1): Network unavailable or host unreachable
+SMOKE_SCRIPT {"result":"PASS","beforeState":true,"savedPlaces":0,"locationOnly":true,"visitModePresent":false,"exportsDisabled":true,"previewHasLocationHeading":true,"rendererErrors":[]}
+VISIT_BEFORE_RENDERED_FRAMES [{"url":"app://atlas/index.html","headingElements":0,"briefingHeadingPainted":false,"textBoxes":176}]
+SMOKE_RESULT {"globeReady":true,"errors":[],"locations":0,"alerts":0,"quakes":0,"nws":"error","usgs":"error"}
+SMOKE_FEEDS {"nws":"error","nwsCount":0,"usgs":"error","usgsCount":0,"nwsErr":"Network unavailable or host unreachable","usgsErr":"Network unavailable or host unreachable"}
+VISIT_BEFORE_PROVIDER_FETCHES 0

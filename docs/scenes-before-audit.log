@@ -1,0 +1,7 @@
+
+[feeds] nws refresh failed (1): Network unavailable or host unreachable
+[feeds] usgs refresh failed (1): Network unavailable or host unreachable
+SMOKE_SCRIPT {"result":"PASS","beforeState":true,"providerTraffic":"forced offline","fixture":"explicit synthetic historical quake","savedFields":["id","name","camera","basemap","layersEnabled","createdAt"],"savedHasInvestigation":false,"cameraRestored":true,"restoredReplay":false,"scenesOpeningExitedReplay":true,"recordedCursorBeforeSave":"2026-11-11T16:03:27.000Z","selectedBeforeSave":"qa-scenes-before-quake","rendererErrors":[]}
+SMOKE_RESULT {"globeReady":true,"errors":[],"locations":0,"alerts":0,"quakes":0,"nws":"error","usgs":"error"}
+SMOKE_FEEDS {"nws":"error","nwsCount":0,"usgs":"error","usgsCount":0,"nwsErr":"Network unavailable or host unreachable","usgsErr":"Network unavailable or host unreachable"}
+SCENES_BEFORE_PROVIDER_FETCHES 0

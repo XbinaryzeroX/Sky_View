@@ -1,0 +1,55 @@
+{
+  "result": "PASS",
+  "startedAt": "2026-11-12T04:19:15.853Z",
+  "archiveSha256": "5eacf4b1d1a0c77cba3914ca968d5052d3c6d7d406b79a2883c92ce0a507c682",
+  "checks": [
+    "Country selection showed the publisher title, original report URL, subject digest and posting time.",
+    "Verified the live CFR count, region filter, assessed trend, dashboard link and exact situation overview.",
+    "Selected a monitored situation and opened humanitarian reporting filed under Myanmar.",
+    "Controlled HTTP 503 responses after restart preserved both original successful check times and both complete lists."
+  ],
+  "reports": {
+    "source": "ReliefWeb · UN OCHA",
+    "coverage": "Selected humanitarian agencies in ReliefWeb’s 20 latest matching English situation reports, posted in the 30 days before the source check. Countries are the publisher’s filing areas. Report titles may cover an earlier period.",
+    "lastSuccessfulCheck": "2026-11-12T04:19:18.882Z",
+    "reportCount": 9,
+    "countries": [
+      "South Sudan",
+      "Yemen",
+      "Sudan",
+      "Nigeria",
+      "Myanmar",
+      "Kenya",
+      "Lebanon"
+    ],
+    "publishedBy": [
+      "International Organization for Migration",
+      "Health Cluster, World Health Organization",
+      "UN High Commissioner for Refugees",
+      "World Food Programme",
+      "International Federation of Red Cross and Red Crescent Societies",
+      "United Nations Population Fund",
+      "UN Children's Fund"
+    ],
+    "postedFrom": "2026-11-09T07:09:23.000Z",
+    "postedThrough": "2026-11-12T02:03:29.000Z"
+  },
+  "assessments": {
+    "lastSuccessfulCheck": "2026-11-12T04:19:20.254Z",
+    "situations": 27,
+    "regions": [
+      "Americas",
+      "Asia",
+      "Europe and Eurasia",
+      "Middle East and North Africa",
+      "Sub-Saharan Africa"
+    ],
+    "statuses": {
+      "Worsening": 9,
+      "Unchanging": 14,
+      "Developing": 2,
+      "Improving": 2
+    }
+  },
+  "rendererErrors": []
+}

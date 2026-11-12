@@ -1,0 +1,10 @@
+{
+  "receivedAt": "2026-11-11T12:00:00.250Z",
+  "longSeconds": 3456000,
+  "httpDate": "Fri, 13 Nov 2026 12:00:01 GMT",
+  "obsoleteDate": "Friday, 13-Nov-26 12:00:01 GMT",
+  "asctimeDate": "Fri Nov 13 12:00:01 2026",
+  "futureObsoleteDate": "Wednesday, 06-Nov-75 08:49:37 GMT",
+  "futureObsoleteIso": "2075-11-06T08:49:37.000Z",
+  "invalidHeaders": ["-1", "1.5", "1e6", "Infinity", "NaN", "+5000", "2026-11-13", "garbage"]
+}

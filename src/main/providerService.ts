@@ -9,9 +9,13 @@ import { isKeyedCameraId, keyedCameraRequest, keyedCameraSystem, normalizeKeyedC
 import { FeedHttpError, isAllowedLocalReceiverUrl, setLocalReceiverUrl, type FetchJson, type FetchText } from './feeds/http';
 import { redactSecrets, type SecretStore } from './secrets';
 import type { AtlasStore } from './store';
+import type { DwdSource } from './layers/dwdSource';
+import { cleanText } from '../shared/normalize';
+import { geocodingMatches } from './geocoding';
 
 export class ProviderService {
   marketService?: MarketService;
+  dwd?: DwdSource;
   readonly credentials: CredentialService;
   private lastTests = new Map<ProviderId, { ok: boolean; message: string; at: string }>();
 
@@ -111,6 +115,11 @@ export class ProviderService {
   private async runTest(id: ProviderId, headers: Record<string, string>, secret: string | null): Promise<{ ok: boolean; message: string }> {
     const json = async (url: string, extra: Record<string, string> = {}) => (await this.fetchJson(url, { headers: { ...headers, ...extra }, timeoutMs: 15000 })).body;
     switch (id) {
+      case 'dwd': {
+        if (!this.dwd) throw new Error('DWD warning source unavailable');
+        const view = await this.dwd.refresh();
+        return { ok: true, message: `DWD STATUS checked ${view.checkedAt}. ${view.note}` };
+      }
       case 'twelvedata':
       case 'alphavantage': {
         if (!this.marketService) throw new Error('Market service unavailable');
@@ -159,8 +168,20 @@ export class ProviderService {
         return { ok: true, message: `Connected. Alaska 24 h file has ${Math.max(0, t.text.split('\n').filter(Boolean).length - 1)} detections.` };
       }
       case 'nifc': {
-        const b = (await json('https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query?where=1%3D1&returnCountOnly=true&f=json')) as { count?: number };
-        return { ok: true, message: `Connected. ${b.count ?? '?'} current perimeters.` };
+        const body = await json('https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query?where=1%3D1&returnCountOnly=true&f=json');
+        if (!body || typeof body !== 'object' || Array.isArray(body))
+          return { ok: false, message: 'NIFC responded, but did not return a valid perimeter count.' };
+        const b = body as { count?: unknown; error?: unknown };
+        // ArcGIS reports application errors inside HTTP 200 JSON replies too.
+        if (b.error !== undefined && b.error !== null) {
+          const error = typeof b.error === 'object' && !Array.isArray(b.error) ? b.error as { code?: unknown; message?: unknown } : null;
+          const code = Number.isSafeInteger(error?.code) ? ` (code ${error!.code})` : '';
+          const message = cleanText(error?.message, 250);
+          return { ok: false, message: `NIFC ArcGIS error${code}${message ? `: ${message}` : '.'}` };
+        }
+        if (typeof b.count !== 'number' || !Number.isSafeInteger(b.count) || b.count < 0)
+          return { ok: false, message: 'NIFC responded, but did not return a valid non-negative integer perimeter count.' };
+        return { ok: true, message: `Connected. ${b.count} current perimeters.` };
       }
       case 'awc': {
         const b = (await json('https://aviationweather.gov/api/data/metar?ids=KDEN&format=json')) as unknown[];
@@ -187,8 +208,15 @@ export class ProviderService {
         return { ok: true, message: `Connected. ${b.count ?? '?'} prohibited/restricted areas.` };
       }
       case 'census-geocoder': {
-        const b = (await json('https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=1600+Pennsylvania+Ave+NW+Washington+DC&benchmark=Public_AR_Current&format=json')) as { result?: { addressMatches?: unknown[] } };
-        return { ok: true, message: `Connected. Test address returned ${b.result?.addressMatches?.length ?? 0} match(es).` };
+        const body = await json('https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=1600+Pennsylvania+Ave+NW+Washington+DC&benchmark=Public_AR_Current&format=json');
+        try {
+          const matches = geocodingMatches('Census', body);
+          return { ok: true, message: matches.length
+            ? `Connected. Validated ${matches.length} usable test-address match(es) with WGS84 coordinates.`
+            : 'Connected. Census returned a valid empty address-match list; no navigation position was verified.' };
+        } catch (error) {
+          return { ok: false, message: `${(error as Error).message} Retry the Census connection test later.` };
+        }
       }
       case 'openfreemap': {
         const j = (await json('https://tiles.openfreemap.org/planet')) as { tiles?: string[] };

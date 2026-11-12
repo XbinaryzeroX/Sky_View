@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+  <identifier>atlas-test-named.DEU</identifier>
+  <sender>opendata@dwd.de</sender>
+  <sent>2026-11-11T12:01:00Z</sent>
+  <status>Actual</status><msgType>Alert</msgType><scope>Public</scope>
+  <info>
+    <language>de-DE</language><category>Met</category><event>Seewarnung</event>
+    <urgency>Immediate</urgency><severity>Moderate</severity><certainty>Likely</certainty>
+    <area><areaDesc>Testseegebiet</areaDesc><geocode><valueName>WARNCELLID</valueName><value>TEST</value></geocode></area>
+  </info>
+</alert>

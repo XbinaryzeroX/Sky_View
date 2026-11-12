@@ -1,0 +1,63 @@
+{
+  "result": "PARTIAL",
+  "startedAt": "2026-11-11T17:19:41.455Z",
+  "executable": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\win-unpacked\\Atlas Watch.exe",
+  "archiveSha256": "0836B993B33CDE8EE3E4D6984EB3F781EF0CB88D1D32FC69A0E807A995CC9EAE",
+  "spawnedPid": 34896,
+  "profile": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-packaged-launch-vgrr22\\profile",
+  "database": "C:\\Users\\infob\\AppData\\Local\\Temp\\atlas-packaged-launch-vgrr22\\live.sqlite",
+  "normalPackagedStartup": true,
+  "testHooksEnabled": false,
+  "remoteDebuggerEnabled": false,
+  "genuineProfileAccessed": false,
+  "installerExecuted": false,
+  "timeout": true,
+  "finishedAt": "2026-11-11T17:22:11.573Z",
+  "exit": {
+    "code": null,
+    "signal": "SIGTERM"
+  },
+  "databaseState": {
+    "caches": [
+      {
+        "feed": "nws",
+        "fetched_at": "2026-11-11T17:19:42.018Z",
+        "source_updated_at": "2026-11-11T17:15:06.000Z"
+      },
+      {
+        "feed": "usgs",
+        "fetched_at": "2026-11-11T17:19:41.772Z",
+        "source_updated_at": "2026-11-11T17:18:59.000Z"
+      }
+    ],
+    "epochs": [
+      {
+        "feed": "nws",
+        "observed_at": "2026-11-11T17:19:42.018Z",
+        "source_updated_at": "2026-11-11T17:15:06.000Z",
+        "scope": "active-US",
+        "state": "recorded",
+        "reason": null,
+        "expected_count": 410
+      },
+      {
+        "feed": "usgs",
+        "observed_at": "2026-11-11T17:19:41.772Z",
+        "source_updated_at": "2026-11-11T17:18:59.000Z",
+        "scope": "2.5_week",
+        "state": "recorded",
+        "reason": null,
+        "expected_count": 324
+      }
+    ],
+    "encryptedCredentialRows": 0
+  },
+  "liveFeedsRecorded": true,
+  "isolatedProfileCreated": true,
+  "uiEvidence": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\docs\\scenes-packaged-ui.json",
+  "uiVerified": false,
+  "uiWindow": null,
+  "archiveStableDuringRun": true,
+  "diagnostics": [],
+  "verificationLimit": "Normal startup and local live-feed recording can be established independently; rendered GUI remains unverified without successful window inspection."
+}
