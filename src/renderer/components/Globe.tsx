@@ -4,7 +4,7 @@ import { profAdd } from '../lib/prof';
 import { buildImageryLayers, clampDate, gibsProduct, imageryDates, type ImageryState } from '../map/imageryOverlay';
 import { imageryHealth, observeImageryRequests } from '../lib/imageryHealth';
 import { expireFrames, fetchLatestFrame, frameLabel, frameUsable, GEO_SAT_LOOKUP_TIMEOUT_MS, GEO_SAT_MAX_LAT, GEO_SAT_REFRESH_MS, GEO_SATS, tileTemplate, type GeoFrames, type GeoSatId, type GeoSatProduct } from '../../shared/geoSatellite';
-import { publicAirlineCallsign, routeMapSegments, type RouteInfo } from '../../shared/route';
+import { routeMapSegments, type RouteInfo } from '../../shared/route';
 import { airlineRouteBounds } from '../map/airlineRouteView';
 import '../lib/cesiumBase';
 import {
@@ -176,6 +176,8 @@ interface Props {
   trailKind: TrailKind;
   trackedRecord: { layer: LayerId; id: string } | null;
   trackingMode?: TrackingMode;
+  passengerSeat: string;
+  onInteriorStatus?(status: 'loading' | 'ready' | 'error'): void;
   onTrackingUnavailable?(reason: string): void;
   showOrbitFor: string | null;
   onViewChange(v: ViewState): void;
@@ -967,30 +969,31 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   }, [props.showOrbitFor, props.layerSnaps.satellites]);
 
   useEffect(() => {
-    layerRendererRef.current?.showTrail(props.trail, props.trailKind);
-  }, [props.trail, props.trailKind]);
+    layerRendererRef.current?.showTrail(props.trail, props.trailKind, props.trackedRecord ?? null);
+  }, [props.trail, props.trailKind, props.trackedRecord?.layer, props.trackedRecord?.id]);
 
   // ----- camera follow (tracking) -----
   const passengerFollow = useMemo(() => {
     const target = props.trackedRecord;
-    if (target?.layer !== 'aircraft') return false;
-    const report = props.layerSnaps.aircraft?.records.find(record => record.id === target.id);
-    return !!report && !!publicAirlineCallsign('aircraft', report);
-  }, [props.trackedRecord?.layer, props.trackedRecord?.id, props.layerSnaps.aircraft?.records]);
+    return target?.layer === 'aircraft' || target?.layer === 'aircraftMil';
+  }, [props.trackedRecord?.layer, props.trackedRecord?.id]);
   useEffect(() => {
-    const previousPassenger = passengerFollowRef.current;
     passengerFollowRef.current = null;
     const w = widgetRef.current;
     if (!w || !ready) return;
     const t = props.trackedRecord;
     if (!t) { w.trackedEntity = undefined; return; }
-    if (props.trackingMode === 'cockpit') {
+    if (props.trackingMode === 'cockpit' || props.trackingMode === 'passenger') {
       const dispose = attachCockpit(w, {
         layer: t.layer,
         record: () => layerRendererRef.current?.recordFor(t.layer, t.id),
         position: () => layerRendererRef.current?.positionFor(t.layer, t.id),
+        heading: () => layerRendererRef.current?.displayedHeadingFor(t.layer, t.id),
+        attitude: () => layerRendererRef.current?.displayedAttitudeFor(t.layer, t.id),
+        seat: () => propsRef.current.passengerSeat,
+        interiorStatus: (status) => propsRef.current.onInteriorStatus?.(status),
         hideOwnVehicle: (hidden) => layerRendererRef.current?.setInteriorTarget(hidden ? t : null),
-      }, (reason) => propsRef.current.onTrackingUnavailable?.(reason));
+      }, (reason) => propsRef.current.onTrackingUnavailable?.(reason), props.trackingMode);
       cockpitCleanupRef.current = dispose;
       return () => { dispose(); if (cockpitCleanupRef.current === dispose) cockpitCleanupRef.current = null; };
     }
@@ -998,15 +1001,10 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       cameraRestoreRef.current?.cancel();
       const dispose = attachPassengerFollow(w, () => {
         const lr = layerRendererRef.current;
-        const current = lr?.recordFor(t.layer, t.id);
-        return current && publicAirlineCallsign(t.layer, current) ? lr?.positionFor(t.layer, t.id) : undefined;
+        return lr?.positionFor(t.layer, t.id);
       }, () => reportViewRef.current?.(), reason => propsRef.current.onTrackingUnavailable?.(reason));
       passengerFollowRef.current = { id: t.id, dispose };
       return dispose;
-    }
-    if (t.layer === 'aircraft' && previousPassenger?.id === t.id) {
-      propsRef.current.onTrackingUnavailable?.('Follow ended because this flight no longer has a current public airline report.');
-      return;
     }
     // A dedicated anchor survives entity ↔ batched rendering and exposes no provider/network access.
     const anchor = new Entity({

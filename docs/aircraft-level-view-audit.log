@@ -1,0 +1,38 @@
+{
+  "result": "PASS",
+  "baseline": false,
+  "startedAt": "2026-11-12T16:45:35.872Z",
+  "executable": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\aircraft-level-view\\win-unpacked\\Atlas Watch.exe",
+  "archiveSha256": "1840a9d4ab7f7cbcb89006adc5a9c8aaa1b0c1c17d70deabe3f863f48848c874",
+  "source": "Two synthetic general-aviation ADS-B observations in an isolated profile. Production rendering, selection, provider adapter and tracking. No subscription or external aircraft source is used.",
+  "errors": [],
+  "first": {
+    "frames": 509,
+    "changedPoses": 508,
+    "elapsedSec": 2.5,
+    "planeTravelM": 284.24,
+    "cameraTravelM": 284.42,
+    "peakStepM": 67.11,
+    "maxReportedFrameGapMs": 590.5,
+    "maxCenterErrorPixels": 0,
+    "kinds": [
+      "model"
+    ]
+  },
+  "second": {
+    "frames": 1451,
+    "changedPoses": 1450,
+    "elapsedSec": 5.28,
+    "planeTravelM": 743.33,
+    "cameraTravelM": 743.7,
+    "peakStepM": 11.3,
+    "maxReportedFrameGapMs": 98.9,
+    "maxCenterErrorPixels": 0,
+    "kinds": [
+      "model"
+    ]
+  },
+  "cockpitTransform": "matrix(1.65, 0, 0, 1.65, -150.591, -36.4658)",
+  "interiors": "Both packaged images loaded; each frame moved opposite the camera turn during drag; Escape worked. Synthetic flight only.",
+  "finishedAt": "2026-11-12T16:45:51.092Z"
+}

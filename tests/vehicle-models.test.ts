@@ -230,4 +230,11 @@ describe('model placement', () => {
     expect(len([1, 0, 0])).toBeCloseTo(3, 6);
     expect(len([0, 1, 0])).toBeCloseTo(4, 6);
   });
+  it('banks right while keeping the nose along its direction of travel', () => {
+    const at = Cartesian3.fromDegrees(0, 0, 0);
+    const banked = placementMatrix(at, 0, 0, [1, 1, 1], undefined, Math.PI / 6);
+    expect(toWorld(banked, [0, 0, 1]).z).toBeCloseTo(1, 6);
+    expect(toWorld(banked, [1, 0, 0]).x).toBeCloseTo(0.5, 6); // left wing rises
+    expect(toWorld(banked, [0, 1, 0]).x).toBeCloseTo(Math.cos(Math.PI / 6), 6);
+  });
 });

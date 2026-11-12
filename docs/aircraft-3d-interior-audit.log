@@ -1,0 +1,117 @@
+{
+  "result": "PASS",
+  "baseline": false,
+  "startedAt": "2026-11-12T17:05:13.543Z",
+  "executable": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\aircraft-3d-interior\\win-unpacked\\Atlas Watch.exe",
+  "archiveSha256": "1c322e00468dba90e5ecedc1157dcb1fc699cdb29f81c4fddbd86cf9c7e71453",
+  "source": "Two synthetic general-aviation ADS-B observations in an isolated profile. Production rendering, selection, provider adapter and tracking. No subscription or external aircraft source is used.",
+  "errors": [],
+  "first": {
+    "frames": 704,
+    "changedPoses": 703,
+    "elapsedSec": 2.51,
+    "planeTravelM": 285.14,
+    "cameraTravelM": 285.33,
+    "peakStepM": 0.68,
+    "maxReportedFrameGapMs": 5.6,
+    "maxCenterErrorPixels": 0,
+    "kinds": [
+      "model"
+    ]
+  },
+  "second": {
+    "frames": 1450,
+    "changedPoses": 1449,
+    "elapsedSec": 5.29,
+    "planeTravelM": 743.55,
+    "cameraTravelM": 743.92,
+    "peakStepM": 11.07,
+    "maxReportedFrameGapMs": 96.9,
+    "maxCenterErrorPixels": 0,
+    "kinds": [
+      "model"
+    ]
+  },
+  "cockpit": {
+    "before": {
+      "id": "interior|cockpit|0",
+      "heading": 1.5707963267948966,
+      "rotation": [
+        0.07217117598716305,
+        0.9973922605257322,
+        3.9044136755593554e-17,
+        -0.76832636865588,
+        0.05559599744498999,
+        0.6376391426944912,
+        0.6359763459317485,
+        -0.04601916678370792,
+        0.7703352021709994
+      ],
+      "screen": [
+        686,
+        120.54745722004941
+      ]
+    },
+    "after": {
+      "id": "interior|cockpit|0",
+      "heading": 2.009836365857397,
+      "rotation": [
+        0.07215467044183689,
+        0.9973934547275864,
+        3.904413681789149e-17,
+        -0.7683272877516547,
+        0.05558328258162937,
+        0.6376391437118937,
+        0.6359771084163456,
+        -0.04600864227534679,
+        0.7703352013288521
+      ],
+      "screen": [
+        79.4269601785021,
+        -132.6023232022352
+      ]
+    }
+  },
+  "passenger": {
+    "before": {
+      "id": "interior|passenger|0",
+      "heading": 3.141592653589793,
+      "rotation": [
+        0.07215105811447332,
+        0.9973937160484628,
+        3.904413683237201e-17,
+        -0.768327488861086,
+        0.05558049986457901,
+        0.6376391439483786,
+        0.6359772752806342,
+        -0.04600633893108252,
+        0.7703352011331034
+      ],
+      "screen": [
+        686,
+        -204.00281247915427
+      ]
+    },
+    "after": {
+      "id": "interior|passenger|0",
+      "heading": 3.5806326926522933,
+      "rotation": [
+        0.07214080465704886,
+        0.9973944577264472,
+        3.904413687513007e-17,
+        -0.7683280596252454,
+        0.05557260122369382,
+        0.6376391446466707,
+        0.6359777489000217,
+        -0.04599980097564322,
+        0.7703352005550975
+      ],
+      "screen": [
+        27.51364456203362,
+        -565.7566082874014
+      ]
+    }
+  },
+  "interiors": "Both 3D cabins stayed in the aircraft frame while changing position on screen as the camera turned; Escape removed the geometry. Synthetic flight only.",
+  "finishedAt": "2026-11-12T17:05:30.151Z"
+}

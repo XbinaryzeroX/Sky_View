@@ -11,6 +11,7 @@ import {
   EllipsoidalOccluder,
   SceneMode,
   CallbackPositionProperty,
+  CallbackProperty,
   Cartesian2,
   Cartesian3,
   Cartographic,
@@ -27,6 +28,7 @@ import {
   Math as CMath,
   NearFarScalar,
   PolygonHierarchy,
+  PolylineDashMaterialProperty,
   VerticalOrigin,
   sampleTerrain,
   type Cesium3DTileset,
@@ -36,8 +38,7 @@ import { classifyAircraft, classifyVessel } from '../../shared/vehicleClass';
 import { aircraftSymbol, vesselSymbol } from './symbols';
 import { eciToGeodetic, gstime, propagate, twoline2satrec, type SatRec } from 'satellite.js';
 import type { GeoRecord, LayerId } from '../../shared/layers';
-import { altitudeColor, drawnPosition, MAX_EXTRAPOLATION_S, passengerMotionEndMs, passengerPose, passesFilter, specialCode, trackState, updatePassengerMotion, type AircraftFilter, type PassengerMotion } from '../../shared/aircraft';
-import { publicAirlineCallsign } from '../../shared/route';
+import { altitudeColor, drawnPosition, MAX_EXTRAPOLATION_S, passengerMotionEndMs, passengerPose, passengerVisualBank, passesFilter, specialCode, trackState, updatePassengerMotion, type AircraftFilter, type PassengerMotion } from '../../shared/aircraft';
 import { COCKPIT_CONTACT_RANGE_M } from '../../shared/trackingCamera';
 import { pitchFromRates } from '../../shared/vehicleDims';
 import { aircraftAppearance, vesselAppearance } from './vehicleAppearance';
@@ -178,6 +179,7 @@ export class LayerRenderer {
   private satTimer: ReturnType<typeof setInterval> | null = null;
   private orbitEntity: Entity | null = null;
   private trailEntity: Entity | null = null;
+  private trailConnector: Entity | null = null;
   private records = new Map<LayerId, Map<string, GeoRecord>>();
   private motionTimer: ReturnType<typeof setInterval> | null = null;
   private bulk = new Map<LayerId, { coll: BillboardCollection; byId: Map<string, Billboard> }>();
@@ -238,7 +240,7 @@ export class LayerRenderer {
   /** Called after vehicle heights changed (see refreshSurfaceHeights), e.g. to re-place playback markers. */
   onSurfaceHeightsChanged: (() => void) | null = null;
   /** Last trail shown, redrawn when the vertical reference changes. */
-  private trailArgs: { points: TrailPoint[]; kind: TrailKind } | null = null;
+  private trailArgs: { points: TrailPoint[]; kind: TrailKind; target: { layer: LayerId; id: string } | null } | null = null;
   private readonly cullDir = new Cartesian3();
   private readonly cullUp = new Cartesian3();
 
@@ -303,7 +305,7 @@ export class LayerRenderer {
         }
       }
     }
-    if (this.trailArgs) this.showTrail(this.trailArgs.points, this.trailArgs.kind);
+    if (this.trailArgs) this.showTrail(this.trailArgs.points, this.trailArgs.kind, this.trailArgs.target);
     this.requestModelSync(0);
     this.widget.scene.requestRender();
     this.onSurfaceHeightsChanged?.();
@@ -426,7 +428,7 @@ export class LayerRenderer {
   private candidate(lid: LayerId, r: GeoRecord, position: Cartesian3): ModelCandidate {
     const key = 'rec|' + lid + '|' + r.id;
     const selected = this.sel.layer === lid && this.sel.id === r.id;
-    const motion = lid === 'aircraft' && this.passengerMotions.get(r.id);
+    const motion = lid === 'aircraft' || lid === 'aircraftMil' ? this.passengerMotions.get(lid + '|' + r.id) : undefined;
     const heading = CMath.toRadians(motion ? passengerPose(motion, Date.now()).heading : r.heading ?? 0);
     const failed = (variant: string) => this.models.variantFailed(variant);
     if (lid === 'vessels') {
@@ -443,7 +445,7 @@ export class LayerRenderer {
     const pitch = onGround ? 0 : pitchFromRates(r.props.verticalRateFpm, r.speedKts);
     // On Google 3D tiles parked aircraft get an absolute height (terrain + sea level): the hidden globe can't clamp them.
     const heightReference = onGround && !this.photoreal ? HeightReference.CLAMP_TO_TERRAIN : HeightReference.NONE;
-    return { ...appearance, key, position, heading, pitch, heightReference, selected, minimumPixelSize: 44 };
+    return { ...appearance, key, position, heading, pitch, bank: onGround ? 0 : passengerVisualBank(motion, Date.now()), heightReference, selected, minimumPixelSize: 44 };
   }
 
   /** Whether a vehicle's callsign/name label should show (geographic labels are separate, see placeLabels.ts). */
@@ -588,7 +590,7 @@ export class LayerRenderer {
     if (s) s.show = visible;
     const bk = this.bulk.get(id);
     if (bk) bk.coll.show = visible;
-    if (id === 'aircraft' && visible) this.requestPassengerFrame();
+    if ((id === 'aircraft' || id === 'aircraftMil') && visible) this.requestPassengerFrame();
     if ((id === 'aircraft' || id === 'aircraftMil' || id === 'vessels') && was !== visible) this.syncModels();
     if (id === 'satellites' && !visible) this.stopSatTimer();
     this.widget.scene.requestRender();
@@ -599,7 +601,7 @@ export class LayerRenderer {
     const now = Date.now();
     let records = all;
     this.smooth = opts.smoothMotion !== false;
-    if (id === 'aircraft') records = this.updatePassengerReports(records, now);
+    if (id === 'aircraft' || id === 'aircraftMil') records = this.updatePassengerReports(id, records, now);
     if ((id === 'aircraft' || id === 'aircraftMil') && opts.aircraftFilter) records = records.filter((r) => trackState(r, now) !== 'expired' && passesFilter(r, opts.aircraftFilter!));
     if (id === 'vessels' && opts.vesselClasses) records = all.filter((r) => opts.vesselClasses!.includes(vesselClass(r.category)));
     this.records.set(id, new Map(records.map((r) => [r.id, r])));
@@ -716,23 +718,32 @@ export class LayerRenderer {
     this.widget.scene.requestRender();
   }
 
-  private updatePassengerReports(records: GeoRecord[], now: number): GeoRecord[] {
-    const previous = this.passengerMotions;
-    this.passengerMotions = new Map();
-    this.movingPassengers.clear();
+  private updatePassengerReports(layer: 'aircraft' | 'aircraftMil', records: GeoRecord[], now: number): GeoRecord[] {
+    const prefix = layer + '|';
+    const previous = new Map(this.passengerMotions);
+    for (const key of this.passengerMotions.keys()) if (key.startsWith(prefix)) this.passengerMotions.delete(key);
+    for (const key of this.movingPassengers) if (key.startsWith(prefix)) this.movingPassengers.delete(key);
     if (!this.smooth) return records;
     const reconciled = records.map(incoming => {
-      const old = previous.get(incoming.id);
+      const key = prefix + incoming.id;
+      const old = previous.get(key);
       // Late network replies can contain an earlier fix, sometimes without speed or course.
       const priorTime = old ? old.endMs - MAX_EXTRAPOLATION_S * 1000 : NaN;
-      const arrivedLate = old && priorTime <= now && incoming.observedAt && old.report.props.callsign === incoming.props.callsign &&
-        Date.parse(incoming.observedAt) < priorTime && publicAirlineCallsign('aircraft', incoming);
+      const arrivedLate = old && priorTime <= now && incoming.observedAt && Date.parse(incoming.observedAt) < priorTime;
       const r = arrivedLate ? old.report : incoming;
-      const endMs = arrivedLate ? old.endMs : passengerMotionEndMs(r);
+      let endMs = arrivedLate ? old.endMs : passengerMotionEndMs(r);
+      // A fresh position can omit speed or track. Blend to that observation
+      // without inventing velocity, then hold until the next usable report.
+      if (endMs === null && r.props.snapshot !== true && r.props.onGround !== true) {
+        const observed = r.observedAt ? Date.parse(r.observedAt) : NaN;
+        if (!Number.isFinite(observed)) endMs = now + MAX_EXTRAPOLATION_S * 1000;
+        else if (observed <= now) endMs = observed + MAX_EXTRAPOLATION_S * 1000;
+      }
       if (endMs === null) return r;
       const motion = updatePassengerMotion(old, r, endMs, now);
-      this.passengerMotions.set(r.id, motion);
-      if (now >= motion.endMs - MAX_EXTRAPOLATION_S * 1000 && now < motion.endMs) this.movingPassengers.add(r.id);
+      this.passengerMotions.set(key, motion);
+      if ((now >= motion.endMs - MAX_EXTRAPOLATION_S * 1000 && now < motion.endMs && passengerMotionEndMs(r) !== null) ||
+          (motion.correction && now < motion.correction.end)) this.movingPassengers.add(key);
       return r;
     });
     this.requestPassengerFrame();
@@ -740,11 +751,16 @@ export class LayerRenderer {
   }
 
   private requestPassengerFrame(): void {
-    if (this.passengerFrame !== null || !this.movingPassengers.size || this.destroyed ||
-        this.sources.get('aircraft')?.show === false || this.bulk.get('aircraft')?.coll.show === false) return;
+    if (this.passengerFrame !== null || !this.movingPassengers.size || this.destroyed) return;
+    let visible = false;
+    for (const key of this.movingPassengers) {
+      const layer = key.slice(0, key.indexOf('|')) as 'aircraft' | 'aircraftMil';
+      if (this.sources.get(layer)?.show !== false && this.bulk.get(layer)?.coll.show !== false) { visible = true; break; }
+    }
+    if (!visible) return;
     this.passengerFrame = requestAnimationFrame(() => {
       this.passengerFrame = null;
-      if (this.destroyed || this.sources.get('aircraft')?.show === false || this.bulk.get('aircraft')?.coll.show === false) return;
+      if (this.destroyed) return;
       this.animatePassengers(Date.now());
       this.requestPassengerFrame();
     });
@@ -752,17 +768,20 @@ export class LayerRenderer {
 
   /** Move just the active flight markers and their loaded meshes. The usual 1 Hz pass handles aging and LOD. */
   private animatePassengers(now: number): void {
-    const bulk = this.bulk.get('aircraft');
-    const entities = this.entities.get('aircraft');
     let changed = false;
-    for (const id of this.movingPassengers) {
-      const motion = this.passengerMotions.get(id)!;
-      const bb = bulk?.byId.get(id);
-      const entity = entities?.get(id);
-      if (now >= motion.endMs || (!bb && !entity)) this.movingPassengers.delete(id);
+    for (const key of this.movingPassengers) {
+      const separator = key.indexOf('|');
+      const layer = key.slice(0, separator) as 'aircraft' | 'aircraftMil';
+      const id = key.slice(separator + 1);
+      const motion = this.passengerMotions.get(key)!;
+      const bb = this.bulk.get(layer)?.byId.get(id);
+      const entity = this.entities.get(layer)?.get(id);
+      const correcting = !!motion.correction && now < motion.correction.end;
+      if ((!bb && !entity) || (!correcting && (now >= motion.endMs || passengerMotionEndMs(motion.report) === null))) this.movingPassengers.delete(key);
       if (!bb && !entity) continue;
+      if (this.sources.get(layer)?.show === false || this.bulk.get(layer)?.coll.show === false) continue;
       const pose = passengerPose(motion, now);
-      const position = Cartesian3.fromDegrees(pose.lon, pose.lat, this.heightFor('aircraft', motion.report, pose));
+      const position = Cartesian3.fromDegrees(pose.lon, pose.lat, this.heightFor(layer, motion.report, pose));
       const heading = CMath.toRadians(pose.heading);
       if (bb) {
         bb.position = position;
@@ -771,7 +790,7 @@ export class LayerRenderer {
         (entity.position as ConstantPositionProperty).setValue(position);
         if (entity.billboard?.rotation instanceof ConstantProperty) entity.billboard.rotation.setValue(-heading);
       }
-      this.models.move('rec|aircraft|' + id, position, heading);
+      this.models.move('rec|' + layer + '|' + id, position, heading, passengerVisualBank(motion, now));
       changed = true;
     }
     if (changed) this.widget.scene.requestRender();
@@ -825,6 +844,17 @@ export class LayerRenderer {
     return this.records.get(id)?.get(rid);
   }
 
+  displayedHeadingFor(id: LayerId, rid: string): number | null {
+    const r = this.records.get(id)?.get(rid);
+    return r ? this.reportPose(id, r, Date.now()).heading ?? null : null;
+  }
+
+  displayedAttitudeFor(id: LayerId, rid: string): { pitch: number; bank: number } {
+    const r = this.records.get(id)?.get(rid);
+    if (!r || r.props.onGround === true) return { pitch: 0, bank: 0 };
+    return { pitch: pitchFromRates(r.props.verticalRateFpm, r.speedKts), bank: passengerVisualBank(this.passengerMotions.get(id + '|' + rid), Date.now()) };
+  }
+
   /** Tracking works with entity and batched rendering, including a switch between them. */
   positionFor(id: LayerId, rid: string, now = Date.now()): Cartesian3 | undefined {
     if (this.sources.get(id)?.show === false || this.bulk.get(id)?.coll.show === false) return undefined;
@@ -856,14 +886,14 @@ export class LayerRenderer {
    * smoothing is on (snapshots stay at their report in both renderers); everything else sits at its report.
    */
   private shownAt(id: LayerId, r: GeoRecord, now: number, bulk: boolean): { lat: number; lon: number; altM?: number | null } {
-    const motion = id === 'aircraft' && this.passengerMotions.get(r.id);
+    const motion = (id === 'aircraft' || id === 'aircraftMil') && this.passengerMotions.get(id + '|' + r.id);
     if (motion) return passengerPose(motion, now);
     return drawnPosition(r, now, { aircraft: id === 'aircraft' || id === 'aircraftMil', smooth: this.smooth, snapshotsStay: bulk });
   }
 
   /** Redrawing a selection, changing model LOD or reloading the same report must preserve its displayed pose. */
   private reportPose(id: LayerId, r: GeoRecord, now: number) {
-    const motion = id === 'aircraft' && this.passengerMotions.get(r.id);
+    const motion = (id === 'aircraft' || id === 'aircraftMil') && this.passengerMotions.get(id + '|' + r.id);
     return motion ? passengerPose(motion, now) : r;
   }
 
@@ -1144,13 +1174,14 @@ export class LayerRenderer {
   }
 
   /** Recorded observed positions for a tracked object (no interpolation). */
-  showTrail(points: TrailPoint[] | null, kind: TrailKind): void {
+  showTrail(points: TrailPoint[] | null, kind: TrailKind, target: { layer: LayerId; id: string } | null = null): void {
     if (this.trailEntity) {
       this.widget.entities.remove(this.trailEntity);
       this.trailEntity = null;
     }
-    this.trailArgs = points && points.length >= 2 ? { points, kind } : null;
-    if (!points || points.length < 2) return;
+    if (this.trailConnector) { this.widget.entities.remove(this.trailConnector); this.trailConnector = null; }
+    this.trailArgs = points?.length ? { points, kind, target } : null;
+    if (!points?.length) { this.widget.scene.requestRender(); return; }
     // Same vertical reference as the vehicle (see `photoreal`); points without a known height are left out.
     const positions: Cartesian3[] = [];
     for (const p of points) {
@@ -1158,8 +1189,7 @@ export class LayerRenderer {
       const h = trailPointHeight(p, kind, this.photoreal, surface ?? 0, () => this.parkedGround(p.lat, p.lon, true));
       if (h !== null) positions.push(Cartesian3.fromDegrees(p.lon, p.lat, h));
     }
-    if (positions.length < 2) return;
-    this.trailEntity = this.widget.entities.add({
+    if (positions.length >= 2) this.trailEntity = this.widget.entities.add({
       id: 'trail|recorded',
       polyline: {
         positions,
@@ -1167,6 +1197,18 @@ export class LayerRenderer {
         material: C('#5fd0e6').withAlpha(0.85),
       },
     });
+    // The recorded history stays unchanged. Its dashed continuation follows the displayed
+    // aircraft, which may be an interpolated or predicted position between reports.
+    const last = positions.at(-1);
+    if (last && kind === 'aircraft' && target && (target.layer === 'aircraft' || target.layer === 'aircraftMil')) {
+      this.trailConnector = this.widget.entities.add({ id: 'trail|estimated', polyline: {
+        positions: new CallbackProperty(() => {
+          const current = this.positionFor(target.layer, target.id);
+          return current ? [last, current] : [];
+        }, false), width: 2,
+        material: new PolylineDashMaterialProperty({ color: C('#5fd0e6').withAlpha(0.85), dashLength: 12 }),
+      } });
+    }
     this.widget.scene.requestRender();
   }
 

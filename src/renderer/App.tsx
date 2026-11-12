@@ -93,6 +93,8 @@ export function App() {
   }, []);
   const [tracked, setTracked] = useState<{ layer: LayerId; id: string } | null>(null);
   const [trackingMode, setTrackingMode] = useState<TrackingMode>('follow');
+  const [passengerSeat, setPassengerSeat] = useState('1F');
+  const [interiorStatus, setInteriorStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [trail, setTrail] = useState<TrailPoint[] | null>(null);
   const [orbitFor, setOrbitFor] = useState<string | null>(null);
   const [tool, setTool] = useState<ToolMode>('none');
@@ -976,6 +978,8 @@ export function App() {
             trailKind={tracked?.layer === 'aircraft' || tracked?.layer === 'aircraftMil' ? 'aircraft' : tracked?.layer === 'vessels' ? 'vessel' : 'other'}
             trackedRecord={playbackOn ? null : tracked}
             trackingMode={trackingMode}
+            passengerSeat={passengerSeat}
+            onInteriorStatus={setInteriorStatus}
             onTrackingUnavailable={(reason) => { setTracked(null); setTrackingMode('follow'); setToast(reason); }}
             showOrbitFor={playbackOn ? null : orbitFor}
             onViewChange={onViewChange}
@@ -1019,6 +1023,8 @@ export function App() {
           />
           {tracked && !widePage && !playbackOn && <TrackingControls target={tracked} record={layerSnaps[tracked.layer]?.records.find((r) => r.id === tracked.id) ?? null}
             mode={trackingMode} in3d={sceneMode === '3d'} smoothMotion={snap.settings.smoothMotion} blockedReason={playbackOn ? 'Stop recorded playback before using cockpit perspective.' : null}
+            passengerSeat={passengerSeat} onPassengerSeat={setPassengerSeat}
+            interiorStatus={interiorStatus}
             onMode={setTrackingMode} onStop={() => { setTracked(null); setTrackingMode('follow'); }} />}
           {!widePage && <FloatingMapControls
             left={page === 'globe' ? leftFloat : null} onLeft={toggleLeft}

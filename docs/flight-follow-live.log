@@ -1,21 +1,20 @@
 {
-  "startedAt": "2026-11-12T03:49:46.069Z",
-  "archiveSha256": "014b599a7dc4472d5ff121d8276647ca4cebbfc3e6180c975884da60aea3a994",
+  "startedAt": "2026-11-12T15:51:49.649Z",
+  "archiveSha256": "d21212bdcb358feaf80d24f393f740f26be95e2eb2be105a158c6d4cc356cc81",
   "result": "PASS",
   "source": "adsb.lol (ODbL)",
-  "callsign": "UAL1123",
-  "firstReportAt": "2026-11-12T03:49:47.993Z",
+  "callsign": "SWA4864",
+  "firstReportAt": "2026-11-12T15:51:49.934Z",
   "motion": {
-    "seconds": 4.9955,
-    "renderedFrames": 974,
-    "movingFrames": 973,
-    "aircraftMetres": 722,
-    "cameraMetres": 723,
-    "maxCenterErrorPx": 2.334968730801729e-8,
+    "seconds": 4.97009999999404,
+    "renderedFrames": 1117,
+    "movingFrames": 1116,
+    "aircraftMetres": 606,
+    "cameraMetres": 606,
+    "maxCenterErrorPx": 1.4950989062946144e-8,
     "drawnAs": [
-      "billboard",
       "model"
     ]
   },
-  "nextReportAt": "2026-11-12T03:49:56.145Z"
+  "nextReportAt": "2026-11-12T15:51:58.325Z"
 }

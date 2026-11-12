@@ -198,7 +198,7 @@ export function vesselShape(shipType: number | null | undefined, lengthM: unknow
 
 /** Climb/descent angle (radians) from vertical rate and ground speed, limited to ±15°. */
 export function pitchFromRates(verticalRateFpm: unknown, speedKts: unknown): number {
-  if (typeof verticalRateFpm !== 'number' || typeof speedKts !== 'number' || speedKts < 40) return 0;
+  if (typeof verticalRateFpm !== 'number' || !Number.isFinite(verticalRateFpm) || typeof speedKts !== 'number' || !Number.isFinite(speedKts) || speedKts < 40) return 0;
   const vs = verticalRateFpm * 0.00508; // ft/min → m/s
   const gs = speedKts * 0.514444; // kt → m/s
   const limit = (15 * Math.PI) / 180;

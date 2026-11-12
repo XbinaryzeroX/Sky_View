@@ -21,6 +21,8 @@ export interface ModelCandidate {
   heading: number;
   /** Radians, nose up positive. */
   pitch: number;
+  /** Simulated right-wing-down bank, radians. */
+  bank?: number;
   /** [length (forward), width (left), height] scale relative to the built model. */
   scale: [number, number, number];
   heightReference: HeightReference;
@@ -150,12 +152,14 @@ const scratchLocal = new Matrix4();
  * World matrix for a model at `position`: built model axes (+X forward, +Y left, +Z up in
  * Cesium's model frame) aligned with the heading/pitch in the local east-north-up frame.
  */
-export function placementMatrix(position: Cartesian3, heading: number, pitch: number, scale: [number, number, number], result = new Matrix4()): Matrix4 {
+export function placementMatrix(position: Cartesian3, heading: number, pitch: number, scale: [number, number, number], result = new Matrix4(), bank = 0): Matrix4 {
   Transforms.eastNorthUpToFixedFrame(position, undefined, scratchEnu);
   const [sh, ch, sp, cp] = [Math.sin(heading), Math.cos(heading), Math.sin(pitch), Math.cos(pitch)];
   const fwd = [sh * cp, ch * cp, sp]; // east, north, up
-  const left = [-ch, sh, 0];
-  const up = [fwd[1] * left[2] - fwd[2] * left[1], fwd[2] * left[0] - fwd[0] * left[2], fwd[0] * left[1] - fwd[1] * left[0]];
+  const levelLeft = [-ch, sh, 0];
+  const levelUp = [fwd[1] * levelLeft[2] - fwd[2] * levelLeft[1], fwd[2] * levelLeft[0] - fwd[0] * levelLeft[2], fwd[0] * levelLeft[1] - fwd[1] * levelLeft[0]];
+  const left = levelLeft.map((v, i) => v * Math.cos(bank) + levelUp[i] * Math.sin(bank));
+  const up = levelUp.map((v, i) => v * Math.cos(bank) - levelLeft[i] * Math.sin(bank));
   const [a, b, c] = scale;
   // Matrix4 constructor takes row-major arguments; columns are forward, left, up.
   Matrix4.clone(new Matrix4(fwd[0] * a, left[0] * b, up[0] * c, 0, fwd[1] * a, left[1] * b, up[1] * c, 0, fwd[2] * a, left[2] * b, up[2] * c, 0, 0, 0, 0, 1), scratchLocal);
@@ -211,7 +215,7 @@ export class VehicleModelLayer {
       }
       l.candidate = c;
       if (!l.model || l.failed) continue;
-      placementMatrix(c.position, c.heading, c.pitch, c.scale, l.model.modelMatrix);
+      placementMatrix(c.position, c.heading, c.pitch, c.scale, l.model.modelMatrix, c.bank);
       if (l.model.heightReference !== c.heightReference) l.model.heightReference = c.heightReference;
       l.model.silhouetteSize = c.selected ? 2 : 0;
       if (l.ready) shown.add(c.key);
@@ -222,9 +226,9 @@ export class VehicleModelLayer {
   }
 
   /** Move the existing mesh between feed updates without rerunning model selection or loading. */
-  move(key: string, position: Cartesian3, heading: number): void {
+  move(key: string, position: Cartesian3, heading: number, bank = 0): void {
     const live = this.live.get(key);
-    if (live?.model) placementMatrix(position, heading, live.candidate.pitch, live.candidate.scale, live.model.modelMatrix);
+    if (live?.model) placementMatrix(position, heading, live.candidate.pitch, live.candidate.scale, live.model.modelMatrix, bank);
   }
 
   private fail(key: string, entry: Live, variant: string, error: unknown): void {
@@ -252,7 +256,7 @@ export class VehicleModelLayer {
         const model = await Model.fromGltfAsync({
           url,
           id: c.key,
-          modelMatrix: placementMatrix(c.position, c.heading, c.pitch, c.scale),
+          modelMatrix: placementMatrix(c.position, c.heading, c.pitch, c.scale, undefined, c.bank),
           minimumPixelSize: c.minimumPixelSize,
           maximumScale: 400,
           scene: this.widget.scene,

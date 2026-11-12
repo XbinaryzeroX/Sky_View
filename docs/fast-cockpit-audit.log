@@ -1,0 +1,181 @@
+{
+  "result": "PASS",
+  "baseline": false,
+  "startedAt": "2026-11-12T17:42:16.435Z",
+  "executable": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\aircraft-fast-cockpit\\win-unpacked\\Atlas Watch.exe",
+  "archiveSha256": "6f4f60e326593eedc4e0fe603230f2aa217063fee32407153ce3fadccd58a238",
+  "source": "Two synthetic general-aviation ADS-B observations in an isolated profile. Production rendering, selection, provider adapter and tracking. No subscription or external aircraft source is used.",
+  "errors": [],
+  "first": {
+    "frames": 702,
+    "changedPoses": 701,
+    "elapsedSec": 2.51,
+    "planeTravelM": 284.35,
+    "cameraTravelM": 284.54,
+    "peakStepM": 0.57,
+    "maxReportedFrameGapMs": 5,
+    "maxCenterErrorPixels": 0,
+    "kinds": [
+      "model"
+    ]
+  },
+  "second": {
+    "frames": 1453,
+    "changedPoses": 1452,
+    "elapsedSec": 5.29,
+    "planeTravelM": 744.09,
+    "cameraTravelM": 744.46,
+    "peakStepM": 11.19,
+    "maxReportedFrameGapMs": 97.8,
+    "maxCenterErrorPixels": 0,
+    "kinds": [
+      "model"
+    ]
+  },
+  "cockpitGeometryMs": 201,
+  "cockpitLoadMs": 2529,
+  "cockpit": {
+    "before": {
+      "id": "interior|cockpit|0",
+      "supplied": {
+        "id": "interior-model|cockpit",
+        "ready": true,
+        "backFaceCulling": false
+      },
+      "camera": [
+        4065458.462834373,
+        -293883.57844474184,
+        4891352.352483117
+      ],
+      "offset": [
+        0,
+        0,
+        0
+      ],
+      "heading": 1.5707963267948966,
+      "rotation": [
+        0.07209979550752559,
+        0.9973974230404714,
+        3.9044137050135216e-17,
+        -0.7683303415514459,
+        0.05554101026170255,
+        0.6376391475047216,
+        0.6359796425509323,
+        -0.04597365214268338,
+        0.7703351981893674
+      ],
+      "screen": [
+        686,
+        120.5474569614737
+      ]
+    },
+    "after": {
+      "id": "interior|cockpit|0",
+      "supplied": {
+        "id": "interior-model|cockpit",
+        "ready": true,
+        "backFaceCulling": false
+      },
+      "camera": [
+        4065465.598426526,
+        -293785.04084306007,
+        4891352.341161571
+      ],
+      "offset": [
+        0,
+        0,
+        0
+      ],
+      "heading": 2.009836365857397,
+      "rotation": [
+        0.07207562058749033,
+        0.9973991703009022,
+        3.9044137181510305e-17,
+        -0.7683316857563386,
+        0.055522387341884256,
+        0.6376391496502396,
+        0.6359807588125218,
+        -0.045958237421920664,
+        0.770335196413431
+      ],
+      "screen": [
+        79.42696040155158,
+        -132.60232313268887
+      ]
+    }
+  },
+  "passengerGeometryMs": 466,
+  "passengerLoadMs": 619,
+  "passenger": {
+    "before": {
+      "id": "interior|passenger|0",
+      "supplied": {
+        "id": "interior-model|passenger",
+        "ready": true,
+        "backFaceCulling": false
+      },
+      "camera": [
+        4065471.74901656,
+        -293700.0945781776,
+        4891352.330460142
+      ],
+      "offset": [
+        0,
+        0,
+        0
+      ],
+      "heading": 3.141592653589793,
+      "rotation": [
+        0.07205478010533765,
+        0.99740067608959,
+        3.9044137305689566e-17,
+        -0.7683328440440639,
+        0.05550633306401616,
+        0.6376391516782408,
+        0.6359817209850701,
+        -0.04594494886072972,
+        0.7703351947347683
+      ],
+      "screen": [
+        685.9999999784778,
+        -204.00281238771686
+      ]
+    },
+    "after": {
+      "id": "interior|passenger|0",
+      "supplied": {
+        "id": "interior-model|passenger",
+        "ready": true,
+        "backFaceCulling": false
+      },
+      "camera": [
+        4065475.004435615,
+        -293655.12966744025,
+        4891352.3244426735
+      ],
+      "offset": [
+        0,
+        0,
+        0
+      ],
+      "heading": 3.5806326926522933,
+      "rotation": [
+        0.07204374853077132,
+        0.9974014729774741,
+        3.904413737551621e-17,
+        -0.7683334569733791,
+        0.05549783498587077,
+        0.6376391528185965,
+        0.6359822302493768,
+        -0.04593791477903706,
+        0.7703351937908474
+      ],
+      "screen": [
+        27.513644454366954,
+        -565.7566082874014
+      ]
+    }
+  },
+  "interiors": "Both 3D cabins stayed in the aircraft frame while changing position on screen as the camera turned; Escape removed the geometry. Synthetic flight only.",
+  "finishedAt": "2026-11-12T17:42:37.493Z"
+}

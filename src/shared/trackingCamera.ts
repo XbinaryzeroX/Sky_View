@@ -2,7 +2,7 @@ import { trackState } from './aircraft';
 import { isValidLat, isValidLon } from './geo';
 import type { GeoRecord, LayerId } from './layers';
 
-export type TrackingMode = 'follow' | 'cockpit';
+export type TrackingMode = 'follow' | 'cockpit' | 'passenger';
 export const COCKPIT_CONTACT_RANGE_M = 75000;
 
 /** A camera direction needs a recent airborne observation; do not invent attitude from a snapshot. */

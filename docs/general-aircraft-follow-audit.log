@@ -1,0 +1,36 @@
+{
+  "result": "PASS",
+  "baseline": false,
+  "startedAt": "2026-11-12T15:53:50.671Z",
+  "executable": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\aircraft-final\\win-unpacked\\Atlas Watch.exe",
+  "archiveSha256": "d21212bdcb358feaf80d24f393f740f26be95e2eb2be105a158c6d4cc356cc81",
+  "source": "Two synthetic general-aviation ADS-B observations in an isolated profile. Production rendering, selection, provider adapter and tracking. No subscription or external aircraft source is used.",
+  "errors": [],
+  "first": {
+    "frames": 657,
+    "changedPoses": 656,
+    "elapsedSec": 2.42,
+    "planeTravelM": 415.62,
+    "cameraTravelM": 415.9,
+    "peakStepM": 141.49,
+    "maxReportedFrameGapMs": 37.2,
+    "maxCenterErrorPixels": 0,
+    "kinds": [
+      "model"
+    ]
+  },
+  "second": {
+    "frames": 1453,
+    "changedPoses": 1452,
+    "elapsedSec": 5.3,
+    "planeTravelM": 744.64,
+    "cameraTravelM": 745.01,
+    "peakStepM": 11.42,
+    "maxReportedFrameGapMs": 100.5,
+    "maxCenterErrorPixels": 0,
+    "kinds": [
+      "model"
+    ]
+  },
+  "finishedAt": "2026-11-12T15:54:05.073Z"
+}

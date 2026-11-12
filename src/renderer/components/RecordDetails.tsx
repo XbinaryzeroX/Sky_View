@@ -323,7 +323,7 @@ export function RecordDetails(p: Props) {
       )}
       <p className="muted small">{meta.temporalNote}</p>
       {perimeter && status && (status.state === 'error' || status.freshness !== 'fresh') && <p className="muted small">Last observed perimeter. Last successful refresh <Time iso={status.lastSuccessAt} />.{status.error && ` ${status.error}`}</p>}
-      {p.tracked && movable && p.layer !== 'satellites' && <p className="muted small">The trail shows positions this app recorded while running (observed fixes joined by straight lines; not interpolated estimates).</p>}
+      {p.tracked && movable && p.layer !== 'satellites' && <p className="muted small">The solid trail joins positions recorded while the app was running. For aircraft, the dashed end follows the displayed position, which can be estimated between reports.</p>}
       {p.orbitShown && <p className="muted small">The orbit line is a prediction from the orbital elements for about one revolution.</p>}
       {p.layer === 'satellites' && <SatellitePasses key={r.id} record={r} savedPlaces={p.savedPlaces} />}
       {flightCard ? <details className="flight-report"><summary>Full source report</summary>{sourceReport}</details> : sourceReport}

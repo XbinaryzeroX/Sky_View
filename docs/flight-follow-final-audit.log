@@ -1,0 +1,99 @@
+{
+  "result": "PASS",
+  "baseline": false,
+  "startedAt": "2026-11-12T15:51:48.057Z",
+  "executable": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\aircraft-final\\win-unpacked\\Atlas Watch.exe",
+  "archiveSha256": "d21212bdcb358feaf80d24f393f740f26be95e2eb2be105a158c6d4cc356cc81",
+  "source": "Two synthetic ADS-B observations in an isolated profile. Production rendering, selection, provider adapter, tracking and recorded history. No subscription or external aircraft source is used.",
+  "errors": [],
+  "first": {
+    "frames": 742,
+    "changedPoses": 741,
+    "elapsedSec": 2.65,
+    "planeTravelM": 301.27,
+    "cameraTravelM": 301.47,
+    "peakStepM": 0.68,
+    "maxReportedFrameGapMs": 5.4,
+    "maxCenterErrorPixels": 0,
+    "kinds": [
+      "model"
+    ]
+  },
+  "second": {
+    "frames": 1651,
+    "changedPoses": 1650,
+    "elapsedSec": 6.01,
+    "planeTravelM": 811.45,
+    "cameraTravelM": 811.88,
+    "peakStepM": 12.11,
+    "maxReportedFrameGapMs": 105.6,
+    "maxCenterErrorPixels": 0,
+    "kinds": [
+      "model"
+    ]
+  },
+  "stopped": {
+    "frames": 338,
+    "changedPoses": 337,
+    "elapsedSec": 1.2,
+    "planeTravelM": 136.72,
+    "cameraTravelM": 0,
+    "peakStepM": 0.57,
+    "maxReportedFrameGapMs": 5.1,
+    "maxCenterErrorPixels": 74.83,
+    "kinds": [
+      "model"
+    ]
+  },
+  "mapPick": {
+    "frames": 507,
+    "changedPoses": 506,
+    "elapsedSec": 1.81,
+    "planeTravelM": 205.31,
+    "cameraTravelM": 205.45,
+    "peakStepM": 0.57,
+    "maxReportedFrameGapMs": 5.1,
+    "maxCenterErrorPixels": 0,
+    "kinds": [
+      "billboard"
+    ]
+  },
+  "twoD": {
+    "frames": 407,
+    "changedPoses": 406,
+    "elapsedSec": 1.71,
+    "planeTravelM": 194.07,
+    "cameraTravelM": 303.68,
+    "peakStepM": 1.7,
+    "maxReportedFrameGapMs": 14.9,
+    "maxCenterErrorPixels": 0,
+    "kinds": [
+      "billboard"
+    ]
+  },
+  "restoredThreeD": {
+    "frames": 420,
+    "changedPoses": 419,
+    "elapsedSec": 1.5,
+    "planeTravelM": 170.56,
+    "cameraTravelM": 170.68,
+    "peakStepM": 0.91,
+    "maxReportedFrameGapMs": 7.9,
+    "maxCenterErrorPixels": 0,
+    "kinds": [
+      "billboard"
+    ]
+  },
+  "sourceCounts": {
+    "firstAt": 1794498710247,
+    "second": true,
+    "secondAt": 1794498717406,
+    "requests": 3,
+    "secondReports": 2
+  },
+  "observedHistory": {
+    "points": 2,
+    "exactSourceCoordinatesAndTimes": true
+  },
+  "finishedAt": "2026-11-12T15:52:12.714Z"
+}
