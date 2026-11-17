@@ -152,7 +152,7 @@ export function answerQuestion(q: string, d: AnalystData): AnalystAnswer | null 
     };
   }
   if (/military/.test(t)) {
-    const rows = uniqAircraft.filter((r) => aircraftClass(r) === 'military');
+    const rows = uniqAircraft.filter((r) => aircraftClass(r) === 'military' || aircraftClass(r) === 'fighter');
     return { title: `${rows.length} military-flagged aircraft${scopeText}`, rows: rows.slice(0, 200).map((r) => aRow(r, 'aircraftMil')), note: `${freshnessNote(d, ['aircraftMil'])} The flag comes from a database and may be wrong.` };
   }
   m = /(cargo|tanker|passenger|fishing|tug|pilot)\s*(vessel|ship|boat)?s?/.exec(t);

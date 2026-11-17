@@ -37,7 +37,7 @@ export interface FeedCacheEntry<T> {
 }
 
 type Row = Record<string, unknown>;
-export type DocTable = 'annotations' | 'saved_views' | 'boards' | 'people';
+export type DocTable = 'annotations' | 'saved_views' | 'boards' | 'people' | 'plans';
 export interface StoredAreaWatchRule { rule: AreaWatchRule; geometryKey: string }
 export interface AreaWatchMatch { event: AreaWatchEvent; aliases: string[] }
 export const MAX_AREA_WATCH_SEEN = 50_000;
@@ -133,6 +133,7 @@ export class AtlasStore {
       CREATE TABLE IF NOT EXISTS saved_views (id TEXT PRIMARY KEY, data TEXT NOT NULL, created_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS boards (id TEXT PRIMARY KEY, data TEXT NOT NULL, created_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS people (id TEXT PRIMARY KEY, data TEXT NOT NULL, created_at TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS plans (id TEXT PRIMARY KEY, data TEXT NOT NULL, created_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS track_points (
         layer TEXT NOT NULL, rid TEXT NOT NULL, t TEXT NOT NULL,
         lat REAL NOT NULL, lon REAL NOT NULL, alt REAL, heading REAL, ground INTEGER,
@@ -477,6 +478,18 @@ export class AtlasStore {
       )
       .all(layer, t, from, layer) as Row[];
     return rows.map((r) => ({ rid: String(r.rid), t: String(r.t), lat: Number(r.lat), lon: Number(r.lon), altM: (r.alt as number | null) ?? null, heading: (r.heading as number | null) ?? null, onGround: r.ground === 1 ? true : r.ground === 0 ? false : null }));
+  }
+
+  /**
+   * Keeps the first fix per object per minute between `fromIso` and `toIso` (older fixes only; recent ones keep their
+   * full rate). Returns the number removed.
+   */
+  thinTracks(fromIso: string, toIso: string): number {
+    if (!(fromIso < toIso)) return 0;
+    return this.tx(() => Number(this.db.prepare(
+      `DELETE FROM track_points WHERE t >= ? AND t < ? AND rowid NOT IN (
+         SELECT MIN(rowid) FROM track_points WHERE t >= ? AND t < ? GROUP BY layer, rid, substr(t, 1, 16))`,
+    ).run(fromIso, toIso, fromIso, toIso).changes));
   }
 
   pruneTracks(retentionHours: number, maxPoints: number, now: Date): number {

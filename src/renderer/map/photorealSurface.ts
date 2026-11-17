@@ -5,9 +5,16 @@ const ENTER_M = 40_000;
 const LEAVE_M = 50_000;
 const RECHECK_MS = 250;
 const CLOSE_WATER_M = 3000;
+/** Below this height the hidden mesh is traversed and downloaded, so it is already in memory at ENTER_M. */
+export const PRELOAD_M = 400_000;
+
+/** Whether the mesh should load while it is not drawn. `always` is the Maximum quality behaviour. */
+export function shouldPreloadHidden(heightM: number, is3d: boolean, always: boolean): boolean {
+  return always || (is3d && heightM < PRELOAD_M);
+}
 
 /** Keep continuous imagery behind partial mesh coverage, and use imagery at ship scale over mapped ocean. */
-export function watchPhotorealSurface(widget: CesiumWidget, tiles: Cesium3DTileset, onCovered: (covered: boolean) => void, readWater = isMappedWater, readRegion = regionalWater): () => void {
+export function watchPhotorealSurface(widget: CesiumWidget, tiles: Cesium3DTileset, onCovered: (covered: boolean) => void, readWater = isMappedWater, readRegion = regionalWater, preloadAlways: () => boolean = () => false): () => void {
   const { scene, camera } = widget;
   const screen = new Cartesian2();
   let near = false, covered = false, dirty = true, moving = false, disposed = false;
@@ -35,6 +42,7 @@ export function watchPhotorealSurface(widget: CesiumWidget, tiles: Cesium3DTiles
     // Traverse the mesh on approach; the globe also draws underneath uncovered parts of every tile.
     if (!near) clearFocus();
     tiles.show = near && !ocean;
+    tiles.preloadWhenHidden = shouldPreloadHidden(camera.positionCartographic.height, scene.mode === SceneMode.SCENE3D, preloadAlways());
     if (!near) {
       pending = null;
       setCovered(false);

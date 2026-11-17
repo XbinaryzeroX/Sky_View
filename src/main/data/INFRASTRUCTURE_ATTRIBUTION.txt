@@ -1,0 +1,25 @@
+infrastructure.json — data centres; dams and hydropower plants
+
+© OpenStreetMap contributors. Available under the Open Database License (ODbL) 1.0:
+https://opendatacommons.org/licenses/odbl/1-0/  —  https://www.openstreetmap.org/copyright
+
+This file is a derived database and is distributed under ODbL 1.0 (share-alike applies to the database, not to the
+application code). Dams and hydropower plants were extracted via Open Infrastructure Map (https://openinframap.org).
+
+Built by scripts/build-infrastructure.mjs from the OpenStreetMap-derived extracts published in God's Eye View
+(https://github.com/bilawalsidhu/gods-eye-view, src/data/local_data/datacenters and dams, ODbL 1.0). Each feature
+was reduced to its OSM identity, one point (the area-weighted centre of its mapped outline) and a few descriptive
+tags; contact details, notes and all other tags were removed. Source checksums and counts are in the file's
+"source" field. The upstream extraction date was not recorded by that project; the dam set is a sample of a few
+hundred sites, not every dam OpenStreetMap maps.
+
+
+cables.json — telecommunication cables under water and under ground
+
+© OpenStreetMap contributors. Available under the Open Database License (ODbL) 1.0 (links above).
+
+This file is a derived database and is distributed under ODbL 1.0. Built by scripts/build-cables.mjs from one
+Overpass API reply (https://overpass-api.de, OpenStreetMap data as of 2026-11-15T15:02:06Z; the query is in the
+script). Each way was reduced to its OSM id, whether it runs under water or under ground, its name, operator and
+medium, and its mapped vertices rounded to five decimals. Nothing was added or extended: it is the part of the
+world's cables that OpenStreetMap maps, drawn as mapped.

@@ -69,9 +69,26 @@ export function specialCode(r: GeoRecord): SpecialCode | null {
   return null;
 }
 
-export type AircraftClass = 'airliner' | 'light' | 'rotorcraft' | 'military' | 'ground' | 'other';
+export type AircraftClass = 'airliner' | 'light' | 'rotorcraft' | 'fighter' | 'military' | 'ground' | 'other';
+
+/**
+ * ICAO type designators of fighter and attack jets. The type comes from the receiver network's aircraft database
+ * (keyed by transponder address), not from the transponder itself, so it can be missing or wrong; most such aircraft
+ * do not broadcast a position at all.
+ */
+export const FIGHTER_TYPES = new Set([
+  'F16', 'F15', 'F15E', 'F18', 'F18H', 'F18S', 'F35', 'F22', 'F14', 'F4', 'F5', 'F1', 'A10', 'AV8B', 'HAR', 'EUFI', 'RFAL', 'GRIF', 'JAS39', 'TOR',
+  'MIR2', 'MIRA', 'M2000', 'MG29', 'MG31', 'SU24', 'SU25', 'SU27', 'SU30', 'SU33', 'SU34', 'SU35', 'SU57', 'J10', 'J11', 'JF17', 'KF21', 'TEJ', 'T50', 'FA50',
+  'HAWK', 'M346', 'L159', 'AMX', 'JAGR', 'KFIR', 'F2', 'F104', 'MRF1',
+]);
+
+/** True when the reported type designator is a fighter or attack jet. */
+export function isFighterType(type: unknown): boolean {
+  return typeof type === 'string' && FIGHTER_TYPES.has(type.trim().toUpperCase());
+}
 
 export function aircraftClass(r: GeoRecord): AircraftClass {
+  if (isFighterType(r.props.type)) return 'fighter';
   if (r.props.militaryFlag === true) return 'military';
   if (r.props.onGround === true) return 'ground';
   const c = typeof r.props.emitterCategory === 'string' ? r.props.emitterCategory : '';
@@ -88,7 +105,7 @@ export interface AircraftFilter {
   specialOnly: boolean;
 }
 
-export const DEFAULT_AIRCRAFT_FILTER: AircraftFilter = { minFt: 0, maxFt: 60000, classes: ['airliner', 'light', 'rotorcraft', 'military', 'ground', 'other'], specialOnly: false };
+export const DEFAULT_AIRCRAFT_FILTER: AircraftFilter = { minFt: 0, maxFt: 60000, classes: ['airliner', 'light', 'rotorcraft', 'fighter', 'military', 'ground', 'other'], specialOnly: false };
 
 export function passesFilter(r: GeoRecord, f: AircraftFilter): boolean {
   if (f.specialOnly && !specialCode(r)) return false;

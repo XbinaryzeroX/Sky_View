@@ -14,9 +14,10 @@ import { deadlineAfter, timerDelayUntil } from '../feeds/timing';
 import type { AtlasStore } from '../store';
 import type { AisStreamClient } from './aisstream';
 import { aircraftProviderHost, FETCHERS, type FetchResult, type SourceState } from './fetchers';
+import { REPLAY_LAYERS, TRACK_MAX_RETENTION_HOURS, TRACK_THIN_AFTER_HOURS, trackPointBudget } from '../../shared/timeline';
 import { dwdFreshness, type DwdSource } from './dwdSource';
 
-const TRACKED_LAYERS: LayerId[] = ['aircraft', 'aircraftMil', 'vessels', 'transit'];
+const TRACKED_LAYERS: LayerId[] = [...REPLAY_LAYERS];
 const VIEW_REFETCH_MIN_MS: Partial<Record<LayerId, number>> = { aircraft: 8000, metar: 15_000 };
 
 export interface LayerManagerDeps {
@@ -29,6 +30,8 @@ export interface LayerManagerDeps {
   localReceiverUrl: () => string | null;
   /** OpenSky API client 'id:secret' from Provider settings, if configured. */
   openskyClient?: () => string | null;
+  /** Launch Library 2 token (optional; anonymous allowance when absent). */
+  launchToken?: () => string | null;
   /** The customer's saved key for a keyed camera system, or null. */
   cameraKey?: (id: KeyedCameraId) => string | null;
   ais: AisStreamClient | null;
@@ -278,6 +281,7 @@ export class LayerManager {
         store: this.d.store,
         localReceiverUrl: id === 'aircraft' ? this.d.localReceiverUrl() : null,
         openskyClient: id === 'aircraft' ? (this.d.openskyClient?.() ?? null) : null,
+        launchToken: id === 'launches' ? (this.d.launchToken?.() ?? null) : null,
         cameraKey: id === 'cameras' ? this.d.cameraKey : undefined,
         sources: id === 'cameras' || id === 'aircraft' || id === 'aircraftMil' ? this.sourceState(id) : undefined,
         clock: () => this.now().getTime(),
@@ -409,14 +413,33 @@ export class LayerManager {
       id === 'aircraftMil' ? this.sourceState(id).backoff.get('api.adsb.lol')?.until ?? 0 : 0);
   }
 
+  private tracksPrunedAt = 0;
+  private tracksThinnedUntil: string | null = null;
+
+  /**
+   * Retention and the storage budget at most once a minute (the point count scans the table); thinning of fixes older
+   * than TRACK_THIN_AFTER_HOURS in the stretch not yet thinned, at most every 15 minutes.
+   */
+  private maintainTracks(): void {
+    const now = this.now();
+    if (now.getTime() - this.tracksPrunedAt < 60_000) return;
+    this.tracksPrunedAt = now.getTime();
+    const s = this.d.getSettings();
+    this.d.store.pruneTracks(Math.min(TRACK_MAX_RETENTION_HOURS, s.trackRetentionHours), trackPointBudget(s.trackStorageMB), now);
+    const until = new Date(now.getTime() - TRACK_THIN_AFTER_HOURS * 3_600_000).toISOString();
+    if (this.tracksThinnedUntil && Date.parse(until) - Date.parse(this.tracksThinnedUntil) < 15 * 60_000) return;
+    const from = this.tracksThinnedUntil ?? this.d.store.trackRange().oldest;
+    if (from) this.d.store.thinTracks(from, until);
+    this.tracksThinnedUntil = until;
+  }
+
   private recordTracks(id: LayerId, records: GeoRecord[]): void {
     try {
       const pts = records
         .filter((r) => r.observedAt)
         .map((r) => ({ rid: r.id, t: r.observedAt!, lat: r.lat, lon: r.lon, alt: r.altM, heading: r.heading, ground: typeof r.props.onGround === 'boolean' ? r.props.onGround : null }));
       this.d.store.addTrackPoints(id, pts);
-      const s = this.d.getSettings();
-      this.d.store.pruneTracks(s.trackRetentionHours, 400_000, this.now());
+      this.maintainTracks();
     } catch (e) {
       this.log(`[tracks] ${id}: ${describe(e)}`);
     }

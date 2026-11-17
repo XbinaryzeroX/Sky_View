@@ -201,3 +201,93 @@ export function normalizeQuebecCams(body: unknown): Normalized {
   }
   return { records, skipped, sourceUpdatedAt: null };
 }
+
+// ---------------------------------------------------------------- added 2026-11-14 (keyless, attribution licences)
+//   Vegagerðin (Iceland)   CC BY 4.0 (IRCA terms of use). Several views per station.
+//   Open Calgary           Open Government Licence – City of Calgary.
+//   City of Toronto        Open Government Licence – Toronto. The list has no image field; the still address is
+//                          built from the camera number, as the dataset documents.
+
+export const ICELAND_IMAGE_PREFIX = 'https://www.vegagerdin.is/vgdata/vefmyndavelar/';
+export const CALGARY_IMAGE_PREFIX = 'https://trafficcam.calgary.ca/';
+export const TORONTO_IMAGE_PREFIX = 'https://opendata.toronto.ca/transportation/tmc/rescucameraimages/CameraImages/';
+
+const still = { streamUrl: null, mediaType: 'still' } as const;
+
+/** Vegagerðin: `GET https://gagnaveita.vegagerdin.is/api/vefmyndavelar2014_1` (one row per camera view). */
+export function normalizeIcelandCams(body: unknown): Normalized {
+  if (!Array.isArray(body)) throw new Error('Unexpected Vegagerðin camera response');
+  const records: GeoRecord[] = [];
+  const seen = new Set<string>();
+  let skipped = 0;
+  for (const c of body.slice(0, 3000)) {
+    const at = isObject(c) ? position(c.Breidd, c.Lengd) : null;
+    const url = isObject(c) && typeof c.Slod === 'string' ? c.Slod : '';
+    const file = url.startsWith(ICELAND_IMAGE_PREFIX) ? url.slice(ICELAND_IMAGE_PREFIX.length) : '';
+    if (!isObject(c) || !at || !/^[A-Za-z0-9_-]{1,80}\.jpg$/.test(file) || seen.has(file)) { skipped++; continue; }
+    seen.add(file);
+    records.push(camera({
+      id: `iceland-${file.slice(0, -4)}`,
+      ...at,
+      label: cleanText(c.Myndavel, 120) ?? 'Road camera',
+      sourceUrl: 'https://www.vegagerdin.is/',
+      source: 'Icelandic Road and Coastal Administration (Vegagerðin), CC BY 4.0',
+      props: { publisher: 'Icelandic Road and Coastal Administration (Vegagerðin), CC BY 4.0', country: 'Iceland', locality: cleanText(c.Vegheiti, 60), description: cleanText(c.Skyring, 240), ...still, updateFrequencyMin: null },
+      imageUrl: `${ICELAND_IMAGE_PREFIX}${file}`,
+    }));
+  }
+  return { records, skipped, sourceUpdatedAt: null };
+}
+
+/** Open Calgary dataset k7p9-kppz. The `quadrant` field is Calgary's address grid, not the direction the camera faces. */
+export function normalizeCalgaryCams(body: unknown): Normalized {
+  if (!Array.isArray(body)) throw new Error('Unexpected Calgary camera response');
+  const records: GeoRecord[] = [];
+  let skipped = 0;
+  for (const c of body.slice(0, 3000)) {
+    const coords = isObject(c) && isObject(c.point) ? c.point.coordinates : undefined;
+    const at = Array.isArray(coords) ? position(coords[1], coords[0]) : null;
+    const raw = isObject(c) && isObject(c.camera_url) && typeof c.camera_url.url === 'string' ? c.camera_url.url.replace(/^http:\/\//, 'https://') : '';
+    const m = /^https:\/\/trafficcam\.calgary\.ca\/(loc\d{1,5}\.jpg)$/.exec(raw);
+    if (!isObject(c) || !at || !m) { skipped++; continue; }
+    records.push(camera({
+      id: `calgary-${m[1].slice(0, -4)}`,
+      ...at,
+      label: cleanText(c.camera_location, 120) ?? 'Calgary traffic camera',
+      sourceUrl: 'https://data.calgary.ca/Transportation-Transit/Traffic-Cameras/k7p9-kppz',
+      source: 'City of Calgary (Open Government Licence – City of Calgary)',
+      props: { publisher: 'Contains information licensed under the Open Government Licence – City of Calgary', country: 'Canada', locality: 'Calgary', cityQuadrant: cleanText(c.quadrant, 12), ...still, updateFrequencyMin: null },
+      imageUrl: `${CALGARY_IMAGE_PREFIX}${m[1]}`,
+    }));
+  }
+  return { records, skipped, sourceUpdatedAt: null };
+}
+
+/** City of Toronto RESCU list, published as JSONP: `jsonTMCEarthCamerasCallback({"Data":[…]})`. */
+export function normalizeTorontoCams(text: string): Normalized {
+  const m = /^\s*jsonTMCEarthCamerasCallback\(([\s\S]*)\)\s*;?\s*$/.exec(text);
+  let data: unknown;
+  try {
+    data = (JSON.parse(m ? m[1] : text) as { Data?: unknown }).Data;
+  } catch {
+    throw new Error('Unexpected Toronto camera response');
+  }
+  if (!Array.isArray(data)) throw new Error('Unexpected Toronto camera response');
+  const records: GeoRecord[] = [];
+  let skipped = 0;
+  for (const c of data.slice(0, 3000)) {
+    const at = isObject(c) ? position(c.Latitude, c.Longitude) : null;
+    const number = isObject(c) && typeof c.Number === 'string' && /^\d{1,6}$/.test(c.Number) ? c.Number : null;
+    if (!isObject(c) || !at || !number) { skipped++; continue; }
+    records.push(camera({
+      id: `toronto-${number}`,
+      ...at,
+      label: cleanText(c.Name, 120) ?? 'Toronto traffic camera',
+      sourceUrl: 'https://open.toronto.ca/dataset/traffic-cameras/',
+      source: 'City of Toronto (Open Government Licence – Toronto)',
+      props: { publisher: 'Contains information licensed under the Open Government Licence – Toronto', country: 'Canada', locality: 'Toronto', roadClass: cleanText(c.Group, 30), ...still, updateFrequencyMin: null },
+      imageUrl: `${TORONTO_IMAGE_PREFIX}loc${number}.jpg`,
+    }));
+  }
+  return { records, skipped, sourceUpdatedAt: null };
+}

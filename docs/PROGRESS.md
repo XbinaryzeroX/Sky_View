@@ -815,3 +815,853 @@ The production build, type check and 13 focused tests passed. In an isolated pac
 The supplied 757 cockpit used single-sided surfaces and dark windshield materials, which produced missing interior faces and the opaque tint in the reported view. Interior models now render back faces, and the cockpit's generic windshield and glass_t1 materials are transparent in the new derivative. The original user-supplied GLBs remain unchanged. The fast derivatives simplify geometry within a bounded error and encode textures as WebP: cockpit 41.2 MB original / 37.0 MB previous derivative / 21.0 MB fast, cabin 76.5 MB / 65.3 MB / 50.9 MB. Original texture dimensions are preserved; geometry simplification and lossy texture encoding may alter fine detail. Loading now reports completion only after textures are ready. [Model loader](../src/renderer/map/aircraftInterior.ts) · [Asset optimization](../scripts/optimize-interior.mjs) · [Attribution and modifications](../public/interior-models/ATTRIBUTION.txt).
 
 The production build and 14 focused model and tracking tests passed. The packaged desktop app loaded the models, rendered interior faces from both sides, selected a passenger seat, and removed the interior on Escape in an isolated synthetic-flight test. One preliminary desktop run failed its unrelated follow-frame sample during slow startup; subsequent runs passed. Geometry and full texture loading times are recorded separately in the final audit and cannot establish the user's machine performance. The screenshot was inspected with network access blocked; exact appearance over live Google photoreal tiles and live flights remains unverified, and camera alignment depends on the source model. No paid Google credentials were used. [Final desktop audit](fast-cockpit-audit.log) · [Material regression](../tests/interior-assets.test.ts). start.bat selects the updated unpacked app; the installer was not rebuilt.
+
+## Protective planning workspace — 2026-11-12
+
+A new **Plan** entry in the left rail (Tools group, "Protective planning") opens a floating workspace beside the globe with five steps: Site → Coverage → Buildings → Routes & zones → Save & brief. It is inspired by the workflows VILYA describes on its website; Atlas Watch does not claim parity with that product. [Panel](../src/renderer/components/PlanningPanel.tsx) · [State](../src/renderer/lib/usePlanning.ts) · [Map overlay](../src/renderer/map/planningOverlay.ts)
+
+**Inventory before building (reused, not duplicated):** the existing globe, terrain source and OSM extruded buildings; the top search box and saved locations for choosing a site; Map tools annotations for routes, perimeters, zones and pins; the Cameras layer and camera viewer; the Satellites layer and its pass predictor worker; the briefing HTML/PDF export path in the main process; the SQLite document store. There was no line-of-sight/viewshed tool, no building-information lookup and no planning workspace, so those are new.
+
+**What it does**
+
+- *Site:* pick on the globe, use the map centre (after a search) or a saved location; "View site in 3D" flies to an oblique view. The panel states what geometry is on screen: terrain, OSM footprints extruded to mapped or estimated heights (simple blocks, not verified 3D models), or Google Photorealistic 3D (display only, not used in analysis), plus a reminder that unmapped buildings look like open ground. Predicted satellite passes above 30° for the next 12 h come from the Satellites layer's loaded orbits and are labelled as predictions, not imaging.
+- *Coverage:* observation points (height, range, optional direction and field of view) and cameras. Public cameras within the area are listed from the Cameras layer with source, catalogue time and "direction not published"; a camera is only modelled after the user enters a direction and field of view (labelled user estimate). A geometric viewshed runs per point on a grid (up to 401 × 401 cells, 2–50 m) from terrain sampled independently of the display setting (strict: missing tiles are no data) and OSM building heights from the same vector tiles that draw the 3D buildings; Earth curvature and refraction are included. Results: covered by one, by two or more, modelled gap, unknown (no data), drawn as a colour-blind-safe grid with a checker for unknown. Unknown is never counted as visible or safe; a known blocker before a data gap decides "blocked". Loading and modelling run with progress and cancel; ray casting runs in a web worker. [Model](../src/shared/viewshed.ts) · [Geometry loading](../src/renderer/map/siteGeometry.ts) · [Raster](../src/shared/siteRaster.ts) · [Worker](../src/renderer/map/viewshedWorker.ts)
+- *Buildings:* "Inspect a building" picks on the rendered surface (a roof, not the ground behind it) and queries OpenStreetMap through the public Overpass API (main instance, then one listed public fallback when it is overloaded). Shown: address, type/use, height (reported vs estimated from floors × 3 m), floors, footprint area, start date, operator (community-mapped), OSM link and last-edited time. Owner is always "not available — no property-records provider is configured"; OSM `owner` tags are not shown. Interiors and occupants: not known. Floor-plan images (PNG/JPEG/WebP, embedded and downscaled) can be placed on the map with width, rotation, floor and height; scale, orientation and floor stay flagged until the user confirms them; "View this floor" looks straight down. [OSM adapter](../src/main/osmSite.ts)
+- *Routes & zones:* buttons open the existing Map tools; drawn items get roles (primary/alternative route, perimeter, zone, staging, exit, assembly point, note). Route comparison: length, time at an assumed speed (walking 4.8 km/h, driving 30 km/h, no traffic), share covered / gap / unknown / outside from the current coverage run; road restrictions "not available". Nearby hospitals, clinics, police, fire and ambulance stations and mapped assembly points come from OSM within 1–5 km; an empty answer is reported as a gap in mapped data. No crowd or evacuation simulation is provided.
+- *Save & brief:* plans are saved locally (new `plans` table, strict schema, size-limited) and reopen with their last-run figures; the grid is recomputed with current data instead of being restored as current. Export writes a self-contained HTML or PDF briefing (no scripts or remote resources, every value escaped) with sources, limitations and whether the author acknowledged them. [Plan model and briefing](../src/shared/protectivePlan.ts)
+
+**Security:** new IPC channels (`plans:*`, `site:building`, `site:facilities`) are validated with zod (coordinates, radius ≤ 5 km, strict plan schema, embedded-image-only floor plans, PNG-only coverage image); Overpass is reachable only from the main process (`overpass-api.de`, fallback `overpass.private.coffee`, same-origin redirects); `openstreetmap.org` was added to the external link allow-list. No credentials are involved.
+
+**Verification.** Type check, production build and the full suite (79 files, 1,149 tests) passed, including 28 new tests: viewshed geometry (open ground, building and ridge occlusion, unknown propagation, observer without terrain, camera field of view and range, cancellation, curvature), combination of several points, route coverage, footprint rasterisation with holes, plan validation, briefing escaping, OSM parsing (inside vs nearest, reported vs estimated height, no owner, strict height parsing, failover on 502/timeout but not on 400) and IPC/allow-list boundaries. Live check in an isolated profile on the secondary monitor, Helsinki Senate Square: a 300 m analysis on a 201 × 201 grid of 3 m cells loaded level-16 terrain (0 missing cells) and one OSM building tile (16,507 building cells) and modelled two points in 0.6 s; the building lookup returned Helsinki Cathedral from OSM (inside its footprint, reported height 59 m, address, last edited 2026-10-30); 15 emergency facilities were found within 1 km; the plan saved and reopened. On the first run the main Overpass instance answered 502 and then timed out — the panel showed both as unavailable — which led to the fallback. [Live log](protective-planning-live-check.log) · [Top view](screenshots/protective-planning/coverage-top.png) · [Oblique view](screenshots/protective-planning/coverage-oblique.png) · [Building lookup](screenshots/protective-planning/building-lookup.png)
+
+**Not verified / limits:** the export save dialog and PDF rendering were not exercised in the automated run (the HTML builder and request validation are unit-tested); the analysis does not use Google Photorealistic geometry, and its grid is not visible while Photoreal hides the globe; vegetation, walls, vehicles and unmapped buildings are not modelled; floor plans are not drawn over Photoreal 3D; Overpass is a free public service with fair-use limits and variable availability.
+
+**Remaining work:** 3D building model (GLB) import and interior navigation; analysis against Photorealistic tiles (needs ray casting against the 3D tile mesh); road-network routing with restrictions (needs a routing provider and a decision on its terms/cost); property records (needs a licensed provider per country); video projection onto the scene (needs calibrated camera pose and lens); shared plans and live device locations (need a server or account decision by the owner).
+
+**Independent review (Codex, round 1): 8 findings, all addressed.** Unknown building height at the observer now stops that point (its eye height is unknown) and an unknown roof at a target is unknown even behind a known wall; mapped buildings without a usable height are unknown, not open ground; footprints are filled by cell centre on both axes (a half-cell westward shift is fixed); every run stores the inputs it was computed from, so changed settings are flagged as out of date in the panel, after reopening and in the briefing (old grid and route shares are omitted there); lookups, image imports, saves and analysis progress are bound to the plan that started them, and Cancel takes effect at once; multipolygon buildings are matched on their assembled rings with courtyards excluded, and a bounds-only match is labelled as uncertain; View site in 3D switches to the 3D scene. OpenStreetMap completeness cannot be measured, so results are now labelled “clear sight line in mapped data” with the completeness caveat beside them rather than claiming unmapped areas are open. Afterwards: 79 files / 1,155 tests passed, build passed, and the live check repeated (the building lookup that run reported both Overpass instances busy, shown as unavailable).
+
+**Review round 2: 7 findings, addressed.** Treating ground without mapped buildings as open is now an explicit per-plan choice: Run analysis stays disabled until the user ticks it, and the briefing records it as the author’s assumption (OpenStreetMap completeness cannot be established from the data; making all unmapped ground unknown would leave every result unknown). A point that cannot be modelled now contributes unknown over its range and field of view, so it never turns other points’ blocked cells into gaps. Lookup busy flags reset when another plan opens; a camera direction the user changed is labelled a user estimate, not the publisher’s; route shares are weighted by distance (repeated vertices ignored); areas beyond ±85° or across the 180° meridian are refused, and cells beyond the sources’ coverage stay unknown; a coverage grid computed for other inputs is no longer drawn on the map. Older saved plans load as out of date instead of being dropped. 79 files / 1,156 tests and the build passed; the live check repeated (both Overpass instances were busy during that run and the panel reported them as unavailable; earlier runs returned the cathedral and 15 facilities).
+
+**Review rounds 3–4: 9 findings, addressed.** A point outside the analysed area leaves what it might see unknown; changing a floor plan’s size, rotation, position or floor clears the matching confirmation (enforced in the planning state, not only the form); a floor plan is drawn only once the terrain height under it is known (retried, never placed at sea level), and a “Hide 3D buildings” control shows floors inside OSM blocks; satellite-pass predictions and pending picks never carry over to another plan or site; sight lines now walk every grid cell they cross (cells clipped at a corner can block or make the result unknown); plans keep a copy of each assigned route, zone and marker, show items changed on the map since saving or deleted from it, and use the saved copy in the briefing; replacing a plan with unsaved changes asks first; camera moves add the terrain height under the site (and the floor height for floor views), stating when it is unavailable. 79 files / 1,162 tests and the build passed. Live: the Senate Square run, Helsinki Cathedral lookup, 15 facilities and save/reopen passed; a generated floor-plan image was imported, placed 12 m above ground, rotated (which cleared its orientation confirmation) and rendered. [Floor plan](screenshots/protective-planning/floor-plan.png)
+
+**Review round 5: 2 findings, addressed.** Route coverage clips each segment to the analysis square, so far-away vertices count as outside by length without extra work (a 5,000-point route spanning the globe is tested), and results are cached per route and run. Briefings now carry the geometry: a self-contained site diagram (north up, scale bar, numbered routes, zones and markers, observation points, analysis radius) and a table of every item’s coordinates; floor plans list their centre coordinates. A sample briefing rendered from the real builder was inspected. [Sample briefing](screenshots/protective-planning/sample-briefing.png)
+
+**Review round 6: 4 findings, addressed.** The building lookup also asks for buildings whose area contains the clicked point, so large halls are found from their middle (checked live: a point inside Helsinki’s Stockmann department store, more than 30 m from its walls, returned that building); the site diagram’s extent is computed without spreading coordinates (a 200,000-point route exports); route notes appear in the briefing; a camera’s direction and field of view carry separate provenance (publisher vs user estimate). 79 files / 1,166 tests and the build passed.
+
+**Review round 7: 4 findings, addressed.** The terrain source keeps sea-floor depths, so cells below sea level are now resolved with the mapped water polygons from the same vector tiles: inside mapped water the surface is the water (sea level); elsewhere, or where water data is unavailable, the cell is unknown. Elevated building parts (OSM min_height: bridges, overhangs) keep the passage beneath them — a sight line is blocked only inside the occupied height interval or when it crosses it within the cell — and points under such a part are treated as ambiguous (unknown). Routes that pass the site without a vertex nearby, areas containing it, and every item already assigned stay available in Routes & zones. Floor-plan width is limited by the image’s proportions so both sides stay within 2000 m. 79 files / 1,171 tests and the build passed (one unrelated airline-route test timed out once under load and passed on rerun). Live: a quay-side point at Helsinki Market Square modelled 44% clear (the open harbour), 0 cells without terrain and 26 unknown. [Harbour](screenshots/protective-planning/harbour.png)
+
+**Review round 8: 2 findings, addressed.** Only mapped sea (ocean polygons) is modelled at sea level; inland water or land below sea level is unknown, because its surface height is not in this data. Route coverage unwraps longitudes around the site (routes crossing the 180° meridian take the short way) and weights by geodesic length, the same model as the route table. 79 files / 1,172 tests and the build passed; the harbour check repeated with the same result.
+
+**Review round 9: 3 findings, addressed.** A building in the target’s own cell or the observer’s own cell is now tested along the part of the line inside it: a roof-top target is hidden when the line enters its cell below the roof, and from a roof the ground close to the building is hidden by the roof edge (terrain inside a single cell is not tested, since a cell has one height). A saved camera keeps its catalogue time, media type and published direction, shown on its row and in the briefing (older plans show them as not recorded). Route segments are unwrapped continuously and placed on the world copy nearest the site, so a remote route crossing the 180° meridian stays remote; the briefing diagram uses the same handling. 79 files / 1,176 tests and the build passed; the live Senate Square run repeated (201 cells are now unknown there, from points under elevated building parts).
+
+**Review round 10: 3 findings, addressed.** Building parts in one cell are merged only when they touch or overlap in height; parts separated by open space (for example 0–3 m and 10–20 m) make the cell unknown instead of one invented solid block, independent of the order the parts arrive in. Terrain-dependent camera moves are dropped when a newer move or another plan has taken over. The “items near the site” check moved to the shared plan module and uses the same longitude handling as route coverage. 1,178 tests: all pass except one unrelated airline-route test that twice exceeded its 5 s limit while the whole suite ran and passes on its own; the build passed. Final live run (Senate Square, camera on the square’s north edge): 201 × 201 grid, 3 m cells, 0.64 s; 9% clear from one point, 3% from both, 87% blocked, 1% unknown (cathedral parts at separate heights); the cathedral lookup, 15 facilities and save/reopen passed. A camera placed inside the cathedral footprint was reported mostly unknown, as intended. The screenshots and log linked above are from this final run.
+
+**Review round 11: 2 findings, addressed.** Each planning camera move is bound to the plan it was requested for: it is applied only if it is still the newest move and that plan is the open one, so opening or starting a plan flies to its site, and declining the unsaved-changes prompt neither replaces the plan nor moves the camera. Checked through the real UI: with the camera at 59°N 20°E, clicking Open on the saved plan placed the camera at 60.1661°N 24.9522°E, 340 m, looking at Senate Square.
+
+**Review round 12: 2 findings, addressed.** Camera placement now uses the same surface rule as the analysis (a one-cell run of the geometry loader): mapped sea is sea level, not the sea floor, and anything else below sea level or without data is reported as unavailable. Each run stores the radius and target height it used; the briefing describes the run with those and, when it is out of date, names the plan’s current settings separately. 79 files / 1,178 tests and the build passed. Live: a plan started on open water in Helsinki’s South Harbour and opened with View site in 3D placed the camera 437 m up (the terrain sample there is slightly above zero, so the below-sea-level branch is covered by the unit test of the shared rule, not by this run).
+
+**Review round 13 and project rules — 2026-11-13.** Two findings addressed: floor plans take their base height from the same resolved surface as the analysis and the camera (mapped sea = sea level; other below-sea-level or missing terrain = unavailable, retried), and a building with many long use tags is still returned (the combined description is bounded). To match the project guide: rejection cases for the six planning channels and the two Overpass hosts were added to the IPC security test; the README gained a Protective planning feature row and an Overpass source row with its terms; screenshots moved to docs/screenshots/protective-planning/ and the live log to docs/. 79 files / 1,190 tests, type check and build passed; the floor-plan live check repeated (import, placement, rotation clearing the orientation confirmation, render).
+
+**Review round 14: 2 findings, addressed.** The site’s satellite-pass list now counts completed and failed calculations separately (each bounded by an 8 s timeout): it says predictions are unavailable when none complete, says how many satellites are missing when some fail, flags satellites whose orbital elements are more than 7 days old, and states the calculation time and its fixed 12-hour window instead of “next 12 h” (warning once entries may have passed, and asking for a new prediction when the window has ended). 79 files / 1,191 tests and the build passed. Live: with the Satellites layer on, 60 satellites were calculated for Senate Square and the panel listed passes with the window stated.
+
+**Review round 15 and close — 2026-11-13.** Two findings addressed: leaving the Site step during a satellite-pass prediction now abandons it (no replacement workers, no further satellites), and a planning camera move is dropped when the camera was moved by anything else (search, a restored view, tracking, the user) while terrain was loading. 79 files / 1,191 tests, type check and build passed; the live run repeated, including opening a saved plan through the panel (camera arrived at the site). The review loop was stopped here at the owner’s request after 15 rounds and 52 findings, all addressed; round 15’s two fixes were verified by tests, build and the live run but not re-reviewed. Still not verified: the export save dialog and PDF file in the running app (the HTML builder is unit-tested and a sample was rendered and inspected), the packaged build and installer, and behaviour over Google Photoreal 3D (no paid Google request was sent).
+
+## Liquid-glass shell and regrouped navigation — 2026-11-13
+
+The map now fills the whole workspace and the navigation is a slim floating glass rail (44 px, icons with tooltips) that the user can expand to show names and group titles; the choice is remembered locally. Pages are grouped in priority order — Monitor, Understand, Plan & track, Workspace — and Providers, Settings and Help form a separate cluster at the bottom of the rail (Providers and Settings left the top bar; their accessible names are unchanged). Every left-anchored float (Layers, page panels, dock, playback, credits, attribution) is offset by the rail’s current width, so nothing sits under it in either state. The bottom dock is one pill for Places, Scenes and Cameras (the overlapping “Browse all cameras” text link became an icon in that pill) and a centre pill with Playback, Watchlist and HUD; Screenshot, Share, Kiosk and Diagnostics moved under More (closes on Escape or an outside click). All floating surfaces share one glass material: a blurred, saturated and darkened backdrop (so text keeps contrast over snow and cloud), hairline border and inner highlight. Motion uses a soft spring: controls lift and their icon follows a beat later, a highlight sweeps across a widget on hover, and panels arrive with scale and blur; both reduced-motion paths (system setting and the app setting) remove it. [Styles](../src/renderer/styles.css) · [Rail](../src/renderer/App.tsx) · [Dock](../src/renderer/components/FloatingMapControls.tsx) · [Groups](../src/renderer/components/Pages.tsx)
+
+Verified: type check, build and 80 files / 1,192 tests (one new test for the navigation groups). In the running app on an isolated profile, element rectangles were read back: with the rail collapsed the left widgets start at 66 px (rail ends at 54 px); expanded, they start at 226 px (rail ends at 214 px); screenshots were inspected. [Collapsed](screenshots/glass-shell/layers-collapsed-rail.png) · [Expanded with More menu](screenshots/glass-shell/rail-open-more-menu.png) · [Page panel](screenshots/glass-shell/planning-page.png)
+
+Not verified: hover and press motion (screenshots cannot show it), windows narrower than 1920 × 1080, the wide Markets and Community pages, dialogs, and kiosk mode with the new rail. The design skill’s reference files were not installed, so no PRODUCT.md or DESIGN.md was created.
+
+## Floating top controls and in-app window buttons — 2026-11-13
+
+**Change.** The top bar no longer has a background, logo or name; its controls (view mode, basemap, imagery year, search, freshness, notifications) float over the map as separate glass pills. The native Windows minimise/maximise/close strip is replaced by three app-drawn buttons in a matching glass pill, because Windows paints a solid strip behind `titleBarOverlay` even with a transparent colour. New IPC channel `window:control` (`minimize` | `maximize` | `close`, strict enum) in all five places; `titleBarOverlay` removed from `main.ts`, `titleBarStyle: 'hidden'` kept. The pill is hidden in kiosk mode.
+
+**Verified.** `npm run typecheck` passes; `npx vitest run`: 80 files, 1,195 tests pass (three new rejection cases for `window:control`); `npm run build` passes. Built app run on the secondary monitor with a temporary profile and database: pill at x 1810–1910, y 7–39 in a 1920×1080 window, accessible names "Minimize", "Maximize or restore", "Close", both `windowControl('maximize')` calls returned true and the first changed the window size. Screenshot: `docs/screenshots/glass-shell/window-buttons.png`.
+
+**Not verified.** Minimise and Close were not clicked in the running app. The second maximise toggle did not change the reported window size within 0.9 s, so restore-then-maximise is unconfirmed. Windows 11 snap layouts on hovering the maximise button are lost with app-drawn buttons (not checked). Dragging the window by the empty top strip, windows narrower than 1920 px, and the packaged build were not checked.
+
+## Labels, tanker and fighter filters, rooftop line of sight, draggable subject, route options — 2026-11-13
+
+**What changed.**
+
+- *Place labels* (`src/renderer/map/placeLabels.ts`): text size now follows the zoom per class (`ZOOM_SCALE`, `zoomScale`): country names are largest with the whole region in view and shrink as you zoom in; states peak at regional zoom; cities, towns, villages and suburbs grow as you approach them. Text is drawn at each class's largest size and scaled down, so it stays sharp. The old distance-only `scaleByDistance` was removed.
+- *Street names* now run along their street. They are rotated billboards, kept upright and redrawn as the camera moves (`uprightAngle`). They appear at up to three points per name per tile on long streets (`streetLabelPoints`), and their collision boxes follow the rotation. Street text is 1 px larger.
+- *Traffic filters* (`TrafficBar.tsx`, `shared/aircraft.ts`): a new aircraft class, fighter / attack jet, comes from the reported ICAO type code (`FIGHTER_TYPES`, `isFighterType`). There are one-click "Fighter jets only" and "All military" filters, and a "Tankers only" vessel filter (AIS ship types 80–89, already classified). No new data source: these filter the existing adsb.lol and AIS layers. The panel states the coverage limits: most military jets do not broadcast; keyless AIS covers Finnish and northern Baltic waters, and an AISStream key extends it to the viewed area.
+- *Rooftops step in Protective planning* (`shared/overwatch.ts`, `PlanningPanel.tsx`, `planningOverlay.ts`): this lists the mapped roofs with a modelled clear straight line to the subject (the site marker). For each roof it shows distance, compass direction, roof height, view angle and the clear share of the roof. Roofs are outlined in vermillion at roof height, with dashed sight lines to the nearest 12. It runs the existing viewshed in reverse over roof cells only, using a new `mask` option. A person on a roof is placed at the roof edge facing the subject (new `edgeTargets` option), because someone at a parapet can look down past the wall below. The step also reports roofs that cannot be decided because data is missing, cells with no building data, and a warning when the subject marker stands on a mapped building (it is then modelled on that roof). Inputs: subject height, eye height on the roof.
+- *Draggable subject, points and route ends* (`Globe.tsx` `planDragTarget`, `usePlanning.dragTo`): press and drag the site marker, an observation point, or a route's Start or Destination marker. The camera stays still while you drag. The rooftop check reruns against the loaded geometry, at most one calculation in flight. On release, coverage reruns if there was a run, and the area reloads if the subject has left it. Keyboard alternative: N, E, S and W nudge buttons (1–50 m) in step 1.
+- *Route options* (`shared/routing.ts`, `map/roadNetwork.ts`, `map/planToolsWorker.ts`): pick a start and a destination (up to 12 km apart) and choose walking or driving. Up to three distinct routes are computed on this computer over the OpenMapTiles `transportation` lines from the same OpenFreeMap zoom-14 tiles the map already loads; no routing service is contacted. One-way streets apply when driving. Motorways are not walked and paths are not driven. Each option shows length, an estimated time (fixed speeds per road class), major-road share, junctions passed, the share of the route inside the loaded area with a clear line to a mapped rooftop within 300 m, and the share watched from your observation points when a current coverage run exists. "Use as primary" and "Use as alternative" save the route as a drawn line with that plan role, so it goes into the comparison and the briefing. These are measures for comparison, deliberately not a single safety rating, in line with the project's no-risk-score rule.
+- Street names on routes come from `transportation_name`, joined by feature id or, failing that, by at least two shared vertices.
+
+**Defect found and fixed during verification.** Zoom-14 tiles simplify long roads and can drop the vertex where a side road joins. In central Helsinki the driving graph then fell into 1,407 disconnected pieces (largest 5,361 nodes), and a driving route between two points 800 m apart failed. `joinTJunctions` joins a road end that lies within 3 tile units (about 0.3–0.6 m) of another road's line. After the fix: driving 119 pieces (largest 10,805 nodes), walking 6,961 → 261 pieces. The quickest walking route for the same pair went from 1.70 km (a detour) to 1.06 km. Roads that cross mid-line (bridges, tunnels) are still not joined. The route search also tries end-node pairs nearest-first and never returns a zero-length route. The panel reports how far the route starts and ends from the requested points.
+
+**Verified.**
+
+- `npm run typecheck` passes. `npx vitest run`: 83 files, 1,227 tests passed. New: `tests/overwatch.test.ts` (14), `tests/routing.test.ts` (12) and `tests/label-scaling.test.ts` (6), covering hidden roofs, missing data treated as undetermined rather than clear, roof edges, the range limit, the subject-on-roof flag, roof grouping, the viewshed mask, route overlook, footprint ids, tile-edge clipping, T-junction joins (and no join for mid-line crossings), one-way streets, mode restrictions, failure reasons, fallback gaps, zoom scale ramps, upright rotation and street label points, and fighter classification and filtering.
+- `npm run build` passes.
+- Built app run on the secondary monitor with a temporary profile and database, central Helsinki, live OpenFreeMap and terrain tiles:
+  - The rooftop check found 34 of 173 roofs clear, with 21 undetermined.
+  - Moving the subject through `dragTo` refreshed the result in about 100 ms.
+  - Walking produced three routes of 1.06, 1.13 and 1.44 km, about 13, 14 and 18 min (12 tiles, 43,314 nodes, no tile failures).
+  - Driving produced three routes of 3.03, 3.56 and 4.40 km, the long way round because of one-way streets.
+  - Screenshots: `docs/screenshots/protective-planning/rooftops-line-of-sight.png`, `route-options-walk.png`, `route-options-drive.png`, `docs/screenshots/labels/street-names-along-streets.png`, `countries-zoomed-out.png`, `countries-and-cities-closer.png`.
+
+**Not verified.**
+
+- Dragging with a real mouse on the globe: the drag path was driven through `dragTo`, not pointer events.
+- The automatic coverage re-run after a drop, in the app.
+- "Use as primary" saving a route, in the app.
+- The fighter and tanker filters against live aircraft and vessels: no military aircraft or tankers were loaded in this run.
+- Label readability on other monitors and scales, and Photoreal 3D with the rooftop outlines.
+- The packaged build and installer.
+- Rooftop results and route overlook are not saved in the plan or the briefing; only a route adopted as a drawn line is.
+
+**Remaining work.** Put the rooftop list and per-route measures into the saved plan and the briefing. Join roads that cross at a mapped crossing vertex lost in simplification only where the source shows one. Decide whether to offer turn restrictions, which would need a routing data source.
+
+## Rooftop and route results in saved plans and briefings — 2026-11-13
+
+**What changed.**
+
+- Plans gain two optional fields, `rooftops` (`rooftopStudySchema`) and `routeStudy` (`routeStudySchema`), in `shared/protectivePlan.ts`. Both are strict and bounded: at most 60 roofs and 3 route options. They are additive with a `null` default, so plans saved earlier open unchanged.
+- On **Save** and on **Export** (`usePlanning.studies`), the plan takes the current rooftop result and the current route options with their measures. The rooftop result is only taken if it was computed for the plan's current subject position; otherwise the plan keeps what it had.
+- `rooftopStudyIsStale` flags a saved rooftop list once the subject moves or its height changes. A route option saved with "Use as primary" or "Use as alternative" records its drawn line, so the briefing names its role.
+- The briefing gains a "Rooftops with a line of sight to the subject" section:
+  - when and for which position and heights the list was computed
+  - counts of clear, undetermined and no-data roofs
+  - a warning when the subject was modelled on a roof
+  - a table R1, R2, … with distance, direction, roof height, angle, clear share and position
+  - the limits of the model
+
+  An out-of-date list is marked as such and left off the diagram.
+- The briefing also gains "Route options considered": mode, ends, tile failures, and per option the length, time estimate, major-road share, junctions, share overlooked, the distances at which the route leaves and joins the network, and its role in the plan. A "not a safety rating" note follows the table. Rooftops appear on the site diagram as numbered vermillion triangles.
+- The planning panel says when results are saved with the plan. After reopening a plan it shows the saved rooftop list and route study, and whether the rooftop list is out of date.
+- **Defect found in the live check and fixed:** the first save was refused ("expected number to be <= 1"). A route's overlooked share, summed from floating-point steps, can land a hair above 100%. Shares are now clamped to 0–1 in `routeOverlook` and when snapshotted. A new test checks the shares stay within 0–1 across sample spacings; I did not confirm that the test fails without the clamp.
+
+**Verified.**
+
+- `npm run typecheck` passes. `npx vitest run`: 84 files, 1,236 tests passed. New `tests/plan-studies.test.ts` (8) covers:
+  - old plans opening without the fields
+  - strict validation
+  - staleness
+  - briefing content for rooftops, subject-on-roof, not checked, out of date, route options and adopted role
+  - escaping of street names
+- `npm run build` passes.
+- Built app with a temporary profile and database (central Helsinki):
+  - Loaded the area: 41 roofs with a clear line.
+  - Found three walking routes and adopted option 1 as the primary route.
+  - Saved, read the plan back through `listPlans`: 41 roofs, three route options with the first marked adopted, the primary-route role with its geometry snapshot.
+  - Closed and reopened: the panel shows "Saved list … 41 roofs" and "Saved route study … 3 walking options", and the plan is not marked unsaved.
+
+**Not verified.** The exported HTML/PDF itself was not opened from the running app (the save dialog was not driven); the briefing content is covered by the unit tests above. Dragging with a real mouse, the packaged build and the installer remain unchecked.
+
+## OpenStreetMap 3D buildings stand on their own ground — 2026-11-13
+
+**Report.** The 3D building blocks did not line up with the buildings in the satellite imagery.
+
+**Cause.** `BuildingManager.load` (`src/renderer/map/buildings.ts`) put every building in a zoom-14 tile on one ground height: a single terrain sample at the tile centre, at terrain level 13. A tile spans about 1–2.5 km, so on any slope buildings floated above or sank into the terrain. In a tilted view, a building at the wrong height is drawn displaced sideways from its footprint in the imagery draped on the terrain.
+
+**Change.** Each building part is now based on the lowest of five terrain samples at its own footprint (`footprintSamplePoints`: the centre, plus points 70% of the way to the corners of its bounds; `buildingBase`). The samples are taken at terrain level 15, the level the ground is drawn from. A failed sample falls back to the tile-centre height, and these fallbacks are counted in `stats.baseFallbacks`. Diagnostics report `stats.baseSpreadM`: the median and maximum difference between the per-building bases and the tile-centre height in the last tile, a measure of the error the old method had (its old sample was at level 13, so this is approximate).
+
+**Measured** (built app on the secondary monitor, temporary profile, keyless Atlas imagery, same camera positions before and after):
+
+| Place | Buildings drawn | Old vertical error in the last tile loaded (median / max) | Fallbacks |
+|---|---|---|---|
+| San Francisco, Russian Hill | 28,742 | 1.9 m / 27 m | 0 |
+| Lisbon, Castelo / Graça | 51,415 | 23.7 m / 74.5 m | 0 |
+
+Before, the Lisbon view showed buildings buried in the castle hill with streets running across their roofs. After, they stand on the slope with the streets between them. Screenshots: `docs/screenshots/building-ground/` (`lisbon-before.png`, `lisbon-after.png`, `san-francisco-before.png`, `san-francisco-after.png`). Building geometry took 474 ms over 16 tiles in the Lisbon run.
+
+**Tests.** `tests/building-base.test.ts` (3) covers the sample points, the lowest-ground rule and fallbacks. `npm run typecheck` passes; `npx vitest run`: 85 files, 1,239 tests passed; `npm run build` passes.
+
+**Not verified, and what this does not fix.**
+
+- The check used the keyless Atlas imagery. Google Satellite was not loaded, because it is metered on the user's key.
+- Satellite images are not true orthophotos: tall buildings lean away from the image centre, so roofs in the imagery can sit several metres off their footprints while the bases line up.
+- OpenStreetMap footprints are traced from various imagery sources and can be offset by a few metres from Google's imagery.
+- Heights from OSM tags or a default estimate can differ from the real building.
+- With Photoreal 3D on, the OSM blocks are hidden and Google's own mesh is shown; the planning rooftop outlines still use OSM heights.
+
+## Coverage traced along sight lines (smooth, exact-angle edges) — 2026-11-14
+
+**Request.** The blue coverage areas were drawn as 4 m squares; show smooth edges that follow the true line angles.
+
+**Change** (`src/shared/viewshed.ts`, `src/shared/siteRaster.ts`, `src/renderer/map/viewshedWorker.ts`):
+
+- Coverage is traced as a fan of sight lines from each observation point (`addObserverToDisplay`):
+  - a quarter-cell step along each ray
+  - rays no further apart than that at the edge of the range (up to 8,192 rays and 1,600 steps)
+  - against buildings rasterised at a quarter cell from their OpenStreetMap outlines (`fineBuildings`)
+  - with terrain interpolated between cell centres
+- The result is a picture of up to about 1,200 pixels per side (0.44 m pixels in the test below), drawn with linear filtering. A shadow's side edge runs along the line from the observer past the blocking corner, and range circles and field-of-view edges are exact.
+- Shares, per-point shares and route shares now come from this traced picture (`displayCombined`, `pictureGrid`), so the numbers match what is drawn. A point that cannot be traced (no terrain, unknown building, or under an elevated part) and rays crossing an elevated building part fall back to the cell model.
+- The cell model also interpolates open-ground terrain between cell centres (`groundBetween`), so lines along a slope are no longer blocked by cell steps.
+- The briefing image is the traced picture (98 KB as a data URL in the test), and the briefing wording says sight lines are traced finer than the sampling grid.
+
+**Measured** (central Helsinki, two observation points, 250 m radius, built app, temporary profile):
+
+- The old cell figures said 15.0% of the area clear, 82.1% blocked and 3.0% unknown.
+- The trace finds 19.1% clear, 77.9% blocked and 3.1% unknown.
+- Experiment: tracing without the outline raster still gave 18.6% clear, so most of the difference is the cell model counting a line that clips the corner of a 4 m cell as blocked by the whole cell. Interpolating terrain moved the cell figures by only 0.1 percentage points.
+- Picture and figures now both read 19.1%.
+
+Screenshots: `docs/screenshots/protective-planning/coverage-cells-before.png` and `coverage-traced-after.png`.
+
+**Tests.** `tests/viewshed-display.test.ts` (8):
+
+- a shadow edge on one straight line through the observer
+- a rotated building's shadow passing within a metre of its real corner
+- 97%+ agreement with the cell model at cell centres
+- the exact range circle and field of view
+- unknown terrain and the fallback
+- lines along an even 45° slope staying clear
+- the combined-share bookkeeping
+
+`npm run typecheck` passes; `npx vitest run`: 86 files, 1,247 tests passed; `npm run build` passes.
+
+**Not verified / limits.**
+
+- Building outlines are rasterised at 1 m, so a corner can be up to about a metre off: measured 0.6 m at a diamond's tip.
+- Some fine fringes remain where rays graze small or narrow mapped features.
+- The rooftop check (step 3) still uses the cell model.
+- Saved plans from before this change keep their earlier cell-based figures until run again.
+- Trace time was not measured separately: the full run, terrain and building loading included, finished within the 60 s wait.
+
+## Dragging the subject fixed; dark "site view" for planning — 2026-11-14
+
+**Report 1.** Dragging the subject marker did not move it, though the highlighted sight lines changed.
+
+**Causes and fixes** (found by driving real pointer events in the built app; `window.__atlasDebug.toScreen` and `pickId` were added for that):
+
+1. **Grabbing.** The dashed sight lines start exactly at the subject marker, so pressing on the marker picked a sight line and no drag started. Pressing and hovering now look through everything stacked under the cursor for a draggable item (`draggableAt`, `scene.drillPick`) in `Globe.tsx`.
+2. **Redrawing.** `PlanningOverlay.update` removed all plan entities and re-added them under the same ids while entity events were suspended. Cesium then reports a re-added id as unchanged, so the map kept drawing the old entity objects. This affected every overlay update, not only dragging. The removal is now flushed before re-adding. One extra render is also requested on the next frame, because markers clamped to the ground settle a frame after they move.
+
+Before/after with the same scripted drag: `docs/screenshots/protective-planning/drag-before-fix.png` and `drag-after-fix.png`. After the fix, the marker is drawn where the moved site projects (1160, 620 on screen).
+
+**Report 2.** Make planning look like the supplied reference images: dark map, lit sight lines, outlined vantage buildings, markers, rings and a route. No names, logos or assets from the reference product were used.
+
+**Change.** A **Site view** switch, on by default, at the top of the planning panel. While the planning page is open:
+
+- **Map and buildings.** Imagery is dimmed (brightness 0.36, saturation 0.1), except the coverage picture. OpenStreetMap buildings become uniform dark grey blocks without façades (`BuildingManager.setDark`).
+- **Coverage** (`displayRgbaGlow`):
+  - Only places with a clear line are lit: white near the observation point, fading to pink at its range, brighter where two or more see the same place, with fine hatching.
+  - The limit of view is a two-pixel dashed magenta edge.
+  - Unknown is a faint grey hatch.
+  - Blocked ground is left unlit.
+  - The legend says all of this, including that unlit ground inside the rings is blocked.
+- **Rooftops.**
+  - Roofs with a clear line are outlined in magenta.
+  - The ten nearest get a diamond vantage marker (an original icon), and the four nearest that are at least 20 m away get a boxed label "Vantage point · N m".
+  - The eight nearest have glowing magenta lines to the subject.
+  - The labels say "vantage point", not "sniper position": they show a modelled line of sight, not a threat.
+- **Subject, rings and routes.** The subject is a white ring marker with a boxed name. Dashed range rings at round distances (`ringStepM`), about four across the radius, plus the edge of the analysed area, each carry a distance label. The chosen route is white and the other options faint white, with boxed Start and Destination labels.
+- **Colour classes remain.** Turning the switch off returns to the colour-class view. The briefing image keeps the colour classes.
+
+**Verified.**
+
+- `npm run typecheck` passes. `npx vitest run`: 86 files, 1,249 tests passed. New: the site-view picture test (lit near the observer and fading with distance, unlit in shadow and beyond range, magenta edge present, unknown hatched and never lit) and the ring-spacing test.
+- `npm run build` passes.
+- Built app, temporary profile, Senate Square in Helsinki: coverage from the subject, 25 rooftops, a walking route. Screenshots: `docs/screenshots/protective-planning/site-view-top.png` and `site-view-3d.png`.
+
+**Not verified / limits.**
+
+- Labels cannot avoid each other, so two close vantage points can overlap.
+- In the site view, the dimming applies to all imagery, so "Imagery year" and Photoreal 3D are not distinguishable there.
+- Dragging was exercised with scripted pointer events, not a physical mouse.
+
+## The site is its own observation point — 2026-11-14
+
+**Request.** Step 1 set the site, then step 2 needed an observation point added at the same place before coverage could run. Make them one.
+
+**Change.**
+
+- Plans gain `analysis.subjectView` (default on; plans saved before open with it on).
+- `coverageObservers(plan)` in `shared/protectivePlan.ts` puts the subject first in every coverage run, as id `subject`: at the site marker, eye at the target height, over the whole analysis radius, all directions. Added points and cameras that can be modelled follow it. The id `subject` is reserved; the schema rejects an added point using it.
+- The run controls (`RunCoverage`) are now in step 1, right after choosing the site:
+  - a checkbox "Model sight lines from the subject"
+  - the open-ground choice
+  - a **Model coverage** button
+  - the subject's own shares and the results
+- Step 2 is renamed **Area & points**. It holds the radius, cell size and height settings, plus optional extra points (guards, rooftops, cameras), and shows the same run controls.
+- Dragging the subject re-runs coverage when there was a run, now without needing an extra point.
+- The briefing lists the subject's view as the first row of the observation table.
+
+**Verified.**
+
+- `npm run typecheck` passes. `npx vitest run`: 87 files, 1,253 tests passed. New `tests/subject-view.test.ts` (4) covers the default, ordering, switching off, old plans, the reserved id and the briefing row.
+- `npm run build` passes.
+- Built app, temporary profile, Senate Square:
+  - Chose the site, ticked the open-ground choice and pressed **Model coverage** in step 1, with no point added.
+  - The run modelled `subject` only (clear 7%, blocked 92%, unknown 2%) and the map showed its view.
+  - Screenshot: `docs/screenshots/protective-planning/coverage-from-site-step1.png`.
+
+**Not verified.** Exporting a briefing from the app after this change; the briefing row is covered by unit tests.
+
+## Wind, lightning, launches, GPS accuracy, flight paths and directions — 2026-11-14
+
+**Request.** Compare with God's Eye View (now MIT-licensed, <https://github.com/bilawalsidhu/gods-eye-view>) and add what Atlas Watch lacks; take code from it where the work is hard. The user chose the first group: animated wind, lightning, GPS interference, space launches, a past track for an aircraft, and turn-by-turn directions with a fly-along camera. Their detection boxes, OpenAI voice, Cesium ion, Nominatim/Photon, the paid Liveuamap feed and the non-commercial Nepal flood data were left out under this project's rules.
+
+**Change.**
+
+- **Wind (Weather → "Wind (animated forecast)", setting `windEnabled`).**
+  - `src/shared/grib2.ts` is a small GRIB2 reader of our own for one message: regular lat/lon grid (template 3.0), complex packing with spatial differencing (template 5.3). God's Eye View decodes with a multi-megabyte ecCodes WebAssembly build; that dependency was not added. Other templates, bitmaps and missing-value management are refused, not guessed.
+  - `src/main/windService.ts` reads the newest published NOAA GFS 1° run from the AWS Open Data bucket: the `.idx` file (about 50 kB), then the 10 m UGRD and VGRD messages by byte range (about 80 kB each). Run selection skips runs that are not published yet. The field is cached for an hour; a failed refresh keeps the last complete field with its own run time and says so; after a failure NOAA is not asked again for 10 minutes.
+  - New `fetchBytes` in `feeds/http.ts` (bounded `maxBytes`, Range header). New allow-list prefix `https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.`, not the whole shared S3 host.
+  - New IPC channel `weather:wind` in all five places.
+  - `src/renderer/map/windOverlay.ts` draws particles on a canvas over the globe, 2,200 of them (3,500 at maximum quality). The trails fade, the canvas clears when the camera moves, and drawing pauses while the window is hidden. With reduced motion it draws still arrows instead.
+  - The Layers panel shows the run, forecast step and valid time, and the forecast wind at the map centre (m/s, knots, compass direction). It is labelled as a forecast; the streaks are described as a visualisation, not tracked air.
+- **Lightning (setting `lightningEnabled`).**
+  - nowCOAST WMS layer `ldn_lightning_strike_density`: 15-minute strike density on an 8 km grid from NLDN and GLD360.
+  - Refreshed every 5 minutes while on. Coverage stated as given by NOAA: 25° S–80° N, 110° E eastward to 0°.
+- **Space launches (layer `launches`, Space group).**
+  - Launch Library 2 v2.3, 30 days back and 14 days ahead, polled hourly (the anonymous limit is 15 per hour). Allow-listed host `ll.thespacedevs.com`.
+  - Records sit at the pad. The source status words are shown. An unknown status is never shown as a success.
+  - Each status has its own marker shape: ring with an arrow for scheduled, tick for success, cross for failure, triangle for in flight, question mark otherwise.
+- **GPS accuracy anomalies (layer `gnss`, Hazards group).**
+  - `src/shared/gnssIntegrity.ts` is ported from God's Eye View (`src/layers/gnss/records.js`, MIT; notice added to `THIRD_PARTY_NOTICES.md` through `scripts/third-party-notices.mjs`).
+  - Per-aircraft rule: GPS-loss flag, NACp < 8, or NIC < 7 except NIC 0 with NACp ≥ 10. TIS-B, MLAT-derived and ground reports are excluded.
+  - Cells are 0.5° over a rolling 30 minutes, with at least 3 aircraft. Score and bands follow gpsjam.org.
+  - The fetcher asks adsb.lol for one 250 nm area at the whole-degree view centre, at most once a minute per area, every 2 minutes while on. The store is bounded at 60,000 entries.
+  - Labelled "calculated". Blank areas are described as too few aircraft, not as "no interference". High and medium cells carry text labels as far out as they are drawn.
+- **Flight path for a selected aircraft (new IPC `tracks:flightPath`, all five places).**
+  - God's Eye View dropped the undocumented adsb.lol trace route; it uses OpenSky's `/api/tracks/all`, which is what this does too.
+  - A button in the aircraft details panel asks OpenSky once. It costs about 4 of the 400 anonymous daily credits; the result is cached 5 minutes per aircraft and concurrent asks share one request.
+  - The path is drawn as a dashed amber line, apart from the recorded cyan trail, and never written to history. It covers the current flight only, not a full 24 hours; the panel says so.
+- **Turn-by-turn directions and fly-along (protective planning, step 5 Routes).**
+  - `routeSteps` in `shared/routing.ts` turns each route option into steps: a new step where the street name changes or the route turns 45° or more at a junction. Jogs under 25 m are folded into a neighbouring step, and same-street pieces meeting at a gentle angle are rejoined. Unnamed roads are described by class.
+  - Each route card has a "Directions" list; clicking a step centres it.
+  - "Fly along" moves the camera behind and above the route, looking ahead. It ends on any click, wheel or Escape. With reduced motion it shows a still overview instead.
+
+**Verified.**
+
+- `npm run typecheck` passes. `npm run build` passes (the usual chunk-size warning).
+- `npx vitest run --maxWorkers=4`: 89 files, 1,290 tests passed. In the default parallel run `tests/nav-groups.test.ts` timed out once while importing `Pages.tsx` and passed alone, like the known `passenger-routes` timeout.
+- New tests:
+  - `tests/wind.test.ts` (13): decodes real GFS u/v messages saved as fixtures; easterly trades and Southern Ocean westerlies come out with the right sign; malformed and unsupported messages are refused. Also covers run selection and forecast step, index ranges, the S3 prefix allow-list, bilinear sampling across the date line, direction words, and the service's fallback to an older run, keeping the last field on failure and refusing a non-wind message.
+  - `tests/group1-layers.test.ts` (14): launches from a trimmed real LL2 reply; GPS rule, gpsjam bands, window, sparse cells, date line and pole keys and store bound; the OpenSky path from a real reply, cache and refusals; every layer has a fetcher.
+  - Three turn-by-turn tests in `tests/routing.test.ts`.
+  - IPC rejection cases for both new channels.
+- Built app, temporary profiles, window on the LED monitor (screenshots in `docs/screenshots/group1/`):
+  - Over North America, wind particles animated from the 06Z run (9 h step); the Atlantic low's circulation is visible. Lightning cells showed over the Atlantic and the Caribbean. 35 launches loaded.
+  - Over central Europe, GPS accuracy loaded 562 aircraft into 93 cells, 15 of them high.
+  - For Austrian 230U (A20N, Berlin to Vienna), "Show this flight's path" returned 44 OpenSky waypoints, drawn from Berlin to the aircraft.
+  - In Helsinki, a walking route gave three options with directions. "Fly along" moved the camera (two samples 2.5 s apart differed) and the button changed to "Stop flight".
+- One request each was sent to Launch Library 2 and OpenSky, plus the GFS index and messages and a few adsb.lol requests; no paid or keyed service was used.
+
+**Not verified.**
+
+- ECMWF wind (God's Eye View's alternative model) is not added.
+- The wind overlay was checked only in 3D. It is drawn over 3D buildings and terrain, not hidden behind them, and the field is the 1° grid (about 110 km).
+- The fly-along was driven by script; a physical mouse ending the flight was not tried. Its camera height follows terrain only, not buildings, so tall buildings can come close to the camera on a walking route.
+- The OpenSky path for military or non-ICAO (`~`) addresses is not offered. OpenSky's terms require an agreement for commercial use, as with the opt-in worldwide snapshot.
+- The packaged app and installer were not rebuilt or run.
+
+**Remaining.** God's Eye View group 2 (trains, bike share, street-level photos, wildlife, Canadian air quality, GDELT conflict events), not started.
+
+## Trains, bike share, wildlife, Canadian air quality, news-reported violence and street photos — 2026-11-14
+
+**Request.** God's Eye View comparison, group 2. Live radio was skipped as proposed: each station streams from its own host, which a fixed allow-list cannot cover. Infrastructure datasets were checked for licences, not added.
+
+**Change.** Six new layers on the existing layer system (`shared/layers.ts`, `main/layers/fetchers.ts`, `map/layerRender.ts`). Each states its kind of data, coverage and terms. God's Eye View's feed catalogues were read for URLs and terms; its code was not copied. Its rail and street-level code is about 19,000 lines, and the versions here are much smaller.
+
+- **Trains (`rail`, Movement).**
+  - `src/shared/gtfsRealtime.ts` is a small GTFS-Realtime reader written from the published field numbers. It reads vehicle positions only and skips unknown fields; no protobuf dependency was added.
+  - `src/shared/streetRail.ts` lists 15 rail-only feeds with published terms: MTA Metro-North and LIRR, SEPTA Regional Rail, MARC, Translink rail and G:link, Fintraffic, Renfe long-distance and Cercanías, Entur Vy, Go-Ahead and Flytoget, KTMB, and two Toyama tramways.
+  - Fintraffic's GTFS-RT URL used by God's Eye View now answers 400, so its JSON `train-locations/latest` is used.
+  - Feeds with no published licence (Tri-Rail, Metro Transit, Charlotte, Irish Rail positions) and mixed bus feeds are left out.
+  - Only feeds near the view are polled, every 30 s. Positions older than 15 minutes are dropped. Renfe gives no per-train time, so its trains are dated by the feed snapshot and the details say so.
+  - Entur lists rail-replacement buses in the Vy feed (11 of 70 vehicles on 2026-11-14); trips matching `:ServiceJourney:BUS-` are left out.
+- **Bike share (`bikeshare`).** GBFS station information and status for Citi Bike, Divvy, Capital Bikeshare, Bay Wheels, Bluebikes, the Oslo, Bergen and Trondheim Bysykkel, and AMBici.
+  - Citi Bike's Data License Agreement was read: "use the Data for any lawful purpose". The other Lyft systems publish the same agreement.
+  - Loaded only when zoomed in near a system. A station without a status report shows unknown counts, not zero.
+- **Wildlife (`wildlife`).** iNaturalist v2, wildlife groups only, last 7 days, current view.
+  - Only CC0, CC BY and CC BY-SA records are requested, so the layer stays usable in a commercial product (most records are CC BY-NC).
+  - Obscured locations are drawn hollow and labelled.
+- **Air quality (`airQuality`, Canada only).** ECCC AQHI observations, with bands 1–3, 4–6, 7–10 and 10+. Marker size grows with the band, and bands above low keep their text label far out.
+- **News-reported violence (`conflicts`).**
+  - GDELT 2.0 15-minute exports, CAMEO roots 18–20, one point per article at its most specific place.
+  - The newest announced file returns 404 for a while, so the fetcher walks back through 15-minute slots.
+  - It reads 3 hours on enabling, then each new file, and keeps 24 hours.
+  - Article links are registered with the main-process link allow-list (bounded to 2,000), so they open in the browser.
+  - The layer says plainly that the coding is often wrong. The fixture itself shows a New Mexico story placed in Spain.
+  - `main/layers/zipSingle.ts` reads the one CSV with size limits checked before inflating.
+- **Street-level photos (`streetPhotos`, Cameras).**
+  - KartaView (blurred photos only, 500 m radius, the API's maximum) and Panoramax, within 500 m of the view centre below about 4 km.
+  - The renderer may load images only from KartaView's CDN path and the IGN and OpenStreetMap France Panoramax paths; pictures on other instances are dropped.
+  - The details panel shows the photo with its date ("it shows the street then, not now") and credit. Mapillary is not included because it needs a token.
+- New `fetchBytes` use for binary feeds through the shared fetcher; `FetchContext.fetchBytes` is optional and defaults to it.
+- All destinations were added to the three allow-lists as exact paths on shared hosts. README sources table, credits and `THIRD_PARTY_NOTICES.md` were updated. `layersEnabled` now allows up to 40 entries.
+
+**Licence check (not added).** God's Eye View's submarine cable data is TeleGeography CC BY-NC-SA 3.0, so it is excluded. Its data-centre (4,352) and dam (704) extracts are OpenStreetMap data under ODbL 1.0, which this app could bundle with attribution and share-alike on the database. Not done: it needs the owner's go-ahead and a generator script rather than a copied file.
+
+**Verified.**
+
+- `npm run typecheck` passes. `npx vitest run --maxWorkers=4`: 90 files, 1,310 tests passed. `npm run build` passes.
+- New `tests/group2-layers.test.ts` (20), from real replies saved as fixtures:
+  - Renfe and Translink GTFS-RT; a hand-made protobuf with a (0, 0) fix and truncation; the stale filter and header dating; replacement-bus filtering; Fintraffic JSON; feeds chosen by view
+  - Oslo GBFS, including unknown status
+  - iNaturalist licence filter and obscured locations
+  - AQHI bands and 10+
+  - a real GDELT export: unzip, parse, one point per article, file naming, size limit
+  - KartaView and Panoramax image-host filtering
+  - allow-list and licence-link checks for every feed
+- Built app, temporary profile, LED monitor (screenshots in `docs/screenshots/group2/`):
+  - Oslo: 86 trains from Vy, Go-Ahead and Flytoget (before the replacement-bus filter), 261 bike stations, 1 sighting.
+  - Paris: 115 photos; a Panoramax photo opened at 2,048 px with its date and CC BY-SA credit.
+  - Canada: 124 AQHI stations; 169 articles from 10 GDELT updates.
+
+**Not verified.**
+
+- The US train feeds (MTA, SEPTA, MARC), KTMB and the Toyama tramways were not fetched live; their URLs come from God's Eye View's registry.
+- The Lyft bike systems other than the licence page were not fetched live.
+- The replacement-bus filter was checked against a saved Vy reply in a test, not re-run in the app.
+- The packaged app and installer were not run.
+
+**Remaining.** Data-centre and dam layers (ODbL), if wanted. Mapillary photos with a customer token. Live radio is not planned.
+
+## Data centres and dams (bundled OpenStreetMap data) — 2026-11-14
+
+**Request.** Add the data-centre and dam layers after the licence check: OpenStreetMap data under ODbL 1.0. TeleGeography cables stay excluded (CC BY-NC-SA).
+
+**Change.**
+
+- `scripts/build-infrastructure.mjs` builds `src/main/data/infrastructure.json` from God's Eye View's OSM extracts (`src/data/local_data/{datacenters,dams}`, ODbL 1.0). It records their SHA-256 checksums and counts in the file.
+  - Each site keeps its OSM type and id, one point (the area-weighted centre of its outline) and a few tags: name, operator, owner, start date, height and levels; source and output for plants.
+  - Contact details, notes, fixme, websites and all other tags are dropped, as are values that look like an email or phone number.
+  - Negative ids are OSM relations. Checked against the OSM API for relation 19953989 (HE Podlubnik) and way 1176042553 (AWS).
+- `src/main/data/INFRASTRUCTURE_ATTRIBUTION.txt`: © OpenStreetMap contributors, ODbL 1.0 (the file is a derived database; share-alike applies to it), dams via Open Infrastructure Map. It also notes that the upstream extraction date was not recorded and that the dam set is a sample.
+- Two static layers in Reference, no network: **Data centres (OpenStreetMap)** with 4,352 sites, and **Dams and hydropower plants (sample)** with 703 sites. One dam row was dropped by the generator as a duplicate or without a position.
+  - `src/shared/infrastructure.ts` validates every row on read.
+  - The thousands of points are drawn as one batched `PointPrimitiveCollection` per layer, not entities: filled dots for data centres, hollow rings for dams.
+  - Each site links to its OpenStreetMap object.
+- README sources row, credits and `THIRD_PARTY_NOTICES.md` updated.
+
+**Verified.**
+
+- `npm run typecheck` passes. `npx vitest run --maxWorkers=4`: 91 files, 1,315 tests passed. `npm run build` passes.
+- New `tests/infrastructure.test.ts` (5) covers the counts, no contact or note fields, the OSM link for a checked relation, malformed rows, and both fetchers working with no network.
+- `tests/layer-render-aging.test.ts` builds the renderer by hand, so its fixture gained the new `staticPoints` field; no assertion changed.
+- Built app, temporary profile, LED monitor:
+  - Both layers loaded (4,352 and 703), drew across Europe, and selecting Equinix FR6 opened its details.
+  - Screenshot: `docs/screenshots/group2/datacentres-dams-europe.png`. It was taken before dams were changed to hollow rings.
+
+**Not verified.**
+
+- The hollow-ring style was not re-checked in the app.
+- The upstream extract's age is unknown, so sites can be outdated or missing.
+
+## Black disc at the North Pole on Google Satellite; weather-satellite gap — 2026-11-14
+
+**Report.** On Google Satellite a black disc covered the North Pole, and the weather-satellite layer left Europe and Africa uncovered.
+
+**Cause.**
+
+- Google, Esri, Mapbox and EOX tiles stop at the Web Mercator limit (85.05°). Above it, only the bundled ocean-colour polar reference was drawn. It is dark navy and blends with the default Atlas imagery, but shows as a black disc against those providers' bright blue ocean. Read from the user's profile, read-only: basemap `google2d`.
+- The default Atlas imagery has no visible disc. Checked in the app at 88° N with weather satellite, wind, lightning and radar each on in turn.
+
+**Change.**
+
+- `basemaps.ts`: `polarCaps(fromLat)` takes a start latitude. The new `keyedMercatorBase()` adds the Blue Marble bathymetry caps from 84° under the provider layer for `google2d`, `esri`, `mapbox` and `eox`.
+- New `tests/polar-basemaps.test.ts` (4): each keyed basemap has caps covering 84–90° placed under the provider layer.
+  - The Google provider is mocked and `fetch` is blocked in the test.
+  - The first run of this test, before the mock was added, may have sent one Google session request with the dummy key `test-key`; an invalid key is refused, not billed.
+
+**Weather satellite over Europe and Africa: not changed.**
+
+- NASA GIBS still carries no Meteosat products (checked in its capabilities on 2026-11-14: GOES-East, GOES-West and Himawari only).
+- EUMETSAT's View Service offers Meteosat 0° and Indian Ocean imagery (`msg_fes:ir108`, `msg_iodc:ir108`, 15-minute), and its capabilities state no fees.
+- EUMETSAT's licence text could not be read here: the 2025 policy PDF is encrypted and the announcement page returned 403. Search results say data under 3 hours old is licensed for research, education and personal use, and that hourly imagery is no longer licensed. Not added until the owner decides.
+
+**Verified.** `npm run typecheck` passes; 92 files, 1,319 tests passed; `npm run build` passes. The bathymetry cap at the pole renders, seen with the keyless street map, which uses the same caps (`docs/screenshots/polar/bathymetry-cap-north-pole.png`).
+
+**Not verified.** Google Satellite itself was not loaded (metered), so the blend with Google's ocean is unconfirmed.
+
+## Hourly Meteosat for the weather-satellite layer — 2026-11-14
+
+**Request.** Fill the weather-satellite gap over Europe, Africa and the Indian Ocean with hourly Meteosat, the option offered after the licence check above.
+
+**Change.**
+
+- `shared/geoSatellite.ts` gains two satellites, `meteosat-0` (Meteosat 0°) and `meteosat-iodc` (Meteosat Indian Ocean, 45.5° E), with `source: 'eumetsat'`.
+  - Infrared uses `msg_*:ir108`; colour uses `msg_*:rgb_naturalenhncd`, which is daylight only.
+  - Seams are now halfway between sub-satellite points: GOES-East to 37.6° W, Meteosat 0° to 22.75° E, IODC to 93.1° E, Himawari from there. Before, GOES-East ran to 10° E and Himawari from 60° E, leaving the gap.
+- `eumetsatFrameTime()` picks the last full hour at least 20 minutes old. Only hourly frames are used, because EUMETSAT licenses its 15-minute imagery under 3 hours old for non-commercial use. No lookup request is made; the WMS serves the frame for that time.
+- `Globe.tsx` draws Meteosat frames as WMS tiles (EPSG:4326) from `view.eumetsat.int/geoserver/wms`. The infrared frame is opaque grey, so dark pixels are made transparent on the GPU (`colorToAlpha`, black, threshold 0.28) to show clouds only.
+- Allow-lists:
+  - renderer `https://view.eumetsat.int/geoserver/wms`
+  - external links `eumetsat.int`
+- Also: a provider entry, the credit "Meteosat © EUMETSAT (hourly)", updated Layers panel text, a README sources row and `THIRD_PARTY_NOTICES.md`.
+
+**Verified.**
+
+- `npm run typecheck` passes; 92 files, 1,320 tests passed; `npm run build` passes.
+- `tests/geo-satellite.test.ts`: the seam test now requires five satellites with no gap or overlap (it used to assert the gap). A new test covers the hourly frame times, the renderer allow-list and the layer names.
+- Built app, temporary profile, LED monitor, view centred on Africa:
+  - All five satellites were drawn, with Meteosat frames for 15:00 UTC.
+  - All 72 EUMETSAT tile requests succeeded, with no lookup failures.
+  - Screenshots: `docs/screenshots/geo-satellite/meteosat-infrared-africa-europe.png` (clouds only, desert clear) and `meteosat-colour-africa-europe.png` (daylight colour; the night side fades out).
+
+**Not verified.**
+
+- EUMETSAT's own licence text: the 2025 Data Policy PDF is encrypted and the announcement page refused the request. The hourly-only choice rests on search-result summaries of EUMETSAT pages. Confirm with EUMETSAT before selling the app.
+- The 0.28 transparency threshold was judged from one afternoon frame; very cold ground at night may also show as cloud.
+
+## Longer movement history (up to 30 days) and a date/time jump in playback — 2026-11-14
+
+**Request.** Replay past flight routes by date and time, as God's Eye View's history appears to. Checked first: God's Eye View has no per-date archive. Its 24-hour backfill used an undocumented adsb.lol route that has been retired, and it now uses OpenSky's current-flight track. Atlas Watch therefore extends its own recordings. Tracking cars through traffic cameras and archiving camera footage were declined: they would follow individual people (project rule: no people-tracking), and public camera publishers provide no archive.
+
+**Change.**
+
+- New setting `trackStorageMB`: default 250, range 20–4,000, additive with a default for older databases.
+- `trackRetentionHours` now allows up to 720 hours (30 days).
+- `shared/timeline.ts`:
+  - `TRACK_BYTES_PER_POINT = 170`, measured: 300,000 aircraft fixes took 50.4 MB including the primary key and time index.
+  - `trackPointBudget()` converts the MB limit into a fix count.
+  - Fixes older than `TRACK_THIN_AFTER_HOURS = 6` are thinned to the first fix per object per minute. Replay looks back 5 minutes, so thinned periods replay without gaps.
+- Pruning:
+  - Before: up to 400,000 fixes, pruned on every layer refresh. At about 700 aircraft every 20 s, that is roughly 3 hours whatever the retention said.
+  - Now: the storage budget, at most once a minute.
+  - Thinning (`AtlasStore.thinTracks`) runs incrementally on the stretch not yet thinned, at most every 15 minutes.
+- Trains (`rail`) are recorded and replayed with aircraft, ships and transit (`REPLAY_LAYERS`).
+- Organisation page: retention input up to 720 hours and a storage-limit input. A note explains:
+  - the estimated fix count
+  - that whichever limit is reached first wins
+  - the thinning
+  - that only what this app recorded can be replayed
+- Playback bar: a "Go to" date-and-time field (local time, minute precision), bounded by the recorded range, next to the slider. A time outside the range gets the existing note; the cursor is never moved to another time.
+
+**Verified.**
+
+- `npm run typecheck` passes; 93 files, 1,326 tests passed; `npm run build` passes.
+- New `tests/track-history.test.ts` (6):
+  - settings bounds, and a database without the new field getting the default
+  - the point budget
+  - thinning keeps the first fix per object per minute and leaves recent fixes alone
+  - a thinned stretch still replays a fix within the 5-minute window
+  - oldest fixes are removed first when the budget is reached
+  - the local time field format
+- Built app, temporary profiles, LED monitor:
+  - Ships near Helsinki: 593 fixes recorded. Playback showed the "Go to" field bounded by the recorded range.
+  - Organisation page: showed 720 hours, 500 MB and "about 2.9 million" fixes.
+  - Trains over Finland and Norway: 327 fixes recorded; at a playback time near the end, 160 trains were drawn from recorded fixes. Screenshot: `docs/screenshots/group2/playback-recorded-trains.png`.
+
+**Not verified.**
+
+- A real multi-day recording, thinning on hours-old fixes, and pruning at the storage budget were exercised only in tests. The app ran for minutes.
+- Disk use over 30 days depends on how many aircraft were in view; the estimate is per stored fix.
+
+## Traffic flow layer — 2026-11-14
+
+**Request.** Add a traffic flow layer wherever possible worldwide. Agreed beforehand: measured traffic per road or sensor only, never individual vehicles; tracking specific cars through cameras stays out.
+
+**Change.**
+
+- `src/shared/trafficFlow.ts` puts five keyless sources on one scale: free / slow / heavy / stopped / unknown. Each record states its basis:
+  - **New York City DOT** speeds (mph): speed bands, because no free-flow reference is published.
+  - **Fintraffic TMS:** speed as a percentage of free-flow speed; the slower direction sets the class.
+  - **Hong Kong TD detectors:** speed bands, averaged over lanes that counted vehicles and weighted by count.
+  - **Madrid:** the city's level of service 0–3. Coordinates are converted from UTM zone 30N, and the local file time from CET/CEST.
+  - **Paris:** the city's traffic state; "Inconnu" stays unknown. Hourly and about a day behind.
+- One layer, `trafficFlow` (Movement), polls only the sources under a zoomed-in view, with per-source caches (2–5 minutes; Paris an hour; station and detector lists a day). It returns only what is near the view, up to 12,000 records.
+- Drawing (`layerRender.updateFlow`): road lines are one ground-clamped `GroundPolylinePrimitive` and sensors one `PointPrimitiveCollection`. Okabe–Ito colours plus width and size by state; unknown readings are thin and grey.
+- Allow-lists: exact dataset paths on the shared hosts (NYC Open Data, DATA.GOV.HK, opendata.paris.fr) and the host `informo.madrid.es`. README source rows, credits and notices updated.
+- Considered and not added:
+  - Netherlands NDW: a 53 MB XML file every minute and a site table of about 150 MB uncompressed, too heavy to parse in the main process.
+  - Chicago: dataset not updated since April 2026.
+  - Hong Kong's old speed map: retired.
+  - UK, Germany and most US states: no keyless live speeds; they need registration or a key.
+  - TomTom worldwide flow: paid key and metered.
+
+**Problems found in the data and fixed (each with a test that failed first).**
+
+- New York reports links with no reading as status −101, speed 0. They were drawn as "stopped": 42 of 125 links on the day. They are now unknown.
+- Fifteen New York encoded shapes were corrupt, jumping hundreds to thousands of kilometres and drawn as straight lines across Queens. The point list is used instead (17 links marked "partial (as published)"), or the link is not drawn. Nothing is repaired or invented.
+- Hong Kong lanes with no vehicles still carry a speed value (70 with volume 0). They are no longer counted.
+
+**Verified.**
+
+- `npm run typecheck` passes; 94 files, 1,340 tests passed; `npm run build` passes.
+- `tests/traffic-flow.test.ts` (14) runs on real samples from all five sources. It covers the class rules, source selection by view, the polyline decoding checked against the published points, the time zone conversions, the Madrid UTM conversion (Puerta del Sol), the three data problems above, and the allow-lists.
+- Built app, temporary profiles, LED monitor (screenshots in `docs/screenshots/traffic-flow/`):
+  - New York: 125 links, 108 with full shapes and 17 partial, following the FDR, BQE and Van Wyck.
+  - Madrid: 4,904 sensors.
+  - Hong Kong: 729 detectors.
+  - Finland around Helsinki: 153 stations.
+  - Paris: 2,942 arcs, 1,056 unknown as published.
+
+**Not verified.** Picking a road line to open its details was not clicked in the app (lines carry the same record id as other layers). Behaviour at rush hour was not seen.
+
+## ATC radio link and simulated traffic — 2026-11-14
+
+**Request.** (1) Show each car moving in real time. (2) When an aircraft is selected, offer to hear the radio between it and the tower.
+
+**What is possible.** No public source publishes live positions of individual private cars, so real per-car tracking cannot be built. The user chose both alternatives offered: keep the real per-vehicle layers (Transit, Rail; unchanged) and add a labelled simulation on the measured roads. For ATC audio, LiveATC.net's terms (items 3 and 4, read at https://www.liveatc.net/legal/ on 2026-11-14) forbid a dedicated app that makes their streams available without consent and ask sites to consult them before linking to streams. The app therefore links to LiveATC's public airport page in the system browser and plays nothing itself.
+
+**Change.**
+
+- ATC radio (`src/shared/atc.ts`, `src/renderer/components/AtcListen.tsx`, shown in aircraft and military-aircraft details):
+  - The three nearest airports within 80 km that publish ATC frequencies, with each airport's frequencies as published.
+  - "Listen to KJFK on LiveATC" opens `https://www.liveatc.net/search/?icao=KJFK` (four-letter ICAO codes only). `liveatc.net` added to `EXTERNAL_LINK_HOSTS`.
+  - A "likely now" mark from the aircraft's height and distance (ground: ground, tower, clearance; below 3,000 ft within 20 km: tower; below 18,000 ft: approach, departure; cruise or unknown altitude: none). The text says it is a guess and that aircraft do not broadcast their frequency.
+  - Frequencies: new generator `scripts/build-airport-frequencies.mjs` from OurAirports `airport-frequencies.csv` (public domain), producing `src/renderer/data/airportFrequencies.json` (266 KB; 9,560 frequencies at 3,610 airports; VHF 108–137 MHz only). JFK matches LiveATC's own list (tower 119.1 and 123.9, ground 121.65 and 121.9, clearance 135.05).
+  - ATC view tooltip no longer says "no ATC audio".
+- Simulated traffic (`src/shared/trafficSim.ts`, `src/renderer/map/trafficSim.ts`), setting `trafficSimEnabled` (default off), switch under Traffic flow in Layers:
+  - Only on roads with a published shape (New York, Paris) and a known state. Finland, Hong Kong and Madrid publish sensor points, so they get no dots; no roads are invented.
+  - Speed: measured speed (New York); Paris publishes no speed, so a speed is assumed per published state (35/20/10/3 km/h).
+  - Number of dots: flow ÷ speed where a flow count is published (Paris), capped at 150 per km; otherwise a typical density per state (20/35/60/100 per km). Up to 12,000 dots; past that each dot stands for several vehicles.
+  - Direction of travel is not published, so dots follow each line's drawn order. One point collection, advanced each frame in real time, hidden above about 60 km camera height, still with reduced motion, not pickable (clicks reach the road).
+  - Map credit: "Moving dots on traffic roads: simulated, not real vehicles".
+
+**Verified.**
+
+- `npm run typecheck` passes; 95 files, 1,352 tests passed (`--maxWorkers=4`); `npm run build` passes (expected chunk-size warning only).
+- `tests/atc-traffic-sim.test.ts` (12): nearest airport and JFK tower frequency from the bundled catalog, LiveATC URL validation and allow-list, date line, invalid position and open ocean (no suggestion), the "likely" rules, catalog band and types, rendered panel wording (no audio element); simulation speed and density bases, unknown and shapeless roads get none, zero speed, thinning, date-line length, stable offsets.
+- Built app, temporary profile, LED monitor (screenshots in `docs/screenshots/atc-radio/` and `docs/screenshots/traffic-sim/`):
+  - Paris: 941 arcs in view; dots on the boulevards; frames 1.5 s apart differ (about 20,700 changed pixels); the credit line is shown.
+  - New York: dots moving along the FDR Drive (about 2,700 changed pixels between frames); unknown links get none.
+  - JFK: EIN109 selected; the panel showed "Listen to KJFK on LiveATC", JFK's frequencies with ground, tower and clearance marked likely, and LaGuardia and Republic.
+
+**Not verified.** Clicking the LiveATC button (it opens the system browser; the link was only checked by the allow-list test and by loading the same URL in a browser). Whether LiveATC covers airports other than JFK. Simulation performance at the 12,000-dot cap on slower GPUs. Rush-hour behaviour.
+
+## Group 3: city transit, cameras, nearest camera, satellite groups — 2026-11-14
+
+**Request.** "Start group 3": more real vehicles and cameras without keys.
+
+**Change.**
+
+- Transit layer (`src/shared/transitFeeds.ts`, `fetchTransit`): 36 operator GTFS-Realtime feeds beside MBTA, decoded with the existing reader. The layer is now view-based: it polls only feeds whose area meets the view, below 1,500 km, and returns the vehicles in view (nearest 2,500 when there are more, stated in the status note).
+  - Positions older than 10 minutes and 0,0 positions are left out. km/h feeds (Montpellier, Toulon) are converted.
+  - Feeds that mix buses with trams or metro without saying which are labelled "Transit"; the type is not guessed.
+  - Entur train operators are dropped here because the Trains layer shows them.
+  - Left out: every God's Eye View feed whose operator states no licence for the realtime data (Kraków, Vilnius, Bucharest, Rome, Turin, Cluj, Iași, Málaga, Carris, Adelaide, Atlanta, Minneapolis, Carris Metropolitana) and Warsaw (third-party mirror).
+  - Behaviour change: Boston vehicles now load only when the view is near Boston (previously always).
+  - Vehicle names show below 6 km camera height (was 30 km) to keep city views readable.
+- Cameras: Iceland (Vegagerðin, CC BY 4.0), Calgary and Toronto (Open Government Licences) added as keyless sources; stills pinned to each publisher's own path in `RENDERER_REMOTES`.
+  - Not added: Texas, Washington, Oregon, Norway, Catalonia, Taiwan, Estonia, Japan, Italy and Delaware. Their terms are a disclaimer rather than a licence, or they need per-frame proxying or stream handling the app does not have. New South Wales stays a keyed system.
+- "Nearest camera" button (`src/shared/nearest.ts`) in the details of aircraft, vessels, fires, fire perimeters, transit, trains, traffic flow and incidents: the nearest loaded camera within 50 km, with the note that it is not aimed at the record.
+- Satellites: three more CelesTrak groups, off by default: telecom (`geo`), imaging (`resource`), debris (`fengyun-1c-debris`, about 2,000 objects).
+- Not built: 24-hour aircraft history from adsb.lol. God's Eye View's own code marks that route retired and undocumented and refuses it; the OpenSky "path since takeoff" remains.
+
+**Verified.**
+
+- `npm run typecheck` passes; 96 files, 1,363 tests passed (`--maxWorkers=4`); `npm run build` passes.
+- `tests/group3.test.ts` (11): every feed is allow-listed with an openable licence link; view selection; a real Kingston feed; stale, 0,0, km/h and mixed-type rules; Entur train exclusion; the three camera normalizers against real samples and hostile inputs; nearest record across the date line; settings schema.
+- All 36 feed addresses answered HTTP 200 once on 2026-11-14 (several small: night-time in Europe).
+- Built app, temporary profile, LED monitor (screenshots in `docs/screenshots/group3/`): Toronto 1,455 vehicles (TTC, MiWay, Durham, YRT); Helsinki 72; Rio 364; Oslo 6 (1,228 older than 10 minutes left out, about 03:30 local); cameras 336 Toronto, 218 Calgary, 499 Iceland; a selected TTC bus offered "Nearest camera: KEELE ST & WILSON AVE · 0.7 km" and the camera opened with a 320×240 image; 2,718 satellites with the three new groups.
+
+**Not verified.** The other 30 feeds in the app (address check only). Calgary and Iceland stills opened in the app. The 6 km label change was made after the app check and is covered by typecheck only. Packaged app and installer.
+
+## Group 4: weather history, wind colours, OSM sites, tilt, global picture, launch events — 2026-11-15
+
+**Request.** "Start group 4".
+
+**Change.**
+
+- Observed-weather history (`src/shared/weatherTimeline.ts`, Layers → Weather, shown while radar, lightning or weather satellites are on): one timeline for all three, two hours back in 10-minute steps, with older/newer buttons, a slider, Play (loops the two hours at 1.5 s a frame; disabled with reduced motion) and Newest. Not saved between sessions.
+  - Radar and lightning ask NOAA nowCOAST for a past time; the service answers with its nearest frame (capabilities read 2026-11-15: radar about every 4 minutes for 7 hours, lightning every 15 minutes for 4.5 hours). The credit line names the time asked for.
+  - Satellites count back from the newest frame GIBS lists (10-minute frames); Meteosat uses the hourly frame for that time.
+  - The previous frame stays on screen until the next one's tiles have loaded (8 s at most), so stepping does not blank the overlay.
+- Wind: "Colour by speed" switch (`windColorBySpeed`, default off): six bands with a text legend; lines also thicken with speed. Applies to the still arrows used with reduced motion too.
+- Two OpenStreetMap layers through the existing Overpass client (`src/shared/osmSites.ts`, `fetchOsmSites`): "Military sites" (below about 500 km, up to 800 objects) and "Plate-reader camera locations" (below about 80 km, up to 2,000). One query per fixed map block, cached for a day, 24 blocks at most. Sites are placed at the mapped point or the centre of the mapped area; outlines are not drawn. Plate-reader records hold the location and device tags only. An empty answer is worded as a gap in the map. Both drawn as batched points.
+- Tilt button in the view controls (straight down or a 35° oblique around the point at the screen centre; 3D only) and a "Global picture" button in the bottom toolbar: turns on six worldwide keyless layers (military-flagged aircraft, satellites, cyclones, incidents, launches, violence in the news) and moves to a whole-globe view; switching it off restores the previous camera and turns off only the layers it added. The way back is kept in `localStorage`, so it survives a restart. Rules in `src/shared/viewModes.ts`.
+- Launch event replay (`src/shared/launchTimeline.ts`, `src/main/launchTimelineLookup.ts`, `LaunchReplay.tsx`; IPC channel `launches:timeline` in all five places): on request, loads the event sequence Launch Library 2 publishes for the selected launch and runs a T± clock through it at 1× to 600×, with a scrub slider. Launch Library publishes no trajectory, so no ascent path is drawn and nothing moves on the map; God's Eye View's drawn ascent is a reconstruction with a guessed direction and was not copied.
+- README: three source rows (nowCOAST past frames, Overpass map layers, Launch Library detail).
+
+**Verified.**
+
+- `npm run typecheck` passes; 97 files, 1,393 tests passed (`--maxWorkers=4`); `npm run build` passes (expected chunk-size warning only).
+- `tests/group4.test.ts` (25) and five rejection cases in `tests/ipc-security.test.ts`. Fixtures: a real Overpass military sample (Chesapeake area, 32 objects) and two real Launch Library detail records (one with 38 events, one with none).
+- Built app, temporary profile, LED monitor (screenshots in `docs/screenshots/group4/`):
+  - Weather: stepping back four times showed "40 min before the newest frames" and the satellite frames moved from 07:10/07:00 UTC to 06:30/06:40 (GOES, Himawari) and 06:00 (Meteosat); Play advanced to the next frame; Newest returned. Radar, satellite and coloured wind drew together, with the legend in the panel.
+  - Tilt: pitch went from -90° to -55.0° with the same point at the centre (Eiffel Tower, 4 km).
+  - Global picture: camera 4,000 m → 22,000 km and six layers added; leaving restored 4,000 m at the same position and left only the layer that was on before.
+  - Launch replay: a Falcon 9 record loaded its published timeline and the clock ran from T-00:01:10 with the current event marked.
+
+**Not verified.**
+
+- The two OpenStreetMap layers with live data. Both public Overpass servers were at capacity during the checks: the military layer showed its "busy or unreachable" error, and the plate-reader layer got one answer with no elements for central Atlanta, which may be an incomplete answer from the fallback server rather than a real "nothing mapped". The plate-reader test data is hand-built for the same reason. The military query itself returned 418 objects when run once by hand.
+- Radar and lightning past frames by image comparison (the request carries the time; the frames were not compared pixel by pixel). Lightning was not switched on in the app check.
+- Tilt while following a vehicle (the follow camera may override it). Global picture across a restart (covered by a unit test of the stored state only).
+- Packaged app and installer.
+
+**Remaining.** Re-check the two OpenStreetMap layers when Overpass is available. Group 4 as proposed is otherwise complete.
+
+## Photoreal 3D loads ahead on approach; render resolution with sharpened upscaling — 2026-11-15
+
+**Request.** "Make the photoreal 3D already prerendered" and "let the software use DLSS". Neither is possible as worded, so the nearest things that are allowed and technically reachable were built.
+
+- Google Photorealistic 3D Tiles may not be pre-downloaded or stored (the Map Tiles API policy; already noted in the code). They can only be fetched during a viewing session.
+- DLSS is an NVIDIA SDK for native Direct3D/Vulkan renderers that supply motion vectors. The app draws through Chromium's WebGL, which exposes none of that, so DLSS (and FSR 2/3, XeSS) cannot be used.
+
+**Changed.**
+
+- `src/renderer/map/photorealSurface.ts`: new `PRELOAD_M` (400 km) and `shouldPreloadHidden`. The surface watcher now sets `preloadWhenHidden` itself: in 3D below 400 km the hidden mesh is traversed and downloaded, so it is in memory when it is first drawn at 40 km. Before, Balanced quality started downloading only at 40 km. Maximum quality still preloads at any height. Nothing is fetched in the whole-globe view, in 2D, at night or on an archived surface.
+- `src/shared/renderScale.ts` (new), setting `renderScale` (1, 0.85, 0.75, 0.67, 0.5; default 1) in `types.ts` and the settings schema in `ipc.ts`. `Globe.tsx` applies it to Cesium's `resolutionScale`; `src/renderer/map/upscaleSharpen.ts` (new) adds a contrast-adaptive sharpening pass when the scale is below 1. Settings → "Render resolution" explains that this is simple upscaling and not DLSS. Only the globe is affected; panels and text stay at full resolution.
+
+**Verified.**
+
+- `npm run typecheck`, `npm run build`, full suite with `--maxWorkers=4`: 98 files, 1,397 tests passed. New tests: `tests/render-scale.test.ts` (3) and one case in `tests/photoreal-surface.test.ts` (preload off at 5,000 km, on at 200 km while hidden, off in 2D, on at any height when asked).
+- Running app, temporary profile, 1920×1080 window on the LED monitor: the drawing buffer went 1920×1080 → 1286×723 (0.67) → 960×540 (0.5), the setting was saved, and Cesium reported no render errors. Screenshots: `docs/screenshots/render-scale/`.
+
+**Not verified.**
+
+- Photoreal 3D itself. No Google key was used (metered), so the earlier loading was not observed and no loading time was measured. The change rests on the unit test and Cesium's documented `preloadWhenHidden` behaviour.
+- Any frame-rate gain from the render scale. Pixel counts were measured; frame times were not.
+- Packaged app and installer.
+
+**Remaining.** With the owner's key, compare time-to-sharp on a descent before and after. Preloading downloads more tiles per session; Google's per-tile and per-session charging should be confirmed against the current price list before treating it as cost-neutral.
+
+### Live photoreal check attempted — 2026-11-15
+
+The owner approved a check with their Google key. It did not run: no mesh was requested, so nothing was billed.
+
+- Method prepared: two temporary profiles, each with a copy of the database and `Local State`, view settings reset in the copies (the stored surface was the metered `google2d`; it was switched to `atlas` before launch), then a cold arrival at 30 km compared with an arrival after dwelling at 200, 80 and 42 km.
+- Result: in the unpackaged build `providers:browserKey` answered "Your saved credential could not be decrypted" with the `Local State` from `%APPDATA%\Atlas Watch` and with the one from `%APPDATA%\Electron`. The key was never read or printed. The database copies and temporary profiles were deleted afterwards.
+- Added for the measurement and kept: `getDiagnostics().photoreal` in `Globe.tsx` (`shown`, `preloading`, `complete`, tiles `loaded` and `failed` this session). Typecheck, build and the full suite (98 files, 1,397 tests) pass.
+
+**Still not verified:** the earlier loading with real Photoreal 3D tiles. It needs a key the test window can read, for example one the owner enters in Providers in a temporary-profile window.
+
+## Internet cable layer, finer layer categories, earthquakes off by default, frosted wide pages — 2026-11-15
+
+**Changed.**
+
+- **Cables.** New layer `cables` ("Internet and telecom cables (OpenStreetMap)", group Infrastructure). `scripts/build-cables.mjs` turns one Overpass API reply into `src/main/data/cables.json` (1.9 MB): 5,863 mapped ways, 1,460 under water and 4,403 under ground, OpenStreetMap data as of 2026-11-15T15:02:06Z; 15 ways with fewer than two usable points were dropped. `src/shared/cables.ts` validates every row on read. `layerRender.ts` draws them as one batched ground primitive (blue, wider = under water; orange, thinner = under ground) and the selected cable as a second small primitive. Details show the kind, operator, medium and the calculated length of the mapped piece. No network at run time.
+  - Source choice: the TeleGeography submarine cable map stays excluded (CC BY-NC-SA, non-commercial). OpenStreetMap is ODbL 1.0. Its coverage is a small part of the world's cables: most ocean systems are mapped only near the coast or not at all, and buried land cables only in a few countries. The layer note, the status line and the record details say so.
+- **Layer categories.** `LAYER_GROUPS` in `shared/layers.ts` replaces the six groups with nine: Air traffic, Sea and ground traffic, Space, Weather, Hazards, Cameras, Infrastructure, Military and surveillance, Nature. The Layers panel reads the list from there.
+- **Earthquakes.** The earthquake markers on the globe now start switched off (`App.tsx`). Earthquake monitoring, notifications, history and the Data overview are unchanged; the switch is still under Alerts & earthquakes.
+- **Frosted wide pages.** `.wide-page` (Markets, Community and the other wide pages) is now a blurred translucent pane over the globe instead of a solid sheet; inner cards are tinted with a glass edge, with a small lift on hover. Solid again under `prefers-reduced-transparency`; no movement with reduced motion.
+- README sources row and the exclusion note; `src/main/data/INFRASTRUCTURE_ATTRIBUTION.txt`.
+
+**Verified.**
+
+- `npm run typecheck`, `npm run build`, full suite with `--maxWorkers=4`: 99 files, 1,401 tests passed (before the final two-line CSS opacity change; build re-run after it). New `tests/cables.test.ts` (4): shipped rows all parse, malformed rows are skipped, a piece across the date line measures 22 km, layer wiring without network, every layer sits in a listed group.
+- Running app, temporary profile, LED monitor: Earthquakes switch off at start; the nine categories listed; cables layer loaded 5,863 records with no render errors; a named cable (Atlantic Crossing 1) selected and highlighted; Community page computed `backdrop-filter: blur(30px) saturate(1.6) brightness(0.72)` over the globe. Screenshots: `docs/screenshots/cables/`, `docs/screenshots/glass-pages/`.
+
+**Not verified.**
+
+- The Markets page was not opened: it would spend the included market-data allowance. It uses the same `.wide-page` rules, but its look was not seen. The other wide pages were not opened either.
+- Underground (orange) lines were not looked at up close; 2D mode; frame rate with the layer on; packaged app and installer.
+
+**Remaining.** `cables.json` is a snapshot: re-run the generator to refresh it. If the owner obtains a commercial licence for a fuller cable dataset, it can replace the file behind the same layer.
+
+## Layer categories start collapsed; wide pages float as rounded panels — 2026-11-15
+
+**Changed.**
+
+- `LayersPanel.tsx`: all nine categories and the "Alerts & earthquakes" section start collapsed. Searching still shows matching layers inside collapsed categories. New optional prop `groupsOpen` starts them expanded; `tests/nifc-layer-status.test.ts` and `tests/dwd-renderer.test.ts` now pass it, because they render the panel without clicks and check the rows inside the categories. Their assertions are unchanged.
+- `styles.css`: wide pages (Markets, Community and the rest) are a floating glass sheet, at most 1,240 px wide, centred in the area right of the navigation rail, with 24 px rounded corners, a drop shadow and the globe visible around them. It opens with a short rise-and-fade, which is turned off under reduced motion. Below 900 px window width it fills the space with 12 px margins.
+
+**Verified.** Typecheck, build, full suite with `--maxWorkers=4`: 99 files, 1,402 tests passed (new test: categories collapsed by default, expanded with `groupsOpen`). Running app, temporary profile, 1920×1080: all nine categories reported `aria-expanded="false"` and Alerts was closed; the Community page measured 1,240 px wide with 24 px corners, 106 px from the top and 24 px from the bottom (`docs/screenshots/glass-pages/community-floating.png`).
+
+**Not verified.** Markets and the other wide pages were not opened (Markets would use the included market-data allowance). Narrow-window layout and packaged app.
+
+
+## Group 5: camera cards, traffic look, landslides, rivers, new provider keys, voice commands, worldwide radio — 2026-11-16
+
+**Request.** Street cameras shown like the reference screenshots; add the APIs from the reference provider screen (TomTom, OpenAI, Cesium ion, Launch Library; Google 3D stays); real-time traffic that looks like the screenshots; landslide events and river visualization; ATC listening without an external website; police and other radio worldwide. The user chose to include scanner and ATC relays and all four new keys.
+
+**What is possible.**
+
+- LiveATC's and Broadcastify's terms forbid playing their streams in another app, so the LiveATC button stays a browser link. In-app audio uses the open Radio Browser directory. Checked 2026-11-16: it lists no station tagged exactly `atc` and only a handful of scanner feeds (SomaFM SF Police Scanner, Perth Fire and Rescue, Kamloops Fire Rescue and a few others), so in-app ATC search usually finds nothing and the app says so.
+- No open, live, located feed of reported landslides was reachable: NASA EONET's landslide category has no events in two years, NASA's COOLR ArcGIS services answered 404 on gis.earthdata.nasa.gov, maps.nccs.nasa.gov and maps.disasters.nasa.gov, and the ReliefWeb API answered 403 without a registered app name (its RSS has no coordinates). The layer therefore uses USGS Ground Failure model estimates after earthquakes, labelled as estimates.
+- No public source publishes individual private cars, so the per-vehicle tags in the reference stay simulated and say so (`SIM-`, never `VEH-`). TomTom adds real congestion colours on roads with the customer's key.
+
+**Changed.**
+
+- Camera cards (`src/shared/cameraCards.ts`, `src/renderer/components/CameraCards.tsx`): with the Cameras layer on and the camera below 25 km, up to 5 cameras nearest the screen centre that publish a still float as cards above their position (title, latest still reloaded at the publisher's interval, `CAM-` tag, publisher, load time) with two leader lines and a dot at the camera; other cameras in view get a clickable `CAM-` tag (up to 60). Cards never overlap and stay on screen. Hidden during playback.
+- Traffic look (`src/shared/trafficSim.ts`, `src/renderer/map/trafficSim.ts`): simulated dots are 6 px and coloured by the road's published state (Okabe–Ito: free blue, slow yellow, heavy orange, stopped vermilion); below 4 km the dots nearest the centre carry `SIM-####` tags, spaced so they do not overlap. Credit: "Moving dots and SIM tags on traffic roads: simulated, not real vehicles".
+- Landslides (`src/shared/landslides.ts`, layer `landslides`, Hazards, temporal "calculated"): USGS earthquakes of the last 30 days with a ground-failure product, newest 25; each event's detail is fetched once and again only when USGS updates it. Shows the alert level in words, modelled area and population, the modelled extent and the estimate's update time; marker at the epicentre with a note that it is not an observation.
+- Rivers (`src/renderer/map/vectorTiles.ts` style `rivers`, setting `riversEnabled`, switch "Rivers and canals" under Nature): OpenStreetMap waterways from OpenFreeMap as a glowing cyan line; streams appear at zoom 13 and closer.
+- Providers (`src/shared/providers.ts`, `src/main/providerService.ts`, `src/shared/remoteHosts.ts`, `src/main/feeds/http.ts`, `src/main/main.ts`):
+  - TomTom (browser key, metered): "Live congestion (TomTom, your key)" under Sea and ground traffic, setting `tomtomTraffic`; raster flow tiles `relative0`, reloaded every 2 minutes. The tile prefix enters the CSP only when a key is saved.
+  - Launch Library 2 token (secret): sent as `Authorization: Token …` by the launches layer and launch replay.
+  - Cesium ion (browser key, restricted): new surface `ionBing` ("Bing Maps aerial via Cesium ion") and Settings → "Use Cesium World Terrain instead" (`ionTerrain`); falls back to the keyless terrain if ion refuses. Google Photoreal 3D is unchanged. The ion and Bing hosts enter the CSP only with a token. No default ion token is ever set (`lib/cesiumBase.ts` comment updated).
+  - OpenAI (secret, metered): voice commands. IPC `voice:transcribe` in all five places (at most 1 MB of audio, three audio types). `src/main/voice.ts` sends one multipart request to `/v1/audio/transcriptions` (`whisper-1`); errors never contain the key. `src/shared/voiceCommands.ts` maps the transcript locally to: layer on/off, go to a place (bundled place catalog), switch surface; anything else is "not a command". `VoiceControl.tsx`: hold-to-talk button (Enter or Space toggles), 15 s cap, shown only when a key is saved. `security.ts` now grants the microphone (audio only, app page only); camera and screen stay denied.
+  - Connection tests: TomTom (one tile), Launch Library (`api-throttle`), OpenAI (`/v1/models`, free), Cesium (`/v1/me`). The main allow-list has exact prefixes for these only.
+- Radio (`src/shared/radio.ts`, `src/main/radio.ts`, `src/renderer/components/RadioPage.tsx`, `src/renderer/lib/radioPlayer.ts`, new page "Radio" under Monitor, IPC `radio:search` in all five places):
+  - Search by name, kind (All, News & talk, Music, Scanners, Air traffic), country code, or near the map centre (250 km). HLS, video and malformed rows are dropped; scanner and ATC rows are labelled as third-party relays with a local-law warning.
+  - Relay at `app://atlas/radio-stream/<station id>`: only ids returned by a search (600 kept); DNS checked at every lookup against private, loopback, link-local, CGNAT, ULA and multicast ranges; at most 3 redirects with the same check; audio types only (playlists and video refused); 4-hour cap; aborted when playback stops. Counts a click with Radio Browser, as its etiquette asks. CSP `media-src` names the relay path.
+  - One app-wide player: playback continues off the Radio page with a now-playing bar (volume, stop).
+  - Aircraft details → ATC panel: "Find ATC streams near <ICAO> in the app" opens Radio with an ATC search near the aircraft.
+- Tests: `tests/group5.test.ts` (15) with real USGS fixtures `tests/fixtures/usgs-ground-failure-list.json` and `usgs-ground-failure-us7000tymu.json`; IPC rejection cases for both new channels and the new provider ids in `tests/ipc-security.test.ts`. `tests/layers.test.ts` used `'openai'` as its example of an unknown provider id; it is now a real one, so the example is `'not-a-provider'` (same assertion).
+- README sources rows (TomTom, Cesium ion, OpenAI, Launch Library, USGS Ground Failure, Radio Browser, OpenFreeMap waterways); CLAUDE.md lines on Cesium ion and the main-process direct network paths corrected.
+
+**Verified.**
+
+- `npm run typecheck`; `npm run build`; full suite with `--maxWorkers=4`: 100 files, 1,428 tests passed.
+- Running app, temporary profile, LED monitor (screenshots in `docs/screenshots/group5/`):
+  - Los Angeles, 9 km, oblique: 9,867 camera records; 5 cards and 33 tags; all 5 card stills loaded (three showed Caltrans's own "Temporarily Unavailable" image).
+  - New York (Clearview Expressway): 110 published roads; dots and spaced `SIM-` tags; no render errors.
+  - Paris, 45 km: Seine and Marne drawn as cyan lines; 303 vector tiles loaded, 0 failed.
+  - Landslides: 24 live USGS estimates, newest M6.6 Indonesia (green, 0 km², 0 people), no errors.
+  - Radio: 57 stations listed; the first played through the relay ("playing" on the now-playing bar, which stayed after leaving the page); near London listed stations by distance (0.9 km first); Scanners near London: none, with the "only a few" note. The first run found a bug (the view object carried `bbox`, which the strict schema rejected); fixed and re-checked.
+  - Providers lists TomTom, Launch Library 2, OpenAI and Cesium ion (none configured).
+
+**Not verified.**
+
+- TomTom, OpenAI, Cesium ion (Bing surface and World Terrain) and the Launch Library token with real keys: no keys were used and no paid request was sent. The microphone permission and the voice button were not exercised (the button appears only with a key).
+- Whether OpenAI still offers `whisper-1` was not checked live.
+- Worldwide (not nearby) scanner and ATC searches; stations that use playlists; long playback; packaged app and installer.
+
+**Remaining.** A located, live landslide-report feed if NASA's COOLR service returns or a ReliefWeb app name is registered (needs the owner). Test each new key with the owner present.
+
+
+## Camera cards closer in, next frame, picture zoom; reorganized details panel — 2026-11-17
+
+**Request.** Camera cards appeared too far out and got in the way; add a next-frame button with a 3-second cooldown; zoom while hovering a camera; make the right panel better organized with bold key information and icons.
+
+**Changed.**
+
+- `src/shared/cameraCards.ts`, `src/renderer/components/CameraCards.tsx`:
+  - Cards only below 4 km (was 25 km), at most 3 (was 5), slightly smaller; tags only below 12 km, at most 30 (was 60).
+  - Cards and tags avoid the floating panels (Layers, details, toolbars, voice, radio bar, HUD); a camera under a panel gets neither.
+  - Bug fixed: the far-side test compared the camera's distance from the Earth's centre with the equatorial radius, which fails at street height in mid-latitudes, so cameras on the other side of the Earth were projected onto the view (Hong Kong cameras appeared off Brooklyn). Now Cesium's `EllipsoidalOccluder` horizon test plus a distance cap (6 × camera height, at least 5 km).
+  - Each card has a next-frame button (reloads the publisher's still; disabled for 3 s after each press, with a one-turn spin) and an open-details button. The mouse wheel over the picture zooms it 1×–4× around the cursor (shown as "2.0×"); leaving the card resets it.
+- `src/renderer/components/RecordDetails.tsx` and styles (all layers except the flight card, which keeps its own layout):
+  - Header with the category's icon in a tinted badge, layer name, bold title and tags.
+  - For cameras the picture comes right after the header.
+  - Key facts as tiles with icons and bold values: time with "how long ago" bold, position, altitude (ft bold, m), speed (kt bold, km/h), heading (degrees bold, compass point). Fetch time stays in the details list.
+  - A record's own note (`mappedNote`) shows under the facts with an info icon; the layer's explanation folds into "About this data · <kind>".
+  - Remaining fields under "Details" (values in medium weight); Source as an icon list (provider bold, link, id, terms, coverage). Focus button has an icon.
+- `src/renderer/App.tsx`: any selected record now comes first in the Data panel with "← Overview" above it (before, only flights, DWD warnings and fire perimeters did; other records appeared below the whole overview).
+- `tests/group5.test.ts`: the placement test now expects a camera under a panel to get no tag (the new rule) and covers a panel that blocks only the card positions; constants for the thresholds and cooldown are checked.
+
+**Verified.** Typecheck, build, full suite (`--maxWorkers=4`): 100 files, 1,428 tests passed. Running app, temporary profile, LED monitor, New York harbour (`docs/screenshots/group5/camera-cards-close-and-details.png`): at 9 km 0 cards and 30 tags; at 2.5 km 3 cards; the next-frame button changed the image URL, was disabled during the cooldown and enabled after 3.3 s; three wheel steps zoomed a picture to 2.0×; after the occluder fix no Hong Kong cards appeared; selecting "3 AVE @ 60 ST" showed the camera first in the panel with icon header, picture, facts and details.
+
+**Not verified.** Other record kinds in the new layout were checked only by the existing panel tests, not by eye; narrow windows; packaged app.
+
+## Clearer Google Map Tiles failure messages — 2026-11-17
+
+**Why.** The owner saw "Google Photoreal 3D unavailable: Google did not respond" after entering a new key. That text was shown for every failure whose error carried no HTTP status 400/401/403/429, so it could not tell a refused key from a blocked or failed connection.
+
+**Changed.** `src/shared/googleErrors.ts` (moved from `Globe.tsx`): reads the status from Cesium request errors (`statusCode`) or the message; distinct wording for refused key (400/401/403, including the website-restriction and new-key delay hints), not found (404), quota (429), server error (5xx) and no answer (offline, firewall, proxy or antivirus blocking `tile.googleapis.com`). Diagnostics now records "Google 3D Tiles: HTTP <code>" or "no HTTP answer" before the redacted message. `tests/google-errors.test.ts` (2).
+
+**Verified.** Typecheck, build, full suite: 101 files, 1,430 tests passed. From this computer `tile.googleapis.com/v1/3dtiles/root.json` answered HTTP 403 in 0.26 s without a key (no billing), so the server is reachable outside the app.
+
+**Not verified.** The owner's key and the cause of their failure: no key was read or used. The running app instance predates this build.
+
+- 2026-11-17, same day: the owner's Google provider test answered HTTP 404. Public reports of this exact 404 on `root.json` trace it to the Map Tiles API not being enabled, or billing not active, in the key's project. `providerService.ts` now says that for a Google 404 instead of the bare status; `tests/google-provider-test.test.ts` (1) checks the wording and that the key is not shown. Full suite: 102 files, 1,431 tests passed; build passes.
+
+## Cesium ion checked with the owner's token; map credit fixed — 2026-11-17
+
+**Done.** The owner supplied a Cesium ion token in chat (default token: scopes `assets:read`, `geocode`). Checked against ion: `/v1/me`, World Terrain (asset 1) and Bing aerial (asset 2, Bing via `dev.virtualearth.net`) all answered 200. In a throwaway profile the token was saved through the app, Providers → Test answered "Token accepted by Cesium ion", and the Bing surface with "Use Cesium World Terrain instead" loaded over the Alps: after 45 s, 61 Bing tiles (zoom 1–13, all HTTP 200) and World Terrain tiles to level 13, 0 imagery errors. Zermatt at 1.5 km shows individual roofs on Bing versus 10 m pixels on the free surface (`docs/screenshots/cesium-ion/`). The throwaway profile and every copy of the token were deleted afterwards.
+
+**Fixed.** The map credit line said "Surface: neutral" and "Terrain: Mapzen" while Bing and World Terrain were in use. `App.tsx` now credits "Bing Maps aerial (© Microsoft and its suppliers) via Cesium ion" and "Cesium World Terrain (© Cesium)" when they are on (checked in the app). Also corrected a garbled sentence in CLAUDE.md mistake 8. Suite: 102 files, 1,431 tests passed; build passes.
+
+**Not verified.** The owner's own profile (the token must be entered there in Providers); usage against the ion Community plan limits.
+
+## Camera cards only at street distance, pinned above their camera — 2026-11-17
+
+**Request.** Previews appeared too far away (a 3 km oblique view over Lower Manhattan showed several cards); show them only much closer and keep each fixed to its street.
+
+**Changed** (`src/shared/cameraCards.ts`, `src/renderer/components/CameraCards.tsx`): eligibility is the straight-line distance from the viewer to the camera, not camera altitude (an oblique view at a few km altitude still showed cards). A card needs ≤ 900 m; tags ≤ 4 km; beyond that nothing. Each card sits centred directly above its camera's point on the street (ground height read once per camera and kept), joined by one vertical pin, and never moves to another side: if it does not fit (screen edge, another card, a panel) that camera stays a tag. Cameras that already have a card keep it while they still qualify, so cards do not swap as you move. The overlay now updates every rendered frame (was every 120 ms), so cards stay on their street while the map moves. Tests updated for the new inputs and one added (distance cut-offs, centred pin, keeping the shown card, no side-switching).
+
+**Verified.** Typecheck, build, full suite: 102 files, 1,432 tests passed. Running app, temporary profile, Lower Manhattan: at 3 km and −50°, 0 cards and 13 tags; at 450 m, one card above Bowery @ Cooper Sq; after a ~10 m pan the same card moved with its camera (left 1036→1016 px, top 230→239 px) (`docs/screenshots/group5/camera-card-pinned-street.png`).
+
+**Not verified.** Frame rate with many cameras in a dense close view; packaged app.
+
+## README: install guide and feature tour with screenshots — 2026-11-17
+
+**Changed.** `README.md` now opens with a step-by-step Windows install (Node.js and Git, clone, `npm ci`, build and start, optional installer, updating, troubleshooting), a feature tour with twelve screenshots, and an optional-keys table. The earlier introduction follows as "Feature notes"; the detailed reference sections are unchanged. The PowerShell example no longer shows a personal folder path. Screenshots for the README are 1280-px JPEG copies (85–231 KB each) in `docs/screenshots/readme/`, made from the full-size captures listed in this record.
+
+**Not verified.** The install steps on a clean PC.

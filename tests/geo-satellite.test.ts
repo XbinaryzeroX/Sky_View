@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { domainUrl, expireFrames, fetchLatestFrame, frameLabel, frameUsable, GEO_SAT_LOOKUP_MAX_BYTES, GEO_SAT_MAX_AGE_MS, GEO_SATS, parseLatestFrame, readCapped, tileTemplate } from '../src/shared/geoSatellite';
+import { domainUrl, EUMETSAT_WMS, eumetsatFrameTime, expireFrames, fetchLatestFrame, frameLabel, frameUsable, GEO_SAT_LOOKUP_MAX_BYTES, GEO_SAT_MAX_AGE_MS, GEO_SATS, parseLatestFrame, readCapped, tileTemplate } from '../src/shared/geoSatellite';
 import { DEFAULT_SETTINGS, IPC, settingsPatchSchema, validateIpcArgs } from '../src/shared/ipc';
 import { isAllowedRendererUrl } from '../src/shared/remoteHosts';
 
@@ -42,8 +42,8 @@ describe('weather satellites: newest frame', () => {
 
 describe('weather satellites: requests', () => {
   const now = Date.parse('2026-11-11T13:50:43.512Z');
-  it('builds GIBS URLs the renderer is allowed to load, for every satellite and product', () => {
-    for (const s of GEO_SATS)
+  it('builds GIBS URLs the renderer is allowed to load, for every GIBS satellite and product', () => {
+    for (const s of GEO_SATS.filter((x) => x.source === 'gibs'))
       for (const L of Object.values(s.layers)) {
         const d = domainUrl(L, now);
         expect(d).toBe(`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/${L.id}/default/${L.tms}/all/2026-11-11T10:50:43Z--2026-11-11T13:50:43Z.xml`);
@@ -59,13 +59,21 @@ describe('weather satellites: requests', () => {
     expect(() => tileTemplate(L, '../../x')).toThrow();
     expect(() => tileTemplate(L, 'default')).toThrow();
   });
-  it('clips neighbouring disks so they meet without overlapping', () => {
-    const [w, e, h] = GEO_SATS;
-    expect(w.east).toBe(e.west);
-    expect(e.east).toBeLessThan(h.west); // Europe/Africa gap: no Meteosat in GIBS
-    expect(h.east).toBe(180);
-    expect(w.west).toBe(-180);
+  it('clips neighbouring disks so they meet without overlapping or leaving a gap', () => {
+    expect(GEO_SATS.map((s) => s.id)).toEqual(['goes-west', 'goes-east', 'meteosat-0', 'meteosat-iodc', 'himawari']);
+    for (let i = 1; i < GEO_SATS.length; i++) expect(GEO_SATS[i].west).toBe(GEO_SATS[i - 1].east);
+    expect(GEO_SATS[0].west).toBe(-180);
+    expect(GEO_SATS.at(-1)!.east).toBe(180);
     for (const s of GEO_SATS) expect(s.west).toBeLessThan(s.east);
+  });
+  it('draws Meteosat from hourly EUMETSAT frames only, on the hour and at least 20 minutes old', () => {
+    expect(eumetsatFrameTime(Date.parse('2026-11-14T15:41:00Z'))).toBe('2026-11-14T15:00:00Z');
+    expect(eumetsatFrameTime(Date.parse('2026-11-14T15:10:00Z'))).toBe('2026-11-14T14:00:00Z');
+    expect(eumetsatFrameTime(Date.parse('2026-11-15T00:05:00Z'))).toBe('2026-11-14T23:00:00Z');
+    expect(frameUsable(eumetsatFrameTime(Date.now()), Date.now())).toBe(true);
+    expect(isAllowedRendererUrl(`${EUMETSAT_WMS}?service=WMS&request=GetMap&layers=msg_fes:ir108`, { google3d: false })).toBe(true);
+    expect(isAllowedRendererUrl('https://view.eumetsat.int/other/path', { google3d: false })).toBe(false);
+    for (const s of GEO_SATS.filter((x) => x.source === 'eumetsat')) for (const L of Object.values(s.layers)) expect(L.id).toMatch(/^msg_(fes|iodc):(ir108|rgb_naturalenhncd)$/);
   });
 });
 

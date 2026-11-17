@@ -1,9 +1,11 @@
-import { Camera, Cloud, CloudSun, MapPin, Orbit, Plane, TriangleAlert } from 'lucide-react';
+import { Cable, Camera, Car, Waves, ChevronLeft, ChevronRight, Cloud, CloudSun, Leaf, Orbit, Pause, Plane, Play, Shield, Ship, TriangleAlert, Wind, Zap } from 'lucide-react';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { LAYER_IDS, LAYERS, TEMPORAL_LABEL, type LayerGroup, type LayerId, type LayerSnapshot } from '../../shared/layers';
+import { LAYER_GROUPS, LAYER_IDS, LAYERS, TEMPORAL_LABEL, type LayerGroup, type LayerId, type LayerSnapshot } from '../../shared/layers';
 import type { ArchiveImage } from '../../shared/satelliteYears';
 import { archiveCaption } from '../map/historicalImagery';
 import type { Settings } from '../../shared/types';
+import { compassPoint, sampleWind, WIND_SPEED_BANDS, windFromDeg, type WindField } from '../../shared/wind';
+import { backLabel, clampBack, stepBack, WEATHER_MAX_BACK_MIN, WEATHER_STEP_MIN } from '../../shared/weatherTimeline';
 import { api } from '../lib/api';
 import { FRESHNESS_META, METAR_COLORS, METAR_UNKNOWN_COLOR, relativeTime } from '../lib/format';
 import { clampDate, firstDate, GIBS_CATALOG_BUILT_AT, GIBS_CATEGORIES, GIBS_PRODUCTS, gibsProduct, imageryDates, latestDate, levelResolution, nextDate, playbackDates, productKey, shiftDate, type ImageryState } from '../map/imageryOverlay';
@@ -13,7 +15,7 @@ import { VISUAL_MODE_LABEL, VISUAL_MODE_NOTE, type VisualMode } from '../map/vis
 import { DwdSourceStatus } from './DwdWarnings';
 import { Time } from './common';
 
-const GROUPS: LayerGroup[] = ['Movement', 'Space', 'Hazards', 'Weather', 'Cameras', 'Reference'];
+const GROUPS: readonly LayerGroup[] = LAYER_GROUPS;
 
 interface Props {
   alertsContent?: React.ReactNode;
@@ -23,10 +25,55 @@ interface Props {
   archived?: ArchiveImage | null;
   snaps: Partial<Record<LayerId, LayerSnapshot>>;
   playbackActive?: boolean;
+  /** Show every category expanded at first (default: collapsed). */
+  groupsOpen?: boolean;
   onPatch(p: Partial<Settings>): void;
   imagery: ImageryState;
   preserveImageryDates?: boolean;
   onImagery(s: ImageryState): void;
+  wind?: WindState;
+  viewCenter?(): { lat: number; lon: number } | null;
+  /** Observed-weather history timeline (radar, lightning, satellites). */
+  weather?: WeatherTimeState;
+}
+
+export interface WeatherTimeState { backMin: number; playing: boolean; onBack(backMin: number): void; onPlaying(on: boolean): void }
+
+/** Step back, play and "newest" for the observed-weather overlays that are on. One timeline for all of them. */
+function WeatherTimeline({ weather, reducedMotion }: { weather: WeatherTimeState; reducedMotion: boolean }) {
+  const { backMin, playing } = weather;
+  return (
+    <div className="weather-time" role="group" aria-label="Observed weather history">
+      <div className="weather-time-row">
+        <button className="icon-btn" title="Older frame" aria-label="Older frame" disabled={backMin >= WEATHER_MAX_BACK_MIN} onClick={() => weather.onBack(stepBack(backMin, 1))}><ChevronLeft size={16} aria-hidden="true" /></button>
+        <input type="range" aria-label="Minutes before the newest frames" min={-WEATHER_MAX_BACK_MIN} max={0} step={WEATHER_STEP_MIN} value={-backMin}
+          aria-valuetext={backLabel(backMin)} onChange={(event) => weather.onBack(clampBack(-Number(event.target.value)))} />
+        <button className="icon-btn" title="Newer frame" aria-label="Newer frame" disabled={backMin === 0} onClick={() => weather.onBack(stepBack(backMin, -1))}><ChevronRight size={16} aria-hidden="true" /></button>
+        <button className="btn small" aria-pressed={playing} disabled={reducedMotion} title={reducedMotion ? 'Playing is off while reduced motion is on; step through the frames instead.' : 'Play the last two hours in a loop'}
+          onClick={() => weather.onPlaying(!playing)}>{playing ? <Pause size={14} aria-hidden="true" /> : <Play size={14} aria-hidden="true" />}{playing ? 'Pause' : 'Play'}</button>
+        <button className="btn small" disabled={backMin === 0 && !playing} onClick={() => weather.onBack(0)}>Newest</button>
+      </div>
+      <p className="small muted" role="status">{backLabel(backMin)}{backMin > 0 ? ' (observed then, not now)' : ''}. Radar and lightning show the publisher's frame nearest that time; hourly Meteosat steps once an hour.</p>
+    </div>
+  );
+}
+
+export interface WindState { field: WindField | null; staleReason: string | null; error: string | null; loading: boolean }
+
+/** Forecast wind at the map centre, refreshed every 2 s while shown. */
+function WindReading({ field, center }: { field: WindField; center(): { lat: number; lon: number } | null }) {
+  const [at, setAt] = useState(center());
+  useEffect(() => {
+    const t = setInterval(() => setAt(center()), 2000);
+    return () => clearInterval(t);
+  }, [center]);
+  const w = at ? sampleWind(field, at.lat, at.lon) : null;
+  if (!at || !w) return <p className="small muted">Point the map at the ground to read the wind at its centre.</p>;
+  const speed = Math.hypot(w.u, w.v);
+  const from = windFromDeg(w.u, w.v);
+  return (
+    <p className="small">At the map centre: <strong>{speed.toFixed(1)} m/s</strong> ({(speed * 1.94384).toFixed(0)} kt) from the {compassPoint(from)} ({Math.round(from)}°), forecast for <Time iso={field.validTime} />.</p>
+  );
 }
 
 type Tab = 'live' | 'imagery' | 'style';
@@ -63,7 +110,7 @@ function NifcLayerStatus({ snapshot, enabled, replayActive }: { snapshot?: Layer
 
 export function LayersPanel(p: Props) {
   const [tab, setTab] = useState<Tab>('live');
-  const activeCount = p.settings.layersEnabled.length + (p.settings.radarEnabled ? 1 : 0) + (p.settings.geoSatEnabled ? 1 : 0);
+  const activeCount = p.settings.layersEnabled.length + (p.settings.radarEnabled ? 1 : 0) + (p.settings.lightningEnabled ? 1 : 0) + (p.settings.windEnabled ? 1 : 0) + (p.settings.geoSatEnabled ? 1 : 0);
   return (
     <section className="panel-section">
       <div className="section-head">
@@ -95,10 +142,10 @@ export function LayersPanel(p: Props) {
   );
 }
 
-function LiveTab({ settings, snaps, onPatch, alertsContent, airportsOn, onAirports, playbackActive }: Props) {
+function LiveTab({ settings, snaps, onPatch, alertsContent, airportsOn, onAirports, playbackActive, wind, viewCenter, weather, groupsOpen }: Props) {
   const on = new Set(settings.layersEnabled);
   const [query, setQuery] = useState('');
-  const [closed, setClosed] = useState<Set<string>>(new Set());
+  const [closed, setClosed] = useState<Set<string>>(() => new Set(groupsOpen ? [] : GROUPS)); // Collapsed by default; a search still shows matches inside them.
   const toggle = (id: LayerId) => {
     const next = new Set(on);
     if (next.has(id)) next.delete(id);
@@ -107,13 +154,13 @@ function LiveTab({ settings, snaps, onPatch, alertsContent, airportsOn, onAirpor
   };
   const needle = query.trim().toLowerCase();
   const matches = (id: LayerId) => !needle || [LAYERS[id].name, LAYERS[id].source, LAYERS[id].group].join(' ').toLowerCase().includes(needle);
-  const icons = { Movement: Plane, Space: Orbit, Hazards: TriangleAlert, Weather: Cloud, Cameras: Camera, Reference: MapPin };
+  const icons: Record<LayerGroup, typeof Plane> = { 'Air traffic': Plane, 'Sea and ground traffic': Ship, Space: Orbit, Weather: Cloud, Hazards: TriangleAlert, Cameras: Camera, Infrastructure: Cable, 'Military and surveillance': Shield, Nature: Leaf };
   return (
     <>
       <input className="view-name layer-search" value={query} onChange={event => setQuery(event.target.value)}
         placeholder="Find a layer" aria-label="Find a layer" />
       {alertsContent && (!needle || 'alerts earthquakes weather boundaries saved locations'.includes(needle)) && (
-        <details className="layer-group alert-layer-group" open>
+        <details className="layer-group alert-layer-group" open={groupsOpen}>
           <summary>Alerts &amp; earthquakes</summary>
           {alertsContent}
         </details>
@@ -125,15 +172,19 @@ function LiveTab({ settings, snaps, onPatch, alertsContent, airportsOn, onAirpor
           <input className="layer-switch" role="switch" type="checkbox" checked={!!airportsOn} onChange={onAirports} />
         </label>
       )}
-      {(on.size > 0 || settings.radarEnabled || settings.geoSatEnabled) && (
-        <button className="link-btn small" onClick={() => onPatch({ layersEnabled: [], radarEnabled: false, geoSatEnabled: false })}>Turn all live feeds off</button>
+      {(on.size > 0 || settings.radarEnabled || settings.lightningEnabled || settings.windEnabled || settings.geoSatEnabled) && (
+        <button className="link-btn small" onClick={() => onPatch({ layersEnabled: [], radarEnabled: false, lightningEnabled: false, windEnabled: false, geoSatEnabled: false })}>Turn all live feeds off</button>
       )}
       <p className="muted small">Counts describe the loaded area or catalog, not the whole world.</p>
       {GROUPS.map(group => {
         const ids = LAYER_IDS.filter(id => LAYERS[id].group === group && matches(id));
         const radar = group === 'Weather' && (!needle || 'weather radar nowcoast'.includes(needle));
+        const windRow = group === 'Weather' && (!needle || 'weather wind gfs forecast particles'.includes(needle));
+        const lightning = group === 'Weather' && (!needle || 'weather lightning strikes thunderstorm'.includes(needle));
         const geoSat = group === 'Weather' && (!needle || 'weather satellite clouds goes himawari infrared geocolor'.includes(needle));
-        if (!ids.length && !radar && !geoSat) return null;
+        const riversRow = group === 'Nature' && (!needle || 'nature rivers water canals waterways'.includes(needle));
+        const tomtomRow = group === 'Sea and ground traffic' && (!needle || 'traffic tomtom congestion live roads'.includes(needle));
+        if (!ids.length && !radar && !lightning && !windRow && !geoSat && !riversRow && !tomtomRow) return null;
         const isClosed = closed.has(group) && !needle;
         const Icon = icons[group];
         return (
@@ -161,6 +212,12 @@ function LiveTab({ settings, snaps, onPatch, alertsContent, airportsOn, onAirpor
                     <span className="layer-name">{meta.name}</span>
                     <input className="layer-switch" role="switch" type="checkbox" checked={enabled} onChange={() => toggle(id)} />
                   </label>
+                  {enabled && id === 'trafficFlow' && (
+                    <label className="layer-sub-toggle small">
+                      <input type="checkbox" checked={settings.trafficSimEnabled} onChange={event => onPatch({ trafficSimEnabled: event.target.checked })} />
+                      Simulated cars moving on the roads (illustration, not real vehicles)
+                    </label>
+                  )}
                   <details className="layer-info">
                     <summary>{TEMPORAL_LABEL[meta.temporal]} · Source &amp; coverage{nifc ? nifcSummary : enabled && status && !replayDwd ? ' · ' + status.recordCount.toLocaleString() : ''}</summary>
                     <div className="layer-status small">
@@ -182,6 +239,7 @@ function LiveTab({ settings, snaps, onPatch, alertsContent, airportsOn, onAirpor
                         {status.error && <p className="err-text">Last refresh failed: {status.error}{status.lastSuccessAt ? ' (showing previous data)' : ''}</p>}
                         <button className="link-btn small" onClick={() => void api.refreshLayer(id)}>Refresh</button>
                       </>}
+                      {enabled && id === 'trafficFlow' && <p className="muted">Simulated traffic: moving dots on the New York and Paris roads (the sources that publish road shapes). Each dot is invented; its speed is the road’s measured speed (Paris: assumed from the published state) and the number of dots follows the published flow count where there is one, otherwise a typical density for the state. Direction of travel is not published, so dots follow the line’s drawn order. Roads with unknown readings get none. Shown when zoomed in below about 60 km; still with reduced motion.</p>}
                       {enabled && id === 'fires' && (
                         <select aria-label="Fire detection region" value={settings.firmsRegion}
                           onChange={event => onPatch({ firmsRegion: event.target.value as Settings['firmsRegion'] })}>
@@ -190,12 +248,12 @@ function LiveTab({ settings, snaps, onPatch, alertsContent, airportsOn, onAirpor
                       )}
                       {enabled && id === 'satellites' && (
                         <div className="sat-groups small">
-                          {(['stations', 'visual', 'gnss', 'weather', 'science', 'starlink'] as const).map(satelliteGroup => (
+                          {(['stations', 'visual', 'gnss', 'weather', 'science', 'telecom', 'imaging', 'debris', 'starlink'] as const).map(satelliteGroup => (
                             <label key={satelliteGroup}>
                               <input type="checkbox" checked={settings.satelliteGroups.includes(satelliteGroup)} onChange={event => onPatch({
                                 satelliteGroups: event.target.checked ? [...settings.satelliteGroups, satelliteGroup]
                                   : settings.satelliteGroups.filter(value => value !== satelliteGroup),
-                              })} />{satelliteGroup === 'starlink' ? 'Starlink (≈8,000)' : satelliteGroup}
+                              })} />{satelliteGroup === 'starlink' ? 'Starlink (≈8,000)' : satelliteGroup === 'telecom' ? 'telecom (geostationary)' : satelliteGroup === 'imaging' ? 'imaging (Earth resources)' : satelliteGroup === 'debris' ? 'debris (Fengyun-1C breakup, ≈2,000)' : satelliteGroup}
                             </label>
                           ))}
                         </div>
@@ -205,6 +263,9 @@ function LiveTab({ settings, snaps, onPatch, alertsContent, airportsOn, onAirpor
                 </div>
               );
             })}
+            {!isClosed && group === 'Weather' && weather && (settings.radarEnabled || settings.lightningEnabled || settings.geoSatEnabled) && (
+              <WeatherTimeline weather={weather} reducedMotion={settings.reducedMotion} />
+            )}
             {!isClosed && radar && (
               <div className="layer-row">
                 <label className="layer-toggle"><Cloud size={16} aria-hidden="true" /><span className="layer-name">Weather radar (U.S.)</span>
@@ -213,6 +274,74 @@ function LiveTab({ settings, snaps, onPatch, alertsContent, airportsOn, onAirpor
                 </label>
                 <details className="layer-info"><summary>Observed · NOAA nowCOAST</summary>
                   <p className="small muted">U.S. radar reflectivity, typically 5–10 minutes old; refreshed every 5 minutes while on. Public domain.</p>
+                </details>
+              </div>
+            )}
+            {!isClosed && windRow && (
+              <div className="layer-row">
+                <label className="layer-toggle"><Wind size={16} aria-hidden="true" /><span className="layer-name">Wind (animated forecast)</span>
+                  <input className="layer-switch" role="switch" type="checkbox" checked={settings.windEnabled}
+                    onChange={event => onPatch({ windEnabled: event.target.checked })} />
+                </label>
+                {settings.windEnabled && (
+                  <label className="layer-sub-toggle small">
+                    <input type="checkbox" checked={settings.windColorBySpeed} onChange={event => onPatch({ windColorBySpeed: event.target.checked })} />
+                    Colour by speed
+                  </label>
+                )}
+                {settings.windEnabled && settings.windColorBySpeed && (
+                  <ul className="wind-legend small" aria-label="Wind speed colours">
+                    {WIND_SPEED_BANDS.map((b) => <li key={b.label}><span className="wind-swatch" style={{ background: b.color }} aria-hidden="true" />{b.label}</li>)}
+                  </ul>
+                )}
+                {settings.windEnabled && wind && (
+                  <>
+                    {wind.loading && !wind.field && <p className="small muted" role="status">Loading the latest NOAA GFS run…</p>}
+                    {wind.error && <p className="small error-line" role="alert">Wind unavailable: {wind.error}</p>}
+                    {wind.staleReason && <p className="small muted">{wind.staleReason}</p>}
+                    {wind.field && (
+                      <>
+                        <p className="small muted">GFS run of <Time iso={wind.field.runTime} />, {wind.field.forecastHours} h forecast, valid <Time iso={wind.field.validTime} />.</p>
+                        {viewCenter && <WindReading field={wind.field} center={viewCenter} />}
+                      </>
+                    )}
+                  </>
+                )}
+                <details className="layer-info"><summary>Forecast · NOAA GFS</summary>
+                  <p className="small muted">Wind 10 m above the ground from the NOAA Global Forecast System on a 1° grid (about 110 km), from the newest published run (every 6 hours, usually 4–5 hours old), at the 3-hour step closest to now. A model forecast, not measured wind; local gusts, valleys and coasts are smoothed out. The moving streaks show the direction and relative strength of the forecast flow (brighter is stronger); they are not tracked air. Drawn over the map and 3D buildings. With reduced motion, still arrows are shown instead. U.S. public domain; read from the NOAA Open Data registry on AWS.</p>
+                </details>
+              </div>
+            )}
+            {!isClosed && tomtomRow && (
+              <div className="layer-row">
+                <label className="layer-toggle"><Car size={16} aria-hidden="true" /><span className="layer-name">Live congestion (TomTom, your key)</span>
+                  <input className="layer-switch" role="switch" type="checkbox" checked={settings.tomtomTraffic}
+                    onChange={event => onPatch({ tomtomTraffic: event.target.checked })} />
+                </label>
+                <details className="layer-info"><summary>Live · TomTom Traffic Flow</summary>
+                  <p className="small muted">Road colours by current speed compared with free-flow speed (green free, orange slower, red slow, dark red queuing), worldwide where TomTom has probe data, refreshed every 2 minutes while on. Needs your TomTom key in Providers; every map tile counts against your TomTom allowance. It shows congestion on roads, not individual vehicles.</p>
+                </details>
+              </div>
+            )}
+            {!isClosed && riversRow && (
+              <div className="layer-row">
+                <label className="layer-toggle"><Waves size={16} aria-hidden="true" /><span className="layer-name">Rivers and canals</span>
+                  <input className="layer-switch" role="switch" type="checkbox" checked={settings.riversEnabled}
+                    onChange={event => onPatch({ riversEnabled: event.target.checked })} />
+                </label>
+                <details className="layer-info"><summary>Static reference · OpenStreetMap</summary>
+                  <p className="small muted">Rivers and canals as mapped by OpenStreetMap volunteers (OpenFreeMap vector tiles, ODbL), drawn as a bright line; streams appear when zoomed in close. This is the mapped course, not water level or flow, and small or seasonal channels may be missing.</p>
+                </details>
+              </div>
+            )}
+            {!isClosed && lightning && (
+              <div className="layer-row">
+                <label className="layer-toggle"><Zap size={16} aria-hidden="true" /><span className="layer-name">Lightning density</span>
+                  <input className="layer-switch" role="switch" type="checkbox" checked={settings.lightningEnabled}
+                    onChange={event => onPatch({ lightningEnabled: event.target.checked })} />
+                </label>
+                <details className="layer-info"><summary>Observed · NOAA nowCOAST</summary>
+                  <p className="small muted">Lightning strikes per area over the latest 15 minutes on an 8 km grid, from the U.S. National Lightning Detection Network and the global GLD360 network; refreshed every 5 minutes while on. Covers 25° S to 80° N from 110° E eastward across the Pacific and the Americas to 0° (not Europe, Africa or most of Asia). No colour means no strikes reported or outside coverage. Public domain.</p>
                 </details>
               </div>
             )}
@@ -228,8 +357,8 @@ function LiveTab({ settings, snaps, onPatch, alertsContent, airportsOn, onAirpor
                     <option value="color">True colour (GOES GeoColor; Himawari visible, daylight)</option>
                   </select>
                 )}
-                <details className="layer-info"><summary>Observed · NOAA GOES, JMA Himawari via NASA GIBS</summary>
-                  <p className="small muted">The newest full-disk frame from GOES-West, GOES-East and Himawari-9, checked every 10 minutes; frames are usually 30–60 minutes old (the time is in the credits). About 2 km per pixel (infrared) or 1 km (true colour): clouds, storms, smoke and dust, not ground detail. Covers the Americas, the Pacific, East Asia and Australia; Europe, Africa and the Indian Ocean are not covered (Meteosat is not in NASA GIBS). Not drawn over Google Photoreal 3D.</p>
+                <details className="layer-info"><summary>Observed · NOAA GOES, EUMETSAT Meteosat, JMA Himawari</summary>
+                  <p className="small muted">GOES-West, GOES-East and Himawari-9: the newest full-disk frame from NASA GIBS, checked every 10 minutes, usually 30–60 minutes old. Europe, Africa and the Indian Ocean: Meteosat from EUMETSAT, hourly frames only (on the hour, up to about 80 minutes old), because EUMETSAT licenses its more frequent recent images for non-commercial use. Each frame’s time is in the credits, so neighbouring areas can be from different times. About 2–3 km per pixel: clouds, storms, smoke and dust, not ground detail. Meteosat infrared shows clouds only (warm ground is left clear). Above about 81° north or south no geostationary satellite sees the surface. Not drawn over Google Photoreal 3D.</p>
                 </details>
               </div>
             )}

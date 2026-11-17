@@ -6,6 +6,11 @@ import type { MarketService } from './markets';
 import type { LemmyService } from './lemmy';
 import { parseRouteset } from '../shared/route';
 import { createAirlineStatusLookup } from './airlineFlightStatus';
+import { createFlightPathLookup } from './flightPathLookup';
+import { createLaunchTimelineLookup } from './launchTimelineLookup';
+import { createVoiceTranscriber } from './voice';
+import { createRadio } from './radio';
+import { createWindService } from './windService';
 import { commonsSearchUrl, parseAdsbdb, parseAirportData, parseCommons, type VehicleInfo } from '../shared/vehicleInfo';
 import { buildBriefing, buildVisitBriefing, type BriefingPreview } from '../shared/briefing';
 import { randomUUID } from 'node:crypto';
@@ -13,7 +18,7 @@ import { LAYER_IDS } from '../shared/layers';
 import { locationsToCsv } from '../shared/csv';
 import { IPC, isInvokeChannel, IpcValidationError, validateIpcArgs, type InvokeChannel } from '../shared/ipc';
 import type { AppCore } from './core';
-import { fetchText, type FetchJson } from './feeds/http';
+import { fetchBytes, fetchText, type FetchJson } from './feeds/http';
 import { createConflictReportsLookup } from './conflictReports';
 import { createConflictAssessmentLookup } from './conflictAssessments';
 import { askOllama, getAiStatus } from './ollama';
@@ -28,6 +33,8 @@ import { isKeyedCameraId } from '../shared/keyedCameras';
 import { mainGeoidHeight } from './geoid';
 import { placeSearchMode } from '../shared/geocoding';
 import { geocodingMatches } from './geocoding';
+import { buildingAt, facilitiesNear } from './osmSite';
+import { buildPlanBriefing, planSchema, type ProtectivePlan } from '../shared/protectivePlan';
 import { annotationsToGeoJson, GEOJSON_MAX_BYTES, previewGeoJsonAnnotations, type AnnotationDocument } from '../shared/geojsonAnnotations';
 
 export interface PlatformServices {
@@ -37,6 +44,8 @@ export interface PlatformServices {
   getNetStats(): unknown;
   openTextFile(filters: { name: string; extensions: string[] }[], maxBytes?: number): Promise<string | null>;
   setKiosk(on: boolean): boolean;
+  /** Minimise, toggle maximise, or close the app window (the renderer draws its own window buttons). */
+  windowControl?(action: 'minimize' | 'maximize' | 'close'): boolean;
   captureScreenshot(): Promise<string | null>;
   appVersion: string;
 }
@@ -47,6 +56,8 @@ export interface ExtraServices {
   layers: LayerManager | null;
   providers: ProviderService | null;
   userAgent?: () => string;
+  /** Radio Browser search and relay (shared with the app:// protocol handler). */
+  radio?: ReturnType<typeof createRadio>;
 }
 
 export type Handler = (args: unknown[]) => Promise<unknown> | unknown;
@@ -57,6 +68,11 @@ const vehicleInfoCache = new Map<string, VehicleInfo>();
 export function createHandlers(core: AppCore, store: AtlasStore, fetchJson: FetchJson, platform: PlatformServices, extra: ExtraServices = { layers: null, providers: null }): Record<InvokeChannel, Handler> {
   const conflicts = createConflictReportsLookup(fetchText, store);
   const conflictAssessments = createConflictAssessmentLookup(fetchText, store);
+  const wind = createWindService(fetchText, fetchBytes, () => extra.userAgent?.() ?? 'AtlasWatch (desktop monitoring app)');
+  const flightPath = createFlightPathLookup(fetchJson, () => extra.userAgent?.() ?? 'AtlasWatch (desktop monitoring app)');
+  const radio = extra.radio ?? createRadio(fetchJson, () => extra.userAgent?.() ?? 'AtlasWatch (desktop monitoring app)');
+  const transcribe = createVoiceTranscriber(fetchJson, () => extra.providers?.credentials.userKey('openai') ?? null, () => extra.userAgent?.() ?? 'AtlasWatch (desktop monitoring app)');
+  const launchTimeline = createLaunchTimelineLookup(fetchJson, () => extra.userAgent?.() ?? 'AtlasWatch (desktop monitoring app)', Date.now, () => extra.providers?.credentials.userKey('launchlibrary') ?? null);
   const datedStatus = createAirlineStatusLookup(fetchJson, id => {
     const layer = extra.layers?.snapshot('aircraft');
     return layer?.status.enabled ? layer.records.find(record => record.id === id) : undefined;
@@ -265,6 +281,26 @@ export function createHandlers(core: AppCore, store: AtlasStore, fetchJson: Fetc
       const [lid, rid] = validateIpcArgs(IPC.tracksTrail, a);
       return store.trackFor(lid, rid);
     },
+    [IPC.tracksFlightPath]: (a) => {
+      const [icao24] = validateIpcArgs(IPC.tracksFlightPath, a);
+      return flightPath(icao24);
+    },
+    [IPC.launchesTimeline]: (a) => {
+      const [id] = validateIpcArgs(IPC.launchesTimeline, a);
+      return launchTimeline(id);
+    },
+    [IPC.radioSearch]: (a) => {
+      const [q] = validateIpcArgs(IPC.radioSearch, a);
+      return radio.search(q);
+    },
+    [IPC.voiceTranscribe]: (a) => {
+      const [audio, mime] = validateIpcArgs(IPC.voiceTranscribe, a);
+      return transcribe(audio, mime);
+    },
+    [IPC.weatherWind]: (a) => {
+      validateIpcArgs(IPC.weatherWind, a);
+      return wind();
+    },
     [IPC.tracksRange]: (a) => {
       validateIpcArgs(IPC.tracksRange, a);
       return store.trackRange();
@@ -301,6 +337,36 @@ export function createHandlers(core: AppCore, store: AtlasStore, fetchJson: Fetc
     [IPC.providersBrowserKey]: (a) => {
       const [pid] = validateIpcArgs(IPC.providersBrowserKey, a);
       return need(extra.providers, 'Providers').credentials.browserKey(pid);
+    },
+    [IPC.plansList]: (a) => {
+      validateIpcArgs(IPC.plansList, a);
+      // Plans written by an older or damaged build are skipped, never handed to the UI unchecked.
+      return store.listDocs<unknown>('plans').flatMap((doc) => { const r = planSchema.safeParse(doc); return r.success ? [r.data] : []; });
+    },
+    [IPC.plansPut]: (a) => {
+      const [plan] = validateIpcArgs(IPC.plansPut, a);
+      store.putDoc('plans', plan.id, plan, plan.createdAt);
+      return true;
+    },
+    [IPC.plansDelete]: (a) => {
+      const [pid] = validateIpcArgs(IPC.plansDelete, a);
+      return store.deleteDoc('plans', pid);
+    },
+    [IPC.planExport]: async (a) => {
+      const [request, format] = validateIpcArgs(IPC.planExport, a);
+      const plan: ProtectivePlan = request.plan;
+      const html = buildPlanBriefing(plan, { annotations: request.annotations, routes: request.routes, coverageImage: request.coverageImage, generatedAt: new Date(), appVersion: platform.appVersion });
+      const name = `atlas-watch-plan-${plan.site.name.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'site'}-${new Date().toISOString().slice(0, 10)}`;
+      if (format === 'pdf') return platform.savePdfFromHtml(`${name}.pdf`, html);
+      return platform.saveTextFile(`${name}.html`, [{ name: 'HTML', extensions: ['html'] }], html);
+    },
+    [IPC.siteBuilding]: (a) => {
+      const [la, lo] = validateIpcArgs(IPC.siteBuilding, a);
+      return buildingAt(fetchJson, extra.userAgent?.() ?? 'AtlasWatch (desktop monitoring app)', la, lo);
+    },
+    [IPC.siteFacilities]: (a) => {
+      const [la, lo, r] = validateIpcArgs(IPC.siteFacilities, a);
+      return facilitiesNear(fetchJson, extra.userAgent?.() ?? 'AtlasWatch (desktop monitoring app)', la, lo, r);
     },
     [IPC.geocodeAddress]: async (a) => {
       const [q] = validateIpcArgs(IPC.geocodeAddress, a);
@@ -501,6 +567,10 @@ export function createHandlers(core: AppCore, store: AtlasStore, fetchJson: Fetc
     [IPC.windowKiosk]: (a) => {
       const [on] = validateIpcArgs(IPC.windowKiosk, a);
       return platform.setKiosk(on);
+    },
+    [IPC.windowControl]: (a) => {
+      const [action] = validateIpcArgs(IPC.windowControl, a);
+      return platform.windowControl?.(action) ?? false;
     },
     [IPC.captureScreenshot]: (a) => {
       validateIpcArgs(IPC.captureScreenshot, a);

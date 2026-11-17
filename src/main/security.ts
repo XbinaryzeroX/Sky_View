@@ -95,10 +95,18 @@ export function resolveInside(root: string, pathname: string): string | null {
   return full.startsWith(rootNorm) ? full : null;
 }
 
+/** The radio relay (main/radio.ts), set once the app's services exist. */
+let radioRelay: ((id: string, signal: AbortSignal | null) => Promise<Response>) | null = null;
+export function setRadioRelay(fn: (id: string, signal: AbortSignal | null) => Promise<Response>): void {
+  radioRelay = fn;
+}
+
 export function serveAppProtocol(rendererRoot: string): void {
   protocol.handle(APP_SCHEME, async (request) => {
     const url = new URL(request.url);
     if (url.host !== APP_HOST) return new Response('Not found', { status: 404 });
+    const radio = url.pathname.match(/^\/radio-stream\/([0-9a-f-]{36})$/);
+    if (radio) return radioRelay ? radioRelay(radio[1], request.signal ?? null).catch(() => new Response('The station could not be reached.', { status: 502 })) : new Response('Not found', { status: 404 });
     const file = resolveInside(rendererRoot, url.pathname);
     if (!file) return new Response('Forbidden', { status: 403 });
     try {
@@ -179,8 +187,21 @@ export function lockDownSession(log: (m: string) => void): void {
   }
   // Everything is denied except HTML fullscreen (camera player Fullscreen button), and only for the app's own page.
   const ownPage = (url: string | undefined) => !!url && (url.startsWith(`${APP_ORIGIN}/`) || (devOrigin !== null && url.startsWith(`${devOrigin}/`)));
-  ses.setPermissionRequestHandler((_wc, permission, callback, details) => callback(permission === 'fullscreen' && ownPage(details.requestingUrl)));
-  ses.setPermissionCheckHandler((_wc, permission, origin) => permission === 'fullscreen' && ownPage(`${origin}/`));
+  ses.setPermissionRequestHandler((_wc, permission, callback, details) => {
+    const own = ownPage(details.requestingUrl);
+    if (permission === 'media') {
+      // Voice commands only: the microphone, never the camera or the screen.
+      const types = (details as { mediaTypes?: string[] }).mediaTypes ?? [];
+      callback(own && types.length > 0 && types.every((t) => t === 'audio'));
+      return;
+    }
+    callback(permission === 'fullscreen' && own);
+  });
+  ses.setPermissionCheckHandler((_wc, permission, origin, details) => {
+    const own = ownPage(`${origin}/`);
+    if (permission === 'media') return own && (details as { mediaType?: string }).mediaType === 'audio';
+    return permission === 'fullscreen' && own;
+  });
 }
 
 export function hardenWebContents(contents: WebContents): void {

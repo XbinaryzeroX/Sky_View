@@ -100,6 +100,8 @@ export class ProviderService {
       const msg =
         status === 400 || status === 401 || status === 403
           ? `Rejected by provider (HTTP ${status}). The key may be invalid, not enabled for this API, or restricted.`
+          : status === 404 && id === 'google3d'
+            ? 'Google answered "not found" (HTTP 404). Usually the Map Tiles API is not enabled, or billing is not active, in the Google Cloud project that owns this key.'
           : status === 429
             ? 'Rate limited by provider (HTTP 429). Try again later.'
             : e instanceof FeedHttpError && e.kind === 'network'
@@ -237,6 +239,26 @@ export class ProviderService {
         if (!this.ackGiven('eox')) return { ok: false, message: 'Confirm your EOX commercial license first; without it this layer is for non-commercial use only.' };
         await this.fetchText('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/g/3/3/2.jpg', { headers, timeoutMs: 15000 });
         return { ok: true, message: 'EOX tile service reachable.' };
+      }
+      case 'tomtom': {
+        if (!secret) return { ok: false, message: 'Add your TomTom API key first. Tiles beyond the free tier are billed to your TomTom account.' };
+        await this.fetchText(`https://api.tomtom.com/traffic/map/4/tile/flow/relative0/2/1/1.png?key=${encodeURIComponent(secret)}&tileSize=256`, { headers, timeoutMs: 15000, maxBytes: 512 * 1024 });
+        return { ok: true, message: 'Key accepted by TomTom Traffic. This test counted as one traffic tile.' };
+      }
+      case 'launchlibrary': {
+        if (!secret) return { ok: false, message: 'Add your Launch Library 2 token first, or leave it empty to keep the anonymous allowance.' };
+        const b = (await json('https://ll.thespacedevs.com/2.3.0/api-throttle/', { Authorization: `Token ${secret}` })) as { your_request_limit?: number; current_use?: number };
+        return { ok: typeof b.your_request_limit === 'number', message: typeof b.your_request_limit === 'number' ? `Token accepted. Allowance: ${b.your_request_limit} requests an hour (${b.current_use ?? '?'} used).` : 'Launch Library answered without an allowance; the token may not be valid.' };
+      }
+      case 'openai': {
+        if (!secret) return { ok: false, message: 'Add your OpenAI API key first. Voice commands are billed to your OpenAI account.' };
+        const b = (await json('https://api.openai.com/v1/models', { Authorization: `Bearer ${secret}` })) as { data?: unknown[] };
+        return { ok: Array.isArray(b.data), message: 'Key accepted by OpenAI. Listing models is free; voice commands are billed per minute of audio.' };
+      }
+      case 'cesium-ion': {
+        if (!secret) return { ok: false, message: 'Add your Cesium ion access token first.' };
+        await this.fetchText('https://api.cesium.com/v1/me', { headers: { ...headers, Authorization: `Bearer ${secret}` }, timeoutMs: 15000, maxBytes: 256 * 1024 });
+        return { ok: true, message: 'Token accepted by Cesium ion. Usage counts against your ion plan.' };
       }
       case 'google3d': {
         if (!secret) return { ok: false, message: 'Add your Google Maps API key first. Requests are billed to your Google Cloud account.' };

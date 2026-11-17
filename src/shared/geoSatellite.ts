@@ -3,16 +3,20 @@
 // GOES-West and GOES-East (NOAA) and Himawari-9 (Japan Meteorological Agency) each publish a full-disk frame every
 // 10 minutes; GIBS serves them as Web Mercator tiles about 30–60 minutes after the scan. The app asks GIBS for each
 // layer's newest frame (WMTS DescribeDomains, a few hundred bytes) every 10 minutes and draws that frame; it never
-// guesses a time. Meteosat (Europe, Africa) is not in GIBS, so that part of the globe is not covered.
-// GIBS data use: full and open; acknowledgement requested (shown in the credits).
+// guesses a time. GIBS data use: full and open; acknowledgement requested (shown in the credits).
+//
+// Meteosat (Europe, Africa, the Indian Ocean) is not in GIBS. It comes from EUMETSAT's View Service (WMS) as hourly
+// frames only: EUMETSAT states that hourly imagery is no longer subject to licensing, while 15-minute imagery under
+// three hours old is licensed for research, education and personal use. The frame drawn is the last full hour that is
+// at least 20 minutes old (the service publishes 15-minute frames, so that hour always exists).
 
 export type GeoSatProduct = 'infrared' | 'color';
-export type GeoSatId = 'goes-west' | 'goes-east' | 'himawari';
+export type GeoSatId = 'goes-west' | 'goes-east' | 'meteosat-0' | 'meteosat-iodc' | 'himawari';
 
 export interface GeoSatLayer {
-  /** GIBS layer identifier. */
+  /** GIBS layer identifier, or the EUMETSAT WMS layer name. */
   id: string;
-  /** GIBS tile matrix set (GoogleMapsCompatible_LevelN); maxLevel is N. */
+  /** GIBS tile matrix set (GoogleMapsCompatible_LevelN); maxLevel is N. Unused for EUMETSAT. */
   tms: string;
   maxLevel: number;
   title: string;
@@ -28,18 +32,35 @@ export interface GeoSat {
    */
   west: number;
   east: number;
+  /** Where frames come from: NASA GIBS (newest 10-minute frame) or EUMETSAT (hourly frames). */
+  source: 'gibs' | 'eumetsat';
   layers: Record<GeoSatProduct, GeoSatLayer>;
 }
 
 const ir = (id: string): GeoSatLayer => ({ id, tms: 'GoogleMapsCompatible_Level6', maxLevel: 6, title: 'infrared clouds' });
 const color = (id: string, title: string): GeoSatLayer => ({ id, tms: 'GoogleMapsCompatible_Level7', maxLevel: 7, title });
 
+const msg = (id: string, title: string): GeoSatLayer => ({ id, tms: '', maxLevel: 6, title });
+
+/**
+ * Seams are halfway between neighbouring sub-satellite points (GOES-West 137.2°W, GOES-East 75.2°W, Meteosat 0°,
+ * Meteosat IODC 45.5°E, Himawari 140.7°E), so each area is drawn from the satellite that sees it most directly.
+ */
 export const GEO_SATS: GeoSat[] = [
-  { id: 'goes-west', name: 'GOES-West', agency: 'NOAA', west: -180, east: -106.2, layers: { infrared: ir('GOES-West_ABI_Band13_Clean_Infrared'), color: color('GOES-West_ABI_GeoColor', 'GeoColor') } },
-  { id: 'goes-east', name: 'GOES-East', agency: 'NOAA', west: -106.2, east: 10, layers: { infrared: ir('GOES-East_ABI_Band13_Clean_Infrared'), color: color('GOES-East_ABI_GeoColor', 'GeoColor') } },
+  { id: 'goes-west', name: 'GOES-West', agency: 'NOAA', source: 'gibs', west: -180, east: -106.2, layers: { infrared: ir('GOES-West_ABI_Band13_Clean_Infrared'), color: color('GOES-West_ABI_GeoColor', 'GeoColor') } },
+  { id: 'goes-east', name: 'GOES-East', agency: 'NOAA', source: 'gibs', west: -106.2, east: -37.6, layers: { infrared: ir('GOES-East_ABI_Band13_Clean_Infrared'), color: color('GOES-East_ABI_GeoColor', 'GeoColor') } },
   // Himawari has no GeoColor product in GIBS: its "true colour" option is the red visible band (daylight only, grey).
-  { id: 'himawari', name: 'Himawari-9', agency: 'JMA', west: 60, east: 180, layers: { infrared: ir('Himawari_AHI_Band13_Clean_Infrared'), color: color('Himawari_AHI_Band3_Red_Visible_1km', 'visible (daylight only)') } },
+  { id: 'meteosat-0', name: 'Meteosat (0°)', agency: 'EUMETSAT', source: 'eumetsat', west: -37.6, east: 22.75, layers: { infrared: msg('msg_fes:ir108', 'infrared 10.8 µm, hourly'), color: msg('msg_fes:rgb_naturalenhncd', 'natural colour, hourly (daylight)') } },
+  { id: 'meteosat-iodc', name: 'Meteosat (Indian Ocean)', agency: 'EUMETSAT', source: 'eumetsat', west: 22.75, east: 93.1, layers: { infrared: msg('msg_iodc:ir108', 'infrared 10.8 µm, hourly'), color: msg('msg_iodc:rgb_naturalenhncd', 'natural colour, hourly (daylight)') } },
+  { id: 'himawari', name: 'Himawari-9', agency: 'JMA', source: 'gibs', west: 93.1, east: 180, layers: { infrared: ir('Himawari_AHI_Band13_Clean_Infrared'), color: color('Himawari_AHI_Band3_Red_Visible_1km', 'visible (daylight only)') } },
 ];
+
+export const EUMETSAT_WMS = 'https://view.eumetsat.int/geoserver/wms';
+
+/** The hourly Meteosat frame to draw: the last full hour at least 20 minutes old. */
+export function eumetsatFrameTime(nowMs: number): string {
+  return new Date(Math.floor((nowMs - 20 * 60_000) / 3_600_000) * 3_600_000).toISOString().replace('.000Z', 'Z');
+}
 
 /** How often the newest frame is looked up while the layer is on. */
 export const GEO_SAT_REFRESH_MS = 10 * 60_000;

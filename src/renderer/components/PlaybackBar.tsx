@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { REPLAY_FIX_WINDOW_MS, type RecordedFeed, type TimelineFrame, type TimelineRange } from '../../shared/timeline';
+import { localInput, REPLAY_FIX_WINDOW_MS, type RecordedFeed, type TimelineFrame, type TimelineRange } from '../../shared/timeline';
 import { api, errorText } from '../lib/api';
 import './playbackBar.css';
 
@@ -216,6 +216,11 @@ export function PlaybackBar({ initialCursor, onCursor, onFrame, onExit }: Props)
       step={1} value={t ?? bounds[0]} disabled={phase === 'range-loading'} aria-label="Playback time" aria-valuetext={t === null ? 'No cursor selected' : iso(t)} className="pb-range"
       onChange={(event) => { setPlaying(false); seek(Number(event.target.value)); }} />}
     {t !== null && <time className="mono small pb-cursor" dateTime={iso(t)}>{shownTime(iso(t))}</time>}
+    {bounds && <label className="pb-jump small"><span>Go to</span>
+      <input type="datetime-local" step={60} aria-label="Go to a date and time (local)" min={localInput(bounds[0])} max={localInput(bounds[1])}
+        value={t === null ? '' : localInput(t)}
+        onChange={(event) => { const ms = new Date(event.target.value).getTime(); if (Number.isFinite(ms)) { setPlaying(false); seek(ms); } }} />
+    </label>}
     <button className="btn small-btn" onClick={exit}>Exit playback</button>
     <div className="pb-status">
       {phase === 'range-loading' && <p className="small" role="status">Loading recorded timeline…</p>}

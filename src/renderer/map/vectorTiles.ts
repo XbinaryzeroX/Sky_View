@@ -77,7 +77,7 @@ export function loadVectorTile(z: number, x: number, y: number): Promise<VectorT
 }
 
 /** 'context' = overlay plus translucent water, park, built-up and footprint fills, for areas without high-resolution imagery. */
-export type VectorStyle = 'map' | 'overlay' | 'context';
+export type VectorStyle = 'map' | 'overlay' | 'context' | 'rivers';
 
 interface Palette {
   background: string | null;
@@ -125,6 +125,10 @@ const PALETTES: Record<VectorStyle, Palette> = {
     label: '#ffffff',
     halo: 'rgba(0,0,0,0.85)',
     waterLabel: '#cfe8ff',
+  },
+  rivers: {
+    background: null, water: null, landcover: null, park: null, landuse: null, building: null,
+    roadMajor: 'transparent', roadMinor: 'transparent', rail: 'transparent', boundary: 'transparent', label: '#bff6ff', halo: 'rgba(0,0,0,0.85)', waterLabel: '#bff6ff',
   },
   context: {
     background: null,
@@ -206,6 +210,25 @@ function drawTileImpl(vt: VectorTile, style: VectorStyle, level: number, sub: { 
     g.setLineDash([]);
   };
 
+  if (style === 'rivers') {
+    // Rivers only, as mapped in OpenStreetMap: a soft glow under a bright line, wider for rivers than for canals and
+    // streams. Streams and ditches appear only close in, where the source tile carries them.
+    const glow = (p: Record<string, unknown>) => {
+      const cls = String(p.class ?? '');
+      if (cls === 'river') return { color: 'rgba(80,230,255,0.28)', width: 7 };
+      if (cls === 'canal') return { color: 'rgba(80,230,255,0.22)', width: 5 };
+      return level >= 13 && (cls === 'stream') ? { color: 'rgba(80,230,255,0.18)', width: 3 } : null;
+    };
+    const core = (p: Record<string, unknown>) => {
+      const cls = String(p.class ?? '');
+      if (cls === 'river') return { color: '#5ee6ff', width: 2.2 };
+      if (cls === 'canal') return { color: '#5ee6ff', width: 1.6 };
+      return level >= 13 && cls === 'stream' ? { color: 'rgba(94,230,255,0.85)', width: 1 } : null;
+    };
+    strokeLayer('waterway', glow);
+    strokeLayer('waterway', core);
+    return createImageBitmap(c, { imageOrientation: 'flipY' });
+  }
   fillLayer('landcover', pal.landcover);
   fillLayer('landuse', pal.landuse, (p) => p.class === 'residential' || p.class === 'industrial' || p.class === 'commercial');
   fillLayer('park', pal.park);

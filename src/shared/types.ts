@@ -3,6 +3,7 @@
 
 import type { MultiPolygon, Polygon } from 'geojson';
 import type { AreaWatchState } from './areaWatch';
+import type { RenderScale } from './renderScale';
 
 export type FeedId = 'nws' | 'usgs';
 
@@ -195,7 +196,7 @@ export interface Settings {
   historyRetentionDays: number;
   historyMaxRecords: number;
   zoneLookupEnabled: boolean;
-  basemap: 'atlas' | 'streets' | 'usgsImageryTopo' | 'usgsTopo' | 'gibsDaily' | 'esri' | 'mapbox' | 'eox' | 'naturalEarth' | 'neutral' | 'google3d' | 'google2d';
+  basemap: 'atlas' | 'streets' | 'usgsImageryTopo' | 'usgsTopo' | 'gibsDaily' | 'esri' | 'mapbox' | 'eox' | 'naturalEarth' | 'neutral' | 'google3d' | 'google2d' | 'ionBing';
   /** Selected acquisition year. Null uses the configured ordinary basemap. */
   imageryYear: number | null;
   labelsOverlay: boolean;
@@ -226,6 +227,8 @@ export interface Settings {
   worldAircraft: boolean;
   /** 'maximum' = sharpest tiles, MSAA, full device resolution, larger caches and building radius. */
   renderQuality: 'balanced' | 'maximum';
+  /** Share of full resolution the globe is drawn at, per side; below 1 the image is stretched and sharpened. */
+  renderScale: RenderScale;
   homeLat: number | null;
   homeLon: number | null;
   orgName: string;
@@ -234,7 +237,23 @@ export interface Settings {
   firmsRegion: 'us' | 'global';
   satelliteGroups: string[];
   trackRetentionHours: number;
+  /** Disk budget for recorded movement fixes, in MB (converted to a point count with TRACK_BYTES_PER_POINT). */
+  trackStorageMB: number;
   radarEnabled: boolean;
+  /** NOAA nowCOAST lightning strike density (15-minute, about 8 km). */
+  lightningEnabled: boolean;
+  /** Highlight rivers and canals mapped in OpenStreetMap (OpenFreeMap vector tiles). */
+  riversEnabled: boolean;
+  /** TomTom live congestion tiles over the map (customer key, metered). */
+  tomtomTraffic: boolean;
+  /** Cesium World Terrain instead of the keyless terrain (customer Cesium ion token). */
+  ionTerrain: boolean;
+  /** Animated NOAA GFS 10 m wind forecast. */
+  windEnabled: boolean;
+  /** Colour the wind animation by speed band instead of plain white. */
+  windColorBySpeed: boolean;
+  /** Simulated vehicles moving along traffic-flow roads (an illustration from measured flow, not tracked cars). */
+  trafficSimEnabled: boolean;
   /** Geostationary weather-satellite overlay (NASA GIBS, newest 10-minute frame). */
   geoSatEnabled: boolean;
   geoSatProduct: 'infrared' | 'color';

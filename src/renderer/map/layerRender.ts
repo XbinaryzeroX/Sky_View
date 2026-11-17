@@ -4,6 +4,13 @@
 
 import {
   BillboardCollection,
+  PointPrimitiveCollection,
+  GroundPolylinePrimitive,
+  GroundPolylineGeometry,
+  GeometryInstance,
+  ColorGeometryInstanceAttribute,
+  PolylineColorAppearance,
+  type PointPrimitive,
   type Billboard,
   BoundingSphere,
   Intersect,
@@ -38,6 +45,8 @@ import { classifyAircraft, classifyVessel } from '../../shared/vehicleClass';
 import { aircraftSymbol, vesselSymbol } from './symbols';
 import { eciToGeodetic, gstime, propagate, twoline2satrec, type SatRec } from 'satellite.js';
 import type { GeoRecord, LayerId } from '../../shared/layers';
+import { CABLE_STYLE } from '../../shared/cables';
+import { LANDSLIDE_ALERT_META } from '../../shared/landslides';
 import { altitudeColor, drawnPosition, MAX_EXTRAPOLATION_S, passengerMotionEndMs, passengerPose, passengerVisualBank, passesFilter, specialCode, trackState, updatePassengerMotion, type AircraftFilter, type PassengerMotion } from '../../shared/aircraft';
 import { COCKPIT_CONTACT_RANGE_M } from '../../shared/trackingCamera';
 import { pitchFromRates } from '../../shared/vehicleDims';
@@ -58,6 +67,43 @@ const GROUND_SAMPLE_LEVEL = 13;
 
 // ---------- glyphs (generated once, data URLs) ----------
 const glyphCache = new Map<string, string>();
+
+/**
+ * Launch status as a shape as well as a colour: ring with an up-arrow = scheduled, filled circle with a tick = reported
+ * success, cross = failure, triangle = in flight, ring with a question mark = any other status.
+ */
+function launchIcon(phase: string | null, selected: boolean): string {
+  const key = `launch|${phase}|${selected}`;
+  const hit = glyphCache.get(key);
+  if (hit) return hit;
+  const size = 26;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d')!;
+  const color = phase === 'upcoming' ? '#4ea1ff' : phase === 'success' ? '#57ab5a' : phase === 'failure' ? '#e5534b' : phase === 'inflight' ? '#f0b429' : '#9fb3c8';
+  g.translate(size / 2, size / 2);
+  g.lineWidth = 2.2;
+  g.strokeStyle = selected ? '#ffd84a' : 'rgba(0,0,0,0.9)';
+  g.fillStyle = color;
+  if (phase === 'inflight') {
+    g.beginPath(); g.moveTo(0, -10); g.lineTo(9, 7); g.lineTo(-9, 7); g.closePath(); g.fill(); g.stroke();
+  } else {
+    g.beginPath(); g.arc(0, 0, 9, 0, Math.PI * 2);
+    if (phase === 'success' || phase === 'failure') g.fill(); else { g.fillStyle = 'rgba(0,0,0,0.55)'; g.fill(); }
+    g.stroke();
+    g.strokeStyle = phase === 'success' || phase === 'failure' ? '#fff' : color;
+    g.fillStyle = color;
+    g.lineWidth = 2;
+    g.beginPath();
+    if (phase === 'success') { g.moveTo(-4.5, 0); g.lineTo(-1, 3.5); g.lineTo(4.5, -3.5); g.stroke(); }
+    else if (phase === 'failure') { g.moveTo(-4, -4); g.lineTo(4, 4); g.moveTo(4, -4); g.lineTo(-4, 4); g.stroke(); }
+    else if (phase === 'upcoming') { g.moveTo(0, 5); g.lineTo(0, -4); g.moveTo(-3.5, -1); g.lineTo(0, -5); g.lineTo(3.5, -1); g.stroke(); }
+    else { g.font = 'bold 12px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('?', 0, 1); }
+  }
+  const url = c.toDataURL();
+  glyphCache.set(key, url);
+  return url;
+}
 function glyph(kind: 'plane' | 'ship' | 'camera' | 'storm' | 'sat', fill: string, size = 32): string {
   const key = `${kind}|${fill}|${size}`;
   const hit = glyphCache.get(key);
@@ -180,9 +226,16 @@ export class LayerRenderer {
   private orbitEntity: Entity | null = null;
   private trailEntity: Entity | null = null;
   private trailConnector: Entity | null = null;
+  private flightPathEntity: Entity | null = null;
+  private flightPathPoints: TrailPoint[] | null = null;
   private records = new Map<LayerId, Map<string, GeoRecord>>();
   private motionTimer: ReturnType<typeof setInterval> | null = null;
   private bulk = new Map<LayerId, { coll: BillboardCollection; byId: Map<string, Billboard> }>();
+  /** Static reference layers with thousands of sites (data centres, dams): one batched point collection each. */
+  private staticPoints = new Map<LayerId, { coll: PointPrimitiveCollection; byId: Map<string, PointPrimitive>; selected: string | null }>();
+  /** Traffic flow: road lines as one ground-clamped primitive (rebuilt per update), sensors as one point collection. */
+  private cableDraw: { lines: GroundPolylinePrimitive | null; picked: GroundPolylinePrimitive | null; key: string; pickedId: string | null; show: boolean } = { lines: null, picked: null, key: '', pickedId: null, show: true };
+  private flowDraw: { lines: GroundPolylinePrimitive | null; points: PointPrimitiveCollection | null; show: boolean } = { lines: null, points: null, show: true };
   private smooth = true;
   private passengerMotions = new Map<string, PassengerMotion>();
   private movingPassengers = new Set<string>();
@@ -306,6 +359,7 @@ export class LayerRenderer {
       }
     }
     if (this.trailArgs) this.showTrail(this.trailArgs.points, this.trailArgs.kind, this.trailArgs.target);
+    if (this.flightPathPoints) this.showFlightPath(this.flightPathPoints);
     this.requestModelSync(0);
     this.widget.scene.requestRender();
     this.onSurfaceHeightsChanged?.();
@@ -590,6 +644,18 @@ export class LayerRenderer {
     if (s) s.show = visible;
     const bk = this.bulk.get(id);
     if (bk) bk.coll.show = visible;
+    const sp = this.staticPoints.get(id);
+    if (sp) sp.coll.show = visible;
+    if (id === 'cables') {
+      this.cableDraw.show = visible;
+      if (this.cableDraw.lines) this.cableDraw.lines.show = visible;
+      if (this.cableDraw.picked) this.cableDraw.picked.show = visible;
+    }
+    if (id === 'trafficFlow') {
+      this.flowDraw.show = visible;
+      if (this.flowDraw.lines) this.flowDraw.lines.show = visible;
+      if (this.flowDraw.points) this.flowDraw.points.show = visible;
+    }
     if ((id === 'aircraft' || id === 'aircraftMil') && visible) this.requestPassengerFrame();
     if ((id === 'aircraft' || id === 'aircraftMil' || id === 'vessels') && was !== visible) this.syncModels();
     if (id === 'satellites' && !visible) this.stopSatTimer();
@@ -597,8 +663,137 @@ export class LayerRenderer {
   }
 
   /** Replaces a layer's records, reusing entities by stable id. */
+  /** Batched points for static layers: added once, restyled only when the selection changes. */
+  private updateStaticPoints(id: LayerId, records: GeoRecord[], opts: RenderOptions): void {
+    let s = this.staticPoints.get(id);
+    if (!s) {
+      s = { coll: this.widget.scene.primitives.add(new PointPrimitiveCollection()) as PointPrimitiveCollection, byId: new Map(), selected: null };
+      this.staticPoints.set(id, s);
+    }
+    // Shape as well as colour: data centres are filled dots, dams hollow rings.
+    // Military sites are larger amber dots with a dark rim; plate-reader locations are small hollow magenta rings.
+    const ring = id === 'dams';
+    const base = ring ? { size: 8, color: C('#5ad1a0').withAlpha(0.15), outline: C('#5ad1a0'), width: 2 }
+      : id === 'milSites' ? { size: 10, color: C('#E69F00'), outline: Color.BLACK, width: 2 }
+      : id === 'alpr' ? { size: 7, color: C('#CC79A7').withAlpha(0.2), outline: C('#CC79A7'), width: 2 }
+      : { size: 6, color: C('#7fd1ff'), outline: Color.BLACK, width: 1 };
+    // City-scale layers stay readable when zoomed right in; the worldwide ones shrink with distance.
+    const scale = id === 'milSites' || id === 'alpr' ? new NearFarScalar(2e3, 1.5, 6e5, 0.7) : new NearFarScalar(5e4, 1.4, 8e6, 0.6);
+    const keep = new Set<string>();
+    for (const r of records) {
+      keep.add(r.id);
+      if (!s.byId.has(r.id)) {
+        s.byId.set(r.id, s.coll.add({ id: `rec|${id}|${r.id}`, position: Cartesian3.fromDegrees(r.lon, r.lat, 0), pixelSize: base.size, color: base.color, outlineColor: base.outline, outlineWidth: base.width, scaleByDistance: scale, disableDepthTestDistance: id === 'milSites' || id === 'alpr' ? Number.POSITIVE_INFINITY : 0 }));
+      }
+    }
+    for (const [rid, p] of s.byId) if (!keep.has(rid)) { s.coll.remove(p); s.byId.delete(rid); }
+    const sel = opts.selectedLayer === id ? opts.selectedId : null;
+    if (sel !== s.selected) {
+      const prev = s.selected ? s.byId.get(s.selected) : undefined;
+      if (prev) { prev.pixelSize = base.size; prev.outlineColor = base.outline; }
+      const next = sel ? s.byId.get(sel) : undefined;
+      if (next) { next.pixelSize = base.size * 2; next.outlineColor = Color.WHITE; }
+      s.selected = sel;
+    }
+    this.widget.scene.requestRender();
+  }
+
+  /**
+   * Congestion state by colour (Okabe–Ito, colour-blind safe) and by size: lines and dots get wider and larger as traffic
+   * gets heavier, and unknown readings are thin and grey.
+   */
+  private updateFlow(records: GeoRecord[], opts: RenderOptions): void {
+    const scene = this.widget.scene;
+    const color: Record<string, Color> = { free: C('#56B4E9'), slow: C('#F0E442'), heavy: C('#E69F00'), stopped: C('#D55E00'), unknown: C('#8b98a9') };
+    const width: Record<string, number> = { free: 3, slow: 4, heavy: 6, stopped: 8, unknown: 2 };
+    const size: Record<string, number> = { free: 6, slow: 8, heavy: 10, stopped: 12, unknown: 5 };
+    const sel = opts.selectedLayer === 'trafficFlow' ? opts.selectedId : null;
+    if (this.flowDraw.lines) { scene.groundPrimitives.remove(this.flowDraw.lines); this.flowDraw.lines = null; }
+    const instances: GeometryInstance[] = [];
+    if (!this.flowDraw.points) this.flowDraw.points = scene.primitives.add(new PointPrimitiveCollection()) as PointPrimitiveCollection;
+    const pts = this.flowDraw.points;
+    pts.removeAll();
+    for (const r of records) {
+      const state = r.category ?? 'unknown';
+      const c = color[state] ?? color.unknown;
+      const isSel = sel === r.id;
+      if (r.geometry?.type === 'LineString' && r.geometry.coordinates.length >= 2) {
+        instances.push(new GeometryInstance({
+          id: `rec|trafficFlow|${r.id}`,
+          geometry: new GroundPolylineGeometry({ positions: Cartesian3.fromDegreesArray(r.geometry.coordinates.flatMap(([x, y]) => [x, y])), width: (width[state] ?? 2) + (isSel ? 4 : 0) }),
+          attributes: { color: ColorGeometryInstanceAttribute.fromColor(isSel ? Color.WHITE : c) },
+        }));
+      } else {
+        pts.add({ id: `rec|trafficFlow|${r.id}`, position: Cartesian3.fromDegrees(r.lon, r.lat, 0), pixelSize: (size[state] ?? 5) + (isSel ? 6 : 0), color: state === 'unknown' ? c.withAlpha(0.35) : c, outlineColor: isSel ? Color.WHITE : Color.BLACK, outlineWidth: isSel ? 2 : 1, disableDepthTestDistance: Number.POSITIVE_INFINITY });
+      }
+    }
+    if (instances.length) {
+      this.flowDraw.lines = scene.groundPrimitives.add(new GroundPolylinePrimitive({ geometryInstances: instances, appearance: new PolylineColorAppearance(), asynchronous: true })) as GroundPolylinePrimitive;
+      this.flowDraw.lines.show = this.flowDraw.show;
+    }
+    pts.show = this.flowDraw.show;
+    scene.requestRender();
+  }
+
+  /**
+   * Mapped cable lines as one batched ground primitive, rebuilt only when the record set changes. The selected cable
+   * is a second, small primitive so that choosing one does not rebuild thousands of lines.
+   */
+  private updateCables(records: GeoRecord[], opts: RenderOptions): void {
+    const scene = this.widget.scene;
+    const d = this.cableDraw;
+    const line = (r: GeoRecord, width: number, color: Color) => r.geometry?.type === 'LineString' && r.geometry.coordinates.length >= 2
+      ? new GeometryInstance({
+        id: `rec|cables|${r.id}`,
+        geometry: new GroundPolylineGeometry({ positions: Cartesian3.fromDegreesArray(r.geometry.coordinates.flatMap(([x, y]) => [x, y])), width }),
+        attributes: { color: ColorGeometryInstanceAttribute.fromColor(color) },
+      }) : null;
+    const key = records.length + '|' + (records[0]?.id ?? '') + '|' + (records[records.length - 1]?.id ?? '');
+    if (key !== d.key) {
+      d.key = key;
+      if (d.lines) { scene.groundPrimitives.remove(d.lines); d.lines = null; }
+      const instances: GeometryInstance[] = [];
+      for (const r of records) {
+        const style = CABLE_STYLE[r.category === 'submarine' ? 'submarine' : 'underground'];
+        const g = line(r, style.width, C(style.color).withAlpha(0.9));
+        if (g) instances.push(g);
+      }
+      if (instances.length) {
+        d.lines = scene.groundPrimitives.add(new GroundPolylinePrimitive({ geometryInstances: instances, appearance: new PolylineColorAppearance(), asynchronous: true })) as GroundPolylinePrimitive;
+        d.lines.show = d.show;
+      }
+    }
+    const sel = opts.selectedLayer === 'cables' ? opts.selectedId ?? null : null;
+    if (sel !== d.pickedId || (sel && !d.picked)) {
+      d.pickedId = sel;
+      if (d.picked) { scene.groundPrimitives.remove(d.picked); d.picked = null; }
+      const r = sel ? records.find((x) => x.id === sel) : undefined;
+      const g = r ? line(r, 6, Color.WHITE) : null;
+      if (g) {
+        d.picked = scene.groundPrimitives.add(new GroundPolylinePrimitive({ geometryInstances: [g], appearance: new PolylineColorAppearance(), asynchronous: true })) as GroundPolylinePrimitive;
+        d.picked.show = d.show;
+      }
+    }
+    scene.requestRender();
+  }
+
   update(id: LayerId, all: GeoRecord[], opts: RenderOptions): void {
     const now = Date.now();
+    if (id === 'cables') {
+      this.records.set(id, new Map(all.map((r) => [r.id, r])));
+      this.updateCables(all, opts);
+      return;
+    }
+    if (id === 'trafficFlow') {
+      this.records.set(id, new Map(all.map((r) => [r.id, r])));
+      this.updateFlow(all, opts);
+      return;
+    }
+    if (id === 'datacenters' || id === 'dams' || id === 'milSites' || id === 'alpr') {
+      this.records.set(id, new Map(all.map((r) => [r.id, r])));
+      this.updateStaticPoints(id, all, opts);
+      return;
+    }
     let records = all;
     this.smooth = opts.smoothMotion !== false;
     if (id === 'aircraft' || id === 'aircraftMil') records = this.updatePassengerReports(id, records, now);
@@ -685,6 +880,12 @@ export class LayerRenderer {
         if (id === 'metar' && existing.point?.color instanceof ConstantProperty) {
           existing.point.color.setValue(metarColor(r.category));
         }
+        if (id === 'launches' || id === 'bikeshare' || id === 'airQuality' || id === 'rail' || id === 'wildlife' || id === 'conflicts') {
+          // Status moves (Go → Success, a station emptying, a new AQHI hour): take the fresh graphics as a whole.
+          const fresh = this.create(id, r, selected);
+          if (fresh) { existing.billboard = fresh.billboard; existing.point = fresh.point; existing.label = fresh.label; }
+          continue;
+        }
         if (existing.billboard) {
           existing.billboard.rotation = this.rotationFor(pose) as never;
           existing.billboard.scale = (selected ? 1.35 : 1) as never;
@@ -698,6 +899,16 @@ export class LayerRenderer {
           if (id === 'aircraft' || id === 'aircraftMil' || id === 'vessels') existing.label.disableDepthTestDistance = this.depthTestFor(id, r) as never;
         }
         continue;
+      }
+      // Cells keep their id while their level changes. Re-adding an entity with the same id under suspended events is
+      // reported as unchanged and keeps the old graphics, so swap the graphics on the existing entity instead.
+      if (existing && id === 'gnss') {
+        const fresh = this.create(id, r, selected);
+        if (fresh) {
+          existing.polygon = fresh.polygon;
+          existing.label = fresh.label;
+          continue;
+        }
       }
       if (existing) src.entities.remove(existing);
       const e = this.create(id, r, selected);
@@ -1103,7 +1314,91 @@ export class LayerRenderer {
       case 'cameras':
         return new Entity({ ...base, billboard: { image: glyph('camera', '#6fd0e2', 20), scale: selected ? 1.4 : 1 }, label: label(r.label, 4e4) });
       case 'transit':
-        return new Entity({ ...base, point: { pixelSize: 8, color: C(TRANSIT[r.category ?? ''] ?? '#cfd8e3'), outlineColor: Color.BLACK, outlineWidth: 1 }, label: label(r.label, 3e4, -10) });
+        return new Entity({ ...base, point: { pixelSize: 8, color: C(TRANSIT[r.category ?? ''] ?? '#cfd8e3'), outlineColor: Color.BLACK, outlineWidth: 1 }, label: label(r.label, 6e3, -10) });
+      case 'gnss': {
+        if (!r.geometry || r.geometry.type !== 'Polygon') return null;
+        // Level is also in the label text; colour alone never carries it.
+        const level = r.category;
+        const color = C(level === 'high' ? '#e5534b' : level === 'medium' ? '#f0b429' : '#8b98a9');
+        const ring = r.geometry.coordinates[0].flatMap(([x, y]) => [x, y]);
+        return new Entity({
+          ...base,
+          polygon: {
+            hierarchy: new PolygonHierarchy(Cartesian3.fromDegreesArray(ring)),
+            material: color.withAlpha(level === 'low' ? 0.04 : selected ? 0.45 : 0.28),
+            outline: true,
+            outlineColor: selected ? Color.WHITE : color.withAlpha(level === 'low' ? 0.35 : 0.9),
+            height: 0,
+          },
+          // Flagged cells are labelled as far out as they are drawn, so the level is never shown by colour alone.
+          label: level === 'low' && !selected ? undefined : label(level === 'high' ? `▲ High · ${r.props.scorePercent}%` : level === 'medium' ? `△ Medium · ${r.props.scorePercent}%` : 'Normal', 1.2e7, 0),
+        });
+      }
+      case 'rail':
+        return new Entity({
+          ...base,
+          point: { pixelSize: selected ? 13 : 9, color: C(r.category === 'tram' ? '#e6a3ff' : '#ffd166'), outlineColor: Color.BLACK, outlineWidth: 2 },
+          label: label(`${r.category === 'tram' ? '◆' : '■'} ${r.label}`, 1.2e5, -10),
+        });
+      case 'bikeshare': {
+        const bikes = typeof r.props.bikesAvailable === 'number' ? r.props.bikesAvailable : null;
+        const text = r.category === 'closed' ? 'closed' : r.category === 'unknown' || bikes === null ? '? bikes' : `${bikes} bike${bikes === 1 ? '' : 's'}`;
+        const color = r.category === 'available' ? '#4ea1ff' : r.category === 'empty' ? '#f0b429' : '#8b98a9';
+        return new Entity({ ...base, point: { pixelSize: selected ? 12 : 7, color: C(color), outlineColor: Color.BLACK, outlineWidth: 1 }, label: label(`${r.label} · ${text}`, selected ? 5e7 : 2500, -9) });
+      }
+      case 'wildlife': {
+        const g = r.category ?? '';
+        const color = g === 'Aves' ? '#7cc4ff' : g === 'Mammalia' ? '#e8a87c' : g === 'Reptilia' || g === 'Amphibia' ? '#8bd17c' : g === 'Actinopterygii' ? '#5ad1c8' : '#d6b4ff';
+        const obscured = r.props.locationObscured === true;
+        return new Entity({
+          ...base,
+          // Obscured records are drawn hollow: iNaturalist moved them up to about 20 km from the real spot.
+          point: { pixelSize: selected ? 13 : 9, color: obscured ? Color.TRANSPARENT : C(color), outlineColor: obscured ? C(color) : Color.BLACK, outlineWidth: obscured ? 2 : 1 },
+          label: label(obscured ? `${r.label} (location obscured)` : r.label, 4e4, -9),
+        });
+      }
+      case 'airQuality': {
+        const band = r.category;
+        const color = band === 'low' ? '#4ea1ff' : band === 'moderate' ? '#f0b429' : band === 'high' ? '#e5534b' : '#a83279';
+        // Size grows with the band, and every band above low keeps its text label as far out as it is drawn.
+        const size = band === 'low' ? 9 : band === 'moderate' ? 12 : 15;
+        return new Entity({ ...base, point: { pixelSize: selected ? size + 4 : size, color: C(color), outlineColor: Color.BLACK, outlineWidth: 1.5 }, label: label(`AQHI ${String(r.props.aqhiShown ?? '?')}${band === 'low' ? '' : band === 'moderate' ? ' moderate' : band === 'high' ? ' high' : ' very high'}`, band === 'low' ? 4e6 : 2e7, -10) });
+      }
+      case 'conflicts':
+        return new Entity({
+          ...base,
+          point: { pixelSize: (selected ? 4 : 0) + (r.category === '20' ? 12 : 8), color: C(r.category === '20' ? '#e5534b' : '#f0883e').withAlpha(0.9), outlineColor: Color.BLACK, outlineWidth: 1.5, disableDepthTestDistance: Number.POSITIVE_INFINITY },
+          // Mass-violence reports keep their label far out; the others are labelled when closer and named in their details.
+          label: label(r.label, r.category === '20' ? 2e7 : 1.5e6, -10),
+        });
+      case 'streetPhotos':
+        return new Entity({ ...base, billboard: { image: glyph('camera', r.category === 'panoramax' ? '#b6f09c' : '#9cc8f0', 18), scale: selected ? 1.4 : 1, disableDepthTestDistance: Number.POSITIVE_INFINITY } });
+      case 'datacenters':
+      case 'dams':
+      case 'milSites':
+      case 'alpr':
+        return null; // Drawn as batched points in updateStaticPoints().
+      case 'cables':
+        return null; // Drawn as batched lines in updateCables().
+      case 'landslides': {
+        const meta = LANDSLIDE_ALERT_META[(r.category ?? 'unknown') as keyof typeof LANDSLIDE_ALERT_META] ?? LANDSLIDE_ALERT_META.unknown;
+        return new Entity({
+          ...base,
+          point: { pixelSize: (selected ? 5 : 0) + 13, color: C(meta.color).withAlpha(0.9), outlineColor: Color.BLACK, outlineWidth: 2, disableDepthTestDistance: Number.POSITIVE_INFINITY },
+          label: label(`▲ ${r.category === 'unknown' ? '' : (r.category ?? '').toUpperCase() + ' · '}${r.label.replace(/^Landslide estimate · /, 'Landslide est. ')}`, 8e6, -12),
+        });
+      }
+      case 'trafficFlow':
+        return null; // Drawn as batched lines and points in updateFlow().
+      case 'launches': {
+        const phase = r.category;
+        const when = typeof r.props.launchTime === 'string' ? new Date(r.props.launchTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
+        return new Entity({
+          ...base,
+          billboard: { image: launchIcon(phase, selected), scale: selected ? 1.25 : 1, disableDepthTestDistance: Number.POSITIVE_INFINITY },
+          label: label(`${r.label} · ${String(r.props.statusAbbrev ?? '?')} ${when}`, 3e6, -14),
+        });
+      }
     }
   }
 
@@ -1209,6 +1504,25 @@ export class LayerRenderer {
         material: new PolylineDashMaterialProperty({ color: C('#5fd0e6').withAlpha(0.85), dashLength: 12 }),
       } });
     }
+    this.widget.scene.requestRender();
+  }
+
+  /**
+   * OpenSky's reported path for the selected aircraft's flight: a dashed amber line, separate from the app's own
+   * recorded trail (solid cyan). OpenSky keeps a waypoint only where the course changes, so the line is straight between them.
+   */
+  showFlightPath(points: TrailPoint[] | null): void {
+    if (this.flightPathEntity) { this.widget.entities.remove(this.flightPathEntity); this.flightPathEntity = null; }
+    this.flightPathPoints = points?.length ? points : null;
+    const positions: Cartesian3[] = [];
+    for (const p of points ?? []) {
+      const h = trailPointHeight(p, 'aircraft', this.photoreal, this.seaLevel(p.lat, p.lon) ?? 0, () => this.parkedGround(p.lat, p.lon, false));
+      if (h !== null) positions.push(Cartesian3.fromDegrees(p.lon, p.lat, h));
+    }
+    if (positions.length >= 2) this.flightPathEntity = this.widget.entities.add({
+      id: 'trail|opensky',
+      polyline: { positions, width: 2, material: new PolylineDashMaterialProperty({ color: C('#f0b429').withAlpha(0.9), dashLength: 16 }) },
+    });
     this.widget.scene.requestRender();
   }
 

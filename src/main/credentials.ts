@@ -90,7 +90,7 @@ export class CredentialService {
    * Key for a renderer-side service. The included Google key is for Photorealistic 3D only:
    * 'google2d' (Google satellite tiles, a separately billed product) resolves to the user's own key.
    */
-  browserKey(id: 'google3d' | 'google2d' | 'esri-imagery' | 'mapbox'): string | null {
+  browserKey(id: 'google3d' | 'google2d' | 'esri-imagery' | 'mapbox' | 'tomtom' | 'cesium-ion'): string | null {
     const credential = this.credentialFor(id === 'google2d' ? 'google3d' : id);
     if (credential?.source === 'builtin') {
       if (id !== 'google3d') return null;

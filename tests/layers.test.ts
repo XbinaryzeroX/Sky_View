@@ -322,7 +322,7 @@ describe('tools', () => {
   it('rejects malformed tool/provider IPC input', () => {
     expect(() => validateIpcArgs(IPC.layersSetView, [{ lat: 100, lon: 0, heightM: 1, bbox: [0, 0, 1, 1] }])).toThrow();
     expect(() => validateIpcArgs(IPC.layersRefresh, ['ships'])).toThrow();
-    expect(() => validateIpcArgs(IPC.providersSetCredential, ['openai', 'x'])).toThrow();
+    expect(() => validateIpcArgs(IPC.providersSetCredential, ['not-a-provider', 'x'])).toThrow();
     expect(() => validateIpcArgs(IPC.annotationsPut, [{ id: 'a', kind: 'circle', name: 'x', color: '#fff', points: [[0, 0]], visible: true, createdAt: new Date().toISOString() }])).toThrow();
     expect(() => validateIpcArgs(IPC.geocodeAddress, ['x'])).toThrow();
   });

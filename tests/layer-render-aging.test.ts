@@ -30,7 +30,7 @@ function harness(r: GeoRecord, modelsEnabled = false) {
     widget, destroyed: false, smooth: true, photoreal: false, packSettled: modelsEnabled,
     passengerMotions: new Map(), movingPassengers: new Set(), passengerFrame: null,
     records: new Map([['aircraft', new Map([[r.id, r]])]]), entities: new Map(), sources: new Map(),
-    bulk: new Map([['aircraft', { byId: new Map([[r.id, billboard]]), coll: { show: true } }]]),
+    bulk: new Map([['aircraft', { byId: new Map([[r.id, billboard]]), coll: { show: true } }]]), staticPoints: new Map(),
     modelled: new Set(), modelOpts: { enabled: modelsEnabled, budget: 1 }, lastType: new Map(),
     models: { sync: modelSync, has: () => false }, sel: { layer: 'aircraft', id: r.id },
   });

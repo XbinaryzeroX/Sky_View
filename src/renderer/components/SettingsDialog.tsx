@@ -4,6 +4,7 @@ import type { AiStatus, Settings } from '../../shared/types';
 import { api, errorText } from '../lib/api';
 import { Modal } from './common';
 import { BASEMAPS } from '../map/basemaps';
+import { isRenderScale, RENDER_SCALES, renderScaleLabel } from '../../shared/renderScale';
 
 export function SettingsDialog({ settings, onClose }: { settings: Settings; onClose(): void }) {
   const [s, setS] = useState<Settings>(settings);
@@ -121,7 +122,14 @@ export function SettingsDialog({ settings, onClose }: { settings: Settings; onCl
               <option value="balanced">Balanced (default)</option>
               <option value="maximum">Maximum: sharpest tiles, full screen resolution, 4× anti-aliasing, more 3D buildings</option>
             </select>
-            <small className="muted">Maximum uses more GPU memory and downloads more tiles. Google Photoreal 3D tiles load at higher detail and stay in memory for the session; Google’s terms do not allow pre-downloading them.</small>
+            <small className="muted">Maximum uses more GPU memory and downloads more tiles. Google Photoreal 3D tiles start loading while you approach (below 400 km; at any height on Maximum) and stay in memory for the session; Google’s terms do not allow pre-downloading or storing them.</small>
+          </label>
+          <label className="field">
+            <span>Render resolution</span>
+            <select value={s.renderScale} onChange={(e) => { const v = Number(e.target.value); if (isRenderScale(v)) set('renderScale', v); }}>
+              {RENDER_SCALES.map((v) => <option key={v} value={v}>{renderScaleLabel(v)}</option>)}
+            </select>
+            <small className="muted">Lower settings draw the globe with fewer pixels, sharpen it and stretch it to the window, which eases the load on the graphics card and softens fine detail. This is simple upscaling, not DLSS: the app draws through the browser engine, which cannot use DLSS.</small>
           </label>
           <label className="check">
             <input type="checkbox" checked={s.worldAircraft} onChange={(e) => set('worldAircraft', e.target.checked)} /> Worldwide aircraft when zoomed out (OpenSky Network snapshot: every 15 min anonymously, about every 90 s with your OpenSky client in Providers; OpenSky’s free API is for non-commercial use)
@@ -232,6 +240,9 @@ export function SettingsDialog({ settings, onClose }: { settings: Settings; onCl
           </label>
           <label className="check">
             <input type="checkbox" checked={s.terrainEnabled} onChange={(e) => set('terrainEnabled', e.target.checked)} /> 3D terrain (keyless Terrain Tiles on AWS)
+          </label>
+          <label className="check">
+            <input type="checkbox" checked={s.ionTerrain} disabled={!s.terrainEnabled} onChange={(e) => set('ionTerrain', e.target.checked)} /> Use Cesium World Terrain instead (your Cesium ion token in Providers; counts against your ion plan)
           </label>
           <label className="check">
             <input type="checkbox" checked={s.reducedMotion} onChange={(e) => set('reducedMotion', e.target.checked)} /> Reduce motion (no camera fly animations)
