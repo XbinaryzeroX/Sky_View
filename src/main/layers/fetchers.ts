@@ -941,7 +941,7 @@ async function fetchTrafficFlow(ctx: FetchContext): Promise<FetchResult> {
     switch (s.id) {
       case 'nyc': return cached('nyc', s.cacheMs, nowMs, async () => normalizeNycSpeeds(await json(NYC_URL), s));
       case 'finland': {
-        const dt = { 'Digitraffic-User': 'AtlasWatch/traffic', 'Accept-Encoding': 'gzip' };
+        const dt = { 'Digitraffic-User': 'SkyView/traffic', 'Accept-Encoding': 'gzip' };
         const stations = await cached('fi-stations', 86_400_000, nowMs, () => json(FINLAND_STATIONS_URL, dt));
         return cached('finland', s.cacheMs, nowMs, async () => normalizeFinlandTms(stations, await json(FINLAND_DATA_URL, dt), s));
       }

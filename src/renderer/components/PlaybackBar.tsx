@@ -225,7 +225,7 @@ export function PlaybackBar({ initialCursor, onCursor, onFrame, onExit }: Props)
     <div className="pb-status">
       {phase === 'range-loading' && <p className="small" role="status">Loading recorded timeline…</p>}
       {phase === 'loading' && <p className="small" role="status">Loading the recorded frame… Live hazards and movement are hidden.</p>}
-      {phase === 'empty' && <p className="small" role="status">No retained timeline observations. Leave Atlas Watch running to record movement and successful NWS/USGS refreshes.</p>}
+      {phase === 'empty' && <p className="small" role="status">No retained timeline observations. Leave Sky_View running to record movement and successful NWS/USGS refreshes.</p>}
       {phase === 'error' && <p className="error-line small" role="alert">Recorded replay unavailable: {error}. Live hazards and movement remain hidden. <button className="link-btn" onClick={() => {
         if (range && cursorRef.current !== null) seek(cursorRef.current); else void loadRange();
       }}>Retry</button></p>}

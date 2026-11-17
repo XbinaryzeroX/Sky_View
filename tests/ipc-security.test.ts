@@ -170,8 +170,8 @@ describe('network restrictions', () => {
 
 describe('feed request details', () => {
   it('builds an identifying User-Agent', () => {
-    expect(buildUserAgent('0.1.0', '')).toBe('AtlasWatch/0.1.0 (desktop monitoring app)');
-    expect(buildUserAgent('0.1.0', 'ops@example.com')).toBe('AtlasWatch/0.1.0 (ops@example.com)');
+    expect(buildUserAgent('0.1.0', '')).toBe('SkyView/0.1.0 (desktop monitoring app)');
+    expect(buildUserAgent('0.1.0', 'ops@example.com')).toBe('SkyView/0.1.0 (ops@example.com)');
   });
   it('formats /points coordinates without trailing zeros', () => {
     expect(formatPointCoord(39.7)).toBe('39.7');

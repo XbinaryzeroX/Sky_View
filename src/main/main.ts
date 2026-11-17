@@ -40,6 +40,9 @@ registerAppScheme();
 app.enableSandbox();
 // Development/test only: isolated profile so automated runs never collide with a user's running instance.
 if (!app.isPackaged && process.env.ATLAS_WATCH_USER_DATA) app.setPath('userData', process.env.ATLAS_WATCH_USER_DATA);
+// The app was called Atlas Watch until 2026-11-17. Its data folder keeps that name so saved places, settings,
+// encrypted keys and history load unchanged after the rename to Sky_View.
+else if (!app.commandLine.hasSwitch('user-data-dir')) app.setPath('userData', join(app.getPath('appData'), 'Atlas Watch'));
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -135,7 +138,7 @@ function createWindow(): void {
     height: 900,
     minWidth: 1000,
     minHeight: 640,
-    title: 'Atlas Watch',
+    title: 'Sky_View',
     backgroundColor: '#0d141c',
     // The app's own top bar is the title bar: no separate OS strip or menu row. Windows draws its
     // minimize / maximize / close buttons over the right end of the top bar in matching colors.

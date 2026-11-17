@@ -1665,3 +1665,13 @@ The owner approved a check with their Google key. It did not run: no mesh was re
 **Changed.** `README.md` now opens with a step-by-step Windows install (Node.js and Git, clone, `npm ci`, build and start, optional installer, updating, troubleshooting), a feature tour with twelve screenshots, and an optional-keys table. The earlier introduction follows as "Feature notes"; the detailed reference sections are unchanged. The PowerShell example no longer shows a personal folder path. Screenshots for the README are 1280-px JPEG copies (85–231 KB each) in `docs/screenshots/readme/`, made from the full-size captures listed in this record.
 
 **Not verified.** The install steps on a clean PC.
+
+## Renamed to Sky_View — 2026-11-17
+
+**Changed.** The visible brand is now **Sky_View** (was Atlas Watch): window and page title, every on-screen text (61 places in 22 source files), briefings, scene files (`sky-view-scene-<date>.json`), README, `package.json` `productName` and `author`, and `electron-builder.yml` `productName`, copyright, shortcut and installer name (`Sky_View-Setup-<version>.exe`). The User-Agent and Fintraffic client headers now say `SkyView/…`.
+
+**Kept on purpose.** `appId: app.atlaswatch.desktop` (a new installer upgrades the old install instead of installing beside it), the npm name `atlas-watch`, `ATLAS_WATCH_*` variables, `app://atlas`, internal names (`AtlasStore`, `window.atlas`), the "Atlas" imagery surface name, and the data folder: `main.ts` now sets `userData` to `%APPDATA%\Atlas Watch` explicitly, because Electron would otherwise derive `%APPDATA%\Sky_View` from the new product name and existing places, settings, encrypted keys and history would not load. `start.bat` still launches the older packaged builds named `Atlas Watch.exe`; builds made from now on are `Sky_View.exe`. CLAUDE.md and AGENTS.md updated.
+
+**Verified.** Typecheck, build, full suite: 103 files, 1,433 tests (new `tests/brand-data-folder.test.ts` guards the data folder, appId and names). Test window: title "Sky_View", no "Atlas Watch" text on screen.
+
+**Not verified.** First launch against the real profile after the rename (the owner's data was not touched), a packaged build and an installer upgrade from an Atlas Watch install.

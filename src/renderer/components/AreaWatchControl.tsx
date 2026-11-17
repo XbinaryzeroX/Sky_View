@@ -26,7 +26,7 @@ export function AreaWatchStatus({ controls, quakeWindow, quakeMinMagnitude }: {
   const floor = usgsMagnitudeFloor(quakeMinMagnitude);
   const sourceState = freshness === 'unavailable' ? 'unavailable' : freshness === 'stale' ? 'stale' : 'fresh';
   return <div className="area-watch-context">
-    <p>Local USGS epicenter matches appear in the bell while Atlas Watch runs. These are not official warnings or estimates of shaking or damage.</p>
+    <p>Local USGS epicenter matches appear in the bell while Sky_View runs. These are not official warnings or estimates of shaking or damage.</p>
     <p>New qualifying earthquakes after activation only; no backfill. Enabling a watch or changing its threshold or area starts a new watch period. Hiding an area outline does not pause its watch.</p>
     <p>Boundary points count. Watch edges are straight in unwrapped longitude/latitude; globe outlines follow geodesic arcs, so widely spaced vertices can differ.</p>
     <p className="small muted">USGS source: past {quakeWindow} · {floor === null ? 'all reported magnitudes' : `M ${floor} and above`} · {sourceState}{source.fromCache ? ' · cached' : ''}.

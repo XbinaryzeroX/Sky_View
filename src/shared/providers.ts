@@ -71,7 +71,7 @@ export const PROVIDERS: ProviderInfo[] = [
     capabilities: ['Passenger flight status', 'Scheduled and revised times', 'Airports, terminals and gates'],
     limits: 'One Tier 2 status request per explicit lookup. Coverage and available fields vary.', testable: false },
   { id: 'dwd', name: 'Deutscher Wetterdienst (DWD)', purpose: 'Official weather warnings for Germany and DWD marine areas', status: 'free',
-    statusNote: '© Deutscher Wetterdienst, CC BY 4.0. Atlas Watch converts published CAP polygons to GeoJSON.',
+    statusNote: '© Deutscher Wetterdienst, CC BY 4.0. Sky_View converts published CAP polygons to GeoJSON.',
     docsUrl: 'https://opendata.dwd.de/weather/alerts/cap/COMMUNEUNION_DWD_STAT/', signupUrl: null, credential: null,
     capabilities: ['German-language warnings', 'Published warning areas'], limits: 'One complete status check every five minutes while enabled. The connection test shares this cache.', testable: true },
   { id: 'twelvedata', name: 'Twelve Data', purpose: 'Stock, forex and crypto prices', status: 'free-key', statusNote: 'Included key when supplied by the publisher, or your own key. Delayed or EOD depending on exchange and plan; check your data rights.', docsUrl: 'https://twelvedata.com/docs', signupUrl: 'https://twelvedata.com/register', credential: { kind: 'secret', label: 'API key', placeholder: 'Paste your Twelve Data key' }, capabilities: ['Quotes', 'Charts', 'Symbol search'], limits: '800 API credits/day, 8/minute; cached on demand', testable: true },

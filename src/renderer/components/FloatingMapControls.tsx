@@ -1,4 +1,4 @@
-// Floating map chrome uses only existing Atlas Watch actions.
+// Floating map chrome uses only existing Sky_View actions.
 import { Activity, Camera, ChartNoAxesCombined, Crosshair, Earth, Ellipsis, Gauge, History, Keyboard, LayoutGrid, Layers, MapPin, Maximize, Minus, Navigation, Plus, Rotate3d, RotateCcw, Share2, SlidersHorizontal, Sparkles, Star, SunMoon, View, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 

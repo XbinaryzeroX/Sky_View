@@ -1,14 +1,14 @@
-# Atlas Watch
+# Sky_View
 
 **See what is happening around the places you care about.**
 
-Atlas Watch is a Windows desktop app that puts live public data on a detailed 3D globe: weather alerts,
+Sky_View is a Windows desktop app that puts live public data on a detailed 3D globe: weather alerts,
 earthquakes, aircraft, ships, satellites, fires, traffic cameras, road traffic, launches, radio and more. It runs
 entirely on your computer. There is no server and no account, and the core features need no API keys.
 
 ![The globe with the Layers panel](docs/screenshots/readme/globe-controls.jpg)
 
-> Atlas Watch is a public-data monitoring tool. It is **not** an official warning service, a live satellite feed,
+> Sky_View is a public-data monitoring tool. It is **not** an official warning service, a live satellite feed,
 > or a people-tracking tool. Data can be delayed, revised or incomplete, and every layer says whether it is live,
 > delayed, calculated, simulated or static. In an emergency, follow official alerts.
 
@@ -16,7 +16,7 @@ entirely on your computer. There is no server and no account, and the core featu
 
 ## Install
 
-Atlas Watch is built from this repository. You need a Windows 10 or 11 PC (64-bit) with a graphics card that
+Sky_View is built from this repository. You need a Windows 10 or 11 PC (64-bit) with a graphics card that
 supports WebGL 2, and about 3 GB of free disk space for the build.
 
 ### 1. Install the tools (once)
@@ -35,7 +35,7 @@ node --version
 git --version
 ```
 
-### 2. Download Atlas Watch
+### 2. Download Sky_View
 
 ```bash
 git clone https://github.com/XbinaryzeroX/Sky_View.git
@@ -73,10 +73,10 @@ after you pull new changes.
 npm run dist
 ```
 
-This writes `release/Atlas-Watch-Setup-<version>.exe`, a per-user installer you can copy to other PCs (they need
+This writes `release/Sky_View-Setup-<version>.exe`, a per-user installer you can copy to other PCs (they need
 nothing else installed). The installer is not code-signed, so Windows SmartScreen shows a warning on first run:
 choose **More info → Run anyway**. `npm run dist:dir` makes an unpacked folder instead
-(`release/win-unpacked/Atlas Watch.exe`).
+(`release/win-unpacked/Sky_View.exe`).
 
 ### Updating
 
@@ -92,7 +92,7 @@ npm ci
 npm run build
 ```
 
-Your saved places, settings, keys and history live in `%APPDATA%\Atlas Watch` and are kept across updates.
+Your saved places, settings, keys and history live in `%APPDATA%\Atlas Watch` (the folder keeps the app's former name, Atlas Watch) and are kept across updates.
 
 ### Troubleshooting
 
@@ -214,7 +214,7 @@ service. Paid services bill your own account.
 
 ## Feature notes
 
-Atlas Watch is a Windows desktop geospatial monitoring app. It started as a tool for small businesses and property
+Sky_View is a Windows desktop geospatial monitoring app. It started as a tool for small businesses and property
 managers who look after several locations. It shows active U.S. National Weather Service alerts and recent USGS
 earthquakes, and reports which saved locations fall inside an alert or near an epicenter. On a detailed 3D globe it
 also shows live public data layers: aircraft, vessels, satellites, fires, airspace, radar, weather observations,
@@ -275,7 +275,7 @@ It runs entirely on the user's computer. **Core features need no accounts, API k
 data service, and no server.** Optional integrations (AISStream, Google Photorealistic 3D, a local ADS-B
 receiver, Ollama) stay off until the customer configures them with their own account.
 
-> Atlas Watch is a public-data monitoring tool. It is **not** an official warning service, a live satellite
+> Sky_View is a public-data monitoring tool. It is **not** an official warning service, a live satellite
 > feed, or a people-tracking tool. Data may be delayed, revised, or incomplete. In an emergency, follow official
 > NWS and local alerts.
 
@@ -294,7 +294,7 @@ receiver, Ollama) stay off until the customer configures them with their own acc
 | Protective planning | The **Plan** page: choose a site (globe click, map centre after a search, or a saved location), view it in 3D, and model lines of sight from the site itself (no extra point needed) and any added observation points and cameras over terrain and OpenStreetMap building heights. Results are a labelled geometric estimate (clear in mapped data / blocked / unknown), never proof of safety or threat; ground without mapped buildings is modelled as open only after you choose that, and missing data stays unknown. Also: mapped rooftops with a modelled clear line of sight to the subject (outlined at roof height, updated live while you drag the subject marker), up to three walking or driving route options between two points computed on this computer from the map tiles' road network (length, time estimate, major-road share, junctions, share overlooked by mapped rooftops and watched by your points; measures, not a safety rating; both saved with the plan and listed in the briefing), OpenStreetMap building details and nearby emergency facilities, your own floor-plan images aligned to the map, roles for drawn routes and zones with a route comparison, locally saved plans, and an HTML/PDF briefing with a site diagram. Not provided: property ownership, interiors, turn restrictions or live traffic in routing, crowd simulation, video projection, shared plans. [Details and evidence](docs/PROGRESS.md#protective-planning-workspace--2026-11-12) |
 | Satellite passes | Select a satellite, enter worldwide observer coordinates/elevation or choose an existing saved place, then calculate the next 24 hours of rise/peak/set events. Uses loaded orbital elements locally in a bounded worker; stale-element warnings, UTC/local times and no-pass/unavailable states are explicit. Geometric passes do not establish optical visibility. |
 | GeoJSON annotations | Tools → Import GeoJSON previews local points, lines and simple exterior polygons, reports rejected/duplicate features, and requires acknowledgement before importing valid features only. Atomic import adds new annotation IDs; export shares geometry/name/color/visibility without saved places, notes or credentials. The supported subset and limits are described below. |
-| External Street View | Tools → Street View in Google Maps sends the current screen-center coordinates to the default browser on click. This is a partial street-level workflow: Google chooses an available historical panorama; Atlas Watch does not embed, capture or verify imagery availability. See [source/terms and verification limits](docs/STREET_VIEW.md). |
+| External Street View | Tools → Street View in Google Maps sends the current screen-center coordinates to the default browser on click. This is a partial street-level workflow: Google chooses an available historical panorama; Sky_View does not embed, capture or verify imagery availability. See [source/terms and verification limits](docs/STREET_VIEW.md). |
 | Existing workspaces | Incident register, trends, country summaries and source monitor; local boards and team directory; optional Markets adapters and Lemmy Community. Market-data plans and redistribution rights must be checked separately; credentialed and authenticated workflows have separate verification limits. |
 | Provider settings | Shows source coverage, terms, setup instructions and available connection or configuration checks. Customer-entered credentials are encrypted in local storage using Electron `safeStorage` (Windows DPAPI). Google, Esri and Mapbox client keys are available to the map renderer for the enabled service. |
 | Weather alerts | Pulls active alerts from `api.weather.gov` with severity, urgency, certainty, event, headline, description, instructions, onset, ends, expires, sender, area, zones, and identifier. Polygons are drawn when supplied. Zone-based alerts without a polygon are listed and still evaluated, never drawn as a made-up shape. |
@@ -305,7 +305,7 @@ receiver, Ollama) stay off until the customer configures them with their own acc
 | Event history and replay | Search local alert and earthquake history, then choose **Replay at last observation**. The existing timeline shows recorded NWS alert polygons, USGS epicenters and movement fixes at one cursor. Open **Data** for the recorded details, including zone alerts without polygons. |
 | Saved investigations | In **Scenes**, name and save the current view. Restore its camera, 2D/3D mode, display filters, imagery configuration and selected alert or earthquake. A recorded view opens at its saved UTC time. A live view uses the current provider data. |
 | Briefing | Preview and export a location report or a **Since last visit** report as HTML or PDF. Location reports cover your selected places. Visit reports compare recorded NWS and USGS replies across two app launches, with source IDs, links, observation times and any gaps in coverage. |
-| Optional local AI | If you run **Ollama** yourself, Atlas Watch can ask a local model to explain results it has already calculated. It connects only to loopback (127.0.0.1) and never downloads models. Answers are labeled as AI-generated. The app is fully usable without it. |
+| Optional local AI | If you run **Ollama** yourself, Sky_View can ask a local model to explain results it has already calculated. It connects only to loopback (127.0.0.1) and never downloads models. Answers are labeled as AI-generated. The app is fully usable without it. |
 | Reliability | Last-known data retains original timestamps. Main-process HTTP shares publisher pauses across callers, preserves long Retry-After waits and delayed redirects, and schedules long deadlines through bounded timer hops. Polling, timeouts, backoff and stale/unavailable states remain provider-aware. These paths have regression coverage; outages and live quotas still depend on each source. |
 
 ---
@@ -382,8 +382,8 @@ npm run dist
 ```
 
 This runs type checking, builds, regenerates `THIRD_PARTY_NOTICES.md`, and writes
-`release/Atlas-Watch-Setup-<version>.exe`, a per-user NSIS installer. For an unpacked folder you can run
-directly, use `npm run dist:dir` (the output is `release/win-unpacked/Atlas Watch.exe`).
+`release/Sky_View-Setup-<version>.exe`, a per-user NSIS installer. For an unpacked folder you can run
+directly, use `npm run dist:dir` (the output is `release/win-unpacked/Sky_View.exe`).
 
 To reproduce the handoff installer with customer-supplied credentials, open a fresh PowerShell session in the
 project and point the existing build setting at an empty JSON object. The build should print
@@ -404,7 +404,7 @@ End users need nothing else installed: no Node, Python, Docker, or terminal.
 
 The current flight-card installer is [release/flight-card/Atlas-Watch-Setup-0.7.0.exe](release/flight-card/Atlas-Watch-Setup-0.7.0.exe).
 It is unsigned and its SHA-256 is `932D440E35C1290D5E149D872F7A39131EF7A318C62B9A5F5E2957A95D880203`.
-This side-by-side release lets an earlier Atlas Watch session finish normally. Close the older window and double-click
+This side-by-side release lets an earlier Sky_View session finish normally. Close the older window and double-click
 [start.bat](start.bat) to open the newer package. [Flight-card installer audit](docs/flight-card-package.log).
 
 The preceding November 11 worldwide place-search installer, `release/Atlas-Watch-Setup-0.7.0.exe`, is **128,122,660 bytes**, unsigned.
@@ -466,7 +466,7 @@ the boundary and follows straight longitude/latitude segments across the shorter
 vertices can produce a different boundary from the arcs drawn on the globe. Pole-touching and self-intersecting
 areas cannot be watched.
 
-An enabled watch checks the configured USGS feed on successful refreshes while Atlas Watch runs. It accepts
+An enabled watch checks the configured USGS feed on successful refreshes while Sky_View runs. It accepts
 earthquakes with known magnitude and an origin time after the watch was armed. Re-enabling a watch or changing
 its geometry or threshold starts a new period. The editor shows the source's actual window and minimum magnitude,
 the last local check, and any limits on evaluation. A smaller rule threshold cannot recover observations absent
@@ -484,7 +484,7 @@ its area removes that watch's local matches. USGS event history follows its own 
 
 **Street View in Tools.** Move the globe to the location, then click **Street View in Google Maps ↗**. The action
 uses the center of the screen at click time and refuses a missing globe intersection or a view morph. The
-external Google viewer handles imagery/attribution; the link requires no Atlas Watch API key or billing setup.
+external Google viewer handles imagery/attribution; the link requires no Sky_View API key or billing setup.
 Availability, capture dates and actual default-browser handoff are not established by the fixture tests.
 
 Data is stored in `%APPDATA%\Atlas Watch\atlas-watch.sqlite` (locations, settings, feed cache, history).
@@ -680,14 +680,14 @@ takes precedence. Included-key daily allowances apply per installation. Provider
    connects to AISStream directly. AISStream has no formal terms of service, so review it before
    commercial use.
 5. **Google Photorealistic 3D Tiles (textured 3D buildings).** This is the licensed way to get Google
-   Earth–style textured cities. Atlas Watch never scrapes Google Earth.
+   Earth–style textured cities. Sky_View never scrapes Google Earth.
    1. In Google Cloud Console, create a project and attach a billing account. Google requires billing
       even within its free monthly allowance.
    2. Under **APIs & Services → Library**, enable **Map Tiles API**. Also enable **Geocoding API** so
       place search keeps working (see below).
    3. Under **Credentials**, create an API key. Restrict it to those two APIs, and set a daily quota cap
       to limit spending.
-   4. In Atlas Watch, open **Providers → Google Maps Platform**, paste the key, and press **Save**, then
+   4. In Sky_View, open **Providers → Google Maps Platform**, paste the key, and press **Save**, then
       **Test**. Saving reloads the window once, because the map may only contact Google after the key
       exists.
    5. Use the top-bar buttons. **Satellite** gives Google satellite imagery worldwide (2D tiles, billed per
@@ -714,7 +714,7 @@ providers, account entitlements and imported data have their own rights and redi
 |---|---|---|
 | NWS API (`api.weather.gov`) | U.S. government data; NWS documentation says it is "free to use for any purpose" | No key. A User-Agent is required, and an email or website in it is optional. Rate limits are unpublished but "generous", and the app polls at most once per minute. Credit is shown as "NWS/NOAA". |
 | USGS earthquake feeds | U.S. government work, public domain | Feeds update every minute. Credit: U.S. Geological Survey. |
-| DWD German weather warnings | © Deutscher Wetterdienst, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Atlas Watch converts CAP polygons and exclusions to GeoJSON. | Keyless. The optional layer checks the complete German STATUS archive every five minutes. Provider settings shares that connection and cache. [Publisher access and attribution](docs/REGIONAL_WARNING_RESEARCH.md). |
+| DWD German weather warnings | © Deutscher Wetterdienst, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Sky_View converts CAP polygons and exclusions to GeoJSON. | Keyless. The optional layer checks the complete German STATUS archive every five minutes. Provider settings shares that connection and cache. [Publisher access and attribution](docs/REGIONAL_WARNING_RESEARCH.md). |
 | Natural Earth II imagery (in CesiumJS) | Public domain | Static, low resolution. Labeled "static, not live imagery". |
 | `world-atlas` (Natural Earth) / `us-atlas` (U.S. Census) | ISC package; public-domain data | Boundaries |
 | CesiumJS 1.147 | Apache-2.0 | Bundled locally. Cesium ion is contacted only for the optional Bing aerial surface and Cesium World Terrain, with the customer's own ion token. |

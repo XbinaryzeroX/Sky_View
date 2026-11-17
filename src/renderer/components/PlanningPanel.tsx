@@ -343,7 +343,7 @@ function SatellitePassesNearSite(p: PlanningPanelProps) {
               )}
             </>
           )}
-          <p className="muted">Orbit predictions from published elements. A pass does not mean a satellite is imaging this site; Atlas Watch cannot show live video of arbitrary places.</p>
+          <p className="muted">Orbit predictions from published elements. A pass does not mean a satellite is imaging this site; Sky_View cannot show live video of arbitrary places.</p>
         </div>
       )}
     </>

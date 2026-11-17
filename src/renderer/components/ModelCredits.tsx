@@ -31,7 +31,7 @@ export function ModelCredits() {
           </li>
         ))}
       </ul>
-      <p className="muted small">Converted for Atlas Watch: re-oriented, scaled, simplified, textures resized. Each model stands for its aircraft type or ship category; paint and details may differ from the real vehicle.</p>
+      <p className="muted small">Converted for Sky_View: re-oriented, scaled, simplified, textures resized. Each model stands for its aircraft type or ship category; paint and details may differ from the real vehicle.</p>
     </div>
   );
 }

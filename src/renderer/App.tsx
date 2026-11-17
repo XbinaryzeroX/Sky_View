@@ -912,13 +912,13 @@ export function App() {
   if (loadError)
     return (
       <div className="fatal" role="alert">
-        Atlas Watch could not start: {loadError}
+        Sky_View could not start: {loadError}
       </div>
     );
   if (!snap)
     return (
       <div className="fatal" aria-busy="true">
-        Loading Atlas Watch…
+        Loading Sky_View…
       </div>
     );
 

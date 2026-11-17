@@ -1023,7 +1023,7 @@ function PeoplePage() {
   }, []);
   return (
     <>
-      <Head title="Team directory" sub="An opt-in contact list for your own team (for example, who to call about a property). Stored locally. Atlas Watch does not locate or track people." />
+      <Head title="Team directory" sub="An opt-in contact list for your own team (for example, who to call about a property). Stored locally. Sky_View does not locate or track people." />
       <div className="field-row">
         <input className="view-name" placeholder="Name" maxLength={80} value={p.name} onChange={(e) => setP({ ...p, name: e.target.value })} />
         <input className="view-name" placeholder="Role" maxLength={80} value={p.role} onChange={(e) => setP({ ...p, role: e.target.value })} />
@@ -1251,11 +1251,11 @@ function HelpPage({ ctx }: { ctx: PageCtx }) {
 function ReplaysPage({ ctx }: { ctx: PageCtx }) {
   return (
     <>
-      <Head title="Recorded replays" sub="Review recorded NWS alerts, USGS earthquakes and movement fixes on the same timeline. Coverage depends on what Atlas Watch retrieved and retained." />
+      <Head title="Recorded replays" sub="Review recorded NWS alerts, USGS earthquakes and movement fixes on the same timeline. Coverage depends on what Sky_View retrieved and retained." />
       <button className="btn primary" onClick={ctx.openPlayback}>
         Open playback timeline
       </button>
-      <p className="muted small">Atlas Watch records successful NWS and USGS refreshes while running. Open Data during playback to inspect the recorded alerts and earthquakes. History keeps up to {ctx.snap.settings.historyRetentionDays} days. Enabled movement layers retain fixes for {ctx.snap.settings.trackRetentionHours} hours.</p>
+      <p className="muted small">Sky_View records successful NWS and USGS refreshes while running. Open Data during playback to inspect the recorded alerts and earthquakes. History keeps up to {ctx.snap.settings.historyRetentionDays} days. Enabled movement layers retain fixes for {ctx.snap.settings.trackRetentionHours} hours.</p>
     </>
   );
 }

@@ -1,12 +1,12 @@
 {
   "name": "atlas-watch",
-  "productName": "Atlas Watch",
+  "productName": "Sky_View",
   "version": "0.7.0",
   "description": "See what is happening around the places you care about.",
   "private": true,
   "type": "module",
   "main": "dist/main/main.cjs",
-  "author": "Atlas Watch",
+  "author": "Sky_View",
   "license": "UNLICENSED",
   "devDependencies": {
     "@gltf-transform/core": "^4.5.1",

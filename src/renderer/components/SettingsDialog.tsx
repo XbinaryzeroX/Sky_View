@@ -87,7 +87,7 @@ export function SettingsDialog({ settings, onClose }: { settings: Settings; onCl
           <label className="check">
             <input type="checkbox" checked={s.zoneLookupEnabled} onChange={(e) => set('zoneLookupEnabled', e.target.checked)} /> Look up NWS zones for saved locations
           </label>
-          <small className="muted">This lets Atlas Watch check alerts that have no polygon. Each location's coordinates are sent to api.weather.gov about once a month. If it is off, those alerts show as “cannot determine”.</small>
+          <small className="muted">This lets Sky_View check alerts that have no polygon. Each location's coordinates are sent to api.weather.gov about once a month. If it is off, those alerts show as “cannot determine”.</small>
         </section>
         <section>
           <h3 className="sub">Event history</h3>
@@ -251,7 +251,7 @@ export function SettingsDialog({ settings, onClose }: { settings: Settings; onCl
         <section className="span-2">
           <h3 className="sub">Optional local AI (Ollama)</h3>
           <p className="muted small">
-            Atlas Watch is fully usable without AI. If you have installed <strong>Ollama</strong> yourself and downloaded a model, Atlas Watch can ask it to explain the computed results. It connects only to this
+            Sky_View is fully usable without AI. If you have installed <strong>Ollama</strong> yourself and downloaded a model, Sky_View can ask it to explain the computed results. It connects only to this
             computer (127.0.0.1). Models are never downloaded automatically. Local models need a capable CPU/GPU and enough memory. Answers can be wrong; always check the linked source records.
           </p>
           <div className="field-row">

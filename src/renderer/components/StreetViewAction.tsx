@@ -6,7 +6,7 @@ interface Props {
   getCenter(): { lat: number; lon: number } | null;
 }
 
-/** Explicit external viewer action; no imagery is fetched or embedded by Atlas Watch. */
+/** Explicit external viewer action; no imagery is fetched or embedded by Sky_View. */
 export function StreetViewAction({ getCenter }: Props) {
   const opening = useRef(false);
   const [busy, setBusy] = useState(false);

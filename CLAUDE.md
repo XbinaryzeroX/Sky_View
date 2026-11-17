@@ -1,10 +1,10 @@
-# Atlas Watch (Sky_View): working guide
+# Sky_View: working guide
 
 This file tells you how to work in this repository. `AGENTS.md` holds the same core rules in short form; keep the two consistent. Where this file and the code disagree, the code is right: fix this file.
 
 ## 1. What this project is
 
-Atlas Watch is a Windows desktop app (Electron) for geospatial monitoring. The package name is `atlas-watch`, version 0.7.0; the folder and GitHub repository are called `Sky_View`.
+Sky_View is a Windows desktop app (Electron) for geospatial monitoring. It was called Atlas Watch until 2026-11-17. The visible name, window title, installer and shortcut are `Sky_View`; internal identifiers keep the old name on purpose: the package `atlas-watch`, the `ATLAS_WATCH_*` environment variables, `appId: app.atlaswatch.desktop` (so installs upgrade in place), `app://atlas`, `AtlasStore`/`window.atlas`, and the data folder `%APPDATA%\Atlas Watch` (set explicitly in `main.ts`). Version 0.7.0; the folder and GitHub repository are called `Sky_View`.
 
 It shows a detailed 3D globe (CesiumJS) with saved locations, U.S. weather alerts (NWS), earthquakes (USGS), German warnings (DWD), and optional live layers: aircraft, vessels, satellites, fires, fire perimeters, airspace, METAR, cyclones, cameras, transit. Around that sit workspaces: event history and replay, scenes, briefings (HTML/PDF), camera boards, markets, a Lemmy community client, an optional local Ollama assistant, and a protective-planning workspace (viewshed, building lookup, routes, briefing).
 
@@ -218,7 +218,7 @@ To isolate the packaged executable, pass `--user-data-dir=<temp folder>` and set
 
 1. *Building a feature that already exists.* Grep source and tests for the workflow first; extend what is there.
 2. *Trusting `FEATURE_MATRIX.md` or an old README line that says something is missing.* Check the current code and the later sections of `FEATURES-v0.4.md`.
-3. *Working in the wrong place.* The app is "Atlas Watch", the package is `atlas-watch`, the folder is `Sky_View`. They are one project.
+3. *Working in the wrong place.* The app is "Sky_View" (formerly "Atlas Watch"), the package is `atlas-watch`, the folder is `Sky_View`. They are one project; do not rename the internal identifiers or the data folder.
 4. *Proposing an architecture rewrite.* The main/preload/renderer split is deliberate and tested. Change within it.
 5. *Adding a server, account, telemetry or auto-update.* The app is local-only. These need the owner's decision.
 6. *Adding a dependency casually.* It must bundle (no native add-on), have a permissive licence, and appear in `THIRD_PARTY_NOTICES.md` via `npm run notices`. Prefer what is already installed.

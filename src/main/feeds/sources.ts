@@ -21,7 +21,7 @@ export interface QuakeSource {
 
 export function buildUserAgent(appVersion: string, contact: string): string {
   const c = contact.trim();
-  return c ? `AtlasWatch/${appVersion} (${c})` : `AtlasWatch/${appVersion} (desktop monitoring app)`;
+  return c ? `SkyView/${appVersion} (${c})` : `SkyView/${appVersion} (desktop monitoring app)`;
 }
 
 /** Formats a coordinate with at most 4 decimals and no trailing zeros, as NWS /points expects. */

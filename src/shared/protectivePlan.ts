@@ -688,7 +688,7 @@ table{border-collapse:collapse;width:100%;margin:6px 0}td,th{border:1px solid #c
 .fp img{max-width:320px;border:1px solid #999}.coords{font-size:11px;word-break:break-all}.warn{background:#fff7e0;border:1px solid #e0c060;padding:8px;margin:8px 0}
 </style></head><body>
 <h1>${e(plan.name)}</h1>
-<p class="muted">Site: ${e(plan.site.name)} (${e(coord(plan.site.lat, plan.site.lon))}) · plan updated ${e(fmtTime(plan.updatedAt))} · briefing generated ${e(fmtTime(o.generatedAt.toISOString()))} · Atlas Watch ${e(o.appVersion)}</p>
+<p class="muted">Site: ${e(plan.site.name)} (${e(coord(plan.site.lat, plan.site.lon))}) · plan updated ${e(fmtTime(plan.updatedAt))} · briefing generated ${e(fmtTime(o.generatedAt.toISOString()))} · Sky_View ${e(o.appVersion)}</p>
 <div class="warn"><strong>Planning estimate.</strong> Modelled coverage, travel times and route shares come from available map data and stated assumptions. They are not real-time information, not proof of a threat and not a guarantee of safety. Unknown means no data, not no risk.</div>
 ${section('Observation points and cameras', observers)}
 ${section('Modelled coverage', coverage)}
