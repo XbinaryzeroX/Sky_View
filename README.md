@@ -1,8 +1,220 @@
-# Atlas Watch
+# Sky_View
 
 **See what is happening around the places you care about.**
 
-Atlas Watch is a Windows desktop geospatial monitoring app. It started as a tool for small businesses and property
+Sky_View is a Windows desktop app that puts live public data on a detailed 3D globe: weather alerts,
+earthquakes, aircraft, ships, satellites, fires, traffic cameras, road traffic, launches, radio and more. It runs
+entirely on your computer. There is no server and no account, and the core features need no API keys.
+
+![The globe with the Layers panel](docs/screenshots/readme/globe-controls.jpg)
+
+> Sky_View is a public-data monitoring tool. It is **not** an official warning service, a live satellite feed,
+> or a people-tracking tool. Data can be delayed, revised or incomplete, and every layer says whether it is live,
+> delayed, calculated, simulated or static. In an emergency, follow official alerts.
+
+---
+
+## Install
+
+Sky_View is built from this repository. You need a Windows 10 or 11 PC (64-bit) with a graphics card that
+supports WebGL 2, and about 3 GB of free disk space for the build.
+
+### 1. Install the tools (once)
+
+1. **Node.js 24 LTS** (includes npm): download the Windows installer from [nodejs.org](https://nodejs.org/) and
+   accept the defaults. Node 22.17 or newer also works.
+2. **Git**: download from [git-scm.com](https://git-scm.com/download/win) and accept the defaults.
+
+Open a new **Command Prompt** or **PowerShell** window and check both:
+
+```bash
+node --version
+```
+
+```bash
+git --version
+```
+
+### 2. Download Sky_View
+
+```bash
+git clone https://github.com/XbinaryzeroX/Sky_View.git
+```
+
+```bash
+cd Sky_View
+```
+
+### 3. Install the packages
+
+```bash
+npm ci
+```
+
+This takes a few minutes the first time. If PowerShell says that running scripts is disabled, type `npm.cmd`
+instead of `npm` in every command (or use Command Prompt).
+
+### 4. Build and start
+
+```bash
+npm run build
+```
+
+```bash
+npm start
+```
+
+The globe opens with offline imagery and terrain. Next time, `npm start` is enough; run `npm run build` again
+after you pull new changes.
+
+### Optional: make a normal Windows installer
+
+```bash
+npm run dist
+```
+
+This writes `release/Sky_View-Setup-<version>.exe`, a per-user installer you can copy to other PCs (they need
+nothing else installed). The installer is not code-signed, so Windows SmartScreen shows a warning on first run:
+choose **More info → Run anyway**. `npm run dist:dir` makes an unpacked folder instead
+(`release/win-unpacked/Sky_View.exe`).
+
+### Updating
+
+```bash
+git pull
+```
+
+```bash
+npm ci
+```
+
+```bash
+npm run build
+```
+
+Your saved places, settings, keys and history live in `%APPDATA%\Atlas Watch` (the folder keeps the app's former name, Atlas Watch) and are kept across updates.
+
+### Troubleshooting
+
+| Problem | What to do |
+|---|---|
+| "The 3D globe could not start" | Update your graphics driver. The app needs WebGL 2. |
+| `npm` is "not recognized" | Close and reopen the terminal after installing Node.js, or restart Windows. |
+| "running scripts is disabled" in PowerShell | Use `npm.cmd` instead of `npm`, or use Command Prompt. |
+| A layer shows "busy or unreachable" | The public source is down or rate-limited. The app keeps the last good data and retries later. |
+| Google Photoreal 3D says "not found (HTTP 404)" | In Google Cloud, enable **Map Tiles API** and billing in the same project as the key, and remove website restrictions from the key. |
+
+---
+
+## Feature tour
+
+Open **Layers** (top left) to switch data on. Categories start collapsed; type in **Find a layer** to search them.
+Click anything on the globe to see its details on the right: the source, its terms, and when it was observed.
+
+### Traffic cameras that float over their street
+
+Turn on **Cameras**. Zoom down to street level (under about 900 m) and the nearest public cameras show their latest
+picture, pinned above the camera's spot. Each card has a **next frame** button (3-second cooldown) and you can
+scroll over the picture to zoom it. Farther out, cameras are small `CAM-` tags. Open-data cameras cover New York,
+California, London, Finland, Hong Kong, British Columbia, Québec and more.
+
+| Cameras above their streets | Pinned card at street level |
+|---|---|
+| ![Camera cards over Los Angeles](docs/screenshots/readme/camera-cards.jpg) | ![A camera card pinned above Bowery](docs/screenshots/readme/camera-pinned.jpg) |
+
+### Clear details for anything you click
+
+The right panel leads with what you selected: an icon for its kind, the title, key facts in bold (time, position,
+altitude, speed, heading), then the details and the source.
+
+![Details panel for a camera](docs/screenshots/readme/details-panel.jpg)
+
+### Road traffic
+
+**Traffic flow** shows measured speeds on roads in New York, Paris, Finland, Hong Kong and Madrid. Switch on the
+simulated vehicles to see moving dots coloured by congestion, with `SIM-` tags (they are a simulation, not tracked
+cars). With your own TomTom key, **Live congestion** colours roads worldwide.
+
+![Simulated traffic tagged on a New York expressway](docs/screenshots/readme/traffic-sim.jpg)
+
+### Aircraft, ships, satellites and launches
+
+Live aircraft (ADS-B), military-flagged aircraft, ships (AIS), satellites with predicted orbits and passes, and
+space launches with an event replay. Click a plane for its type, 3D model, usual route and the nearest airports'
+tower frequencies. Ships and aircraft can be followed and recorded for playback.
+
+### Weather, hazards and the ground
+
+Weather radar, lightning, an animated wind forecast, weather-satellite frames with a **two-hour history timeline**,
+U.S. weather alerts, earthquakes (off by default), fires, wildfire perimeters, cyclones, disaster reports, and
+**landslide estimates** from USGS after significant earthquakes.
+
+| Weather timeline and wind colours | Landslide estimates |
+|---|---|
+| ![Weather timeline](docs/screenshots/readme/weather-timeline.jpg) | ![USGS landslide estimates](docs/screenshots/readme/landslides.jpg) |
+
+### Infrastructure and rivers
+
+Internet and telecom cables (under water and under ground, as mapped in OpenStreetMap), data centres, dams,
+military sites and plate-reader camera locations from OpenStreetMap, and a **Rivers and canals** overlay.
+
+| Mapped internet cables | Rivers over Paris |
+|---|---|
+| ![Cables in the North Sea](docs/screenshots/readme/cables.jpg) | ![Rivers and canals](docs/screenshots/readme/rivers.jpg) |
+
+### Worldwide radio
+
+The **Radio** page searches thousands of stations worldwide by name, kind, country or distance from the map centre,
+and plays them inside the app. Playback continues while you use the globe. Scanner and air-traffic entries are
+third-party relays and are labelled; listening to police radio is illegal in some countries.
+
+![Radio stations near London](docs/screenshots/readme/radio.jpg)
+
+### Sharper surfaces with your own keys
+
+Optional: Google Photorealistic 3D cities, Google satellite, Esri, Mapbox, or **Bing aerial and Cesium World Terrain**
+through your Cesium ion token. The free surfaces stay available.
+
+![Bing aerial via Cesium ion over Zermatt](docs/screenshots/readme/bing-ion.jpg)
+
+### Protective planning
+
+The **Plan** page models lines of sight from a site over terrain and mapped buildings, finds rooftops that can see
+it, compares walking and driving routes, and exports a briefing. Results are geometric estimates, not proof of
+safety.
+
+![Protective planning site view](docs/screenshots/readme/planning.jpg)
+
+### And more
+
+Saved places with alert and earthquake matching, CSV import, briefings (HTML/PDF), event history and replay, scenes,
+day/night lighting, an imagery-year archive, markets, a community reader, voice commands (with your OpenAI key), a
+render-resolution setting, tilt and "global picture" views, and visual styles.
+
+---
+
+## Optional keys
+
+Everything above works without keys except where noted. Add keys in **Providers** (the key icon at the bottom of
+the left rail). Keys are encrypted with Windows' credential store and never leave your computer except to their own
+service. Paid services bill your own account.
+
+| Service | Adds | Cost |
+|---|---|---|
+| Google Maps Platform | Photorealistic 3D cities, Google satellite | Metered (your Google Cloud billing) |
+| Cesium ion | Bing aerial surface, Cesium World Terrain | Free Community plan (non-commercial), paid plans |
+| TomTom | Live road congestion worldwide | Free tier, then metered |
+| OpenAI | Voice commands | Metered per minute of audio |
+| AISStream | Ships worldwide in your view | Free beta |
+| OpenSky | More frequent worldwide aircraft snapshots | Free (non-commercial) |
+| Launch Library 2 | More launch requests per hour | Paid supporter plan |
+| AeroDataBox, Esri, Mapbox, market data, camera systems | See Providers for each | Varies |
+
+---
+
+## Feature notes
+
+Sky_View is a Windows desktop geospatial monitoring app. It started as a tool for small businesses and property
 managers who look after several locations. It shows active U.S. National Weather Service alerts and recent USGS
 earthquakes, and reports which saved locations fall inside an alert or near an epicenter. On a detailed 3D globe it
 also shows live public data layers: aircraft, vessels, satellites, fires, airspace, radar, weather observations,
@@ -63,7 +275,7 @@ It runs entirely on the user's computer. **Core features need no accounts, API k
 data service, and no server.** Optional integrations (AISStream, Google Photorealistic 3D, a local ADS-B
 receiver, Ollama) stay off until the customer configures them with their own account.
 
-> Atlas Watch is a public-data monitoring tool. It is **not** an official warning service, a live satellite
+> Sky_View is a public-data monitoring tool. It is **not** an official warning service, a live satellite
 > feed, or a people-tracking tool. Data may be delayed, revised, or incomplete. In an emergency, follow official
 > NWS and local alerts.
 
@@ -74,14 +286,15 @@ receiver, Ollama) stay off until the customer configures them with their own acc
 | Area | What it does |
 |---|---|
 | Globe and map detail | CesiumJS globe with **progressive tile detail**. The NASA Blue Marble land reference reaches zoom 8 (about 500 m per pixel). The global water image comes from ESA Ocean Colour CCI and NASA Terra/MODIS observations. The ESA WorldCover 2021 Sentinel-2 composite adds 10 m imagery where available over land and coastal waters. **USGS National Map orthoimagery** covers the lower 48, Alaska, Hawaii, and Puerto Rico to zoom 16 (about 2.4 m per pixel, neighborhood detail). Other surfaces: NASA VIIRS daily satellite imagery (previous UTC day, dated), USGS imagery with labels, USGS topo, bundled offline relief, and neutral. **3D terrain** comes from the keyless Terrain Tiles on AWS. A **diagnostics panel** (`Diag`, Ctrl+Shift+D) shows providers, tile levels, pending and failed requests, and when a provider's maximum detail is reached. The globe has U.S. / Lower 48 / Alaska / Hawaii views, north-up, reset, and keyboard navigation. |
-| Data layers | Aircraft (adsb.lol, ODbL), military-flagged aircraft, vessels (Fintraffic AIS keyless; AISStream with your key), satellites (CelesTrak elements, positions **calculated** by SGP4), NASA FIRMS fire detections, NIFC wildfire perimeters, FAA prohibited/restricted airspace, NOAA nowCOAST radar, METAR observations, NHC cyclones, Caltrans and Fintraffic cameras, and MBTA transit. Each layer is labeled live / delayed / periodic / calculated / static and shows freshness, record count, fetch time, coverage notes, and errors. Layers poll only while switched on. |
+| Data layers | Aircraft (adsb.lol, ODbL; filters for fighter and attack jets by reported type code, and all military), military-flagged aircraft, vessels (Fintraffic AIS keyless; AISStream with your key; one-click tanker filter for AIS ship types 80–89), satellites (CelesTrak elements, positions **calculated** by SGP4), NASA FIRMS fire detections, NIFC wildfire perimeters, FAA prohibited/restricted airspace, NOAA nowCOAST radar and lightning density, animated NOAA GFS wind forecast, GPS accuracy anomalies from aircraft reports, space launches (Launch Library 2), live trains from selected operators, bike-share stations, wildlife sightings (openly licensed iNaturalist records), Canadian air quality (AQHI), violence reported in the news (GDELT, machine-coded), street-level photos (KartaView, Panoramax), data centres and a sample of dams (bundled OpenStreetMap data), traffic flow for New York, Finland, Hong Kong, Madrid and Paris (measured per road or sensor, never individual vehicles; optional simulated moving dots on the New York and Paris roads, labelled as simulated), air traffic control radio for a selected aircraft (nearest airports' published frequencies and a link to the airport's LiveATC.net page; the app does not stream audio), METAR observations, NHC cyclones, Caltrans and Fintraffic cameras, and live buses, trams and ferries from MBTA and 36 other operators' GTFS-Realtime feeds (real vehicles, one dot each). Each layer is labeled live / delayed / periodic / calculated / static and shows freshness, record count, fetch time, coverage notes, and errors. Layers poll only while switched on. |
 | Tools | Search (coordinates, `geo:` URIs, 7,342 bundled places, U.S. Census address lookup), click-to-track with recorded trail, nearby contacts (250 km), predicted satellite orbit, geodesic distance and area measurement, pins / routes / areas annotations, saved views, last-view restore, scene file export/import (no credentials), playback of recorded movement, a HUD, and display styles (night vision / thermal-style / CRT / noir, all labeled as visual effects only). |
 | Later map and tracking additions | Screen-space place and road labels with collision handling, local scripts and independent vehicle label controls; type/category-specific aircraft and vessel symbols, app-built 3D vehicles and optional attributed model packs; watchlists, airports and overhead search. Follow works across batched/entity rendering; fresh airborne observations support a simulated cockpit perspective aligned to reported track/heading, with fixed pitch/roll and stale-data exit. Optional identification photos and reported-route lookup distinguish a usual callsign route from an observed track or today's flight plan. |
 | Camera workspace | Existing HLS player, refreshed stills and official viewer links; search, country/region and media filters, favorites and map navigation. Existing local boards now group up to 32 camera references, four cards per page and at most two video streams; background players disconnect while a board is open, and hidden/paused players release media. Open-data adapters include Caltrans, NYC DOT, Fintraffic, TfL, Hong Kong, DriveBC and Québec; 22 optional systems require customer credentials and their publisher's terms. A listed camera is not a guarantee of availability. |
 | Dated imagery and weather satellite | 23 NASA GIBS products with source-checked dates, gap-aware playback/navigation, two-date swipe comparison and per-date raster-request health; a listed date may still have missing raster tiles. Separate GOES/Himawari weather satellite frames retain their own coverage and acquisition times. Normal, CRT, NVG, FLIR, Anime, Noir and Snow styles are visual effects. |
+| Protective planning | The **Plan** page: choose a site (globe click, map centre after a search, or a saved location), view it in 3D, and model lines of sight from the site itself (no extra point needed) and any added observation points and cameras over terrain and OpenStreetMap building heights. Results are a labelled geometric estimate (clear in mapped data / blocked / unknown), never proof of safety or threat; ground without mapped buildings is modelled as open only after you choose that, and missing data stays unknown. Also: mapped rooftops with a modelled clear line of sight to the subject (outlined at roof height, updated live while you drag the subject marker), up to three walking or driving route options between two points computed on this computer from the map tiles' road network (length, time estimate, major-road share, junctions, share overlooked by mapped rooftops and watched by your points; measures, not a safety rating; both saved with the plan and listed in the briefing), OpenStreetMap building details and nearby emergency facilities, your own floor-plan images aligned to the map, roles for drawn routes and zones with a route comparison, locally saved plans, and an HTML/PDF briefing with a site diagram. Not provided: property ownership, interiors, turn restrictions or live traffic in routing, crowd simulation, video projection, shared plans. [Details and evidence](docs/PROGRESS.md#protective-planning-workspace--2026-11-12) |
 | Satellite passes | Select a satellite, enter worldwide observer coordinates/elevation or choose an existing saved place, then calculate the next 24 hours of rise/peak/set events. Uses loaded orbital elements locally in a bounded worker; stale-element warnings, UTC/local times and no-pass/unavailable states are explicit. Geometric passes do not establish optical visibility. |
 | GeoJSON annotations | Tools → Import GeoJSON previews local points, lines and simple exterior polygons, reports rejected/duplicate features, and requires acknowledgement before importing valid features only. Atomic import adds new annotation IDs; export shares geometry/name/color/visibility without saved places, notes or credentials. The supported subset and limits are described below. |
-| External Street View | Tools → Street View in Google Maps sends the current screen-center coordinates to the default browser on click. This is a partial street-level workflow: Google chooses an available historical panorama; Atlas Watch does not embed, capture or verify imagery availability. See [source/terms and verification limits](docs/STREET_VIEW.md). |
+| External Street View | Tools → Street View in Google Maps sends the current screen-center coordinates to the default browser on click. This is a partial street-level workflow: Google chooses an available historical panorama; Sky_View does not embed, capture or verify imagery availability. See [source/terms and verification limits](docs/STREET_VIEW.md). |
 | Existing workspaces | Incident register, trends, country summaries and source monitor; local boards and team directory; optional Markets adapters and Lemmy Community. Market-data plans and redistribution rights must be checked separately; credentialed and authenticated workflows have separate verification limits. |
 | Provider settings | Shows source coverage, terms, setup instructions and available connection or configuration checks. Customer-entered credentials are encrypted in local storage using Electron `safeStorage` (Windows DPAPI). Google, Esri and Mapbox client keys are available to the map renderer for the enabled service. |
 | Weather alerts | Pulls active alerts from `api.weather.gov` with severity, urgency, certainty, event, headline, description, instructions, onset, ends, expires, sender, area, zones, and identifier. Polygons are drawn when supplied. Zone-based alerts without a polygon are listed and still evaluated, never drawn as a made-up shape. |
@@ -92,7 +305,7 @@ receiver, Ollama) stay off until the customer configures them with their own acc
 | Event history and replay | Search local alert and earthquake history, then choose **Replay at last observation**. The existing timeline shows recorded NWS alert polygons, USGS epicenters and movement fixes at one cursor. Open **Data** for the recorded details, including zone alerts without polygons. |
 | Saved investigations | In **Scenes**, name and save the current view. Restore its camera, 2D/3D mode, display filters, imagery configuration and selected alert or earthquake. A recorded view opens at its saved UTC time. A live view uses the current provider data. |
 | Briefing | Preview and export a location report or a **Since last visit** report as HTML or PDF. Location reports cover your selected places. Visit reports compare recorded NWS and USGS replies across two app launches, with source IDs, links, observation times and any gaps in coverage. |
-| Optional local AI | If you run **Ollama** yourself, Atlas Watch can ask a local model to explain results it has already calculated. It connects only to loopback (127.0.0.1) and never downloads models. Answers are labeled as AI-generated. The app is fully usable without it. |
+| Optional local AI | If you run **Ollama** yourself, Sky_View can ask a local model to explain results it has already calculated. It connects only to loopback (127.0.0.1) and never downloads models. Answers are labeled as AI-generated. The app is fully usable without it. |
 | Reliability | Last-known data retains original timestamps. Main-process HTTP shares publisher pauses across callers, preserves long Retry-After waits and delayed redirects, and schedules long deadlines through bounded timer hops. Polling, timeouts, backoff and stale/unavailable states remain provider-aware. These paths have regression coverage; outages and live quotas still depend on each source. |
 
 ---
@@ -169,8 +382,8 @@ npm run dist
 ```
 
 This runs type checking, builds, regenerates `THIRD_PARTY_NOTICES.md`, and writes
-`release/Atlas-Watch-Setup-<version>.exe`, a per-user NSIS installer. For an unpacked folder you can run
-directly, use `npm run dist:dir` (the output is `release/win-unpacked/Atlas Watch.exe`).
+`release/Sky_View-Setup-<version>.exe`, a per-user NSIS installer. For an unpacked folder you can run
+directly, use `npm run dist:dir` (the output is `release/win-unpacked/Sky_View.exe`).
 
 To reproduce the handoff installer with customer-supplied credentials, open a fresh PowerShell session in the
 project and point the existing build setting at an empty JSON object. The build should print
@@ -191,7 +404,7 @@ End users need nothing else installed: no Node, Python, Docker, or terminal.
 
 The current flight-card installer is [release/flight-card/Atlas-Watch-Setup-0.7.0.exe](release/flight-card/Atlas-Watch-Setup-0.7.0.exe).
 It is unsigned and its SHA-256 is `932D440E35C1290D5E149D872F7A39131EF7A318C62B9A5F5E2957A95D880203`.
-This side-by-side release lets an earlier Atlas Watch session finish normally. Close the older window and double-click
+This side-by-side release lets an earlier Sky_View session finish normally. Close the older window and double-click
 [start.bat](start.bat) to open the newer package. [Flight-card installer audit](docs/flight-card-package.log).
 
 The preceding November 11 worldwide place-search installer, `release/Atlas-Watch-Setup-0.7.0.exe`, is **128,122,660 bytes**, unsigned.
@@ -210,7 +423,7 @@ Windows installation and installer-driven upgrade remain untested. [Packaged win
 If PowerShell reports that running scripts is disabled, use `npm.cmd` instead of `npm` (or use Command Prompt):
 
 ```powershell
-cd "C:\Users\infob\Documents\Claude\Sky_View"
+cd Sky_View
 npm.cmd run dev
 ```
 
@@ -253,7 +466,7 @@ the boundary and follows straight longitude/latitude segments across the shorter
 vertices can produce a different boundary from the arcs drawn on the globe. Pole-touching and self-intersecting
 areas cannot be watched.
 
-An enabled watch checks the configured USGS feed on successful refreshes while Atlas Watch runs. It accepts
+An enabled watch checks the configured USGS feed on successful refreshes while Sky_View runs. It accepts
 earthquakes with known magnitude and an origin time after the watch was armed. Re-enabling a watch or changing
 its geometry or threshold starts a new period. The editor shows the source's actual window and minimum magnitude,
 the last local check, and any limits on evaluation. A smaller rule threshold cannot recover observations absent
@@ -271,7 +484,7 @@ its area removes that watch's local matches. USGS event history follows its own 
 
 **Street View in Tools.** Move the globe to the location, then click **Street View in Google Maps ↗**. The action
 uses the center of the screen at click time and refuses a missing globe intersection or a view morph. The
-external Google viewer handles imagery/attribution; the link requires no Atlas Watch API key or billing setup.
+external Google viewer handles imagery/attribution; the link requires no Sky_View API key or billing setup.
 Availability, capture dates and actual default-browser handoff are not established by the fixture tests.
 
 Data is stored in `%APPDATA%\Atlas Watch\atlas-watch.sqlite` (locations, settings, feed cache, history).
@@ -467,14 +680,14 @@ takes precedence. Included-key daily allowances apply per installation. Provider
    connects to AISStream directly. AISStream has no formal terms of service, so review it before
    commercial use.
 5. **Google Photorealistic 3D Tiles (textured 3D buildings).** This is the licensed way to get Google
-   Earth–style textured cities. Atlas Watch never scrapes Google Earth.
+   Earth–style textured cities. Sky_View never scrapes Google Earth.
    1. In Google Cloud Console, create a project and attach a billing account. Google requires billing
       even within its free monthly allowance.
    2. Under **APIs & Services → Library**, enable **Map Tiles API**. Also enable **Geocoding API** so
       place search keeps working (see below).
    3. Under **Credentials**, create an API key. Restrict it to those two APIs, and set a daily quota cap
       to limit spending.
-   4. In Atlas Watch, open **Providers → Google Maps Platform**, paste the key, and press **Save**, then
+   4. In Sky_View, open **Providers → Google Maps Platform**, paste the key, and press **Save**, then
       **Test**. Saving reloads the window once, because the map may only contact Google after the key
       exists.
    5. Use the top-bar buttons. **Satellite** gives Google satellite imagery worldwide (2D tiles, billed per
@@ -501,10 +714,10 @@ providers, account entitlements and imported data have their own rights and redi
 |---|---|---|
 | NWS API (`api.weather.gov`) | U.S. government data; NWS documentation says it is "free to use for any purpose" | No key. A User-Agent is required, and an email or website in it is optional. Rate limits are unpublished but "generous", and the app polls at most once per minute. Credit is shown as "NWS/NOAA". |
 | USGS earthquake feeds | U.S. government work, public domain | Feeds update every minute. Credit: U.S. Geological Survey. |
-| DWD German weather warnings | © Deutscher Wetterdienst, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Atlas Watch converts CAP polygons and exclusions to GeoJSON. | Keyless. The optional layer checks the complete German STATUS archive every five minutes. Provider settings shares that connection and cache. [Publisher access and attribution](docs/REGIONAL_WARNING_RESEARCH.md). |
+| DWD German weather warnings | © Deutscher Wetterdienst, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Sky_View converts CAP polygons and exclusions to GeoJSON. | Keyless. The optional layer checks the complete German STATUS archive every five minutes. Provider settings shares that connection and cache. [Publisher access and attribution](docs/REGIONAL_WARNING_RESEARCH.md). |
 | Natural Earth II imagery (in CesiumJS) | Public domain | Static, low resolution. Labeled "static, not live imagery". |
 | `world-atlas` (Natural Earth) / `us-atlas` (U.S. Census) | ISC package; public-domain data | Boundaries |
-| CesiumJS 1.147 | Apache-2.0 | Bundled locally. Cesium ion is **not** used, and no token or account exists. |
+| CesiumJS 1.147 | Apache-2.0 | Bundled locally. Cesium ion is contacted only for the optional Bing aerial surface and Cesium World Terrain, with the customer's own ion token. |
 | Electron 45, React 19, Vite 8, TypeScript 7, zod 4, Turf 7, geographiclib-geodesic 2, PapaParse 5, topojson-client 3 | MIT / Apache-2.0 / ISC | — |
 | Transitive packages | MIT, ISC, Apache-2.0, BSD, (MIT AND Zlib), Unlicense, (MPL-2.0 OR Apache-2.0) | All permissive. See `THIRD_PARTY_NOTICES.md`. |
 | Ollama (optional, not bundled) | MIT; models have their own licenses | Users install Ollama and choose models themselves. Check each model's license for commercial use. |
@@ -517,12 +730,84 @@ providers, account entitlements and imported data have their own rights and redi
 | CelesTrak | U.S. government-origin data, no published license; usage policy: at most one download per 2 hours per dataset | Satellite elements |
 | NASA FIRMS | NASA open data; citation requested | Fire detections |
 | NIFC WFIGS | Public U.S. interagency perimeter data. The publisher lists contributors and disclaims guarantees of accuracy and completeness. [Dataset and terms](https://www.arcgis.com/home/item.html?id=d1c32af3212341869b3c810f1a215824) | Keyless. The enabled layer checks every 15 minutes and requests generalized geometry. |
-| FAA SUA, NOAA AWC, NHC, nowCOAST, U.S. Census Geocoder | U.S. public domain | Airspace, METAR, cyclones, radar, address search |
+| FAA SUA, NOAA AWC, NHC, nowCOAST, U.S. Census Geocoder | U.S. public domain | Airspace, METAR, cyclones, radar, lightning density, address search |
+| EUMETSAT View Service (`view.eumetsat.int/geoserver/wms`) | Meteosat imagery © EUMETSAT. EUMETSAT states hourly imagery is no longer subject to licensing; 15-minute imagery under 3 hours old is licensed for research, education and personal use, so only hourly frames are used. The full 2025 Data Policy text was not readable here (encrypted PDF). | Weather-satellite layer over Europe, Africa and the Indian Ocean (Meteosat 0° and IODC): one hourly frame (on the hour, at least 20 minutes old) as WMS tiles while the layer is on. |
+| Traffic flow: NYC DOT real-time speeds (NYC Open Data `i4gi-tjb9`) | [NYC Open Data Terms of Use](https://opendata.cityofnewyork.us/overview/#termsofuse) | About 125 road links, polled every 4 minutes while the layer is on over New York. Readings are often 1–2 hours old; links with status −101 are shown as unknown. Damaged published shapes are replaced by the published point list (marked partial) or not drawn. |
+| Traffic flow: Fintraffic TMS stations (`tie.digitraffic.fi/api/tms/v1`) | **CC BY 4.0** | About 500 roadside stations; speed as a share of free-flow speed, 5-minute sliding average. Station list once a day. |
+| Traffic flow: Hong Kong Transport Department strategic-road detectors | [DATA.GOV.HK terms](https://data.gov.hk/en/terms-and-conditions) | About 800 detectors, every 2 minutes while on; lanes that counted no vehicles are not used for speed. |
+| Traffic flow: Madrid city sensors (`informo.madrid.es`) | Ayuntamiento de Madrid open data terms ("Origen de los datos: Ayuntamiento de Madrid") | About 4,900 sensors with the city's level of service, every 5 minutes (2 MB). |
+| Traffic flow: Paris permanent counters (`opendata.paris.fr`, `comptages-routiers-permanents`) | **ODbL 1.0** | About 3,000 road arcs with the city's traffic state; hourly and about a day behind; checked hourly. |
+| NOAA GFS on the AWS Open Data registry (`noaa-gfs-bdp-pds`) | U.S. public domain ([registry entry](https://registry.opendata.aws/noaa-gfs-bdp-pds/)) | Wind layer: the newest 1° run's 10 m u/v wind, two byte-range reads of about 80 kB plus a 50 kB index, at most once an hour while the layer is on. A forecast. |
+| nowCOAST lightning strike density (`ldn_lightning_strike_density`) | U.S. public domain | Lightning layer: 15-minute strike density on an 8 km grid from NLDN and GLD360, 25° S–80° N, 110° E eastward to 0°. WMS tiles every 5 minutes while on. |
+| nowCOAST radar and lightning, past frames (WMS `time` parameter) | U.S. public domain | Observed-weather history: the frame nearest the requested time, up to two hours back in 10-minute steps (radar frames are about 4 minutes apart, lightning 15). Weather-satellite history uses the same GIBS and EUMETSAT sources at earlier frame times. |
+| The Space Devs Launch Library 2 (`ll.thespacedevs.com`) | [Terms](https://thespacedevs.com/llapi): free use, courtesy attribution, no completeness guarantee; anonymous limit 15 requests per hour | Launches layer: one request per hour while on (30 days back, 14 ahead). |
+| The Space Devs Launch Library 2, launch detail (`/2.3.0/launches/{id}/?mode=detailed`) | Same terms and the same 15-requests-per-hour allowance | Launch event replay: one request when you press "Load the event timeline" for a selected launch, cached six hours. Published event times relative to liftoff, not telemetry; no trajectory is published, so none is drawn. |
+| adsb.lol aircraft quality fields (NIC, NACp, GPS loss) | **ODbL 1.0** | GPS accuracy layer: one 250 nm request around the view center at most once a minute per area, every 2 minutes while on. Cell score and bands from [gpsjam.org's published method](https://gpsjam.org/faq); per-aircraft rule ported from God's Eye View (MIT). Anomalies, not detections. |
+| Train feeds (Trains layer) | MTA Data Feed Terms; SEPTA Trip Planning Data Agreement; MDOT MTA developer feeds; Translink, Fintraffic, Renfe and KTMB (via data.gov.my) **CC BY 4.0**; Entur **NLOD 2.0**; Toyama tramways via gtfs-data.jp **CC0** | Only feeds near the view, every 30 s while on. Rail-only feeds with published terms; feeds with no licence and mixed bus feeds are left out. Positions older than 15 minutes are dropped. |
+| Bike-share GBFS feeds | Citi Bike, Divvy, Capital Bikeshare, Bay Wheels, Bluebikes: each system's Lyft Data License Agreement ("use the Data for any lawful purpose", Citi Bike's read 2026-11-14); Oslo, Bergen, Trondheim Bysykkel: **NLOD 2.0**; AMBici: CC0 | Two small requests per system near a zoomed-in view, every 2 minutes. Urban Sharing asks for a `Client-Identifier` header, which the app sends. |
+| iNaturalist API v2 | Per record; the app asks only for **CC0, CC BY and CC BY-SA** records so it stays usable commercially (most iNaturalist records are CC BY-NC and are not shown) | Wildlife groups only, last 7 days, current view, every 15 minutes. Obscured locations are drawn hollow and said to be obscured. |
+| ECCC MSC GeoMet AQHI observations | [ECCC Data Servers End-use Licence](https://eccc-msc.github.io/open-data/licence/readme_en/) (open, attribution) | Canada only, every 30 minutes. |
+| GDELT 2.0 event exports (`data.gdeltproject.org/gdeltv2/`) | [GDELT terms](https://www.gdeltproject.org/about.html#termsofuse): unrestricted use with citation | 15-minute files (about 50 kB zipped); first 3 hours on enabling, then each new file, up to 24 hours kept. Machine-coded and often wrong; article links open the publisher's page. |
+| KartaView photo API and CDN | Photos **CC BY-SA 4.0** ([terms](https://kartaview.org/terms)) | Up to 100 photos within 500 m of the view centre when below about 4 km; only photos KartaView has blurred. |
+| Panoramax (`api.panoramax.xyz` search; pictures from the IGN and OpenStreetMap France instances) | Per picture (Licence Ouverte 2.0 or CC BY-SA 4.0 in samples), shown on each | Pictures from other instances are not shown, because the renderer loads images only from listed hosts. |
+| Transit: CapMetro (Austin, TX), `data.texas.gov` | [CapMetro Developer Tools license](https://www.capmetro.org/developertools) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: HSL (Helsinki, Finland), `realtime.hsl.fi` | [CC BY 4.0](https://www.hsl.fi/en/hsl/open-data) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: OVapi (Netherlands), `gtfs.ovapi.nl` | [Free to use per the OVapi README (best effort, no SLA)](https://gtfs.ovapi.nl/README) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Entur (Norway), `api.entur.io` | [Norwegian Licence for Open Government Data (NLOD)](https://developer.entur.org/pages-intro-authentication) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: TransLink (South East Queensland, Australia), `gtfsrt.api.translink.com.au` | [CC BY 4.0](https://translink.com.au/about-translink/open-data) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: TTC (Toronto, ON), `bustime.ttc.ca` | [Open Government Licence \\– Toronto](https://open.toronto.ca/open-data-licence/) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: MiWay (Mississauga, ON), `www.miapp.ca` | [City of Mississauga Open Data Terms of Use](https://www5.mississauga.ca/research_catalogue/CityofMississauga_TermsofUse.pdf) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Hamilton HSR (Hamilton, ON), `opendata.hamilton.ca` | [City of Hamilton Open Data Licence](https://www.hamilton.ca/city-initiatives/strategies-actions/open-data-licence-terms-and-conditions) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Durham Region Transit (Durham Region, ON), `drtonline.durhamregiontransit.com` | [Region of Durham Open Data Licence v.1.0](https://www.durham.ca/en/regional-government/open-data.aspx) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Guelph Transit (Guelph, ON), `glphprdtmgtfs.glphtrpcloud.com` | [Open Government Licence \\– City of Guelph (v2.0)](https://explore.guelph.ca/pages/open-data-license) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Kingston Transit (Kingston, ON), `api.cityofkingston.ca` | [City of Kingston Open Data Licence 1.0](https://www.cityofkingston.ca/media/wtpgpkb0/gis_license_opendata.pdf) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Barrie Transit (Barrie, ON), `www.myridebarrie.ca` | [Barrie Transit Data licence](https://www.barrie.ca/services-payments/transportation-parking/barrie-transit/barrie-gtfs) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: YRT/Viva (York Region, ON), `rtu.york.ca` | [YRT Open Data Licence v2.0 (UK OGL-derived)](https://www.yrt.ca/en/about-us/open-data-licence-agreement.aspx) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Burlington Transit (Burlington, ON), `opendata.burlington.ca` | [City of Burlington Open Data Terms of Use](https://opendata.burlington.ca/opendata-terms-of-use/City%20of%20Burlington%20-%20Open%20Data%20Terms%20of%20Use.pdf) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Rio buses (SPPO) (Rio de Janeiro, RJ), `dados.mobilidade.rio` | [CC BY 4.0](https://www.data.rio/documents/997bc16cc4344a5cb0e48ab06cbdfd1f) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Mobi-Rio BRT (Rio de Janeiro, RJ), `dados.mobilidade.rio` | [CC BY 4.0](https://www.data.rio/documents/8bb196cc02174d25b77437bb2f6443d4) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Szczecin buses and trams (Szczecin, Poland), `www.zditm.szczecin.pl` | [CC0 1.0](https://www.zditm.szczecin.pl/en/zditm/for-developers) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Prague PID (Prague and Central Bohemia, Czechia), `api.golemio.cz` | [CC BY](https://pid.cz/o-systemu/opendata/) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Bordeaux TBM (Bordeaux, France), `bdx.mecatran.com` | [Licence Ouverte / Etalab 2.0](https://transport.data.gouv.fr/datasets/offres-de-services-bus-tram-et-scolaire-au-format-gtfs-netex-gtfs-rt-siri-lite) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Sendai City Bus (Sendai, Japan), `api-public.odpt.org` | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Poznań buses and trams (Poznań, Poland), `www.ztm.poznan.pl` | [ZTM Poznań open-data terms](https://www.ztm.poznan.pl/otwarte-dane/dla-deweloperow/) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Gdańsk buses and trams (Gdańsk, Poland), `ckan2.multimediagdansk.pl` | [CC BY 4.0](https://dane.gov.pl/pl/dataset/38599,rozklady-jazdy-i-lokalizacja-przystankow-gtfs-rt) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Edmonton Transit Service (Edmonton, AB), `gtfs.edmonton.ca` | [City of Edmonton Open Data Agreement](https://www.edmonton.ca/transportation/Web-version2.1-OpenDataAgreement.pdf) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Halifax Transit (Halifax, NS), `gtfs.halifax.ca` | [Open Government Licence – Halifax](https://www.halifax.ca/home/open-data/open-data-license) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Victoria Regional Transit (Victoria, BC), `bct.tmix.se` | [BC Transit Open Data Terms of Use](https://www.bctransit.com/open-data/terms-of-use) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Montpellier TaM (Montpellier, France), `gtfsproxy.e-tam.fr` | [ODbL](https://transport.data.gouv.fr/datasets/offre-de-transport-tam-en-temps-reel-gtfs-rt-urbain-et-suburbain) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Venice ACTV buses (Venice, Italy), `tpl.actv.it` | [ACTV open-data catalogue](https://actv.avmspa.it/it/content/catalogo-dei-dati-metadati-e-banche-dati-actv) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Venice ACTV waterbuses (Venice, Italy), `tpl.actv.it` | [ACTV open-data catalogue](https://actv.avmspa.it/it/content/catalogo-dei-dati-metadati-e-banche-dati-actv) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Denver RTD (Denver, CO), `open-data.rtd-denver.com` | [RTD GTFS-realtime licence agreement](https://www.rtd-denver.com/business-center/open-spatial-data/gtfs-realtime-license-agreement) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Rzeszów city transport (Rzeszów, Poland), `www.mpkrzeszow.pl` | [MPK Rzeszów open data](https://www.mpkrzeszow.pl/otwartedane/) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: BAS.MY Johor Bahru (Johor Bahru, Malaysia), `api.data.gov.my` | [CC BY 4.0](https://developer.data.gov.my/realtime-api/gtfs-realtime) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: BAS.MY Kota Bharu (Kota Bharu, Malaysia), `api.data.gov.my` | [CC BY 4.0](https://developer.data.gov.my/realtime-api/gtfs-realtime) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Rouen Astuce (Rouen, France), `api.mrn.cityway.fr` | [Licence Ouverte 2.0](https://transport.data.gouv.fr/datasets/donnees-statiques-et-temps-reel-du-reseau-astuce-metropole-rouen-normandie) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Toulon Mistral (Toulon, France), `feed-rdtpm-toulon.ratpdev.com` | [Licence Ouverte 2.0](https://transport.data.gouv.fr/datasets/reseau-de-transport-urbain-de-la-metropole-toulon-provence-mediterranee) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Le Havre LiA (Le Havre, France), `opendata.transports-lia.fr` | [ODbL](https://transport.data.gouv.fr/datasets/reseau-de-transport-en-commun-lia-gtfs-siri) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Transit: Tours Fil Bleu (Tours, France), `data.filbleu.fr` | [Licence Ouverte 2.0](https://transport.data.gouv.fr/datasets/fil-bleu-syndicat-des-mobilites-gtfs-gtfs-rt) | GTFS-Realtime vehicle positions, polled every 20 s only while the layer is on and the view is over the area. |
+| Cameras: Vegagerðin, Iceland (`gagnaveita.vegagerdin.is`; stills on `www.vegagerdin.is`) | **CC BY 4.0** (IRCA terms of use) | About 500 camera views. Stills load only when a camera is opened. |
+| Cameras: City of Calgary (`data.calgary.ca` dataset `k7p9-kppz`; stills on `trafficcam.calgary.ca`) | Open Government Licence – City of Calgary | About 220 cameras. The dataset's quadrant is the address grid, not the camera direction. |
+| Cameras: City of Toronto (`opendata.toronto.ca`) | Open Government Licence – Toronto | 336 cameras; still address built from the camera number as the dataset documents. The list may lag the live network. |
+| ATC frequencies (bundled, `src/renderer/data/airportFrequencies.json`) | OurAirports, public domain | Built by `scripts/build-airport-frequencies.mjs` from `airport-frequencies.csv`: tower, ground, approach, departure, clearance, ATIS and uncontrolled-field frequencies (108–137 MHz) for the bundled large and medium airports (9,560 frequencies, 3,610 airports). Community-maintained and may be out of date. No network requests. |
+| ATC audio link: LiveATC.net (`liveatc.net/search/?icao=…`) | [LiveATC.net Terms of Use](https://www.liveatc.net/legal/): personal, non-commercial listening; no dedicated app that makes their streams available without their consent | Opened in the system browser only, never fetched or played by the app. Coverage depends on volunteers; many airports have no feed. Aircraft do not broadcast their frequency, so the link is the nearest airport's radio, not a confirmed link to the flight. |
+| Data centres and dams (bundled, `src/main/data/infrastructure.json`) | © OpenStreetMap contributors, **ODbL 1.0** (the bundled file is a derived database: attribution and share-alike apply to it, not to the app code); dams via Open Infrastructure Map | Built by `scripts/build-infrastructure.mjs` from God's Eye View's OSM extracts (4,352 data centres; a sample of 703 dams, mostly hydropower). One point per site; contact details and notes removed. The upstream extraction date was not recorded. No network requests. See `src/main/data/INFRASTRUCTURE_ATTRIBUTION.txt`. |
+| Internet and telecom cables (bundled, `src/main/data/cables.json`) | © OpenStreetMap contributors, **ODbL 1.0** (derived database: attribution and share-alike apply to it); one Overpass API download at build time by `scripts/build-cables.mjs` | Mapped telecom cables under water and under ground; a small part of the world's cables, densest around Europe |
+| OpenSky Network track API (`/api/tracks/all`, experimental) | [OpenSky terms](https://opensky-network.org/about/terms-of-use): non-commercial use without an agreement | Only when the user asks for a selected aircraft's path; anonymous, cached 5 minutes per aircraft. The same commercial-use condition as the OpenSky worldwide snapshot applies. |
+| OpenStreetMap via the Overpass API (`overpass-api.de`; fallback `overpass.private.coffee` when the first is busy) | Data: **ODbL 1.0**, © OpenStreetMap contributors. The public Overpass instances are free fair-use services ([usage policy](https://wiki.openstreetmap.org/wiki/Overpass_API#Public_Overpass_API_instances): on the main instance, under about 10,000 queries and 1 GB per day); review them before commercial distribution | Protective planning only: building details and nearby emergency facilities, one request each time the user asks. Community-mapped; no ownership data |
+| OpenStreetMap via the Overpass API, map layers (same two hosts) | **ODbL 1.0**, © OpenStreetMap contributors; public fair-use service | Military sites layer (below about 500 km) and Plate-reader camera locations layer (below about 80 km): one query per fixed map block while the layer is on, reused for a day. Community mapping: incomplete; an empty area is a gap in the map. Plate-reader records are locations and tags only (no plate reads, images or video). |
 | Caltrans CCTV | Published openly by Caltrans; review Caltrans terms before redistribution | California cameras |
 | MBTA V3 API | MassDOT/MBTA developer license (review before commercial use) | Boston transit |
 | Natural Earth 1:10m populated places v5.1.2 | [Public domain](https://www.naturalearthdata.com/about/terms-of-use/) | 7,342 existing places with 97,615 publisher name variants, indexed locally on first use. [Source and regeneration information](scripts/places-source-manifest.json). |
 | satellite.js | MIT | SGP4 propagation |
 | Google Photorealistic 3D Tiles (optional) | Google Maps Platform terms, **metered**, customer key | 3D cities |
+| TomTom Traffic Flow tiles (optional, `api.tomtom.com/traffic/map/4/tile/flow/`) | [TomTom terms](https://developer.tomtom.com/terms-and-conditions), **metered** per tile, customer key | Live road congestion overlay |
+| Cesium ion (optional: Bing Maps aerial via asset 2, Cesium World Terrain via asset 1) | [Cesium ion terms](https://cesium.com/legal/terms-of-service/): Community plan non-commercial; commercial use needs a paid plan; customer token | Bing aerial surface, world terrain |
+| OpenAI speech-to-text (optional, `api.openai.com/v1/audio/transcriptions`, model whisper-1) | [OpenAI terms](https://openai.com/policies/terms-of-use), **metered** per minute of audio, customer key | Voice commands (one recording per held button press) |
+| Launch Library 2 token (optional) | [The Space Devs](https://thespacedevs.com/llapi), paid supporter plan | Higher allowance for launches and launch replay |
+| USGS Ground Failure (`earthquake.usgs.gov/fdsnws/event/1/query?producttype=ground-failure`) | U.S. government work, public domain | Landslide estimates after significant earthquakes (model, not observations) |
+| Radio Browser directory (`de1.api.radio-browser.info`) | [Radio Browser](https://www.radio-browser.info/): directory data public domain; audio is each station's own | Worldwide radio search; streams play through the app's audio relay (station ids only, public addresses only, audio types only) |
+| OpenFreeMap waterways (rivers overlay) | OpenMapTiles / © OpenStreetMap contributors (ODbL) | Rivers and canals overlay |
 | Google Maps Street View external link | Google Maps viewer terms and imagery attribution remain in Google's viewer | User-clicked browser handoff only; no embedded/static API, imagery download or reuse license. See [Street View notes](docs/STREET_VIEW.md). |
 
 **Optional sources with restrictions:** OpenSky worldwide snapshots are opt-in and require a separate
@@ -530,14 +815,14 @@ commercial-use agreement before selling; Esri World Imagery uses the customer's 
 The reference's unrestricted classic Esri endpoint is not used.
 
 **Excluded for terms, cost or privacy reasons:** public OSM tiles, Photon/Nominatim and FOSSGIS OSRM (fair-use
-community servers), TeleGeography cables (CC BY-NC-SA), Google News RSS (personal use only), and ALPR camera
+community servers), the TeleGeography submarine cable map (CC BY-NC-SA; the cable layer uses OpenStreetMap instead), Google News RSS (personal use only), and ALPR camera
 mapping (privacy).
 
 `THIRD_PARTY_NOTICES.md` (regenerated by `npm run notices`) is copied into the installer's `resources`
 folder. Electron's packager also places `LICENSE.electron.txt` and `LICENSES.chromium.html` next to the
 executable.
 
-**Provider choices:** NASA, ESA WorldCover and USGS imagery and AWS terrain are included without keys. Cesium ion is not used.
+**Provider choices:** NASA, ESA WorldCover and USGS imagery and AWS terrain are included without keys. Cesium ion (Bing aerial, World Terrain) is optional and uses the customer's own token.
 Google, Esri and Mapbox are optional credentialed integrations with provider-specific billing and terms.
 U.S. address lookup uses Census. Worldwide offline place and coordinate search is included. Google place
 lookup uses your key when you select Google imagery and explicitly start a search. Public OSM tile servers and community geocoding/routing

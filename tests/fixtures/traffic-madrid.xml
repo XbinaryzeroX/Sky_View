@@ -1,0 +1,423 @@
+﻿<pms>
+  <fecha_hora>14/11/2026 20:35:02</fecha_hora>
+  <pm>
+    <idelem>3409</idelem>
+    <descripcion>SEPULVEDA N-S (CEBREROS - C. FCO.J.JIMENEZ)</descripcion>
+    <accesoAsociado>240102</accesoAsociado>
+    <intensidad>120</intensidad>
+    <ocupacion>1</ocupacion>
+    <carga>5</carga>
+    <nivelServicio>0</nivelServicio>
+    <intensidadSat>3000</intensidadSat>
+    <error>N</error>
+    <subarea>170018</subarea>
+    <st_x>436004,103195086</st_x>
+    <st_y>4472588,47356732</st_y>
+  </pm>
+<pm>
+    <idelem>4739</idelem>
+    <descripcion>CJAL. FCO. J. JIMENEZ nº 126 E-O (BERLANAS-SEPULVEDA)</descripcion>
+    <accesoAsociado>240101</accesoAsociado>
+    <intensidad>60</intensidad>
+    <ocupacion>0</ocupacion>
+    <carga>4</carga>
+    <nivelServicio>0</nivelServicio>
+    <intensidadSat>1500</intensidadSat>
+    <error>N</error>
+    <subarea>170018</subarea>
+    <st_x>436039,137988103</st_x>
+    <st_y>4472395,05226989</st_y>
+  </pm>
+<pm>
+    <idelem>4740</idelem>
+    <descripcion>CJAL. FCO. J. JIMENEZ nº 86 O-E (F. CALVO-ALHAMBRA)</descripcion>
+    <accesoAsociado>240604</accesoAsociado>
+    <intensidad>120</intensidad>
+    <ocupacion>2</ocupacion>
+    <carga>10</carga>
+    <nivelServicio>0</nivelServicio>
+    <intensidadSat>1500</intensidadSat>
+    <error>N</error>
+    <subarea>170012</subarea>
+    <st_x>436730,451619122</st_x>
+    <st_y>4472483,85415038</st_y>
+  </pm>
+<pm>
+    <idelem>4741</idelem>
+    <descripcion>CJAL. FCO. J. JIMENEZ nº 76 E-O (HURTUMPASCUAL-ALHAMBRA)</descripcion>
+    <accesoAsociado>240602</accesoAsociado>
+    <intensidad>60</intensidad>
+    <ocupacion>0</ocupacion>
+    <carga>4</carga>
+    <nivelServicio>0</nivelServicio>
+    <intensidadSat>1500</intensidadSat>
+    <error>N</error>
+    <subarea>170012</subarea>
+    <st_x>436895,947727199</st_x>
+    <st_y>4472512,33474052</st_y>
+  </pm>
+<pm>
+    <idelem>4742</idelem>
+    <descripcion>ALHAMBRA nº 23 N-S (CJAL. FCO. J. JIMENEZ -CUART POBLET)</descripcion>
+    <accesoAsociado>241101</accesoAsociado>
+    <intensidad>120</intensidad>
+    <ocupacion>0</ocupacion>
+    <carga>4</carga>
+    <nivelServicio>0</nivelServicio>
+    <intensidadSat>3000</intensidadSat>
+    <error>N</error>
+    <subarea>170012</subarea>
+    <st_x>436809,990969673</st_x>
+    <st_y>4472410,09421372</st_y>
+  </pm>
+<pm>
+    <idelem>4743</idelem>
+    <descripcion>ALHAMBRA nº 23 S-N (CUART POBLET-CJAL. FCO. J. JIMENEZ)</descripcion>
+    <accesoAsociado>240603</accesoAsociado>
+    <intensidad>480</intensidad>
+    <ocupacion>2</ocupacion>
+    <carga>18</carga>
+    <nivelServicio>0</nivelServicio>
+    <intensidadSat>3000</intensidadSat>
+    <error>N</error>
+    <subarea>170012</subarea>
+    <st_x>436817,148294475</st_x>
+    <st_y>4472417,20280615</st_y>
+  </pm>
+<pm>
+    <idelem>4744</idelem>
+    <descripcion>ALHAMBRA nº 31 S-N (CERRO MICA-ÁNGEL SANZ BRIZ)</descripcion>
+    <accesoAsociado>241103</accesoAsociado>
+    <intensidad>420</intensidad>
+    <ocupacion>2</ocupacion>
+    <carga>16</carga>
+    <nivelServicio>0</nivelServicio>
+    <intensidadSat>3000</intensidadSat>
+    <error>N</error>
+    <subarea>170012</subarea>
+    <st_x>436848,007596086</st_x>
+    <st_y>4472225,74306448</st_y>
+  </pm>
+<pm>
+    <idelem>4746</idelem>
+    <descripcion>ALHAMBRA, 94 N-S (CULLERA-GTA. LOS CARMENES)</descripcion>
+    <accesoAsociado>241301</accesoAsociado>
+    <intensidad>180</intensidad>
+    <ocupacion>4</ocupacion>
+    <carga>10</carga>
+    <nivelServicio>0</nivelServicio>
+    <intensidadSat>3000</intensidadSat>
+    <error>N</error>
+    <subarea>170012</subarea>
+    <st_x>436869,228492762</st_x>
+    <st_y>4472052,56654993</st_y>
+  </pm>
+<pm>
+    <idelem>4747</idelem>
+    <descripcion>GALLUR nº 46 E-O (ESCALONILLA-GTA.CARMENES)</descripcion>
+    <accesoAsociado>241302</accesoAsociado>
+    <intensidad>360</intensidad>
+    <ocupacion>8</ocupacion>
+    <carga>30</carga>
+    <nivelServicio>1</nivelServicio>
+    <intensidadSat>1500</intensidadSat>
+    <error>N</error>
+    <subarea>170012</subarea>
+    <st_x>436975,708839387</st_x>
+    <st_y>4471941,57973658</st_y>
+  </pm>
+<pm>
+    <idelem>4748</idelem>
+    <descripcion>DUQ. PARCENT nº 3 O-E (M. CASTILLO-GTA.LOS CARMENES)</descripcion>
+    <accesoAsociado>241304</accesoAsociado>
+    <intensidad>480</intensidad>
+    <ocupacion>7</ocupacion>
+    <carga>37</carga>
+    <nivelServicio>1</nivelServicio>
+    <intensidadSat>1500</intensidadSat>
+    <error>N</error>
+    <subarea>170012</subarea>
+    <st_x>436785,094310191</st_x>
+    <st_y>4471871,34299176</st_y>
+  </pm>
+<pm>
+    <idelem>4749</idelem>
+    <descripcion>N.S.VALVANERA  nº 56 S-N (LAGUNA-GTA.CARMENES)</descripcion>
+    <accesoAsociado>241303</accesoAsociado>
+    <intensidad>300</intensidad>
+    <ocupacion>3</ocupacion>
+    <carga>15</carga>
+    <nivelServicio>0</nivelServicio>
+    <intensidadSat>2400</intensidadSat>
+    <error>N</error>
+    <subarea>170012</subarea>
+    <st_x>436948,624418082</st_x>
+    <st_y>4471825,08634181</st_y>
+  </pm>
+<pm>
+    <idelem>4750</idelem>
+    <descripcion>N.S.VALVANERA nº 43 N-S (LAGUNA-V.CARPETANA)</descripcion>
+    <accesoAsociado>241501</accesoAsociado>
+    <intensidad>240</intensidad>
+    <ocupacion>2</ocupacion>
+    <carga>10</carga>
+    <nivelServicio>0</nivelServicio>
+    <intensidadSat>3000</intensidadSat>
+    <error>N</error>
+    <subarea>170012</subarea>
+    <st_x>437072,020860823</st_x>
+    <st_y>4471688,02584565</st_y>
+  </pm>
+<pm>
+    <idelem>4751</idelem>
+    <descripcion>(AFOROS) V.CARPETANA nº 138 E-O (ATECA-N.S.VALVANERA)</descripcion>
+    <accesoAsociado>241502</accesoAsociado>
+    <intensidad>540</intensidad>
+    <ocupacion>8</ocupacion>
+    <carga>41</carga>
+    <nivelServicio>1</nivelServicio>
+    <intensidadSat>1500</intensidadSat>
+    <error>N</error>
+    <subarea>170012</subarea>
+    <st_x>437207,877265405</st_x>
+    <st_y>4471728,31227492</st_y>
+  </pm>
+<pm>
+    <idelem>3566</idelem>
+    <descripcion>(AFOROS) V.CARPETANA nº 138 O-E (N.S.VALVANERA-ALBENTOSA)</descripcion>
+    <accesoAsociado>241604</accesoAsociado>
+    <intensidad>660</intensidad>
+    <ocupacion>13</ocupacion>
+    <carga>51</carga>
+    <nivelServicio>2</nivelServicio>
+    <intensidadSat>1500</intensidadSat>
+    <error>N</error>
+    <subarea>170012</subarea>
+    <st_x>437217,295405096</st_x>
+    <st_y>4471732,15516418</st_y>
+  </pm>
+<pm>
+    <idelem>3567</idelem>
+    <descripcion>N.S.VALVANERA, 114 S-N (A.PAVAS-V.CARPETANA)</descripcion>
+    <accesoAsociado>241503</accesoAsociado>
+    <intensidad>180</intensidad>
+    <ocupacion>1</ocupacion>
+    <carga>5</carga>
+    <nivelServicio>0</nivelServicio>
+    <intensidadSat>4500</intensidadSat>
+    <error>N</error>
+    <subarea>170012</subarea>
+    <st_x>437164,828862734</st_x>
+    <st_y>4471604,07802877</st_y>
+  </pm>
+<pm>
+    <idelem>3568</idelem>
+    <descripcion>V.CARPETANA, 143 O-E (LAGUNA-N.S.VALVANERA)</descripcion>
+    <accesoAsociado>241504</accesoAsociado>
+    <intensidad>720</intensidad>
+    <ocupacion>12</ocupacion>
+    <carga>54</carga>
+    <nivelServicio>2</nivelServicio>
+    <intensidadSat>1500</intensidadSat>
+    <error>N</error>
+    <subarea>170012</subarea>
+    <st_x>437070,490858331</st_x>
+    <st_y>4471587,82291284</st_y>
+  </pm>
+<pm>
+    <idelem>4752</idelem>
+    <descripcion>V.CARPETANA, 143 E-O (N.S.VALVANERA-LAGUNA)</descripcion>
+    <accesoAsociado>242101</accesoAsociado>
+    <intensidad>360</intensidad>
+    <ocupacion>7</ocupacion>
+    <carga>29</carga>
+    <nivelServicio>1</nivelServicio>
+    <intensidadSat>1500</intensidadSat>
+    <error>N</error>
+    <subarea>170012</subarea>
+    <st_x>437059,903896904</st_x>
+    <st_y>4471582,6982263</st_y>
+  </pm>
+<pm>
+    <idelem>10977</idelem>
+    <descripcion>(BUS)CJAL. FCO. J. JIMENEZ Ø126 E-O (BERLANAS-SEPULVEDA)</descripcion>
+    <accesoAsociado>0</accesoAsociado>
+    <intensidad>0</intensidad>
+    <ocupacion>0</ocupacion>
+    <carga>0</carga>
+    <nivelServicio>0</nivelServicio>
+    <intensidadSat>1500</intensidadSat>
+    <error>N</error>
+    <subarea>0000</subarea>
+    <st_x>436040,476525758</st_x>
+    <st_y>4472398,56593123</st_y>
+  </pm>
+<pm>
+    <idelem>4754</idelem>
+    <descripcion>V.CARPETANA Ø123 E-O (SALVADOR A.-TARAZONA)</descripcion>
+    <accesoAsociado>241602</accesoAsociado>
+    <intensidad>240</intensidad>
+    <ocupacion>10</ocupacion>
+    <carga>24</carga>
+    <nivelServicio>0</nivelServicio>
+    <intensidadSat>1500</intensidadSat>
+    <error>N</error>
+    <subarea>170012</subarea>
+    <st_x>437345,974904364</st_x>
+    <st_y>4471906,86325488</st_y>
+  </pm>
+<pm>
+    <idelem>10978</idelem>
+    <descripcion>(BUS)CJAL. FCO. J. JIMENEZ Ø86 O-E (F. CALVO-ALHAMBRA)</descripcion>
+    <accesoAsociado>0</accesoAsociado>
+    <intensidad>0</intensidad>
+    <ocupacion>0</ocupacion>
+    <carga>0</carga>
+    <nivelServicio>0</nivelServicio>
+    <intensidadSat>1500</intensidadSat>
+    <error>N</error>
+    <subarea>0000</subarea>
+    <st_x>436731,12088795</st_x>
+    <st_y>4472480,00585462</st_y>
+  </pm>
+<pm>
+    <idelem>10979</idelem>
+    <descripcion>(BUS)CJAL. FCO. J. JIMENEZ Ø76 E-O (HURTUMPASCUAL-ALHAMBRA)</descripcion>
+    <accesoAsociado>0</accesoAsociado>
+    <intensidad>0</intensidad>
+    <ocupacion>0</ocupacion>
+    <carga>0</carga>
+    <nivelServicio>0</nivelServicio>
+    <intensidadSat>1500</intensidadSat>
+    <error>N</error>
+    <subarea>0000</subarea>
+    <st_x>436895,111141165</st_x>
+    <st_y>4472516,85230511</st_y>
+  </pm>
+<pm>
+    <idelem>4758</idelem>
+    <descripcion>VIA CARPETANA, 167 O-E (LEON V ARMENIA-LAGUNA)</descripcion>
+    <accesoAsociado>242104</accesoAsociado>
+    <intensidad>480</intensidad>
+    <ocupacion>10</ocupacion>
+    <carga>39</carga>
+    <nivelServicio>1</nivelServicio>
+    <intensidadSat>1500</intensidadSat>
+    <error>N</error>
+    <subarea>170012</subarea>
+    <st_x>436944,056157125</st_x>
+    <st_y>4471440,73261486</st_y>
+  </pm>
+<pm>
+    <idelem>4759</idelem>
+    <descripcion>ALHAMBRA,28 N-S (A.CALVO-GREG.VACAS)</descripcion>
+    <accesoAsociado>240601</accesoAsociado>
+    <intensidad>120</intensidad>
+    <ocupacion>2</ocupacion>
+    <carga>10</carga>
+    <nivelServicio>0</nivelServicio>
+    <intensidadSat>1500</intensidadSat>
+    <error>N</error>
+    <subarea>170012</subarea>
+    <st_x>436801,36802155</st_x>
+    <st_y>4472577,99845899</st_y>
+  </pm>
+<pm>
+    <idelem>4760</idelem>
+    <descripcion>HIGUERAS Ø41 S-N(PALMIPEDO-SEPULVEDA)</descripcion>
+    <accesoAsociado>242503</accesoAsociado>
+    <intensidad>120</intensidad>
+    <ocupacion>0</ocupacion>
+    <carga>8</carga>
+    <nivelServicio>0</nivelServicio>
+    <intensidadSat>1500</intensidadSat>
+    <error>N</error>
+    <subarea>170078</subarea>
+    <st_x>436757,82413148</st_x>
+    <st_y>4472874,95036183</st_y>
+  </pm>
+<pm>
+    <idelem>4761</idelem>
+    <descripcion>HIGUERAS Ø25 N-S(ALMAZAN-CEBREROS)</descripcion>
+    <accesoAsociado>242501</accesoAsociado>
+    <intensidad>60</intensidad>
+    <ocupacion>0</ocupacion>
+    <carga>4</carga>
+    <nivelServicio>0</nivelServicio>
+    <intensidadSat>1500</intensidadSat>
+    <error>N</error>
+    <subarea>170078</subarea>
+    <st_x>436765,108993995</st_x>
+    <st_y>4473038,76126792</st_y>
+  </pm>
+<pm>
+    <idelem>4762</idelem>
+    <descripcion>SEPULVEDA, 119 E-O (HIGUERAS-A. MORÁN)</descripcion>
+    <accesoAsociado>242802</accesoAsociado>
+    <intensidad>120</intensidad>
+    <ocupacion>2</ocupacion>
+    <carga>12</carga>
+    <nivelServicio>0</nivelServicio>
+    <intensidadSat>1200</intensidadSat>
+    <error>N</error>
+    <subarea>170078</subarea>
+    <st_x>436658,861932626</st_x>
+    <st_y>4472903,21879891</st_y>
+  </pm>
+<pm>
+    <idelem>4763</idelem>
+    <descripcion>SEPULVEDA Ø98 O-E(BERLANAS-PALMIPEDO)</descripcion>
+    <accesoAsociado>240104</accesoAsociado>
+    <intensidad>660</intensidad>
+    <ocupacion>5</ocupacion>
+    <carga>31</carga>
+    <nivelServicio>1</nivelServicio>
+    <intensidadSat>2400</intensidadSat>
+    <error>N</error>
+    <subarea>170018</subarea>
+    <st_x>436448,726607281</st_x>
+    <st_y>4472837,3542256</st_y>
+  </pm>
+<pm>
+    <idelem>4764</idelem>
+    <descripcion>CEBREROS, 54 O-E (CARLINA-HIGUERAS)</descripcion>
+    <accesoAsociado>242504</accesoAsociado>
+    <intensidad>180</intensidad>
+    <ocupacion>2</ocupacion>
+    <carga>17</carga>
+    <nivelServicio>0</nivelServicio>
+    <intensidadSat>1200</intensidadSat>
+    <error>N</error>
+    <subarea>170078</subarea>
+    <st_x>436629,255765667</st_x>
+    <st_y>4472952,27943257</st_y>
+  </pm>
+<pm>
+    <idelem>4766</idelem>
+    <descripcion>CARLINA Ø7 N-S (VILLAMANIN-CEBREROS)</descripcion>
+    <accesoAsociado>241801</accesoAsociado>
+    <intensidad>300</intensidad>
+    <ocupacion>8</ocupacion>
+    <carga>26</carga>
+    <nivelServicio>1</nivelServicio>
+    <intensidadSat>1500</intensidadSat>
+    <error>N</error>
+    <subarea>170077</subarea>
+    <st_x>436249,122589369</st_x>
+    <st_y>4472914,69096518</st_y>
+  </pm>
+<pm>
+    <idelem>4767</idelem>
+    <descripcion>CEBREROS Ø130 GIRO E-N (CEBREROS-CARLINA)</descripcion>
+    <accesoAsociado>0</accesoAsociado>
+    <intensidad>180</intensidad>
+    <ocupacion>2</ocupacion>
+    <carga>14</carga>
+    <nivelServicio>0</nivelServicio>
+    <intensidadSat>1500</intensidadSat>
+    <error>N</error>
+    <subarea>0000</subarea>
+    <st_x>436361,827325916</st_x>
+    <st_y>4472885,50436494</st_y>
+  </pm>
+</pms>

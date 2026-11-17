@@ -2,8 +2,10 @@
 // locally persisted content, with empty/loading/unavailable states. Features
 // that need a licensed source or a shared backend say so instead of pretending.
 
-import { Globe, Camera, LayoutDashboard, Flag, Sparkles, Crosshair, PenLine, LayoutGrid, Plane, MapPin, Star, History, ScrollText, Users, ChartCandlestick, MessagesSquare, Building2, CircleHelp, type LucideIcon } from 'lucide-react';
+import { PlanningPanel, type PlanningPanelProps } from './PlanningPanel';
+import { Globe, Camera, LayoutDashboard, Flag, Sparkles, Crosshair, PenLine, LayoutGrid, Plane, MapPin, Star, History, ScrollText, Users, ChartCandlestick, MessagesSquare, Building2, CircleHelp, ShieldCheck, Radio, type LucideIcon } from 'lucide-react';
 import { MarketsPage } from './MarketsPage';
+import { RadioPage } from './RadioPage';
 import { CommunityPage } from './CommunityPage';
 import { useEffect, useMemo, useState } from 'react';
 import { CameraPlayer, cameraMedia } from './CameraPlayer';
@@ -17,6 +19,7 @@ import { answerQuestion, ANALYST_EXAMPLES, type AnalystAnswer } from '../../shar
 import { isAlertCountable } from '../../shared/dedupe';
 import { geodesicDistanceKm } from '../../shared/geo';
 import { LAYER_IDS, LAYERS, type GeoRecord, type LayerId, type LayerSnapshot } from '../../shared/layers';
+import { TRACK_MAX_RETENTION_HOURS, TRACK_STORAGE_MAX_MB, TRACK_STORAGE_MIN_MB, TRACK_THIN_AFTER_HOURS, trackPointBudget } from '../../shared/timeline';
 import type { AppSnapshot, Settings } from '../../shared/types';
 import { fmtAltitudeM, fmtDistanceKm, fmtSpeedKts } from '../../shared/units';
 import { AIRPORTS } from '../data/airports';
@@ -43,28 +46,36 @@ export type PageId =
   | 'markets'
   | 'social'
   | 'org'
-  | 'help';
+  | 'help'
+  | 'planning'
+  | 'radio';
 
 /** `short` is the rail label (one word); `label` is the full name used for tooltips, headings and screen readers. */
+/** Rail groups in priority order. `NAV_UTILITY_GROUP` is rendered apart from the feature groups, with Providers and Settings. */
+export const NAV_GROUPS = ['Monitor', 'Understand', 'Plan & track', 'Workspace'] as const;
+export const NAV_UTILITY_GROUP = 'Settings & help';
+
 export const NAV: { id: PageId; label: string; short: string; icon: LucideIcon; group: string; wide?: boolean }[] = [
-  { id: 'globe', label: 'Globe', short: 'Globe', icon: Globe, group: 'Live' },
-  { id: 'cameras', label: 'Cameras', short: 'Cameras', icon: Camera, group: 'Live' },
-  { id: 'ops', label: 'Ops center', short: 'Ops', icon: LayoutDashboard, group: 'Live' },
-  { id: 'events', label: 'Events', short: 'Events', icon: Flag, group: 'Intelligence' },
-  { id: 'discover', label: 'Discover', short: 'Discover', icon: Sparkles, group: 'Intelligence' },
-  { id: 'near', label: 'Near me / overhead', short: 'Overhead', icon: Crosshair, group: 'Intelligence' },
-  { id: 'analyst', label: 'Analyst', short: 'Analyst', icon: PenLine, group: 'Intelligence' },
-  { id: 'boards', label: 'Boards', short: 'Boards', icon: LayoutGrid, group: 'Boards' },
-  { id: 'track', label: 'Track a flight', short: 'Flights', icon: Plane, group: 'Tools' },
-  { id: 'airports', label: 'Airports', short: 'Airports', icon: MapPin, group: 'Tools' },
-  { id: 'watchlist', label: 'Watchlist', short: 'Watch', icon: Star, group: 'Tools' },
-  { id: 'replays', label: 'Replays', short: 'Replays', icon: History, group: 'Tools' },
-  { id: 'bulletins', label: 'Official bulletins', short: 'Bulletins', icon: ScrollText, group: 'Tools' },
-  { id: 'people', label: 'Team directory', short: 'Team', icon: Users, group: 'Organization' },
-  { id: 'markets', label: 'Markets', short: 'Markets', icon: ChartCandlestick, wide: true, group: 'Organization' },
-  { id: 'social', label: 'Community', short: 'Community', icon: MessagesSquare, wide: true, group: 'Organization' },
-  { id: 'org', label: 'Organization', short: 'Org', icon: Building2, group: 'Organization' },
-  { id: 'help', label: 'Help & resources', short: 'Help', icon: CircleHelp, group: 'Organization' },
+  { id: 'globe', label: 'Globe', short: 'Globe', icon: Globe, group: 'Monitor' },
+  { id: 'cameras', label: 'Cameras', short: 'Cameras', icon: Camera, group: 'Monitor' },
+  { id: 'ops', label: 'Ops center', short: 'Ops', icon: LayoutDashboard, group: 'Monitor' },
+  { id: 'radio', label: 'Radio', short: 'Radio', icon: Radio, group: 'Monitor' },
+  { id: 'events', label: 'Events', short: 'Events', icon: Flag, group: 'Understand' },
+  { id: 'discover', label: 'Discover', short: 'Discover', icon: Sparkles, group: 'Understand' },
+  { id: 'near', label: 'Near me / overhead', short: 'Overhead', icon: Crosshair, group: 'Understand' },
+  { id: 'bulletins', label: 'Official bulletins', short: 'Bulletins', icon: ScrollText, group: 'Understand' },
+  { id: 'analyst', label: 'Analyst', short: 'Analyst', icon: PenLine, group: 'Understand' },
+  { id: 'planning', label: 'Protective planning', short: 'Plan', icon: ShieldCheck, group: 'Plan & track' },
+  { id: 'track', label: 'Track a flight', short: 'Flights', icon: Plane, group: 'Plan & track' },
+  { id: 'airports', label: 'Airports', short: 'Airports', icon: MapPin, group: 'Plan & track' },
+  { id: 'watchlist', label: 'Watchlist', short: 'Watch', icon: Star, group: 'Plan & track' },
+  { id: 'replays', label: 'Replays', short: 'Replays', icon: History, group: 'Plan & track' },
+  { id: 'boards', label: 'Boards', short: 'Boards', icon: LayoutGrid, group: 'Plan & track' },
+  { id: 'markets', label: 'Markets', short: 'Markets', icon: ChartCandlestick, wide: true, group: 'Workspace' },
+  { id: 'social', label: 'Community', short: 'Community', icon: MessagesSquare, wide: true, group: 'Workspace' },
+  { id: 'people', label: 'Team directory', short: 'Team', icon: Users, group: 'Workspace' },
+  { id: 'org', label: 'Organization', short: 'Org', icon: Building2, group: 'Workspace' },
+  { id: 'help', label: 'Help & resources', short: 'Help', icon: CircleHelp, group: NAV_UTILITY_GROUP },
 ];
 
 export interface PageCtx {
@@ -86,6 +97,8 @@ export interface PageCtx {
   openProviders(): void;
   toast(msg: string): void;
   enableLayers(ids: LayerId[]): void;
+  /** Protective planning workspace (state lives in App so it survives page switches). */
+  planningPanel?: PlanningPanelProps;
 }
 
 
@@ -1010,7 +1023,7 @@ function PeoplePage() {
   }, []);
   return (
     <>
-      <Head title="Team directory" sub="An opt-in contact list for your own team (for example, who to call about a property). Stored locally. Atlas Watch does not locate or track people." />
+      <Head title="Team directory" sub="An opt-in contact list for your own team (for example, who to call about a property). Stored locally. Sky_View does not locate or track people." />
       <div className="field-row">
         <input className="view-name" placeholder="Name" maxLength={80} value={p.name} onChange={(e) => setP({ ...p, name: e.target.value })} />
         <input className="view-name" placeholder="Role" maxLength={80} value={p.role} onChange={(e) => setP({ ...p, role: e.target.value })} />
@@ -1180,10 +1193,18 @@ function OrgPage({ ctx }: { ctx: PageCtx }) {
           <input type="number" min={1} max={365} value={s.historyRetentionDays} onChange={(e) => ctx.patch({ historyRetentionDays: Math.max(1, Math.min(365, Number(e.target.value) || 30)) })} />
         </label>
         <label className="field">
-          <span>Track recording retention (hours)</span>
-          <input type="number" min={1} max={72} value={s.trackRetentionHours} onChange={(e) => ctx.patch({ trackRetentionHours: Math.max(1, Math.min(72, Number(e.target.value) || 6)) })} />
+          <span>Track recording retention (hours, up to {TRACK_MAX_RETENTION_HOURS} = 30 days)</span>
+          <input type="number" min={1} max={TRACK_MAX_RETENTION_HOURS} value={s.trackRetentionHours} onChange={(e) => ctx.patch({ trackRetentionHours: Math.max(1, Math.min(TRACK_MAX_RETENTION_HOURS, Number(e.target.value) || 6)) })} />
+        </label>
+        <label className="field">
+          <span>Track storage limit (MB)</span>
+          <input type="number" min={TRACK_STORAGE_MIN_MB} max={TRACK_STORAGE_MAX_MB} step={50} value={s.trackStorageMB} onChange={(e) => ctx.patch({ trackStorageMB: Math.max(TRACK_STORAGE_MIN_MB, Math.min(TRACK_STORAGE_MAX_MB, Math.round(Number(e.target.value) || 250))) })} />
         </label>
       </div>
+      <p className="muted small">
+        Up to about {(trackPointBudget(s.trackStorageMB) / 1e6).toFixed(1)} million recorded aircraft, ship, transit and train fixes. Whichever limit is reached first wins: when the storage is full, the oldest fixes are removed even if they are inside the retention period, so check the oldest recorded time in Playback.
+        Fixes older than {TRACK_THIN_AFTER_HOURS} hours are kept at one per object per minute. Only what this app recorded while it was running, for the layers you had on and the areas you viewed, can be replayed.
+      </p>
       <h3 className="sub">Data providers</h3>
       <p className="muted small">Providers shows whether a credential comes from your organization or this build's optional included allowance. Your saved key takes priority; a failed saved key is never retried using an included key. Check the provider's billing and redistribution terms before use.</p>
       <button className="btn small-btn" onClick={ctx.openProviders}>
@@ -1230,11 +1251,11 @@ function HelpPage({ ctx }: { ctx: PageCtx }) {
 function ReplaysPage({ ctx }: { ctx: PageCtx }) {
   return (
     <>
-      <Head title="Recorded replays" sub="Review recorded NWS alerts, USGS earthquakes and movement fixes on the same timeline. Coverage depends on what Atlas Watch retrieved and retained." />
+      <Head title="Recorded replays" sub="Review recorded NWS alerts, USGS earthquakes and movement fixes on the same timeline. Coverage depends on what Sky_View retrieved and retained." />
       <button className="btn primary" onClick={ctx.openPlayback}>
         Open playback timeline
       </button>
-      <p className="muted small">Atlas Watch records successful NWS and USGS refreshes while running. Open Data during playback to inspect the recorded alerts and earthquakes. History keeps up to {ctx.snap.settings.historyRetentionDays} days. Enabled movement layers retain fixes for {ctx.snap.settings.trackRetentionHours} hours.</p>
+      <p className="muted small">Sky_View records successful NWS and USGS refreshes while running. Open Data during playback to inspect the recorded alerts and earthquakes. History keeps up to {ctx.snap.settings.historyRetentionDays} days. Enabled movement layers retain fixes for {ctx.snap.settings.trackRetentionHours} hours.</p>
     </>
   );
 }
@@ -1257,6 +1278,8 @@ export function PageView({ page, ctx, airport }: { page: PageId; ctx: PageCtx; a
       return <CamerasPage ctx={ctx} />;
     case 'watchlist':
       return <WatchlistPage ctx={ctx} />;
+    case 'radio':
+      return <RadioPage viewCenter={ctx.viewCenter} focus={ctx.focus} />;
     case 'replays':
       return <ReplaysPage ctx={ctx} />;
     case 'boards':
@@ -1275,6 +1298,8 @@ export function PageView({ page, ctx, airport }: { page: PageId; ctx: PageCtx; a
       return <OrgPage ctx={ctx} />;
     case 'help':
       return <HelpPage ctx={ctx} />;
+    case 'planning':
+      return ctx.planningPanel ? <PlanningPanel {...ctx.planningPanel} /> : null;
     default:
       return null;
   }

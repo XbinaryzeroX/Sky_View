@@ -5,7 +5,7 @@
 import { monitoringCount, monitoringEvidence } from './monitoring';
 import type { AppSnapshot } from './types';
 
-export const AI_SYSTEM_PROMPT = `You are an assistant inside Atlas Watch, a desktop app that monitors public weather alerts (U.S. National Weather Service) and earthquakes (USGS) near a user's saved locations.
+export const AI_SYSTEM_PROMPT = `You are an assistant inside Sky_View, a desktop app that monitors public weather alerts (U.S. National Weather Service) and earthquakes (USGS) near a user's saved locations.
 
 Rules you must follow:
 1. Answer ONLY from the JSON in the DATA block. Do not use outside knowledge about current events. If the data does not answer the question, say so.

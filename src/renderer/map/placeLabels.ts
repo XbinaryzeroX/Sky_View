@@ -11,10 +11,14 @@ import { prof, profAdd } from '../lib/prof';
 //   * zoom (tile level) and camera distance limits decide which classes may show,
 //   * a greedy screen-space collision pass keeps the most important names,
 //     with a bonus for names already on screen (no flicker),
-//   * names below the horizon are hidden, and labels fade in and out.
+//   * names below the horizon are hidden, and labels fade in and out,
+//   * text size follows the zoom per class (countries largest when the whole country is in view, cities and towns
+//     growing as you approach them), drawn at the largest size and scaled down so it stays sharp,
+//   * street names run along their street (rotated to the road on screen, kept upright) and repeat on long roads.
 // Raster tiles no longer contain any text (see vectorTiles.ts drawTile).
 
 import {
+  BillboardCollection,
   Cartesian2,
   Cartesian3,
   Cartographic,
@@ -25,10 +29,10 @@ import {
   LabelCollection,
   LabelStyle,
   Math as CMath,
-  NearFarScalar,
   sampleTerrain,
   SceneTransforms,
   VerticalOrigin,
+  type Billboard,
   type CesiumWidget,
   type Label,
 } from 'cesium';
@@ -47,7 +51,7 @@ export const DEFAULT_LABEL_OPTIONS: LabelOptions = { level: 'standard', streets:
 const FONT_STACK = '"Segoe UI", "Microsoft YaHei UI", "Yu Gothic UI", "Malgun Gothic", "Nirmala UI", "Segoe UI Historic", sans-serif';
 const MAX_TILES = 24;
 
-type Kind = 'country' | 'state' | 'capital' | 'city' | 'town' | 'village' | 'suburb' | 'neighbourhood' | 'sea' | 'lake' | 'road';
+export type Kind = 'country' | 'state' | 'capital' | 'city' | 'town' | 'village' | 'suburb' | 'neighbourhood' | 'sea' | 'lake' | 'road';
 
 interface Candidate {
   key: string;
@@ -56,11 +60,20 @@ interface Candidate {
   rank: number;
   lon: number;
   lat: number;
+  /** Streets: a second point along the road, giving the text direction. */
+  lon2?: number;
+  lat2?: number;
 }
 
 interface Placed {
   c: Candidate;
-  label: Label;
+  /** Place and water names are labels; street names are rotated billboards. */
+  label: Label | null;
+  bb: Billboard | null;
+  pos: Cartesian3;
+  /** Current screen scale (zoom × distance) and base scale (font drawn at the class's largest size). */
+  scale: number;
+  base: number;
   width: number;
   height: number;
   alpha: number;
@@ -79,8 +92,73 @@ const MAX_LEVEL: Partial<Record<Kind, number>> = { country: 7, state: 9, sea: 10
 /** Furthest camera distance (km) at which a class is labelled; tilted views keep small names near the camera only. */
 const MAX_DIST_KM: Record<Kind, number> = { country: 1e9, state: 4000, capital: 1e9, city: 2500, sea: 1e9, town: 350, lake: 400, village: 70, suburb: 40, neighbourhood: 12, road: 4 };
 const BASE_PRIORITY: Record<Kind, number> = { country: 1000, capital: 900, sea: 820, state: 760, city: 700, town: 500, lake: 450, village: 300, suburb: 280, neighbourhood: 180, road: 120 };
-const SIZE: Record<Kind, number> = { country: 13, capital: 13, city: 12.5, state: 11, sea: 11.5, town: 11.5, lake: 10.5, village: 10.5, suburb: 10.5, neighbourhood: 10, road: 10 };
+const SIZE: Record<Kind, number> = { country: 13, capital: 13, city: 12.5, state: 11, sea: 11.5, town: 11.5, lake: 10.5, village: 10.5, suburb: 10.5, neighbourhood: 10, road: 11 };
 const MAX_VISIBLE = { low: 35, medium: 60, high: 110 };
+
+/**
+ * Text scale by class against the continuous zoom level (log2 of 30,000 km over the camera height): [zoom, scale]
+ * stops, linear between them and flat beyond. Exported for tests.
+ */
+export const ZOOM_SCALE: Record<Kind, [number, number][]> = {
+  country: [[2, 1.45], [4, 1.25], [6, 1.0], [8, 0.85]],
+  state: [[4, 0.95], [6, 1.15], [8, 1.05], [10, 0.9]],
+  capital: [[3, 0.9], [6, 1.05], [9, 1.3], [12, 1.45], [15, 1.2]],
+  city: [[4, 0.85], [7, 1.0], [10, 1.25], [12, 1.4], [15, 1.15]],
+  town: [[8, 0.88], [10, 1.0], [12, 1.2], [14, 1.3], [16, 1.1]],
+  village: [[10, 0.88], [12, 1.0], [14, 1.2], [16, 1.1]],
+  suburb: [[12, 0.9], [14, 1.08], [16, 1.15]],
+  neighbourhood: [[13, 0.9], [15, 1.08]],
+  sea: [[2, 1.25], [5, 1.05], [8, 0.95]],
+  lake: [[7, 0.9], [11, 1.05], [14, 1.15]],
+  road: [[14, 0.95], [16, 1.08], [18, 1.2]],
+};
+const MAX_SCALE = Object.fromEntries(Object.entries(ZOOM_SCALE).map(([k, s]) => [k, Math.max(...s.map((x) => x[1]))])) as Record<Kind, number>;
+
+/** Interpolated text scale for a class at a continuous zoom level. */
+export function zoomScale(kind: Kind, zoom: number): number {
+  const s = ZOOM_SCALE[kind];
+  if (zoom <= s[0][0]) return s[0][1];
+  for (let i = 1; i < s.length; i++)
+    if (zoom <= s[i][0]) {
+      const t = (zoom - s[i - 1][0]) / (s[i][0] - s[i - 1][0]);
+      return s[i - 1][1] + (s[i][1] - s[i - 1][1]) * t;
+    }
+  return s[s.length - 1][1];
+}
+
+/** Screen angle (radians, counter-clockwise) that runs text along a direction while keeping it upright. */
+export function uprightAngle(dx: number, dyDown: number): number {
+  let a = Math.atan2(dyDown, dx); // clockwise on screen, y down
+  if (a > Math.PI / 2) a -= Math.PI;
+  else if (a < -Math.PI / 2) a += Math.PI;
+  return -a;
+}
+
+/** Where street names go on a line (tile units): the middle, plus quarter points on long lines. */
+export function streetLabelPoints(line: readonly { x: number; y: number }[], longUnits = 900): { at: { x: number; y: number }; next: { x: number; y: number } }[] {
+  const seg: number[] = [];
+  let total = 0;
+  for (let i = 1; i < line.length; i++) {
+    const d = Math.hypot(line[i].x - line[i - 1].x, line[i].y - line[i - 1].y);
+    seg.push(d);
+    total += d;
+  }
+  if (!(total > 0)) return [];
+  const fractions = total >= longUnits ? [0.2, 0.5, 0.8] : [0.5];
+  return fractions.map((f) => {
+    let want = f * total;
+    for (let i = 0; i < seg.length; i++) {
+      if (want <= seg[i] || i === seg.length - 1) {
+        const t = seg[i] ? Math.min(1, want / seg[i]) : 0;
+        const a = line[i];
+        const b = line[i + 1];
+        return { at: { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }, next: b.x === a.x && b.y === a.y ? { x: b.x + 1, y: b.y } : b };
+      }
+      want -= seg[i];
+    }
+    return { at: line[0], next: line[1] };
+  });
+}
 
 function tileXY(lon: number, lat: number, z: number): [number, number] {
   const n = 2 ** z;
@@ -123,10 +201,14 @@ export function placeBoxes<T extends { x: number; y: number; w: number; h: numbe
 
 export class PlaceLabelManager {
   private readonly labels: LabelCollection;
+  private readonly streets: BillboardCollection;
+  private readonly streetImages = new Map<string, HTMLCanvasElement>();
+  private zoom = 3;
   private readonly placed = new Map<string, Placed>();
   private readonly tileCands = new Map<string, Candidate[]>();
   private opts: LabelOptions = { ...DEFAULT_LABEL_OPTIONS };
   private level = 3;
+  private groundH = 0;
   private loadSeq = 0;
   private lastCam = new Cartesian3();
   private lastLayout = 0;
@@ -136,6 +218,7 @@ export class PlaceLabelManager {
 
   constructor(private readonly widget: CesiumWidget) {
     this.labels = widget.scene.primitives.add(new LabelCollection());
+    this.streets = widget.scene.primitives.add(new BillboardCollection());
     widget.scene.postRender.addEventListener(() => this.frame());
   }
 
@@ -144,6 +227,8 @@ export class PlaceLabelManager {
     this.opts = { ...o };
     if (rebuild) {
       this.labels.removeAll();
+      this.streets.removeAll();
+      this.streetImages.clear();
       this.placed.clear();
       this.tileCands.clear();
     }
@@ -161,6 +246,7 @@ export class PlaceLabelManager {
     }
     const c = w.camera.positionCartographic;
     const ground = w.scene.globe.getHeight(c) ?? 0;
+    this.groundH = ground;
     const h = Math.max(50, c.height - Math.max(0, ground));
     let z = Math.max(1, Math.min(14, Math.floor(Math.log2(3.0e7 / h))));
     this.level = z;
@@ -237,19 +323,28 @@ export class PlaceLabelManager {
       }
     const tn = z >= 14 ? vt.layers.transportation_name : undefined;
     if (tn) {
-      const seen = new Set<string>();
+      // Up to three placements per street name per tile; the collision pass keeps the ones that fit.
+      const perName = new Map<string, number>();
       for (let i = 0; i < tn.length; i++) {
         const f = tn.feature(i);
         if (f.type !== 2) continue;
         const text = pickName(f.properties, lang);
-        if (!text || seen.has(text)) continue;
-        const line = f.loadGeometry()[0];
-        if (line.length < 2) continue;
-        seen.add(text);
+        if (!text || (perName.get(text) ?? 0) >= 3) continue;
         const cls = String(f.properties.class ?? '');
-        const mid = line[Math.floor(line.length / 2)];
-        const [lon, lat] = toLonLat(z, x, y, mid.x, mid.y, tn.extent);
-        out.push({ key: `road|${text}|${x}|${y}`, text, kind: 'road', rank: cls === 'primary' || cls === 'trunk' || cls === 'motorway' ? 2 : cls === 'secondary' ? 5 : 9, lon, lat });
+        const rank = cls === 'primary' || cls === 'trunk' || cls === 'motorway' ? 2 : cls === 'secondary' ? 5 : cls === 'tertiary' ? 7 : 9;
+        for (const line of f.loadGeometry()) {
+          if (line.length < 2) continue;
+          for (const pt of streetLabelPoints(line)) {
+            const used = perName.get(text) ?? 0;
+            if (used >= 3) break;
+            // Skip points in the tile buffer: the neighbouring tile places those.
+            if (pt.at.x < 0 || pt.at.y < 0 || pt.at.x > tn.extent || pt.at.y > tn.extent) continue;
+            perName.set(text, used + 1);
+            const [lon, lat] = toLonLat(z, x, y, pt.at.x, pt.at.y, tn.extent);
+            const [lon2, lat2] = toLonLat(z, x, y, pt.next.x, pt.next.y, tn.extent);
+            out.push({ key: `road|${text}|${lon.toFixed(5)}|${lat.toFixed(5)}`, text, kind: 'road', rank, lon, lat, lon2, lat2 });
+          }
+        }
       }
     }
     profAdd('labels.parse', performance.now() - tL);
@@ -293,15 +388,25 @@ export class PlaceLabelManager {
         ex.tiles = tiles;
         continue;
       }
-      const size = SIZE[c.kind] * scale;
+      const base = 1 / MAX_SCALE[c.kind];
+      const size = SIZE[c.kind] * scale * MAX_SCALE[c.kind];
       const weight = c.kind === 'country' || c.kind === 'capital' || c.kind === 'city' ? 600 : c.kind === 'state' || c.kind === 'sea' ? 500 : 500;
       const text = c.kind === 'country' || c.kind === 'state' ? c.text.toLocaleUpperCase() : c.text;
       const font = `${c.kind === 'sea' || c.kind === 'lake' ? 'italic ' : ''}${weight} ${size.toFixed(1)}px ${FONT_STACK}`;
       this.measure.font = font;
       const width = this.measure.measureText(text).width + (c.kind === 'country' || c.kind === 'state' ? text.length * 1.2 : 0);
       const color = c.kind === 'sea' || c.kind === 'lake' ? Color.fromCssColorString('#bfe1ff') : c.kind === 'road' ? Color.fromCssColorString('#f3e7c8') : c.kind === 'state' ? Color.fromCssColorString('#d9d2ec') : Color.WHITE;
+      const pos = Cartesian3.fromDegrees(c.lon, c.lat, 0);
+      if (c.kind === 'road') {
+        const image = this.streetImage(text, font, color);
+        const bb = this.streets.add({ position: pos, image, scale: base, color: Color.WHITE.withAlpha(0), alignedAxis: Cartesian3.ZERO, disableDepthTestDistance: Number.POSITIVE_INFINITY, show: false });
+        const p: Placed = { c, label: null, bb, pos, scale: base, base, width: image.width, height: image.height, alpha: 0, target: 0, tiles };
+        this.placed.set(k, p);
+        newOnes.push(p);
+        continue;
+      }
       const label = this.labels.add({
-        position: Cartesian3.fromDegrees(c.lon, c.lat, 0),
+        position: pos,
         text,
         font,
         fillColor: color.withAlpha(0),
@@ -312,10 +417,10 @@ export class PlaceLabelManager {
         verticalOrigin: VerticalOrigin.CENTER,
         // Horizon and globe occlusion are handled in layout(); terrain must not clip names on hillsides.
         disableDepthTestDistance: Number.POSITIVE_INFINITY,
-        scaleByDistance: new NearFarScalar(1e5, 1, 2e7, 0.85),
+        scale: base,
         show: false,
       });
-      const p: Placed = { c, label, width, height: size * 1.35, alpha: 0, target: 0, tiles };
+      const p: Placed = { c, label, bb: null, pos, scale: base, base, width, height: size * 1.35, alpha: 0, target: 0, tiles };
       (label as unknown as { _atlasColor: Color })._atlasColor = color;
       this.placed.set(k, p);
       newOnes.push(p);
@@ -323,6 +428,32 @@ export class PlaceLabelManager {
     void this.groundHeights(newOnes);
     this.lastLayout = 0;
     this.layout();
+  }
+
+  /** Street name drawn once per text (outlined, for any background); billboards reuse it. */
+  private streetImage(text: string, font: string, color: Color): HTMLCanvasElement {
+    const hit = this.streetImages.get(text);
+    if (hit) return hit;
+    this.measure.font = font;
+    const w = Math.ceil(this.measure.measureText(text).width) + 8;
+    const fontPx = Number(/([\d.]+)px/.exec(font)?.[1] ?? 12);
+    const h = Math.ceil(fontPx * 1.5) + 4;
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d')!;
+    ctx.font = font;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(6, 9, 13, 0.85)';
+    ctx.strokeText(text, w / 2, h / 2);
+    ctx.fillStyle = color.toCssColorString();
+    ctx.fillText(text, w / 2, h / 2);
+    if (this.streetImages.size > 600) this.streetImages.clear();
+    this.streetImages.set(text, canvas);
+    return canvas;
   }
 
   /** Lift labels to the terrain surface so they sit on their place in tilted views. */
@@ -334,7 +465,12 @@ export class PlaceLabelManager {
       // pulled remote height and coastline tiles for offscreen place names.
       const res = await sampleTerrain(this.widget.terrainProvider, Math.min(11, this.level), carto);
       res.forEach((r, i) => {
-        if (Number.isFinite(r.height) && r.height > 0 && !items[i].label.isDestroyed?.()) items[i].label.position = Cartesian3.fromDegrees(items[i].c.lon, items[i].c.lat, r.height + 15);
+        if (!Number.isFinite(r.height) || r.height <= 0) return;
+        const it = items[i];
+        if (this.placed.get(it.c.key) !== it) return; // removed meanwhile
+        it.pos = Cartesian3.fromDegrees(it.c.lon, it.c.lat, r.height + (it.bb ? 3 : 15));
+        if (it.label) it.label.position = it.pos;
+        if (it.bb) it.bb.position = it.pos;
       });
       this.kick();
     } catch {
@@ -373,13 +509,17 @@ export class PlaceLabelManager {
     const H = scene.canvas.clientHeight;
     const items: { x: number; y: number; w: number; h: number; p: number; pl: Placed }[] = [];
     const win = new Cartesian2();
+    const win2 = new Cartesian2();
+    // Continuous zoom from the camera's height above the ground (the same measure that picks the tile level).
+    const cam = this.widget.camera.positionCartographic;
+    this.zoom = Math.max(0, Math.log2(3.0e7 / Math.max(20, cam.height - Math.max(0, this.groundH))));
     for (const pl of this.placed.values()) {
       if (pl.target === 0 && !this.allowedNow(pl)) continue;
       if (!this.allowedNow(pl)) {
         pl.target = 0;
         continue;
       }
-      const pos = pl.label.position;
+      const pos = pl.pos;
       const distKm = Cartesian3.distance(camPos, pos) / 1000;
       if (distKm > MAX_DIST_KM[pl.c.kind] || !occ.isPointVisible(pos) || !SceneTransforms.worldToWindowCoordinates(scene, pos, win)) {
         pl.target = 0;
@@ -389,8 +529,28 @@ export class PlaceLabelManager {
         pl.target = 0;
         continue;
       }
-      const sc = 1 - Math.min(0.15, Math.max(0, (distKm - 100) / 20000) * 0.15);
-      items.push({ x: win.x, y: win.y, w: pl.width * sc, h: pl.height * sc, p: labelPriority(pl.c.kind, pl.c.rank) + (pl.target > 0 ? 40 : 0) - distKm * 0.002, pl });
+      // Zoom sets the size per class; far names in tilted views shrink a little more.
+      const sc = zoomScale(pl.c.kind, this.zoom) * (1 - Math.min(0.15, Math.max(0, (distKm - 100) / 20000) * 0.15)) * pl.base;
+      if (Math.abs(sc - pl.scale) > 0.004) {
+        pl.scale = sc;
+        if (pl.label) pl.label.scale = sc;
+        if (pl.bb) pl.bb.scale = sc;
+      }
+      let w = pl.width * sc;
+      let h = pl.height * sc;
+      if (pl.bb && pl.c.lon2 !== undefined && pl.c.lat2 !== undefined) {
+        // Along the street on screen, kept upright; the collision box is the rotated text's bounds.
+        if (!SceneTransforms.worldToWindowCoordinates(scene, Cartesian3.fromDegrees(pl.c.lon2, pl.c.lat2, Cartographic.fromCartesian(pos).height), win2)) {
+          pl.target = 0;
+          continue;
+        }
+        const rot = uprightAngle(win2.x - win.x, win2.y - win.y);
+        pl.bb.rotation = rot;
+        const cw = Math.abs(Math.cos(rot));
+        const sw = Math.abs(Math.sin(rot));
+        [w, h] = [w * cw + h * sw, w * sw + h * cw];
+      }
+      items.push({ x: win.x, y: win.y, w, h, p: labelPriority(pl.c.kind, pl.c.rank) + (pl.target > 0 ? 40 : 0) - distKm * 0.002, pl });
     }
     const max = Math.round(MAX_VISIBLE[this.opts.density] * (this.opts.level === 'minimal' ? 0.5 : this.opts.level === 'detailed' ? 1.25 : 1));
     const keep = placeBoxes(items, max, 5);
@@ -410,14 +570,21 @@ export class PlaceLabelManager {
       if (p.alpha !== p.target) {
         p.alpha = p.target > p.alpha ? Math.min(1, p.alpha + 0.25) : Math.max(0, p.alpha - 0.34);
         busy = true;
-        const base = (p.label as unknown as { _atlasColor: Color })._atlasColor;
-        p.label.fillColor = base.withAlpha(p.alpha);
-        p.label.outlineColor = Color.fromCssColorString('#06090d').withAlpha(p.alpha * 0.85);
-        p.label.show = p.alpha > 0.01;
+        if (p.label) {
+          const base = (p.label as unknown as { _atlasColor: Color })._atlasColor;
+          p.label.fillColor = base.withAlpha(p.alpha);
+          p.label.outlineColor = Color.fromCssColorString('#06090d').withAlpha(p.alpha * 0.85);
+          p.label.show = p.alpha > 0.01;
+        }
+        if (p.bb) {
+          p.bb.color = Color.WHITE.withAlpha(p.alpha);
+          p.bb.show = p.alpha > 0.01;
+        }
       }
       // Drop labels that are fully faded and no longer in any loaded tile.
       if (p.alpha === 0 && p.target === 0 && !this.allowedNow(p)) {
-        this.labels.remove(p.label);
+        if (p.label) this.labels.remove(p.label);
+        if (p.bb) this.streets.remove(p.bb);
         this.placed.delete(k);
       }
     }
@@ -427,6 +594,7 @@ export class PlaceLabelManager {
 
   destroy(): void {
     this.widget.scene.primitives.remove(this.labels);
+    this.widget.scene.primitives.remove(this.streets);
     this.placed.clear();
   }
 }

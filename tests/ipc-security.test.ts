@@ -45,6 +45,42 @@ describe('IPC argument validation', () => {
     [IPC.aiAsk, [{ question: '', locationIds: [] }]],
     [IPC.aiAsk, [{ question: 'q', locationIds: [], url: 'http://x' }]],
     [IPC.stateGet, ['extra']],
+    [IPC.weatherWind, ['now']],
+    [IPC.weatherWind, [{}]],
+    [IPC.tracksFlightPath, ['ABC123']],
+    [IPC.tracksFlightPath, ['abc12']],
+    [IPC.tracksFlightPath, ['~abc123']],
+    [IPC.tracksFlightPath, ['abc123', 'x']],
+    [IPC.tracksFlightPath, ['https://evil.example/']],
+    [IPC.launchesTimeline, ['db3500ac-965b-4ad8-b417-cb8d8d00558']],
+    [IPC.voiceTranscribe, ['not bytes', 'audio/webm']],
+    [IPC.radioSearch, [{ query: 'x', kind: 'all', country: null, near: null, url: 'https://evil.example/' }]],
+    [IPC.radioSearch, [{ query: 'x'.repeat(81), kind: 'all', country: null, near: null }]],
+    [IPC.radioSearch, [{ query: '', kind: 'everything', country: null, near: null }]],
+    [IPC.radioSearch, [{ query: '', kind: 'all', country: 'usa', near: null }]],
+    [IPC.radioSearch, [{ query: '', kind: 'all', country: null, near: { lat: 91, lon: 0 } }]],
+    [IPC.voiceTranscribe, [new Uint8Array(0), 'audio/webm']],
+    [IPC.voiceTranscribe, [new Uint8Array(1_000_001), 'audio/webm']],
+    [IPC.voiceTranscribe, [new Uint8Array(500), 'video/webm']],
+    [IPC.voiceTranscribe, [new Uint8Array(500), 'audio/webm', 'https://evil.example/']],
+    [IPC.launchesTimeline, ['DB3500AC-965B-4AD8-B417-CB8D8D005586']],
+    [IPC.launchesTimeline, ['../previous']],
+    [IPC.launchesTimeline, ['db3500ac-965b-4ad8-b417-cb8d8d005586', 'detailed']],
+    [IPC.launchesTimeline, [{ id: 'db3500ac-965b-4ad8-b417-cb8d8d005586' }]],
+    [IPC.windowControl, ['quit']],
+    [IPC.windowControl, [true]],
+    [IPC.windowControl, ['close', 'now']],
+    [IPC.plansList, ['extra']],
+    [IPC.plansPut, [{ id: 'p1', name: 'x' }]],
+    [IPC.plansPut, ['{"version":1}']],
+    [IPC.plansDelete, ['../../other']],
+    [IPC.planExport, [{ plan: {}, annotations: [], routes: [], coverageImage: null }, 'html']],
+    [IPC.siteBuilding, [91, 0]],
+    [IPC.siteBuilding, ['60.17', 24.94]],
+    [IPC.siteBuilding, [60.17, 24.94, 'https://evil.example']],
+    [IPC.siteFacilities, [60.17, 24.94, 50]],
+    [IPC.siteFacilities, [60.17, 24.94, 5001]],
+    [IPC.siteFacilities, [60.17, 181, 1000]],
   ])('%s rejects %j', (channel, args) => {
     expect(() => validateIpcArgs(channel as keyof typeof ipcArgSchemas, args as unknown[])).toThrow(IpcValidationError);
   });
@@ -101,6 +137,11 @@ describe('network restrictions', () => {
     expect(() => assertAllowedUrl('http://localhost:11434/')).toThrow(/Blocked/);
     expect(() => assertAllowedUrl('http://192.168.1.10:11434/')).toThrow(/Blocked/);
     expect(() => assertAllowedUrl('https://api.weather.gov.evil.example/')).toThrow(/Blocked/);
+    // OpenStreetMap Overpass (protective planning): the two listed public instances only, https, default port.
+    expect(() => assertAllowedUrl('https://overpass-api.de/api/interpreter')).not.toThrow();
+    expect(() => assertAllowedUrl('https://overpass.private.coffee/api/interpreter')).not.toThrow();
+    expect(() => assertAllowedUrl('http://overpass-api.de/api/interpreter')).toThrow(/Blocked/);
+    expect(() => assertAllowedUrl('https://overpass-api.de.evil.example/api/interpreter')).toThrow(/Blocked/);
   });
 
   it('Ollama endpoint is always loopback', async () => {
@@ -129,8 +170,8 @@ describe('network restrictions', () => {
 
 describe('feed request details', () => {
   it('builds an identifying User-Agent', () => {
-    expect(buildUserAgent('0.1.0', '')).toBe('AtlasWatch/0.1.0 (desktop monitoring app)');
-    expect(buildUserAgent('0.1.0', 'ops@example.com')).toBe('AtlasWatch/0.1.0 (ops@example.com)');
+    expect(buildUserAgent('0.1.0', '')).toBe('SkyView/0.1.0 (desktop monitoring app)');
+    expect(buildUserAgent('0.1.0', 'ops@example.com')).toBe('SkyView/0.1.0 (ops@example.com)');
   });
   it('formats /points coordinates without trailing zeros', () => {
     expect(formatPointCoord(39.7)).toBe('39.7');
@@ -149,5 +190,16 @@ describe('feed request details', () => {
     expect(computeBackoffMs(20, null, mid)).toBe(30 * 60_000);
     expect(computeBackoffMs(1, 120, mid)).toBe(120_000);
     expect(computeBackoffMs(1, 0, mid)).toBe(5_000);
+  });
+});
+
+describe('new provider keys', () => {
+  it('accepts the four new provider ids and only the tile-service browser keys', () => {
+    for (const id of ['tomtom', 'launchlibrary', 'openai', 'cesium-ion']) expect(() => validateIpcArgs(IPC.providersSetCredential, [id, 'k'])).not.toThrow();
+    expect(() => validateIpcArgs(IPC.providersBrowserKey, ['tomtom'])).not.toThrow();
+    expect(() => validateIpcArgs(IPC.providersBrowserKey, ['cesium-ion'])).not.toThrow();
+    // Server-side keys never go to the map view.
+    expect(() => validateIpcArgs(IPC.providersBrowserKey, ['openai'])).toThrow();
+    expect(() => validateIpcArgs(IPC.providersBrowserKey, ['launchlibrary'])).toThrow();
   });
 });

@@ -281,7 +281,7 @@ export function writeGlb(parts: { geometry: Geometry; material: number }[], mate
   }
   const imageViews = images.map((png) => push(png));
   const json = {
-    asset: { version: '2.0', generator: 'Atlas Watch vehicle models' },
+    asset: { version: '2.0', generator: 'Sky_View vehicle models' },
     scene: 0,
     scenes: [{ nodes: [0] }],
     nodes: [{ mesh: 0 }],

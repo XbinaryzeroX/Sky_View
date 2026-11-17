@@ -1,0 +1,10 @@
+# Supplied interior model attribution
+
+- Boeing 757-200 Icelandair Cockpit, by VTX: https://sketchfab.com/3d-models/boeing-757-200-icelandair-cockpit-1cb8f8109cb145849282ad703a652859 . Licensed CC BY-NC-SA 4.0: https://creativecommons.org/licenses/by-nc-sa/4.0/ . Original user-provided GLB, not modified.
+- Airplane interior, by Newbie99999993: https://sketchfab.com/3d-models/airplane-interior-f56acb1930b645aaab879a259e36b606 . Licensed CC BY 4.0: https://creativecommons.org/licenses/by/4.0/ . Original user-provided GLB, not modified.
+
+Models are shown as simulated interiors, not as the actual interior of a tracked aircraft. Seat viewpoints are approximations.
+
+The app also contains optimized derivatives created by flattening the scene hierarchy, combining meshes and removing duplicate or unused data; geometry and source texture resolutions are preserved. The originals are retained alongside them. The cockpit derivative remains subject to CC BY-NC-SA 4.0 and the cabin derivative to CC BY 4.0.
+
+Further optimized copies simplify geometry and encode textures as WebP. For the cockpit view, two windshield materials have been made transparent to allow the map to be seen through the glazing. These are modified derivatives under the same respective licences.

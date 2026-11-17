@@ -57,7 +57,7 @@ export function ProvidersDialog({ onClose }: { onClose(): void }) {
   return (
     <Modal title="Provider settings" onClose={onClose} wide>
       <p className="muted small">
-        Atlas Watch needs no paid credentials. Some releases include limited provider keys. Your saved key takes precedence; removing it restores the included key. Secret keys are encrypted with
+        Sky_View needs no paid credentials. Some releases include limited provider keys. Your saved key takes precedence; removing it restores the included key. Secret keys are encrypted with
         the Windows credential store and never shown again, exported, or logged. Google’s 3D Tiles key is a browser key by design: restrict it to the Map Tiles API in Google Cloud.
       </p>
       <div className="btn-row">
@@ -96,7 +96,7 @@ export function ProvidersDialog({ onClose }: { onClose(): void }) {
               {st?.credentialSource && (
                 <p className="small">
                   {st.credentialSource === 'builtin'
-                    ? (p.id === 'google3d' ? 'Using the key included with Atlas Watch for Photoreal 3D · ' : 'Using the key included with Atlas Watch · ') +
+                    ? (p.id === 'google3d' ? 'Using the key included with Sky_View for Photoreal 3D · ' : 'Using the key included with Sky_View · ') +
                       st.builtinRemaining +
                       ' remaining today' +
                       (p.id === 'google3d' ? '. Satellite imagery and Google place search need your own key.' : '')

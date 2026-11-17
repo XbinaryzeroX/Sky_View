@@ -1,5 +1,6 @@
 // Typed access to the preload bridge.
 
+import type { BuildingInfo, Facilities, PlanExport, ProtectivePlan } from '../../shared/protectivePlan';
 import type { Candle, Quote, SymbolMatch, MarketResult, MarketRange, Headline, TrendingMarkets } from '../../shared/markets';
 import type { LemmyPost, LemmyComment, LemmyCommunity } from '../../shared/lemmy';
 import type { z } from 'zod';
@@ -7,6 +8,10 @@ import type { lemmyWriteSchema } from '../../shared/ipc';
 import type { Scene as SharedScene, SavedView as SharedSavedView, AppliedScene, RestoredView } from '../../shared/ipc';
 import type { BriefingExportRequest, BriefingPreview, BriefingRequest } from '../../shared/briefing';
 import type { RouteInfo } from '../../shared/route';
+import type { FlightPath } from '../../shared/flightPath';
+import type { LaunchTimeline } from '../../shared/launchTimeline';
+import type { RadioQuery, RadioStation } from '../../shared/radio';
+import type { WindField } from '../../shared/wind';
 import type { DatedFlightStatus } from '../../shared/flightStatus';
 import type { VehicleInfo } from '../../shared/vehicleInfo';
 import type {
@@ -80,13 +85,30 @@ export interface AtlasApi {
   setView(v: ViewState): Promise<boolean>;
   refreshLayer(id: LayerId): Promise<boolean>;
   trackTrail(layer: LayerId, id: string): Promise<TrackPoint[]>;
+  /** OpenSky's path for the aircraft's current flight; rejects when OpenSky has none or refuses. */
+  flightPath(icao24: string): Promise<FlightPath>;
+  /** The event sequence Launch Library 2 publishes for one launch (empty when it publishes none). */
+  launchTimeline(id: string): Promise<LaunchTimeline>;
+  /** Transcribes one recorded voice command with the customer's OpenAI key (main process only). */
+  voiceTranscribe(audio: Uint8Array, mime: 'audio/webm' | 'audio/ogg' | 'audio/mp4'): Promise<{ text: string }>;
+  /** Searches the Radio Browser directory; play a result at app://atlas/radio-stream/<id>. */
+  radioSearch(q: RadioQuery): Promise<{ stations: RadioStation[]; note: string | null }>;
+  /** GFS 10 m wind forecast; staleReason is set when an older field is kept after a failed refresh. */
+  wind(): Promise<{ field: WindField; staleReason: string | null }>;
   trackRange(): Promise<{ oldest: string | null; newest: string | null; points: number }>;
   trackSnapshot(layer: LayerId, t: string): Promise<(TrackPoint & { rid: string })[]>;
   listProviders(): Promise<ProviderState[]>;
   setProviderCredential(id: ProviderId, value: string | null): Promise<ProviderState[]>;
   testProvider(id: ProviderId): Promise<{ ok: boolean; message: string }>;
-  providerBrowserKey(id: 'google3d' | 'google2d' | 'esri-imagery' | 'mapbox'): Promise<string | null>;
+  providerBrowserKey(id: 'google3d' | 'google2d' | 'esri-imagery' | 'mapbox' | 'tomtom' | 'cesium-ion'): Promise<string | null>;
   geocodeAddress(q: string): Promise<{ label: string; lat: number; lon: number }[]>;
+  listPlans(): Promise<ProtectivePlan[]>;
+  putPlan(plan: ProtectivePlan): Promise<boolean>;
+  deletePlan(id: string): Promise<boolean>;
+  exportPlan(request: PlanExport, format: 'html' | 'pdf'): Promise<string | null>;
+  /** OpenStreetMap building at or nearest (≤ 30 m) a point; null when none is mapped there. */
+  siteBuilding(lat: number, lon: number): Promise<BuildingInfo | null>;
+  siteFacilities(lat: number, lon: number, radiusM: number): Promise<Facilities>;
   /** Google Geocoding with the customer's Google key (used while Google 3D Tiles are on; their terms require the Google geocoder). */
   geocodeGoogle(q: string): Promise<{ label: string; lat: number; lon: number }[]>;
   listAnnotations(): Promise<Annotation[]>;
@@ -117,6 +139,8 @@ export interface AtlasApi {
   putDoc(kind: 'boards' | 'people', doc: { id: string; createdAt: string; [k: string]: unknown }): Promise<boolean>;
   deleteDoc(kind: 'boards' | 'people', id: string): Promise<boolean>;
   setKiosk(on: boolean): Promise<boolean>;
+  /** The app draws its own window buttons; 'maximize' toggles between maximised and restored. */
+  windowControl(action: 'minimize' | 'maximize' | 'close'): Promise<boolean>;
   captureScreenshot(): Promise<string | null>;
 }
 

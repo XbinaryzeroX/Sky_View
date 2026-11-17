@@ -73,7 +73,7 @@ describe('DWD source and original warning display', () => {
 
   it('hides live DWD source totals and notes when the expanded Weather layer stays open during Replay', () => {
     const snapshot = dwdSnapshot([dwdFixture()], { note: 'LIVE_DWD_COUNTS_SENTINEL' });
-    const render = (playbackActive: boolean) => renderToStaticMarkup(createElement(LayersPanel, { settings: { ...DEFAULT_SETTINGS, layersEnabled: ['dwd'] }, snaps: { dwd: snapshot }, playbackActive,
+    const render = (playbackActive: boolean) => renderToStaticMarkup(createElement(LayersPanel, { groupsOpen: true, settings: { ...DEFAULT_SETTINGS, layersEnabled: ['dwd'] }, snaps: { dwd: snapshot }, playbackActive,
       onPatch: vi.fn(), imagery: { product: null, date: '', compare: false, compareDate: '', opacity: 1, split: 0.5 }, onImagery: vi.fn() }));
     expect(render(false)).toContain('LIVE_DWD_COUNTS_SENTINEL');
     expect(render(true)).not.toContain('LIVE_DWD_COUNTS_SENTINEL');

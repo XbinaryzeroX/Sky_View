@@ -4,7 +4,6 @@
 
 import type { GeoRecord } from './layers';
 import { geodesicDistanceKm } from './geo';
-import { publicAirlineCallsign } from './route';
 
 export const STALE_AFTER_S = 60;
 export const EXPIRE_AFTER_S = 300;
@@ -70,9 +69,26 @@ export function specialCode(r: GeoRecord): SpecialCode | null {
   return null;
 }
 
-export type AircraftClass = 'airliner' | 'light' | 'rotorcraft' | 'military' | 'ground' | 'other';
+export type AircraftClass = 'airliner' | 'light' | 'rotorcraft' | 'fighter' | 'military' | 'ground' | 'other';
+
+/**
+ * ICAO type designators of fighter and attack jets. The type comes from the receiver network's aircraft database
+ * (keyed by transponder address), not from the transponder itself, so it can be missing or wrong; most such aircraft
+ * do not broadcast a position at all.
+ */
+export const FIGHTER_TYPES = new Set([
+  'F16', 'F15', 'F15E', 'F18', 'F18H', 'F18S', 'F35', 'F22', 'F14', 'F4', 'F5', 'F1', 'A10', 'AV8B', 'HAR', 'EUFI', 'RFAL', 'GRIF', 'JAS39', 'TOR',
+  'MIR2', 'MIRA', 'M2000', 'MG29', 'MG31', 'SU24', 'SU25', 'SU27', 'SU30', 'SU33', 'SU34', 'SU35', 'SU57', 'J10', 'J11', 'JF17', 'KF21', 'TEJ', 'T50', 'FA50',
+  'HAWK', 'M346', 'L159', 'AMX', 'JAGR', 'KFIR', 'F2', 'F104', 'MRF1',
+]);
+
+/** True when the reported type designator is a fighter or attack jet. */
+export function isFighterType(type: unknown): boolean {
+  return typeof type === 'string' && FIGHTER_TYPES.has(type.trim().toUpperCase());
+}
 
 export function aircraftClass(r: GeoRecord): AircraftClass {
+  if (isFighterType(r.props.type)) return 'fighter';
   if (r.props.militaryFlag === true) return 'military';
   if (r.props.onGround === true) return 'ground';
   const c = typeof r.props.emitterCategory === 'string' ? r.props.emitterCategory : '';
@@ -89,7 +105,7 @@ export interface AircraftFilter {
   specialOnly: boolean;
 }
 
-export const DEFAULT_AIRCRAFT_FILTER: AircraftFilter = { minFt: 0, maxFt: 60000, classes: ['airliner', 'light', 'rotorcraft', 'military', 'ground', 'other'], specialOnly: false };
+export const DEFAULT_AIRCRAFT_FILTER: AircraftFilter = { minFt: 0, maxFt: 60000, classes: ['airliner', 'light', 'rotorcraft', 'fighter', 'military', 'ground', 'other'], specialOnly: false };
 
 export function passesFilter(r: GeoRecord, f: AircraftFilter): boolean {
   if (f.specialOnly && !specialCode(r)) return false;
@@ -144,9 +160,9 @@ function projectTrack(r: GeoRecord, t: number): { lat: number; lon: number; esti
   return { lat: (lat2 * 180) / Math.PI, lon: ((((lon2 * 180) / Math.PI + 540) % 360) - 180), estimatedS: Math.round(t) };
 }
 
-/** The existing prediction horizon, for public passenger flights eligible for frame animation. */
+/** The prediction horizon for an aircraft with a usable reported ground track. */
 export function passengerMotionEndMs(r: GeoRecord): number | null {
-  if (!canExtrapolate(r) || !publicAirlineCallsign('aircraft', r)) return null;
+  if (!canExtrapolate(r)) return null;
   const observed = r.observedAt ? Date.parse(r.observedAt) : NaN;
   return Number.isFinite(observed) ? observed + MAX_EXTRAPOLATION_S * 1000 : null;
 }
@@ -155,6 +171,7 @@ export interface FlightDisplayPose { lat: number; lon: number; altM: number | nu
 export interface PassengerMotion {
   report: GeoRecord;
   endMs: number;
+  fallbackHeading?: number;
   correction?: { start: number; end: number; lat: number; lon: number; altM: number; heading: number };
 }
 
@@ -164,8 +181,9 @@ const shortestAngle = (degrees: number) => ((degrees % 360 + 540) % 360) - 180;
 export function passengerPose(motion: PassengerMotion, now: number): FlightDisplayPose {
   const r = motion.report;
   const age = Math.max(0, Math.min(MAX_EXTRAPOLATION_S, MAX_EXTRAPOLATION_S + (now - motion.endMs) / 1000));
-  const point = age > 0 ? projectTrack(r, age) : r;
-  const pose = { lat: point.lat, lon: point.lon, altM: r.altM, heading: r.heading! };
+  const observed = r.observedAt ? Date.parse(r.observedAt) : NaN;
+  const point = age > 0 && Number.isFinite(observed) && canExtrapolate(r) ? projectTrack(r, age) : r;
+  const pose = { lat: point.lat, lon: point.lon, altM: r.altM, heading: r.heading ?? motion.fallbackHeading ?? 0 };
   const c = motion.correction;
   if (!c || now >= c.end) return pose;
   const u = Math.max(0, (now - c.start) / (c.end - c.start));
@@ -177,23 +195,35 @@ export function passengerPose(motion: PassengerMotion, now: number): FlightDispl
   return pose;
 }
 
+/** Visual bank from the rate of the smoothed direction correction, not a reported roll angle. */
+export function passengerVisualBank(motion: PassengerMotion | undefined, now: number): number {
+  const c = motion?.correction;
+  const speed = motion?.report.speedKts;
+  if (!c || typeof speed !== 'number' || !Number.isFinite(speed) || speed < 40 || now <= c.start || now >= c.end || c.end <= c.start) return 0;
+  const u = (now - c.start) / (c.end - c.start);
+  const turnRate = -c.heading * Math.PI / 180 * 6 * u * (1 - u) / ((c.end - c.start) / 1000);
+  return Math.max(-Math.PI / 7.2, Math.min(Math.PI / 7.2, Math.atan((speed * 0.514444 * turnRate) / 9.80665)));
+}
+
 /** Reconcile a fresh fix with the pose already on screen. Duplicated polls keep the blend in progress. */
 export function updatePassengerMotion(previous: PassengerMotion | undefined, r: GeoRecord, endMs: number, now: number): PassengerMotion {
   const next: PassengerMotion = { report: r, endMs };
-  if (!previous || previous.report.props.callsign !== r.props.callsign) return next;
+  if (!previous) return next;
+  if (r.heading === null) next.fallbackHeading = passengerPose(previous, now).heading;
   if (previous.endMs - MAX_EXTRAPOLATION_S * 1000 > now) return next;
   const old = previous.report;
   if (endMs < previous.endMs) return previous;
   if (endMs === previous.endMs && old.lat === r.lat && old.lon === r.lon && old.altM === r.altM &&
       old.heading === r.heading && old.speedKts === r.speedKts) return previous;
-  // After a prolonged outage or a large position discontinuity, reacquire at the new fix.
-  if (now < endMs - MAX_EXTRAPOLATION_S * 1000 || now >= endMs ||
-      now - previous.endMs > (STALE_AFTER_S - MAX_EXTRAPOLATION_S) * 1000) return next;
+  if (now < endMs - MAX_EXTRAPOLATION_S * 1000) return next;
   const from = passengerPose(previous, now);
   const to = passengerPose(next, now);
-  if (geodesicDistanceKm(from.lat, from.lon, to.lat, to.lon) > 15) return next;
+  const distanceKm = geodesicDistanceKm(from.lat, from.lon, to.lat, to.lon);
+  // Larger corrections take longer, so a delayed report does not move the
+  // displayed aircraft and its following camera instantaneously.
+  const correctionMs = Math.min(30000, Math.max(4000, distanceKm * 2000));
   next.correction = {
-    start: now, end: Math.min(now + 4000, endMs),
+    start: now, end: now + correctionMs,
     lat: from.lat - to.lat, lon: shortestAngle(from.lon - to.lon),
     altM: from.altM !== null && to.altM !== null ? from.altM - to.altM : 0,
     heading: shortestAngle(from.heading - to.heading),

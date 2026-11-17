@@ -1,4 +1,7 @@
-import { FileText, KeyRound, Settings as SettingsIcon, Bell } from 'lucide-react';
+import { usePlanning } from './lib/usePlanning';
+import { rgbaToDataUrl } from './map/planningOverlay';
+import { groundHeightAt } from './map/siteGeometry';
+import { FileText, KeyRound, Settings as SettingsIcon, Bell, PanelLeftClose, PanelLeftOpen, Minus, Square, X as XIcon } from 'lucide-react';
 import { EarthLightingPanel } from './components/EarthLightingPanel';
 import { loadEarthLighting, type EarthLighting } from './map/earthLighting';
 import { FloatingMapControls, FloatingPanel, type LeftMapPanel } from './components/FloatingMapControls';
@@ -27,9 +30,11 @@ import { RecordDetails } from './components/RecordDetails';
 import { TrackingControls } from './components/TrackingControls';
 import type { TrackingMode } from '../shared/trackingCamera';
 import { SearchBox } from './components/SearchBox';
+import { VoiceControl } from './components/VoiceControl';
+import { RadioNowPlaying } from './components/RadioPage';
 import { placeSearchMode } from '../shared/geocoding';
 import { ToolsPanel, measurementText } from './components/ToolsPanel';
-import { AIRPORTS, NAV, PageView, type PageCtx, type PageId } from './components/Pages';
+import { AIRPORTS, NAV, NAV_GROUPS, NAV_UTILITY_GROUP, PageView, type PageCtx, type PageId } from './components/Pages';
 import { TrafficBar } from './components/TrafficBar';
 import { DEFAULT_AIRCRAFT_FILTER, specialCode, type AircraftFilter } from '../shared/aircraft';
 import type { SearchResult } from './components/SearchBox';
@@ -45,6 +50,10 @@ import { LocationForm } from './components/LocationForm';
 import { SettingsDialog } from './components/SettingsDialog';
 import { ModelCredits } from './components/ModelCredits';
 import type { TrailPoint } from './map/trailHeights';
+import type { FlightPath } from '../shared/flightPath';
+import type { WindState } from './components/LayersPanel';
+import { nextPlayFrame, WEATHER_PLAY_FRAME_MS } from '../shared/weatherTimeline';
+import { enterGlobalPicture, GLOBAL_PICTURE_HEIGHT_M, isTilted, leaveGlobalPicture, parseGlobalPictureState, type GlobalPictureState } from '../shared/viewModes';
 import { api, errorText } from './lib/api';
 import { localTime, quakeClass, SEVERITY_META, SEVERITY_ORDER } from './lib/format';
 
@@ -61,6 +70,7 @@ const BASEMAP_CREDIT: Record<string, string> = {
   eox: 'EOxCloudless 2024 by EOX IT Services GmbH (contains modified Copernicus Sentinel data 2024), your license',
   google3d: 'Google Photorealistic 3D and Atlas satellite imagery (ESA Ocean Colour CCI, WorldCover, NASA and USGS)',
   google2d: 'Google satellite imagery (Google Maps Platform)',
+  ionBing: 'Bing Maps aerial (© Microsoft and its suppliers) via Cesium ion, your token; not live',
 };
 
 type Dialog = { kind: 'providers' } | { kind: 'import' } | { kind: 'settings' } | { kind: 'briefing'; ids: string[]; mode?: 'visit' | 'locations' } | { kind: 'ai' } | { kind: 'delete'; loc: SavedLocation } | null;
@@ -74,7 +84,7 @@ export function App() {
   }, []);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
-  const [layers, setLayers] = useState<GlobeLayers>({ alerts: true, quakes: true, locations: true, radii: true, boundaries: true });
+  const [layers, setLayers] = useState<GlobeLayers>({ alerts: true, quakes: false, locations: true, radii: true, boundaries: true });
   const [severityFilter, setSeverityFilter] = useState<Set<AlertSeverity>>(new Set(SEVERITY_ORDER));
   const [alertsAffectingOnly, setAlertsAffectingOnly] = useState(false);
   const [search, setSearch] = useState('');
@@ -93,13 +103,83 @@ export function App() {
   }, []);
   const [tracked, setTracked] = useState<{ layer: LayerId; id: string } | null>(null);
   const [trackingMode, setTrackingMode] = useState<TrackingMode>('follow');
+  const [passengerSeat, setPassengerSeat] = useState('1F');
+  const [interiorStatus, setInteriorStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [trail, setTrail] = useState<TrailPoint[] | null>(null);
+  /** OpenSky's reported path, tied to the aircraft it was asked for. */
+  const [flightPath, setFlightPath] = useState<FlightPath | null>(null);
+  /** GFS wind field for the wind layer; loaded only while the layer is on, rechecked every 30 minutes. */
+  const [wind, setWind] = useState<WindState>({ field: null, staleReason: null, error: null, loading: false });
+  const windOn = !!snap?.settings.windEnabled;
+  /** Observed-weather history (radar, lightning, satellites): minutes back from the newest frames; not saved. */
+  const [weatherBack, setWeatherBack] = useState(0);
+  const [weatherPlaying, setWeatherPlaying] = useState(false);
+  const weatherObservedOn = !!snap && (snap.settings.radarEnabled || snap.settings.lightningEnabled || snap.settings.geoSatEnabled);
+  useEffect(() => {
+    // With every observed overlay off there is nothing to step through: back to the newest frames.
+    if (!weatherObservedOn) { setWeatherBack(0); setWeatherPlaying(false); }
+  }, [weatherObservedOn]);
+  useEffect(() => {
+    if (!weatherPlaying) return;
+    const t = setInterval(() => setWeatherBack((b) => nextPlayFrame(b)), WEATHER_PLAY_FRAME_MS);
+    return () => clearInterval(t);
+  }, [weatherPlaying]);
+  useEffect(() => {
+    if (!windOn) return;
+    let current = true;
+    const load = () => {
+      setWind((w) => ({ ...w, loading: true }));
+      api.wind().then(
+        (r) => { if (current) setWind({ field: r.field, staleReason: r.staleReason, error: null, loading: false }); },
+        (e: unknown) => { if (current) setWind((w) => ({ ...w, loading: false, error: errorText(e) })); },
+      );
+    };
+    load();
+    const t = setInterval(load, 30 * 60_000);
+    return () => { current = false; clearInterval(t); };
+  }, [windOn]);
   const [orbitFor, setOrbitFor] = useState<string | null>(null);
   const [tool, setTool] = useState<ToolMode>('none');
   const [draft, setDraft] = useState<[number, number][]>([]);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [views, setViews] = useState<SavedView[]>([]);
   const [toolsOpen, setToolsOpen] = useState(false);
+  // Navigation names are shown only when the user expands the rail; the choice is remembered on this computer.
+  const [railOpen, setRailOpenState] = useState(() => { try { return localStorage.getItem('atlas.railOpen') === '1'; } catch { return false; } });
+  const setRailOpen = (open: boolean) => { setRailOpenState(open); try { localStorage.setItem('atlas.railOpen', open ? '1' : '0'); } catch { /* storage unavailable: the choice lasts for this session */ } };
+  const planning = usePlanning({
+    annotations,
+    notify: (m) => setToast(m),
+    saveAnnotation: async (a) => {
+      try {
+        await api.putAnnotation(a);
+        setAnnotations((prev) => [...prev, a]);
+        return true;
+      } catch (e) {
+        setToast(errorText(e));
+        return false;
+      }
+    },
+  });
+  const planningRef = useRef(planning);
+  planningRef.current = planning;
+  /** Bumped by every planning camera move: only the newest one, and only for the plan that is open, is applied. */
+  const planFlightRef = useRef(0);
+  /**
+   * Whether the camera is somewhere else than when a planning move was requested: a search, a restored view, tracking
+   * or the user's own drag happened while terrain loaded, and that later navigation wins.
+   */
+  const cameraMovedSince = (before: Camera | null): boolean => {
+    const now = globeRef.current?.getCamera() ?? null;
+    if (!before || !now) return false; // unknown (e.g. mid-morph): the generation and plan checks still apply
+    return Math.abs(now.lat - before.lat) > 1e-6 || Math.abs(now.lon - before.lon) > 1e-6 || Math.abs(now.heightM - before.heightM) > 0.5 || Math.abs(now.heading - before.heading) > 1e-4 || Math.abs(now.pitch - before.pitch) > 1e-4;
+  };
+  useEffect(() => {
+    if (!planning.pick) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') planning.setPick(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [planning.pick]);
   const [leftFloat, setLeftFloat] = useState<LeftMapPanel>('layers');
   const [lighting, setLighting] = useState<EarthLighting>(loadEarthLighting);
   useEffect(() => {
@@ -143,7 +223,7 @@ export function App() {
     const y = new Date(Date.now() - 86400_000).toISOString().slice(0, 10);
     return { product: null, date: y, compare: false, compareDate: new Date(Date.now() - 31 * 86400_000).toISOString().slice(0, 10), opacity: 1, split: 0.5 };
   });
-  const [imageryKeys, setImageryKeys] = useState<{ esri: string | null; mapbox: string | null; google: string | null }>({ esri: null, mapbox: null, google: null });
+  const [imageryKeys, setImageryKeys] = useState<{ esri: string | null; mapbox: string | null; google: string | null; ion: string | null; tomtom: string | null }>({ esri: null, mapbox: null, google: null, ion: null, tomtom: null });
   const [preserveImageryDates, setPreserveImageryDates] = useState(false);
   const catalogRevision = useSyncExternalStore(imageryDates.subscribe, imageryDates.revision);
   const selectedYear = snap?.settings.imageryYear ?? null;
@@ -168,10 +248,17 @@ export function App() {
     setImagery(next);
   };
   const [googleConfigured, setGoogleConfigured] = useState(false);
+  const [voiceReady, setVoiceReady] = useState(false);
   // Satellite (Google 2D) and Google geocoding need the user's own key; the included key covers Photoreal 3D only.
   const [googleOwnKey, setGoogleOwnKey] = useState(false);
   const [eoxLicensed, setEoxLicensed] = useState(false);
   const [page, setPage] = useState<PageId>('globe');
+  // Other panels can ask for a page (the ATC panel opens Radio with a search ready).
+  useEffect(() => {
+    const open = (e: Event) => { const id = (e as CustomEvent).detail; if (id === 'radio') setPage('radio'); };
+    window.addEventListener('atlas:open-page', open);
+    return () => window.removeEventListener('atlas:open-page', open);
+  }, []);
   const widePage = NAV.find((entry) => entry.id === page)?.wide === true;
 
   const [airportSel, setAirportSel] = useState<string | null>(null);
@@ -276,6 +363,7 @@ export function App() {
   }, [leftFloat, dataOpen, toolsOpen, diagOpen, creditsOpen, keyboardOpen, playbackMenu, historyOpen, page, widePage, dialog, form, bellOpen]);
   const getDiag = useCallback(() => globeRef.current?.getDiagnostics() ?? null, []);
   const getHeading = useCallback(() => globeRef.current?.getCamera()?.heading ?? null, []);
+  const getTilted = useCallback(() => isTilted(globeRef.current?.getCamera()?.pitch), []);
   useEffect(() => {
     // Main-thread blocking (tasks over 50 ms), read by the performance smoke test.
     try {
@@ -299,8 +387,11 @@ export function App() {
       replayMap: (kind?: 'alert' | 'quake', id?: string) => globeRef.current?.replayMap(kind, id) ?? null,
       camera: () => globeRef.current?.getCamera() ?? null,
       viewCenter: () => globeRef.current?.getMapCenter() ?? null,
+      toScreen: (lat: number, lon: number) => globeRef.current?.toScreen(lat, lon) ?? null,
+      pickId: (x: number, y: number) => globeRef.current?.pickId(x, y) ?? null,
       setSceneMode: (m: '2d' | '3d') => setSceneMode(m),
       setPage: (p: PageId) => setPage(p),
+      planning: () => planningRef.current,
       setImagery: (s: Partial<ImageryState>) => setImagery((x) => ({ ...x, ...s })),
       select: (layer: LayerId, id: string) => setRecordSel({ layer, id }),
       track: (layer: LayerId, id: string) => setTracked({ layer, id }),
@@ -404,19 +495,25 @@ export function App() {
       const esri = b === 'esri' ? await api.providerBrowserKey('esri-imagery') : null;
       const mapbox = b === 'mapbox' ? await api.providerBrowserKey('mapbox') : null;
       const google = b === 'google2d' ? await api.providerBrowserKey('google2d') : null;
+      // Cesium ion: for the Bing surface or World Terrain. TomTom: only while its traffic overlay is on.
+      const ion = b === 'ionBing' || snap?.settings.ionTerrain ? await api.providerBrowserKey('cesium-ion') : null;
+      const tomtom = snap?.settings.tomtomTraffic ? await api.providerBrowserKey('tomtom') : null;
       const list = await api.listProviders();
       if (!current) return;
       const eox = b === 'eox' ? list.some((p) => p.id === 'eox' && p.configured) : false;
       setGoogleConfigured(list.some((p) => p.id === 'google3d' && p.configured));
+      setVoiceReady(list.some((p) => p.id === 'openai' && p.configured));
       setGoogleOwnKey(list.some((p) => p.id === 'google3d' && p.credentialSource === 'user'));
-      setImageryKeys({ esri, mapbox, google });
+      setImageryKeys({ esri, mapbox, google, ion, tomtom });
       setEoxLicensed(eox);
-      if ((b === 'esri' && !esri) || (b === 'mapbox' && !mapbox) || (b === 'eox' && !eox) || (b === 'google2d' && !google)) setToast('That imagery source needs setup in Providers. Showing keyless imagery meanwhile.');
+      if ((b === 'esri' && !esri) || (b === 'mapbox' && !mapbox) || (b === 'eox' && !eox) || (b === 'google2d' && !google) || (b === 'ionBing' && !ion)) setToast('That imagery source needs setup in Providers. Showing keyless imagery meanwhile.');
+      else if (snap?.settings.ionTerrain && !ion) setToast('Cesium World Terrain needs your Cesium ion token in Providers. Using the keyless terrain meanwhile.');
+      else if (snap?.settings.tomtomTraffic && !tomtom) setToast('TomTom live traffic needs your TomTom key in Providers.');
     })().catch(error => {
-      if (current) { setImageryKeys({ esri: null, mapbox: null, google: null }); setToast(errorText(error)); }
+      if (current) { setImageryKeys({ esri: null, mapbox: null, google: null, ion: null, tomtom: null }); setToast(errorText(error)); }
     });
     return () => { current = false; };
-  }, [snap?.settings.basemap, selectedYear, dialog === null]);
+  }, [snap?.settings.basemap, snap?.settings.ionTerrain, snap?.settings.tomtomTraffic, selectedYear, dialog === null]);
 
   // Restore the last camera view (per-viewer convenience; falls back to the U.S. view).
   const restoredRef = useRef(false);
@@ -479,6 +576,28 @@ export function App() {
     }
   }, []);
 
+  // ----- global picture: worldwide layers and a whole-globe view, with the way back kept (also across a restart) -----
+  const [globalPicture, setGlobalPicture] = useState<GlobalPictureState | null>(() => {
+    try { return parseGlobalPictureState(localStorage.getItem('atlas.globalPicture')); } catch { return null; }
+  });
+  const toggleGlobalPicture = useCallback(() => {
+    const enabled = snap?.settings.layersEnabled ?? [];
+    if (globalPicture) {
+      void patchSettings({ layersEnabled: leaveGlobalPicture(enabled, globalPicture.added) });
+      if (globalPicture.camera) void globeRef.current?.restoreCamera(globalPicture.camera, { animate: !snap?.settings.reducedMotion });
+      setGlobalPicture(null);
+      try { localStorage.removeItem('atlas.globalPicture'); } catch { /* Storage unavailable: nothing to clear. */ }
+      return;
+    }
+    const camera = globeRef.current?.getCamera() ?? null;
+    const next = enterGlobalPicture(enabled);
+    const state: GlobalPictureState = { added: next.added, camera: camera ? { lat: camera.lat, lon: camera.lon, heightM: camera.heightM, heading: camera.heading, pitch: camera.pitch } : null };
+    setGlobalPicture(state);
+    try { localStorage.setItem('atlas.globalPicture', JSON.stringify(state)); } catch { /* Storage unavailable: the way back lasts for this session only. */ }
+    void patchSettings({ layersEnabled: next.enabled });
+    void globeRef.current?.restoreCamera({ lat: camera ? Math.max(-50, Math.min(50, camera.lat)) : 20, lon: camera?.lon ?? 0, heightM: GLOBAL_PICTURE_HEIGHT_M, heading: 0, pitch: -Math.PI / 2 }, { animate: !snap?.settings.reducedMotion });
+  }, [globalPicture, patchSettings, snap?.settings.layersEnabled, snap?.settings.reducedMotion]);
+
   const globeAlerts = useMemo(() => {
     if (!snap) return [];
     const sup = new Set(snap.supersededAlertIds);
@@ -516,8 +635,8 @@ export function App() {
   }, [playbackFrame, severityFilter]);
   const globeSettings = useMemo(() => {
     if (!snap) return undefined;
-    if (archived) return { ...snap.settings, basemap: 'atlas' as const, radarEnabled: false, geoSatEnabled: false, buildings3d: false };
-    return playbackOn ? { ...snap.settings, radarEnabled: false, geoSatEnabled: false } : snap.settings;
+    if (archived) return { ...snap.settings, basemap: 'atlas' as const, radarEnabled: false, lightningEnabled: false, windEnabled: false, geoSatEnabled: false, buildings3d: false };
+    return playbackOn ? { ...snap.settings, radarEnabled: false, lightningEnabled: false, windEnabled: false, geoSatEnabled: false } : snap.settings;
   }, [playbackOn, snap?.settings, archived]);
 
   const focusSelection = useCallback(
@@ -639,12 +758,27 @@ export function App() {
     metar: 'METAR: NOAA AWC',
     dwd: 'German weather warnings: © Deutscher Wetterdienst, CC BY 4.0; CAP polygons converted to GeoJSON',
     cyclones: 'Cyclones: NOAA NHC',
-    cameras: 'Cameras: Caltrans; NYC DOT; Fintraffic / digitraffic.fi, CC BY 4.0; Powered by TfL Open Data; Transport Department, Hong Kong SAR (DATA.GOV.HK); DriveBC, Open Government Licence – British Columbia; Québec 511, MTMD, CC BY 4.0',
-    transit: 'Transit: MBTA',
+    cameras: 'Cameras: Caltrans; NYC DOT; Fintraffic / digitraffic.fi, CC BY 4.0; Powered by TfL Open Data; Transport Department, Hong Kong SAR (DATA.GOV.HK); DriveBC, Open Government Licence – British Columbia; Québec 511, MTMD, CC BY 4.0; Icelandic Road and Coastal Administration (Vegagerðin), CC BY 4.0; City of Calgary and City of Toronto (Open Government Licences)',
     airspace: 'Airspace: FAA',
+    gnss: 'GPS accuracy: adsb.lol (ODbL); cell bands after gpsjam.org',
+    launches: 'Launches: The Space Devs Launch Library 2',
+    rail: 'Trains: MTA; SEPTA; MDOT MTA; Translink (CC BY 4.0); Fintraffic / digitraffic.fi, CC BY 4.0; Renfe (CC BY 4.0); Entur (NLOD); KTMB via data.gov.my (CC BY 4.0); gtfs-data.jp (CC0)',
+    bikeshare: 'Bike share: Lyft systems (data licence agreements); Oslo, Bergen, Trondheim Bysykkel (NLOD); AMBici (CC0)',
+    wildlife: 'Wildlife: iNaturalist contributors (CC0 / CC BY / CC BY-SA per record)',
+    airQuality: 'AQHI: Environment and Climate Change Canada',
+    conflicts: 'Violence in the news: The GDELT Project',
+    streetPhotos: 'Street photos: © KartaView contributors (CC BY-SA 4.0); Panoramax contributors',
+    datacenters: 'Data centres: © OpenStreetMap contributors (ODbL)',
+    milSites: 'Military sites: © OpenStreetMap contributors (ODbL); community mapping, incomplete',
+    alpr: 'Plate-reader locations: © OpenStreetMap contributors (ODbL); locations only, incomplete',
+    transit: 'Transit: each operator is credited on its vehicles (MBTA / MassDOT and 36 GTFS-Realtime publishers)',
+    trafficFlow: 'Traffic flow: NYC DOT; Fintraffic / digitraffic.fi, CC BY 4.0; Transport Department, Hong Kong SAR; Ayuntamiento de Madrid; Ville de Paris (ODbL)',
+    dams: 'Dams: © OpenStreetMap contributors (ODbL), via Open Infrastructure Map',
+    cables: 'Cables: © OpenStreetMap contributors (ODbL)',
+    landslides: 'Landslide estimates: USGS Ground Failure (model)',
   };
   const layerCredits = snap
-    ? [...(snap.settings.layersEnabled as string[]).map((l) => LAYER_CREDIT[l]).filter(Boolean), ...(snap.settings.radarEnabled ? ['Radar: NOAA nowCOAST'] : []), ...(snap.settings.geoSatEnabled ? ['Weather satellites: NOAA GOES, JMA Himawari; imagery from NASA GIBS (ESDIS)'] : [])].join(' · ')
+    ? [...(snap.settings.layersEnabled as string[]).map((l) => LAYER_CREDIT[l]).filter(Boolean), ...(snap.settings.radarEnabled ? ['Radar: NOAA nowCOAST'] : []), ...(snap.settings.lightningEnabled ? ['Lightning: NOAA nowCOAST (NLDN, GLD360)'] : []), ...(snap.settings.windEnabled ? ['Wind: NOAA GFS forecast'] : []), ...(snap.settings.trafficSimEnabled && snap.settings.layersEnabled.includes('trafficFlow') ? ['Moving dots and SIM tags on traffic roads: simulated, not real vehicles'] : []), ...(snap.settings.geoSatEnabled ? ['Weather satellites: NOAA GOES, JMA Himawari (imagery from NASA GIBS, ESDIS); Meteosat © EUMETSAT (hourly)'] : [])].join(' · ')
     : '';
   const allAircraftLoaded = [...new Map([...(layerSnaps.aircraft?.records ?? []), ...(layerSnaps.aircraftMil?.records ?? [])].map((r) => [r.id, r])).values()];
   const notifications = (() => {
@@ -723,23 +857,68 @@ export function App() {
         openProviders: () => setDialog({ kind: 'providers' }),
         toast: setToast,
         enableLayers: (ids) => void patchSettings({ layersEnabled: [...new Set([...(snap.settings.layersEnabled as LayerId[]), ...ids])] as LayerId[] }),
+        planningPanel: {
+          planning,
+          settings: snap.settings,
+          locations: snap.locations,
+          layerSnaps,
+          annotations,
+          patch: (p) => void patchSettings(p),
+          enableLayers: (ids) => void patchSettings({ layersEnabled: [...new Set([...(snap.settings.layersEnabled as LayerId[]), ...ids])] as LayerId[] }),
+          viewCenter: () => (lastViewRef.current ? { lat: lastViewRef.current.lat, lon: lastViewRef.current.lon } : null),
+          // An oblique 3D view from the south, far enough out to see the whole analysis area.
+          flyToSite: (la, lo, rangeM, planId) => {
+            const before = globeRef.current?.getCamera() ?? null;
+            // Camera heights are absolute: add the terrain height under the site (unavailable → sea level, said so).
+            const flight = ++planFlightRef.current;
+            void groundHeightAt(la, lo).then((g) => {
+              // Dropped when a newer move was requested, or the plan it was for is not the open one (closed, replaced,
+              // or never opened).
+              if (planFlightRef.current !== flight || planningRef.current.plan?.id !== planId || cameraMovedSince(before)) return;
+              if (g === null) setToast('Terrain height is unavailable here; the view is placed relative to sea level.');
+              setSceneMode('3d');
+              void globeRef.current?.restoreCamera({ lat: la - (rangeM * 0.9) / 111_320, lon: lo, heightM: (g ?? 0) + rangeM * 0.75, heading: 0, pitch: -0.62 }, { mode: '3d', animate: true });
+            });
+          },
+          flyAbove: (la, lo, h, planId, above = 0) => {
+            const before = globeRef.current?.getCamera() ?? null;
+            const flight = ++planFlightRef.current;
+            void groundHeightAt(la, lo).then((g) => {
+              if (planFlightRef.current !== flight || planningRef.current.plan?.id !== planId || cameraMovedSince(before)) return;
+              if (g === null) setToast('Terrain height is unavailable here; the view is placed relative to sea level.');
+              globeRef.current?.setCamera({ lat: la, lon: lo, heightM: (g ?? 0) + above + h, heading: 0, pitch: -Math.PI / 2 }, true);
+            });
+          },
+          setTool: (t) => { setTool(t); setDraft([]); setToolsOpen(true); },
+          selectRecord: (layer, id) => setRecordSel({ layer, id }),
+          coverageImage: () => (planning.result && !planning.stale ? rgbaToDataUrl(planning.result.rgba, planning.result.grid.n) : null),
+          // A 2D map morphs to 3D first; the flight starts once the morph has finished.
+          flyAlong: (pts, mode, onEnd) => {
+            if (sceneMode === '3d') { globeRef.current?.flyAlong(pts, mode, onEnd); return; }
+            setSceneMode('3d');
+            setTimeout(() => globeRef.current?.flyAlong(pts, mode, onEnd), 900);
+          },
+          stopFlyAlong: () => globeRef.current?.stopFlyAlong(),
+          focusPoint: (la, lo) => globeRef.current?.focus(la, lo, 0.3),
+        },
       }
     : null;
   const selectedRecord = recordSel ? (layerSnaps[recordSel.layer]?.records.find((r) => r.id === recordSel.id) ?? null) : null;
   const showFlight = recordSel?.layer === 'aircraft' && selectedRecord?.props.militaryFlag !== true;
-  const showRecordFirst = showFlight || recordSel?.layer === 'dwd' || recordSel?.layer === 'firePerimeters';
+  // A selected record is the panel's subject: it comes first, with a way back to the overview.
+  const showRecordFirst = !!recordSel;
   const selectedDwdWarning = recordSel?.layer === 'dwd' ? layerSnaps.dwd?.dwdWarnings?.find(warning => warning.id === recordSel.id) ?? null : null;
 
   if (loadError)
     return (
       <div className="fatal" role="alert">
-        Atlas Watch could not start: {loadError}
+        Sky_View could not start: {loadError}
       </div>
     );
   if (!snap)
     return (
       <div className="fatal" aria-busy="true">
-        Loading Atlas Watch…
+        Loading Sky_View…
       </div>
     );
 
@@ -787,22 +966,13 @@ export function App() {
     + (lighting.mode !== 'day' ? ' · City lights: NASA Black Marble, 2016 composite' : '')
     + (snap.settings.labelsOverlay && snap.settings.basemap !== 'streets' ? ' · Labels/roads: © OpenStreetMap contributors, © OpenMapTiles (OpenFreeMap)' : '')
     + (globeSettings?.buildings3d ? ' · Buildings: OpenStreetMap (heights may be estimated)' : '')
-    + (snap.settings.terrainEnabled ? ' · Terrain: Mapzen Terrain Tiles (AWS Open Data; 3DEP, SRTM, GMTED, ETOPO1, EU-DEM)' : '')
+    + (snap.settings.terrainEnabled ? (snap.settings.ionTerrain && imageryKeys.ion ? ' · Terrain: Cesium World Terrain (© Cesium) via your Cesium ion token' : ' · Terrain: Mapzen Terrain Tiles (AWS Open Data; 3DEP, SRTM, GMTED, ETOPO1, EU-DEM)') : '')
     + ' · Boundaries: U.S. Census Bureau, Natural Earth · Globe: CesiumJS'
     + (!archived && snap.settings.basemap === ('google3d' as never) ? ' · Sea level on Photoreal 3D: EGM96 geoid, NGA (public domain)' : '')
     + (playbackOn ? [...new Set(playbackFrame?.points.map(fix => LAYER_CREDIT[fix.layer]).filter(Boolean))].map(credit => ' · ' + credit).join('') : layerCredits ? ' · ' + layerCredits : '');
   return (
-    <div className={`app ${historyOpen ? 'history-open' : ''} ${kiosk ? 'kiosk' : ''} ${snap.settings.reducedMotion ? 'reduced-motion' : ''} ${playbackOn ? 'playback-active' : ''}`}>
+    <div className={`app ${railOpen ? 'rail-open' : ''} ${historyOpen ? 'history-open' : ''} ${kiosk ? 'kiosk' : ''} ${snap.settings.reducedMotion ? 'reduced-motion' : ''} ${playbackOn ? 'playback-active' : ''}`}>
       <header className="topbar">
-        <div className="brand">
-          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
-            <ellipse cx="12" cy="12" rx="4.2" ry="9.5" fill="none" stroke="currentColor" strokeWidth="1.2" />
-            <path d="M2.8 9h18.4M2.8 15h18.4" stroke="currentColor" strokeWidth="1.2" />
-            <circle cx="16.5" cy="8" r="2" fill="#e8a33a" />
-          </svg>
-          <span>Atlas Watch</span>
-        </div>
         <div className="seg" role="group" aria-label="Map mode">
           <button className={`btn small-btn ${sceneMode === '2d' ? 'primary' : ''}`} onClick={() => setSceneMode('2d')} aria-pressed={sceneMode === '2d'}>
             2D
@@ -812,7 +982,7 @@ export function App() {
           </button>
           <button
             className="btn small-btn"
-            title="Air-traffic view: aircraft layers, airports and altitude colors (no ATC audio: no authorized audio source is included)"
+            title="Air-traffic view: aircraft layers, airports and altitude colors. Select an aircraft to open the nearest airport's radio on LiveATC.net in your browser."
             onClick={() => {
               if (playbackOn) exitPlayback();
               void patchSettings({ layersEnabled: [...new Set([...(snap.settings.layersEnabled as LayerId[]), 'aircraft', 'aircraftMil'])] as LayerId[] });
@@ -911,23 +1081,46 @@ export function App() {
             </div>
           )}
         </div>
-        <button className="btn" onClick={() => setDialog({ kind: 'providers' })} title="Data providers, credentials and connection tests">
-          <KeyRound aria-hidden="true" /> <span className="top-action-label">Providers</span>
-        </button>
-        <button className="icon-btn" onClick={() => setDialog({ kind: 'settings' })} aria-label="Settings" title="Settings">
-          <SettingsIcon aria-hidden="true" />
-        </button>
+        <div className="window-controls" role="group" aria-label="Window">
+          <button className="icon-btn" onClick={() => void api.windowControl('minimize')} aria-label="Minimize" title="Minimize"><Minus aria-hidden="true" /></button>
+          <button className="icon-btn" onClick={() => void api.windowControl('maximize')} aria-label="Maximize or restore" title="Maximize or restore"><Square aria-hidden="true" /></button>
+          <button className="icon-btn window-close" onClick={() => void api.windowControl('close')} aria-label="Close" title="Close"><XIcon aria-hidden="true" /></button>
+        </div>
       </header>  <main className="workspace">
         <nav className="nav-rail" aria-label="Sections">
-          {NAV.map((n, i) => (
-            <span key={n.id}>
-              {i > 0 && NAV[i - 1].group !== n.group && <span className="nav-divider" role="separator" aria-label={n.group} />}
-              <button className={`nav-btn ${page === n.id ? 'active' : ''}`} onClick={() => setPage(n.id)} title={n.label} aria-label={n.label} aria-current={page === n.id ? 'page' : undefined}>
+          <button className="nav-btn nav-toggle" onClick={() => setRailOpen(!railOpen)} aria-expanded={railOpen} aria-label={railOpen ? 'Collapse navigation' : 'Expand navigation'} title={railOpen ? 'Collapse navigation' : 'Expand navigation (show names)'}>
+            <span className="nav-icon" aria-hidden="true">{railOpen ? <PanelLeftClose size={18} strokeWidth={1.75} /> : <PanelLeftOpen size={18} strokeWidth={1.75} />}</span>
+            <span className="nav-label" aria-hidden="true">Collapse</span>
+          </button>
+          <div className="nav-main">
+            {NAV_GROUPS.map((group) => (
+              <div className="nav-group" role="group" aria-label={group} key={group}>
+                <span className="nav-group-title" aria-hidden="true">{group}</span>
+                {NAV.filter((n) => n.group === group).map((n) => (
+                  <button key={n.id} className={`nav-btn ${page === n.id ? 'active' : ''}`} onClick={() => setPage(n.id)} title={n.label} aria-label={n.label} aria-current={page === n.id ? 'page' : undefined}>
+                    <span className="nav-icon" aria-hidden="true"><n.icon size={18} strokeWidth={1.75} aria-hidden="true" /></span>
+                    <span className="nav-label" aria-hidden="true">{n.label}</span>
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+          <div className="nav-group nav-utility" role="group" aria-label={NAV_UTILITY_GROUP}>
+            <button className="nav-btn" onClick={() => setDialog({ kind: 'providers' })} title="Data providers, credentials and connection tests" aria-label="Providers">
+              <span className="nav-icon" aria-hidden="true"><KeyRound size={18} strokeWidth={1.75} /></span>
+              <span className="nav-label" aria-hidden="true">Providers</span>
+            </button>
+            <button className="nav-btn" onClick={() => setDialog({ kind: 'settings' })} title="Settings" aria-label="Settings">
+              <span className="nav-icon" aria-hidden="true"><SettingsIcon size={18} strokeWidth={1.75} /></span>
+              <span className="nav-label" aria-hidden="true">Settings</span>
+            </button>
+            {NAV.filter((n) => n.group === NAV_UTILITY_GROUP).map((n) => (
+              <button key={n.id} className={`nav-btn ${page === n.id ? 'active' : ''}`} onClick={() => setPage(n.id)} title={n.label} aria-label={n.label} aria-current={page === n.id ? 'page' : undefined}>
                 <span className="nav-icon" aria-hidden="true"><n.icon size={18} strokeWidth={1.75} aria-hidden="true" /></span>
-                <span className="nav-label" aria-hidden="true">{n.short}</span>
+                <span className="nav-label" aria-hidden="true">{n.label}</span>
               </button>
-            </span>
-          ))}
+            ))}
+          </div>
         </nav>
 
         <section className="center" aria-label="Globe">
@@ -940,6 +1133,10 @@ export function App() {
             settings={globeSettings ?? snap.settings}
             selection={globeSelection}
             pickMode={pickMode}
+            planPick={planning.pick ? planning.onPick : null}
+            planDrag={planning.plan && page === 'planning' ? planning.dragTo : null}
+            planOverlay={planning.overlay}
+            siteLook={!!planning.plan && page === 'planning' && planning.siteLook}
             onSelect={(s) => {
               if (playbackOn) {
                 const record = s?.kind === 'alert' || s?.kind === 'quake' ? { kind: s.kind, id: s.id } : null;
@@ -969,6 +1166,10 @@ export function App() {
             layerSnaps={layerSnaps}
             layersOn={snap.settings.layersEnabled as LayerId[]}
             trail={playbackOn ? null : trail}
+            windField={windOn && !playbackOn ? wind.field : null}
+            windColorBySpeed={snap.settings.windColorBySpeed}
+            weatherBackMin={weatherBack}
+            flightPath={!playbackOn && flightPath && recordSel && flightPath.icao24 === recordSel.id ? flightPath.points : null}
             routeLine={playbackOn ? null : routeLine}
             archived={archived}
             imagery={playbackOn || archived || unavailableImageryDates.length ? undefined : imagery}
@@ -976,6 +1177,8 @@ export function App() {
             trailKind={tracked?.layer === 'aircraft' || tracked?.layer === 'aircraftMil' ? 'aircraft' : tracked?.layer === 'vessels' ? 'vessel' : 'other'}
             trackedRecord={playbackOn ? null : tracked}
             trackingMode={trackingMode}
+            passengerSeat={passengerSeat}
+            onInteriorStatus={setInteriorStatus}
             onTrackingUnavailable={(reason) => { setTracked(null); setTrackingMode('follow'); setToast(reason); }}
             showOrbitFor={playbackOn ? null : orbitFor}
             onViewChange={onViewChange}
@@ -1019,7 +1222,22 @@ export function App() {
           />
           {tracked && !widePage && !playbackOn && <TrackingControls target={tracked} record={layerSnaps[tracked.layer]?.records.find((r) => r.id === tracked.id) ?? null}
             mode={trackingMode} in3d={sceneMode === '3d'} smoothMotion={snap.settings.smoothMotion} blockedReason={playbackOn ? 'Stop recorded playback before using cockpit perspective.' : null}
+            passengerSeat={passengerSeat} onPassengerSeat={setPassengerSeat}
+            interiorStatus={interiorStatus}
             onMode={setTrackingMode} onStop={() => { setTracked(null); setTrackingMode('follow'); }} />}
+          {page !== 'radio' && <RadioNowPlaying onOpen={() => setPage('radio')} />}
+          {!widePage && voiceReady && <VoiceControl
+            onGo={(lat, lon, label) => { setPage('globe'); setTracked(null); globeRef.current?.focus(lat, lon, 6, 1_500); setToast(`Flying to ${label}`); }}
+            onAction={(a) => {
+              if (a.kind === 'layer') {
+                const set = new Set(snap.settings.layersEnabled);
+                if (a.on) set.add(a.layer); else set.delete(a.layer);
+                void patchSettings({ layersEnabled: [...set] as Settings['layersEnabled'] });
+                return null;
+              }
+              if (a.kind === 'surface') { void patchSettings({ basemap: a.basemap, imageryYear: null }); return `Switching the map surface`; }
+              return null;
+            }} />}
           {!widePage && <FloatingMapControls
             left={page === 'globe' ? leftFloat : null} onLeft={toggleLeft}
             solarLighting={lighting.mode !== 'day'}
@@ -1050,6 +1268,8 @@ export function App() {
             onScreenshot={() => void api.captureScreenshot().then(path => path && setToast('Saved ' + path))}
             onShare={scenes.exportScene} onWatchlist={() => setPage('watchlist')}
             onZoom={direction => globeRef.current?.zoom(direction)} onNorth={() => globeRef.current?.northUp()} getHeading={getHeading}
+            onTilt={() => { if (globeRef.current?.tilt() == null) setToast('Tilt needs the 3D globe with the ground at the centre of the view.'); }} getTilted={getTilted}
+            globalPicture={!!globalPicture} onGlobalPicture={toggleGlobalPicture}
             onReset={() => globeRef.current?.flyHome()} onHome={() => {
               if (selectedRecord) globeRef.current?.focus(selectedRecord.lat, selectedRecord.lon, 20);
               else if (snap.settings.homeLat !== null && snap.settings.homeLon !== null) globeRef.current?.focus(snap.settings.homeLat, snap.settings.homeLon, 20);
@@ -1057,10 +1277,12 @@ export function App() {
             }} keyboardOpen={keyboardOpen} onKeyboard={() => { setKeyboardOpen(!keyboardOpen); setDataOpen(false); setToolsOpen(false); }}
           />}
           {page === 'globe' && leftFloat === 'layers' && !diagOpen && (
-            <FloatingPanel className="floating-left floating-layers" title={'Layers \u00b7 ' + (snap.settings.layersEnabled.length + (snap.settings.radarEnabled ? 1 : 0) + (snap.settings.geoSatEnabled ? 1 : 0)) + ' on'}
+            <FloatingPanel className="floating-left floating-layers" title={'Layers \u00b7 ' + (snap.settings.layersEnabled.length + (snap.settings.radarEnabled ? 1 : 0) + (snap.settings.lightningEnabled ? 1 : 0) + (snap.settings.windEnabled ? 1 : 0) + (snap.settings.geoSatEnabled ? 1 : 0)) + ' on'}
               onClose={() => setLeftFloat(null)}>
               <LayersPanel settings={snap.settings} snaps={layerSnaps} playbackActive={playbackOn} onPatch={patch => void patchSettings(patch)} imagery={imagery}
-                archived={archived} onImagery={changeImagery} preserveImageryDates={preserveImageryDates} airportsOn={showAirports} onAirports={() => setShowAirports(!showAirports)} alertsContent={locationPanel} />
+                archived={archived} onImagery={changeImagery} preserveImageryDates={preserveImageryDates} airportsOn={showAirports} onAirports={() => setShowAirports(!showAirports)} alertsContent={locationPanel}
+                wind={wind} viewCenter={() => globeRef.current?.getMapCenter() ?? null}
+                weather={{ backMin: weatherBack, playing: weatherPlaying, onBack: (b) => { setWeatherPlaying(false); setWeatherBack(b); }, onPlaying: setWeatherPlaying }} />
             </FloatingPanel>
           )}
           {page === 'globe' && leftFloat === 'places' && !diagOpen && (
@@ -1117,6 +1339,8 @@ export function App() {
               photosEnabled={snap.settings.aircraftPhotos}
               onEnablePhotos={() => void patchSettings({ aircraftPhotos: true })}
               onShowRoute={setRouteLine}
+              flightPath={flightPath}
+              onFlightPath={setFlightPath}
               onOpenProviders={() => setDialog({ kind: 'providers' })}
               onViewRoute={route => { setTracked(null); setTrackingMode('follow'); globeRef.current?.focusAirlineRoute(route); }}
             />
@@ -1261,6 +1485,7 @@ export function App() {
           </div>}
           {diagOpen && <DiagnosticsPanel get={getDiag} onClose={() => setDiagOpen(false)} />}
           {pickMode && <div className="pick-banner">Click the globe to choose a point · Esc to cancel</div>}
+          {planning.pick && !pickMode && <div className="pick-banner">Protective planning: click the globe · Esc to cancel</div>}
           <footer className="attribution">
             <span tabIndex={0} title={credits}>{credits}</span>
             <button className="link-btn" aria-expanded={creditsOpen} onClick={() => { setCreditsOpen(!creditsOpen); setLeftFloat(null); setDiagOpen(false); setHistoryOpen(false); setPage('globe'); }}>Credits</button>

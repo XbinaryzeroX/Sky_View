@@ -1,5 +1,7 @@
 .playback { max-height: min(42vh, 340px); overflow-y: auto; }
 .pb-cursor { white-space: nowrap; }
+.pb-jump { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.pb-jump input { min-width: 0; }
 .pb-status { flex-basis: 100%; min-width: 0; }
 .pb-status p { margin: 4px 0; overflow-wrap: anywhere; }
 .pb-feed-status { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px; }

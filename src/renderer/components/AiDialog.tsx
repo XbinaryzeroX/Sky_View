@@ -62,7 +62,7 @@ export function AiDialog({ snap, selectedLocationId, onClose, onOpenSettings, on
         </div>
       ) : null}
       <p className="muted small">
-        The model only explains results that Atlas Watch has already calculated (spatial matches, distances, feed freshness). It sees only the retrieved records and gets no file or network access. Feed text
+        The model only explains results that Sky_View has already calculated (spatial matches, distances, feed freshness). It sees only the retrieved records and gets no file or network access. Feed text
         and notes are passed to it as untrusted data.
       </p>
       <div className="field-row">

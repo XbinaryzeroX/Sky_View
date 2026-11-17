@@ -1,4 +1,4 @@
-# Atlas Watch project work
+# Sky_View project work (formerly Atlas Watch)
 
 - Before adding or proposing a feature, search the current source and matching tests for its workflow, adapters,
   persistence and UI. Improve the existing implementation when it already addresses the request.

@@ -7,11 +7,13 @@ const CLASSES: { id: AircraftClass; label: string }[] = [
   { id: 'airliner', label: 'Large/heavy' },
   { id: 'light', label: 'Light' },
   { id: 'rotorcraft', label: 'Rotorcraft' },
+  { id: 'fighter', label: 'Fighter / attack jet (type code)' },
   { id: 'military', label: 'Military flag' },
   { id: 'ground', label: 'On ground' },
   { id: 'other', label: 'Other/unknown' },
 ];
 const VESSELS = ['cargo', 'tanker', 'passenger', 'fishing', 'other'];
+const ALL_CLASSES = CLASSES.map((c) => c.id);
 const ALT_OPTIONS = [0, 1000, 5000, 10000, 20000, 30000, 40000, 60000];
 
 /** Altitude legend + filters for aircraft, class filters for vessels, and the special-code panel. */
@@ -68,6 +70,12 @@ export function TrafficBar(p: {
                   ))}
                 </select>
               </div>
+              <div className="btn-row">
+                <button className={`btn small-btn ${p.filter.classes.length === 1 && p.filter.classes[0] === 'fighter' ? 'primary' : ''}`} onClick={() => p.onFilter({ ...p.filter, classes: ['fighter'], minFt: 0, maxFt: 60000, specialOnly: false })}>Fighter jets only</button>
+                <button className={`btn small-btn ${p.filter.classes.length === 2 && p.filter.classes.includes('fighter') && p.filter.classes.includes('military') ? 'primary' : ''}`} onClick={() => p.onFilter({ ...p.filter, classes: ['fighter', 'military'], minFt: 0, maxFt: 60000, specialOnly: false })}>All military</button>
+                <button className="btn small-btn" onClick={() => p.onFilter({ ...p.filter, classes: ALL_CLASSES, minFt: 0, maxFt: 60000, specialOnly: false })}>Show all</button>
+              </div>
+              <p className="muted small">Fighters are found by the type code in the receiver network’s aircraft database. Most military jets do not broadcast a position, so this shows only those that do; turn on Military-flagged aircraft for worldwide coverage.</p>
               <div className="diag-sub">Aircraft type (from transponder category / database flag)</div>
               <div className="chip-row">
                 {CLASSES.map((c) => (
@@ -89,6 +97,11 @@ export function TrafficBar(p: {
           {p.vesselsOn && (
             <>
               <div className="diag-sub">Vessel type (self-reported over AIS)</div>
+              <div className="btn-row">
+                <button className={`btn small-btn ${p.vesselClasses.length === 1 && p.vesselClasses[0] === 'tanker' ? 'primary' : ''}`} onClick={() => p.onVesselClasses(['tanker'])}>Tankers only</button>
+                <button className="btn small-btn" onClick={() => p.onVesselClasses(VESSELS)}>Show all</button>
+              </div>
+              <p className="muted small">Tankers are AIS ship types 80–89 (oil, chemical and gas tankers as reported by the ship). Without a key, vessel positions cover Finnish and northern Baltic waters; add a free AISStream key in Providers for the area you are viewing.</p>
               <div className="chip-row">
                 {VESSELS.map((v) => (
                   <label key={v} className="check small">

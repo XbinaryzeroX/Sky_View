@@ -204,7 +204,7 @@ function AlertDetails({ snap, alert, p, historical, replay }: {
       </header>
       {alert.headline && <p className="headline">{alert.headline}</p>}
       <dl className="kvs">
-        {replay && <Row label="Recorded by Atlas Watch"><Time iso={replay.observedAt} /></Row>}
+        {replay && <Row label="Recorded by Sky_View"><Time iso={replay.observedAt} /></Row>}
         <Row label="Onset">
           <Time iso={alert.onset ?? alert.effective} />
         </Row>
@@ -309,7 +309,7 @@ function QuakeDetails({ snap, quake, p, historical, replay }: {
         </button>
       </div>
       <dl className="kvs">
-        {replay && <Row label="Recorded by Atlas Watch"><Time iso={replay.observedAt} /></Row>}
+        {replay && <Row label="Recorded by Sky_View"><Time iso={replay.observedAt} /></Row>}
         <Row label="Origin time">
           <Time iso={quake.time} />
         </Row>
@@ -448,7 +448,7 @@ function Overview({ snap, p }: { snap: AppSnapshot; p: Props }) {
           <p>
             <strong>Get started:</strong> add a location with “+ Add”, pick a point on the globe, or import a CSV of properties.
           </p>
-          <p className="small">Atlas Watch will show which saved locations fall inside active NWS weather alerts and which recent earthquakes are within each location’s radius.</p>
+          <p className="small">Sky_View will show which saved locations fall inside active NWS weather alerts and which recent earthquakes are within each location’s radius.</p>
         </Empty>
       ) : (
         <>
@@ -505,7 +505,7 @@ export function DetailsPanel(p: Props) {
         <dl className="kvs">
           <Row label="Rule at detection">M{event.minMagnitude} or greater</Row>
           <Row label="Origin time"><Time iso={event.quakeTime} /></Row>
-          <Row label="Detected by Atlas Watch"><Time iso={event.detectedAt} /></Row>
+          <Row label="Detected by Sky_View"><Time iso={event.detectedAt} /></Row>
           <Row label="Reported epicenter">{event.lat.toFixed(4)}, {event.lon.toFixed(4)}</Row>
           <Row label="USGS event ID"><code>{event.quakeId}</code></Row>
           {event.url && <Row label="Source"><ExternalLink url={event.url}>USGS event page</ExternalLink></Row>}

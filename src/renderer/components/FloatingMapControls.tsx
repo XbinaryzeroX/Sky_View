@@ -1,5 +1,5 @@
-// Floating map chrome uses only existing Atlas Watch actions.
-import { Activity, Camera, ChartNoAxesCombined, Crosshair, History, Keyboard, Layers, MapPin, Maximize, Minus, Navigation, Plus, RotateCcw, Share2, SlidersHorizontal, Sparkles, Star, SunMoon, View, X, type LucideIcon } from 'lucide-react';
+// Floating map chrome uses only existing Sky_View actions.
+import { Activity, Camera, ChartNoAxesCombined, Crosshair, Earth, Ellipsis, Gauge, History, Keyboard, LayoutGrid, Layers, MapPin, Maximize, Minus, Navigation, Plus, Rotate3d, RotateCcw, Share2, SlidersHorizontal, Sparkles, Star, SunMoon, View, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
 export type LeftMapPanel = 'layers' | 'places' | 'scenes' | 'lighting' | null;
@@ -29,6 +29,12 @@ interface Props {
   onZoom(direction: 1 | -1): void;
   onNorth(): void;
   getHeading(): number | null;
+  /** Straight down or 35° oblique. */
+  onTilt(): void;
+  getTilted(): boolean;
+  /** Worldwide layers and a whole-globe view; switching it off brings the previous view and layers back. */
+  globalPicture: boolean;
+  onGlobalPicture(): void;
   onReset(): void;
   onHome(): void;
   keyboardOpen: boolean;
@@ -76,12 +82,24 @@ export function FloatingPanel({ title, onClose, children, className = '', header
 
 export function FloatingMapControls(p: Props) {
   const [heading, setHeading] = useState<number | null>(null);
+  const [tilted, setTilted] = useState(false);
+  const [more, setMore] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+  // The More menu closes on Escape and on a click anywhere else.
   useEffect(() => {
-    const update = () => setHeading(p.getHeading());
+    if (!more) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMore(false); };
+    const onDown = (e: PointerEvent) => { if (!moreRef.current?.contains(e.target as Node)) setMore(false); };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('pointerdown', onDown);
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('pointerdown', onDown); };
+  }, [more]);
+  useEffect(() => {
+    const update = () => { setHeading(p.getHeading()); setTilted(p.getTilted()); };
     update();
     const timer = setInterval(update, 250);
     return () => clearInterval(timer);
-  }, [p.getHeading]);
+  }, [p.getHeading, p.getTilted]);
   return (
     <>
       <div className="map-top-left float-pill">
@@ -93,33 +111,36 @@ export function FloatingMapControls(p: Props) {
         <Action icon={SlidersHorizontal} label="Map tools" onClick={p.onTools} expanded={p.toolsOpen} active={p.toolsOpen} iconOnly />
         <Action icon={ChartNoAxesCombined} label="Data" onClick={p.onData} expanded={p.dataOpen} active={p.dataOpen} />
       </div>
-      <div className="map-bottom-left">
-        <div className="float-pill">
-          <Action icon={MapPin} label="Places" onClick={() => p.onLeft('places')} expanded={p.left === 'places'} active={p.left === 'places'} />
-        </div>
-        <div className="float-pill">
-          <Action icon={View} label="Scenes" onClick={() => p.onLeft('scenes')} expanded={p.left === 'scenes'} active={p.left === 'scenes'} />
-        </div>
-        <div className="float-pill camera-pill">
-          <Action icon={Camera} label="Cameras" onClick={p.onCameras} active={p.camerasOn} />
-          <button className="link-btn browse-cameras" onClick={p.onBrowseCameras}>Browse all cameras</button>
-        </div>
+      <div className="map-bottom-left float-pill" role="toolbar" aria-label="Places, scenes and cameras">
+        <Action icon={MapPin} label="Places" onClick={() => p.onLeft('places')} expanded={p.left === 'places'} active={p.left === 'places'} />
+        <Action icon={View} label="Scenes" onClick={() => p.onLeft('scenes')} expanded={p.left === 'scenes'} active={p.left === 'scenes'} />
+        <span className="map-divider" />
+        <Action icon={Camera} label="Cameras on map" onClick={p.onCameras} active={p.camerasOn} iconOnly />
+        <Action icon={LayoutGrid} label="Browse all cameras" onClick={p.onBrowseCameras} iconOnly />
       </div>
       <div className="map-bottom-toolbar float-pill" role="toolbar" aria-label="Map actions">
-        <Action icon={Activity} label="Diagnostics" onClick={p.onDiagnostics} active={p.diagnosticsOpen} />
-        <Action icon={View} label="HUD" onClick={p.onHud} active={p.hudOn} />
-        <span className="map-divider" />
         <Action icon={History} label="Playback / History" onClick={p.onPlayback} active={p.playbackActive} />
-        <Action icon={Maximize} label="Kiosk" onClick={p.onKiosk} active={p.kiosk} />
-        <span className="map-divider" />
-        <Action icon={Camera} label="Screenshot" onClick={p.onScreenshot} />
-        <Action icon={Share2} label="Share" onClick={p.onShare} />
         <Action icon={Star} label="Watchlist" onClick={p.onWatchlist} />
+        <Action icon={Gauge} label="HUD" onClick={p.onHud} active={p.hudOn} />
+        <Action icon={Earth} label={p.globalPicture ? 'Leave global picture' : 'Global picture'} onClick={p.onGlobalPicture} active={p.globalPicture} iconOnly />
+        <span className="map-divider" />
+        <div className="map-more" ref={moreRef}>
+          <Action icon={Ellipsis} label="More" onClick={() => setMore(!more)} expanded={more} active={more || p.diagnosticsOpen || p.kiosk} iconOnly />
+          {more && (
+            <div className="map-more-menu" role="menu" aria-label="More map actions">
+              <button role="menuitem" className="map-action" onClick={() => { setMore(false); p.onScreenshot(); }}><Camera size={16} strokeWidth={1.75} aria-hidden="true" /><span>Screenshot</span></button>
+              <button role="menuitem" className="map-action" onClick={() => { setMore(false); p.onShare(); }}><Share2 size={16} strokeWidth={1.75} aria-hidden="true" /><span>Share scene</span></button>
+              <button role="menuitem" className={'map-action ' + (p.kiosk ? 'active' : '')} aria-pressed={p.kiosk} onClick={() => { setMore(false); p.onKiosk(); }}><Maximize size={16} strokeWidth={1.75} aria-hidden="true" /><span>Kiosk</span></button>
+              <button role="menuitem" className={'map-action ' + (p.diagnosticsOpen ? 'active' : '')} aria-pressed={p.diagnosticsOpen} onClick={() => { setMore(false); p.onDiagnostics(); }}><Activity size={16} strokeWidth={1.75} aria-hidden="true" /><span>Diagnostics</span></button>
+            </div>
+          )}
+        </div>
       </div>
       <div className="map-zoom-stack float-pill" role="toolbar" aria-label="Map view controls">
         <Action icon={Plus} label="Zoom in" onClick={() => p.onZoom(1)} iconOnly />
         <Action icon={Minus} label="Zoom out" onClick={() => p.onZoom(-1)} iconOnly />
         <Action icon={Navigation} label="North up" onClick={p.onNorth} rotation={heading === null ? 0 : -heading * 180 / Math.PI} iconOnly />
+        <Action icon={Rotate3d} label={tilted ? 'Look straight down' : 'Tilt view 35°'} onClick={p.onTilt} active={tilted} iconOnly />
         <Action icon={RotateCcw} label="Reset view" onClick={p.onReset} iconOnly />
         <Action icon={Crosshair} label="Go to home or selected object" onClick={p.onHome} iconOnly />
         <Action icon={Keyboard} label="Keyboard shortcuts" onClick={p.onKeyboard} expanded={p.keyboardOpen} iconOnly />

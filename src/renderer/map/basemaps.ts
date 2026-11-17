@@ -20,6 +20,7 @@ import {
   WebMapServiceImageryProvider,
   type ImageryProvider,
   Google2DImageryProvider,
+  IonImageryProvider,
   WebMercatorTilingScheme,
 } from 'cesium';
 import { GibsBaseProvider } from './gibsProvider';
@@ -27,7 +28,7 @@ import { WorldCoverImageryProvider, worldCoverUrl } from './worldCover';
 import { UsgsImageryProvider, type UsgsService } from './usgsProvider';
 import { createVectorImageryProvider } from './vectorTiles';
 
-export type BasemapId = 'atlas' | 'streets' | 'usgsImageryTopo' | 'usgsTopo' | 'gibsDaily' | 'esri' | 'mapbox' | 'eox' | 'naturalEarth' | 'neutral' | 'google3d' | 'google2d';
+export type BasemapId = 'atlas' | 'streets' | 'usgsImageryTopo' | 'usgsTopo' | 'gibsDaily' | 'esri' | 'mapbox' | 'eox' | 'naturalEarth' | 'neutral' | 'google3d' | 'google2d' | 'ionBing';
 
 export interface ImagerySourceInfo {
   id: string;
@@ -45,7 +46,7 @@ export interface ImagerySourceInfo {
 
 export interface BuildContext {
   date: string;
-  keys: { esri: string | null; mapbox: string | null; google: string | null };
+  keys: { esri: string | null; mapbox: string | null; google: string | null; ion?: string | null };
   eoxLicensed: boolean;
 }
 
@@ -53,7 +54,7 @@ export interface BasemapDef {
   id: BasemapId;
   label: string;
   description: string;
-  requires?: 'esri' | 'mapbox' | 'eox' | 'google3d';
+  requires?: 'esri' | 'mapbox' | 'eox' | 'google3d' | 'cesium';
   sources: ImagerySourceInfo[];
   build(ctx: BuildContext): ImageryLayer[];
 }
@@ -130,8 +131,8 @@ export const POLAR_CAP_LAT = 78;
  * is served in geographic projection (EPSG:4326, to ±90°) by the GIBS WMS, so
  * the caps match the base in color and resolution.
  */
-function polarCaps(): ImageryLayer[] {
-  const caps = [Rectangle.fromDegrees(-180, POLAR_CAP_LAT, 180, 90), Rectangle.fromDegrees(-180, -90, 180, -POLAR_CAP_LAT)];
+function polarCaps(fromLat = POLAR_CAP_LAT): ImageryLayer[] {
+  const caps = [Rectangle.fromDegrees(-180, fromLat, 180, 90), Rectangle.fromDegrees(-180, -90, 180, -fromLat)];
   return caps.flatMap(
     (rectangle, index) => [
       new ImageryLayer(new SingleTileImageryProvider({
@@ -185,6 +186,15 @@ function globalBase(): ImageryLayer[] {
       credit: new Credit('Polar reference: NASA Blue Marble, July 2004'),
     }), { rectangle })),
   ];
+}
+
+/**
+ * Base for keyed Web Mercator imagery (Google, Esri, Mapbox, EOX). Those tiles stop at ±85.05°, where the dark
+ * ocean-colour polar reference showed through as a black disc against their bright blue ocean. The Blue Marble
+ * bathymetry caps (the low-zoom style these providers use near the poles) are placed under the provider from 84°.
+ */
+function keyedMercatorBase(): ImageryLayer[] {
+  return [...globalBase(), ...polarCaps(84)];
 }
 
 function usgsLayers(service: UsgsService): ImageryLayer[] {
@@ -263,7 +273,7 @@ export const BASEMAPS: Record<BasemapId, BasemapDef> = {
     build: (ctx) =>
       ctx.keys.esri
         ? [
-            ...globalBase(),
+            ...keyedMercatorBase(),
             new ImageryLayer(
               new UrlTemplateImageryProvider({
                 url: `https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token=${encodeURIComponent(ctx.keys.esri)}`,
@@ -284,7 +294,7 @@ export const BASEMAPS: Record<BasemapId, BasemapDef> = {
     build: (ctx) =>
       ctx.keys.mapbox
         ? [
-            ...globalBase(),
+            ...keyedMercatorBase(),
             new ImageryLayer(
               new UrlTemplateImageryProvider({
                 url: `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg90?access_token=${encodeURIComponent(ctx.keys.mapbox)}`,
@@ -305,7 +315,7 @@ export const BASEMAPS: Record<BasemapId, BasemapDef> = {
     build: (ctx) =>
       ctx.eoxLicensed
         ? [
-            ...globalBase(),
+            ...keyedMercatorBase(),
             new ImageryLayer(
               new UrlTemplateImageryProvider({
                 url: 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/g/{z}/{y}/{x}.jpg',
@@ -339,7 +349,18 @@ export const BASEMAPS: Record<BasemapId, BasemapDef> = {
     sources: [GLOBAL_BASE, { id: 'google2d', name: 'Google Satellite (2D Tiles)', provider: 'Google Map Tiles API', coverage: 'Worldwide; detail varies by area', maxLevel: 22, bestResolution: 'Sub-meter in many cities; coarser elsewhere', captureDate: 'Varies by area (not live)', terms: 'Google Maps Platform terms (metered, customer key; no caching beyond terms)', host: 'tile.googleapis.com' }],
     build: (ctx) =>
       ctx.keys.google
-        ? [...globalBase(), ImageryLayer.fromProviderAsync(Google2DImageryProvider.fromUrl({ key: ctx.keys.google, mapType: 'satellite' } as never) as unknown as Promise<ImageryProvider>)]
+        ? [...keyedMercatorBase(), ImageryLayer.fromProviderAsync(Google2DImageryProvider.fromUrl({ key: ctx.keys.google, mapType: 'satellite' } as never) as unknown as Promise<ImageryProvider>)]
+        : atlasImagery(),
+  },
+  ionBing: {
+    id: 'ionBing',
+    label: 'Bing Maps aerial via Cesium ion (your token)',
+    description: 'Worldwide aerial and satellite imagery from Bing Maps, served through your Cesium ion account (asset 2). Community plan for non-commercial use; commercial use needs a paid ion plan.',
+    requires: 'cesium',
+    sources: [GLOBAL_BASE, { id: 'ion-bing', name: 'Bing Maps Aerial (via Cesium ion)', provider: 'Microsoft Bing Maps through Cesium ion', coverage: 'Worldwide; detail varies by area', maxLevel: 21, bestResolution: 'Sub-meter in many cities', capturedAt: 'Mixed dates; not live' } as never],
+    build: (ctx) =>
+      ctx.keys.ion
+        ? [...keyedMercatorBase(), ImageryLayer.fromProviderAsync(IonImageryProvider.fromAssetId(2, { accessToken: ctx.keys.ion }))]
         : atlasImagery(),
   },
   google3d: {

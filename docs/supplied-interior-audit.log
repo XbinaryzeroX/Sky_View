@@ -1,0 +1,173 @@
+{
+  "result": "PASS",
+  "baseline": false,
+  "startedAt": "2026-11-12T17:19:44.517Z",
+  "executable": "C:\\Users\\infob\\Documents\\Claude\\Sky_View\\release\\aircraft-supplied-interior\\win-unpacked\\Atlas Watch.exe",
+  "archiveSha256": "cab32b182df836c2237dccaa0df58584e32aa31e2e3b2c49ad0968c0986830ca",
+  "source": "Two synthetic general-aviation ADS-B observations in an isolated profile. Production rendering, selection, provider adapter and tracking. No subscription or external aircraft source is used.",
+  "errors": [],
+  "first": {
+    "frames": 702,
+    "changedPoses": 701,
+    "elapsedSec": 2.5,
+    "planeTravelM": 284.35,
+    "cameraTravelM": 284.54,
+    "peakStepM": 0.57,
+    "maxReportedFrameGapMs": 4.6,
+    "maxCenterErrorPixels": 0,
+    "kinds": [
+      "model"
+    ]
+  },
+  "second": {
+    "frames": 1457,
+    "changedPoses": 1456,
+    "elapsedSec": 5.29,
+    "planeTravelM": 744.34,
+    "cameraTravelM": 744.71,
+    "peakStepM": 10.96,
+    "maxReportedFrameGapMs": 95.7,
+    "maxCenterErrorPixels": 0,
+    "kinds": [
+      "model"
+    ]
+  },
+  "cockpit": {
+    "before": {
+      "id": "interior|cockpit|0",
+      "supplied": {
+        "id": "interior-model|cockpit",
+        "ready": true
+      },
+      "camera": [
+        4065442.523446208,
+        -294103.76824325003,
+        4891352.365964354
+      ],
+      "offset": [
+        0,
+        0,
+        0
+      ],
+      "heading": 1.5707963267948966,
+      "rotation": [
+        0.07215381596098995,
+        0.9973935165431284,
+        3.90441368936991e-17,
+        -0.7683273343482419,
+        0.05558262427101291,
+        0.6376391449499259,
+        0.6359771490671601,
+        -0.04600809751423996,
+        0.7703352003040803
+      ],
+      "screen": [
+        686.0000002504999,
+        120.5474572281255
+      ]
+    },
+    "after": {
+      "id": "interior|cockpit|0",
+      "supplied": {
+        "id": "interior-model|cockpit",
+        "ready": true
+      },
+      "camera": [
+        4065460.065617232,
+        -293861.6154007318,
+        4891352.339951078
+      ],
+      "offset": [
+        0,
+        0,
+        0
+      ],
+      "heading": 2.0098363658573977,
+      "rotation": [
+        0.07209440694621903,
+        0.9973978125537839,
+        3.904413719555686e-17,
+        -0.7683306396465577,
+        0.055536859121536,
+        0.6376391498796373,
+        0.6359798932886045,
+        -0.04597021635626374,
+        0.770335196223549
+      ],
+      "screen": [
+        79.42696040155158,
+        -132.60232313268887
+      ]
+    }
+  },
+  "passenger": {
+    "before": {
+      "id": "interior|passenger|0",
+      "supplied": {
+        "id": "interior-model|passenger",
+        "ready": true
+      },
+      "camera": [
+        4065468.2029223093,
+        -293749.25996160443,
+        4891352.325475347
+      ],
+      "offset": [
+        0,
+        0,
+        0
+      ],
+      "heading": 3.141592653589793,
+      "rotation": [
+        0.07206684196600929,
+        0.9973998046365591,
+        3.9044137363533056e-17,
+        -0.7683321719532248,
+        0.05551562468345415,
+        0.6376391526228967,
+        0.6359811662546984,
+        -0.04595264004341442,
+        0.7703351939528363
+      ],
+      "screen": [
+        686.0000000215223,
+        -204.00281247915427
+      ]
+    },
+    "after": {
+      "id": "interior|passenger|0",
+      "supplied": {
+        "id": "interior-model|passenger",
+        "ready": true
+      },
+      "camera": [
+        4065479.725867865,
+        -293590.1273533204,
+        4891352.302363311
+      ],
+      "offset": [
+        0,
+        0,
+        0
+      ],
+      "heading": 3.5806326926522933,
+      "rotation": [
+        0.07202780074605561,
+        0.9974026247808286,
+        3.904413763172487e-17,
+        -0.7683343407935912,
+        0.055485549596577,
+        0.6376391570028015,
+        0.6359829688576292,
+        -0.04592774614848069,
+        0.7703351903274033
+      ],
+      "screen": [
+        27.513644610031974,
+        -565.756608377359
+      ]
+    }
+  },
+  "interiors": "Both 3D cabins stayed in the aircraft frame while changing position on screen as the camera turned; Escape removed the geometry. Synthetic flight only.",
+  "finishedAt": "2026-11-12T17:20:06.102Z"
+}

@@ -27,7 +27,24 @@ export const ALLOWED_HOSTS = new Set([
   'opensky-network.org',
   'auth.opensky-network.org',
   'eonet.gsfc.nasa.gov',
+  // Radio Browser community directory (station search; streams themselves go through the radio relay).
+  'de1.api.radio-browser.info',
   'celestrak.org',
+  // The Space Devs Launch Library 2: launch schedule and results (launches layer, hourly).
+  'll.thespacedevs.com',
+  // Traffic flow: Madrid's city sensor file.
+  'informo.madrid.es',
+  // Bike-share station feeds (GBFS): Bluebikes publishes on its own host.
+  'gbfs.bluebikes.com',
+  // iNaturalist observations API (wildlife layer).
+  'api.inaturalist.org',
+  // Street-level photo search: KartaView photo API and the Panoramax meta-catalogue.
+  'api.kartaview.org',
+  'api.panoramax.xyz',
+  // Train positions: operator realtime feeds on their own hosts.
+  'api-endpoint.mta.info',
+  'gtfsrt.api.translink.com.au',
+  'gtfsrt.renfe.com',
   'firms.modaps.eosdis.nasa.gov',
   'aviationweather.gov',
   'www.nhc.noaa.gov',
@@ -35,9 +52,14 @@ export const ALLOWED_HOSTS = new Set([
   'api.tfl.gov.uk',
   'static.data.gov.hk',
   'www.drivebc.ca',
+  // Iceland road cameras (Vegagerðin, CC BY 4.0): camera list.
+  'gagnaveita.vegagerdin.is',
   'ws.mapserver.transports.gouv.qc.ca',
   'api-v3.mbta.com',
   'geocoding.geo.census.gov',
+  // OpenStreetMap Overpass API: building details and emergency facilities for protective planning (free, fair use).
+  'overpass-api.de',
+  'overpass.private.coffee',
   'tile.googleapis.com',
   'tiles.openfreemap.org',
   'ibasemaps-api.arcgis.com',
@@ -48,10 +70,79 @@ export const ALLOWED_HOSTS = new Set([
 ]);
 /** Multi-tenant hosts are allowed only for specific service paths. */
 export const ALLOWED_PREFIXES = [
+  // Connection tests of customer keys only (one small request each, run when the user presses Test).
+  'https://api.tomtom.com/traffic/map/4/tile/flow/',
+  'https://api.cesium.com/v1/me',
+  // OpenAI with the customer's key: key check and speech-to-text for voice commands.
+  'https://api.openai.com/v1/models',
+  'https://api.openai.com/v1/audio/transcriptions',
   // Google Geocoding, only with the customer's own key while Google 3D Tiles are enabled.
   'https://maps.googleapis.com/maps/api/geocode/json?',
   'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters_Current/',
   'https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services/Special_Use_Airspace/',
+  // NOAA GFS on the Open Data registry (shared S3 host): forecast index files and 10 m wind messages by byte range.
+  'https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.',
+  // Traffic flow on shared open-data hosts: the exact datasets.
+  'https://data.cityofnewyork.us/resource/i4gi-tjb9.json',
+  'https://resource.data.one.gov.hk/td/traffic-detectors/rawSpeedVol-all.xml',
+  'https://static.data.gov.hk/td/traffic-data-strategic-major-roads/info/',
+  'https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/comptages-routiers-permanents/',
+  // Camera lists on shared open-data hosts: the exact datasets.
+  'https://data.calgary.ca/resource/k7p9-kppz.json',
+  'https://opendata.toronto.ca/transportation/tmc/rescucameraimages/Data/tmcearthcameras.json',
+  // Transit vehicle positions (GTFS-Realtime), one exact feed address per operator (shared/transitFeeds.ts).
+  'https://data.texas.gov/download/eiei-9rpf/application%2Foctet-stream',
+  'https://realtime.hsl.fi/realtime/vehicle-positions/v2/hsl',
+  'https://gtfs.ovapi.nl/nl/vehiclePositions.pb',
+  'https://bustime.ttc.ca/gtfsrt/vehicles',
+  'https://www.miapp.ca/GTFS_RT/Vehicle/VehiclePositions.pb',
+  'https://opendata.hamilton.ca/GTFS-RT/GTFS_VehiclePositions.pb',
+  'https://drtonline.durhamregiontransit.com/gtfsrealtime/VehiclePositions',
+  'https://glphprdtmgtfs.glphtrpcloud.com/tmgtfsrealtimewebservice/vehicle/vehiclepositions.pb',
+  'https://api.cityofkingston.ca/gtfs-realtime/vehicleupdates.pb',
+  'https://www.myridebarrie.ca/gtfs/GTFS_VehiclePositions.pb',
+  'https://rtu.york.ca/gtfsrealtime/VehiclePositions',
+  'https://opendata.burlington.ca/gtfs-rt/GTFS_VehiclePositions.pb',
+  'https://dados.mobilidade.rio/gtfs/realtime/onibus/vehicle-positions',
+  'https://dados.mobilidade.rio/gtfs/realtime/brt/vehicle-positions',
+  'https://www.zditm.szczecin.pl/storage/gtfs/gtfs-rt-vehicles.pb',
+  'https://api.golemio.cz/v2/vehiclepositions/gtfsrt/vehicle_positions.pb',
+  'https://bdx.mecatran.com/utw/ws/gtfsfeed/vehicles/bordeaux?apiKey=opendata-bordeaux-metropole-flux-gtfs-rt',
+  'https://api-public.odpt.org/api/v4/gtfs/realtime/odpt_SendaiMunicipal_bus_realtime_information_vehicle',
+  'https://www.ztm.poznan.pl/pl/dla-deweloperow/getGtfsRtFile/?file=vehicle_positions.pb',
+  'https://ckan2.multimediagdansk.pl/gtfs-rt?feed=vehiclePositions',
+  'https://gtfs.edmonton.ca/TMGTFSRealTimeWebService/Vehicle/VehiclePositions.pb',
+  'https://gtfs.halifax.ca/realtime/Vehicle/VehiclePositions.pb',
+  'https://bct.tmix.se/gtfs-realtime/vehicleupdates.pb?operatorIds=48',
+  'https://gtfsproxy.e-tam.fr/COMMON/VehiclePosition.pb',
+  'https://tpl.actv.it/aut/GTFSRT/vehiclePositions',
+  'https://tpl.actv.it/nav/GTFSRT/vehiclePositions',
+  'https://open-data.rtd-denver.com/files/gtfs-rt/rtd/VehiclePosition.pb',
+  'https://www.mpkrzeszow.pl/gtfs/rt/gtfsrt.pb',
+  'https://api.data.gov.my/gtfs-realtime/vehicle-position/mybas-johor/',
+  'https://api.data.gov.my/gtfs-realtime/vehicle-position/mybas-kota-bharu/',
+  'https://api.mrn.cityway.fr/dataflow/vehicle-tc-tr/download?provider=TCAR&dataFormat=gtfs-rt',
+  'https://feed-rdtpm-toulon.ratpdev.com/VehiclePosition/GTFS-RT',
+  'https://opendata.transports-lia.fr/gtfs-rt/VehiclePosition.pb',
+  'https://data.filbleu.fr/ws-tr/gtfs-rt/opendata/vehicle-positions',
+  'https://api.entur.io/realtime/v1/gtfs-rt/vehicle-positions',
+  // GBFS bike-share feeds on shared operator hosts: only the listed systems' paths.
+  'https://gbfs.lyft.com/gbfs/2.3/',
+  'https://gbfs.urbansharing.com/oslobysykkel.no/',
+  'https://gbfs.urbansharing.com/bergenbysykkel.no/',
+  'https://gbfs.urbansharing.com/trondheimbysykkel.no/',
+  'https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bs/',
+  // ECCC GeoMet: the AQHI observation collection only.
+  'https://api.weather.gc.ca/collections/aqhi-observations-realtime/',
+  // GDELT 2.0 15-minute event exports.
+  'https://data.gdeltproject.org/gdeltv2/',
+  // Train feeds on shared hosts: the exact feed paths.
+  'https://www3.septa.org/gtfsrt/septarail-pa-us/Vehicle/',
+  'https://mdotmta-gtfs-rt.s3.amazonaws.com/MARC+RT/',
+  'https://rata.digitraffic.fi/api/v1/train-locations/',
+  'https://api.entur.io/realtime/v1/gtfs-rt/vehicle-positions?',
+  'https://api.data.gov.my/gtfs-realtime/vehicle-position/ktmb/',
+  'https://gtfs-rt-files.buscatch.jp/toyama/',
 ];
 
 const PRIVATE_V4 = /^(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|127\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})$/;
@@ -91,6 +182,8 @@ export interface FetchJsonOptions {
   timeoutMs?: number;
   method?: 'GET' | 'POST';
   body?: string;
+  /** Binary request body (multipart uploads); used instead of `body` when set. */
+  bytes?: Uint8Array<ArrayBuffer>;
   maxBytes?: number;
   sameOrigin?: boolean;
   rejectRedirects?: boolean;
@@ -158,7 +251,7 @@ async function fetchResponse(rawUrl: string, opts: FetchJsonOptions, conditional
       res = await fetch(url, {
         method: opts.method ?? 'GET',
         headers: opts.headers,
-        body: opts.body,
+        body: opts.bytes ?? opts.body,
         redirect: 'manual',
         signal,
       });
@@ -283,6 +376,15 @@ export const fetchJson: FetchJson = async (rawUrl, opts = {}) => {
   } catch {
     throw new FeedHttpError('Response was not valid JSON', r.status, null, 'parse');
   }
+};
+
+/** Binary download; maxBytes is required so a reply can never grow without bound. Pass a Range header for partial reads. */
+export type FetchBytes = (url: string, opts: FetchJsonOptions & { maxBytes: number }) => Promise<{ status: number; bytes: Uint8Array }>;
+export const fetchBytes: FetchBytes = async (url, opts) => {
+  const res = await fetchResponse(url, opts);
+  if (!res.body) return { status: res.status, bytes: new Uint8Array(0) };
+  const bytes = await readLimitedBody(res.body, opts.maxBytes, res.status);
+  return { status: res.status, bytes: new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength) };
 };
 
 export type FetchText = (url: string, opts?: FetchJsonOptions) => Promise<{ status: number; text: string }>;

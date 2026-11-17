@@ -104,6 +104,105 @@ if errorlevel 1 goto runSelected
 :useClose
 set "appDir=%closeDir%"
 :runSelected
+set "smoothDir=%~dp0release\aircraft-smooth\win-unpacked"
+if not exist "%smoothDir%\Atlas Watch.exe" goto openSelected
+if not exist "%smoothDir%\resources\app.asar" goto openSelected
+if not exist "%appDir%\resources\app.asar" goto useSmooth
+powershell.exe -NoProfile -NonInteractive -Command "if ([IO.File]::GetLastWriteTimeUtc((Join-Path $env:smoothDir 'resources\app.asar')) -lt [IO.File]::GetLastWriteTimeUtc((Join-Path $env:appDir 'resources\app.asar'))) { exit 1 }"
+if errorlevel 1 goto openSelected
+:useSmooth
+set "appDir=%smoothDir%"
+:openSelected
+set "smoothFinalDir=%~dp0release\aircraft-final\win-unpacked"
+if not exist "%smoothFinalDir%\Atlas Watch.exe" goto launchSelected
+if not exist "%smoothFinalDir%\resources\app.asar" goto launchSelected
+if not exist "%appDir%\resources\app.asar" goto useSmoothFinal
+powershell.exe -NoProfile -NonInteractive -Command "if ([IO.File]::GetLastWriteTimeUtc((Join-Path $env:smoothFinalDir 'resources\app.asar')) -lt [IO.File]::GetLastWriteTimeUtc((Join-Path $env:appDir 'resources\app.asar'))) { exit 1 }"
+if errorlevel 1 goto launchSelected
+:useSmoothFinal
+set "appDir=%smoothFinalDir%"
+:launchSelected
+set "interiorDir=%~dp0release\aircraft-interior\win-unpacked"
+if not exist "%interiorDir%\Atlas Watch.exe" goto launchInteriorSelected
+if not exist "%interiorDir%\resources\app.asar" goto launchInteriorSelected
+if not exist "%appDir%\resources\app.asar" goto useInterior
+powershell.exe -NoProfile -NonInteractive -Command "if ([IO.File]::GetLastWriteTimeUtc((Join-Path $env:interiorDir 'resources\app.asar')) -lt [IO.File]::GetLastWriteTimeUtc((Join-Path $env:appDir 'resources\app.asar'))) { exit 1 }"
+if errorlevel 1 goto launchInteriorSelected
+:useInterior
+set "appDir=%interiorDir%"
+:launchInteriorSelected
+set "attitudeDir=%~dp0release\aircraft-attitude\win-unpacked"
+if not exist "%attitudeDir%\Atlas Watch.exe" goto launchAttitudeSelected
+if not exist "%attitudeDir%\resources\app.asar" goto launchAttitudeSelected
+if not exist "%appDir%\resources\app.asar" goto useAttitude
+powershell.exe -NoProfile -NonInteractive -Command "if ([IO.File]::GetLastWriteTimeUtc((Join-Path $env:attitudeDir 'resources\app.asar')) -lt [IO.File]::GetLastWriteTimeUtc((Join-Path $env:appDir 'resources\app.asar'))) { exit 1 }"
+if errorlevel 1 goto launchAttitudeSelected
+:useAttitude
+set "appDir=%attitudeDir%"
+:launchAttitudeSelected
+set "parallaxDir=%~dp0release\aircraft-parallax\win-unpacked"
+if not exist "%parallaxDir%\Atlas Watch.exe" goto launchParallaxSelected
+if not exist "%parallaxDir%\resources\app.asar" goto launchParallaxSelected
+if not exist "%appDir%\resources\app.asar" goto useParallax
+powershell.exe -NoProfile -NonInteractive -Command "if ([IO.File]::GetLastWriteTimeUtc((Join-Path $env:parallaxDir 'resources\app.asar')) -lt [IO.File]::GetLastWriteTimeUtc((Join-Path $env:appDir 'resources\app.asar'))) { exit 1 }"
+if errorlevel 1 goto launchParallaxSelected
+:useParallax
+set "appDir=%parallaxDir%"
+:launchParallaxSelected
+set "levelViewDir=%~dp0release\aircraft-level-view\win-unpacked"
+if not exist "%levelViewDir%\Atlas Watch.exe" goto launchLevelViewSelected
+if not exist "%levelViewDir%\resources\app.asar" goto launchLevelViewSelected
+if not exist "%appDir%\resources\app.asar" goto useLevelView
+powershell.exe -NoProfile -NonInteractive -Command "if ([IO.File]::GetLastWriteTimeUtc((Join-Path $env:levelViewDir 'resources\app.asar')) -lt [IO.File]::GetLastWriteTimeUtc((Join-Path $env:appDir 'resources\app.asar'))) { exit 1 }"
+if errorlevel 1 goto launchLevelViewSelected
+:useLevelView
+set "appDir=%levelViewDir%"
+:launchLevelViewSelected
+set "fixedInteriorDir=%~dp0release\aircraft-fixed-interior\win-unpacked"
+if not exist "%fixedInteriorDir%\Atlas Watch.exe" goto launchFixedInteriorSelected
+if not exist "%fixedInteriorDir%\resources\app.asar" goto launchFixedInteriorSelected
+if not exist "%appDir%\resources\app.asar" goto useFixedInterior
+powershell.exe -NoProfile -NonInteractive -Command "if ([IO.File]::GetLastWriteTimeUtc((Join-Path $env:fixedInteriorDir 'resources\app.asar')) -lt [IO.File]::GetLastWriteTimeUtc((Join-Path $env:appDir 'resources\app.asar'))) { exit 1 }"
+if errorlevel 1 goto launchFixedInteriorSelected
+:useFixedInterior
+set "appDir=%fixedInteriorDir%"
+:launchFixedInteriorSelected
+set "cabin3dDir=%~dp0release\aircraft-3d-interior\win-unpacked"
+if not exist "%cabin3dDir%\Atlas Watch.exe" goto launchCabin3dSelected
+if not exist "%cabin3dDir%\resources\app.asar" goto launchCabin3dSelected
+if not exist "%appDir%\resources\app.asar" goto useCabin3d
+powershell.exe -NoProfile -NonInteractive -Command "if ([IO.File]::GetLastWriteTimeUtc((Join-Path $env:cabin3dDir 'resources\app.asar')) -lt [IO.File]::GetLastWriteTimeUtc((Join-Path $env:appDir 'resources\app.asar'))) { exit 1 }"
+if errorlevel 1 goto launchCabin3dSelected
+:useCabin3d
+set "appDir=%cabin3dDir%"
+:launchCabin3dSelected
+set "suppliedCabinDir=%~dp0release\aircraft-supplied-interior\win-unpacked"
+if not exist "%suppliedCabinDir%\Atlas Watch.exe" goto launchSuppliedCabinSelected
+if not exist "%suppliedCabinDir%\resources\app.asar" goto launchSuppliedCabinSelected
+if not exist "%appDir%\resources\app.asar" goto useSuppliedCabin
+powershell.exe -NoProfile -NonInteractive -Command "if ([IO.File]::GetLastWriteTimeUtc((Join-Path $env:suppliedCabinDir 'resources\app.asar')) -lt [IO.File]::GetLastWriteTimeUtc((Join-Path $env:appDir 'resources\app.asar'))) { exit 1 }"
+if errorlevel 1 goto launchSuppliedCabinSelected
+:useSuppliedCabin
+set "appDir=%suppliedCabinDir%"
+:launchSuppliedCabinSelected
+set "optimizedCabinDir=%~dp0release\aircraft-optimized-interior\win-unpacked"
+if not exist "%optimizedCabinDir%\Atlas Watch.exe" goto launchOptimizedCabinSelected
+if not exist "%optimizedCabinDir%\resources\app.asar" goto launchOptimizedCabinSelected
+if not exist "%appDir%\resources\app.asar" goto useOptimizedCabin
+powershell.exe -NoProfile -NonInteractive -Command "if ([IO.File]::GetLastWriteTimeUtc((Join-Path $env:optimizedCabinDir 'resources\app.asar')) -lt [IO.File]::GetLastWriteTimeUtc((Join-Path $env:appDir 'resources\app.asar'))) { exit 1 }"
+if errorlevel 1 goto launchOptimizedCabinSelected
+:useOptimizedCabin
+set "appDir=%optimizedCabinDir%"
+:launchOptimizedCabinSelected
+set "fastCockpitDir=%~dp0release\aircraft-fast-cockpit\win-unpacked"
+if not exist "%fastCockpitDir%\Atlas Watch.exe" goto launchFastCockpitSelected
+if not exist "%fastCockpitDir%\resources\app.asar" goto launchFastCockpitSelected
+if not exist "%appDir%\resources\app.asar" goto useFastCockpit
+powershell.exe -NoProfile -NonInteractive -Command "if ([IO.File]::GetLastWriteTimeUtc((Join-Path $env:fastCockpitDir 'resources\app.asar')) -lt [IO.File]::GetLastWriteTimeUtc((Join-Path $env:appDir 'resources\app.asar'))) { exit 1 }"
+if errorlevel 1 goto launchFastCockpitSelected
+:useFastCockpit
+set "appDir=%fastCockpitDir%"
+:launchFastCockpitSelected
 if not exist "%appDir%\Atlas Watch.exe" (
     echo Could not find Atlas Watch.exe in "%appDir%".
     echo Run npm run dist:dir from the project folder, then try again.

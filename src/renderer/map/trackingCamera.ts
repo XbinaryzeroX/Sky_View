@@ -1,6 +1,8 @@
 import { CallbackPositionProperty, Cartesian3, Cartographic, Color, HeadingPitchRange, Math as CMath, Matrix4, OrthographicOffCenterFrustum, SceneMode, TrackingReferenceFrame, type CesiumWidget } from 'cesium';
 import { cockpitUnavailable } from '../../shared/trackingCamera';
 import type { GeoRecord, LayerId } from '../../shared/layers';
+import { createAircraftInterior } from './aircraftInterior';
+import type { InteriorStatus } from './aircraftInterior';
 
 /** Track the same visible position used by the aircraft renderer, retaining Cesium's orbit and zoom controls. */
 export function attachPassengerFollow(widget: CesiumWidget, position: () => Cartesian3 | undefined,
@@ -71,11 +73,15 @@ interface CockpitSource {
   layer: LayerId;
   record(): GeoRecord | null | undefined;
   position(): Cartesian3 | undefined;
+  heading?(): number | null | undefined;
+  attitude?(): { pitch: number; bank: number } | undefined;
+  seat?(): string;
+  interiorStatus?(status: InteriorStatus): void;
   hideOwnVehicle(hidden: boolean): void;
 }
 
-/** Forward camera on the existing displayed position, with explicit ground-track orientation. No flight attitude is inferred. */
-export function attachCockpit(widget: CesiumWidget, source: CockpitSource, onUnavailable: (reason: string) => void): () => void {
+/** Camera on the displayed position. The limited look angles and estimated attitude are visual simulations. */
+export function attachCockpit(widget: CesiumWidget, source: CockpitSource, onUnavailable: (reason: string) => void, mode: 'cockpit' | 'passenger' = 'cockpit'): () => void {
   const camera = widget.camera;
   const scene = widget.scene;
   if (scene.mode !== SceneMode.SCENE3D) { onUnavailable('Cockpit perspective requires a settled 3D scene.'); return () => {}; }
@@ -83,6 +89,7 @@ export function attachCockpit(widget: CesiumWidget, source: CockpitSource, onUna
   const previous = {
     position: Cartesian3.clone(camera.positionWC), direction: Cartesian3.clone(camera.directionWC), up: Cartesian3.clone(camera.upWC),
     inputs: controller.enableInputs, minimumZoom: controller.minimumZoomDistance, maximumTilt: controller.maximumTiltAngle,
+    near: camera.frustum?.near,
   };
   widget.trackedEntity = undefined;
   camera.cancelFlight();
@@ -90,19 +97,51 @@ export function attachCockpit(widget: CesiumWidget, source: CockpitSource, onUna
   controller.enableInputs = false;
   controller.minimumZoomDistance = 1;
   controller.maximumTiltAngle = CMath.PI_OVER_TWO;
+  if (camera.frustum) camera.frustum.near = .05;
   source.hideOwnVehicle(true);
+  const interior = scene.primitives ? createAircraftInterior(widget, mode, source.interiorStatus) : null;
   let disposed = false;
   let lastUpdate = -Infinity;
+  let yaw = 0;
+  let pitch = 0;
+  let aircraftPitch = 0;
+  let dragging: { id: number; x: number; y: number } | null = null;
+  const canvas = scene.canvas;
+  const down = (event: PointerEvent) => {
+    if (event.button !== 0) return;
+    dragging = { id: event.pointerId, x: event.clientX, y: event.clientY };
+    canvas?.setPointerCapture?.(event.pointerId);
+  };
+  const move = (event: PointerEvent) => {
+    if (!dragging || dragging.id !== event.pointerId) return;
+    const nextYaw = yaw + (event.clientX - dragging.x) * 0.004;
+    yaw = mode === 'passenger' ? CMath.negativePiToPi(nextYaw) : CMath.clamp(nextYaw, -CMath.toRadians(50), CMath.toRadians(50));
+    const pitchLimit = CMath.toRadians(mode === 'passenger' ? 80 : 35);
+    pitch = CMath.clamp(pitch - (event.clientY - dragging.y) * 0.004, -pitchLimit, pitchLimit);
+    dragging.x = event.clientX; dragging.y = event.clientY;
+    scene.requestRender();
+  };
+  const up = (event: PointerEvent) => { if (dragging?.id === event.pointerId) dragging = null; };
+  canvas?.addEventListener('pointerdown', down);
+  canvas?.addEventListener('pointermove', move);
+  canvas?.addEventListener('pointerup', up);
+  canvas?.addEventListener('pointercancel', up);
   let removeTick = () => {};
   const dispose = () => {
     if (disposed) return;
     disposed = true;
     removeTick();
+    interior?.destroy();
+    canvas?.removeEventListener('pointerdown', down);
+    canvas?.removeEventListener('pointermove', move);
+    canvas?.removeEventListener('pointerup', up);
+    canvas?.removeEventListener('pointercancel', up);
     source.hideOwnVehicle(false);
     if (widget.isDestroyed()) return;
     controller.enableInputs = previous.inputs;
     controller.minimumZoomDistance = previous.minimumZoom;
     controller.maximumTiltAngle = previous.maximumTilt;
+    if (camera.frustum && previous.near !== undefined) camera.frustum.near = previous.near;
     // Cesium forbids lookAtTransform while morphing. A changed scene mode owns its new camera projection.
     if (scene.mode === SceneMode.SCENE3D) {
       camera.lookAtTransform(Matrix4.IDENTITY);
@@ -115,7 +154,8 @@ export function attachCockpit(widget: CesiumWidget, source: CockpitSource, onUna
     if (disposed || widget.isDestroyed()) return;
     if (scene.mode !== SceneMode.SCENE3D) { fail('Cockpit perspective requires 3D mode.'); return; }
     const now = Date.now();
-    if (now - lastUpdate < 100) return;
+    if (now - lastUpdate < 16) { scene.requestRender(); return; }
+    const elapsed = Number.isFinite(lastUpdate) ? Math.max(0, Math.min((now - lastUpdate) / 1000, 1)) : 0;
     lastUpdate = now;
     const record = source.record();
     const reason = cockpitUnavailable(source.layer, record, now);
@@ -127,7 +167,16 @@ export function attachCockpit(widget: CesiumWidget, source: CockpitSource, onUna
     if (ground !== undefined && cartographic.height <= ground + 10) {
       fail('Reported aircraft height is too close to the loaded terrain for cockpit perspective.'); return;
     }
-    camera.setView({ destination: position, orientation: { heading: CMath.toRadians(record!.heading!), pitch: CMath.toRadians(-5), roll: 0 } });
+    const attitude = source.attitude?.() ?? { pitch: 0, bank: 0 };
+    aircraftPitch += (attitude.pitch - aircraftPitch) * (1 - Math.exp(-elapsed / 1.5));
+    const relative = (mode === 'passenger' ? CMath.PI_OVER_TWO : 0) + yaw;
+    const heading = CMath.toRadians(source.heading?.() ?? record!.heading!);
+    const eye = interior?.update(position, heading, aircraftPitch, attitude.bank, source.seat?.()) ?? position;
+    camera.setView({ destination: eye, orientation: {
+      heading: heading + relative,
+      pitch: CMath.toRadians(-5) + pitch + aircraftPitch * Math.cos(relative) - attitude.bank * Math.sin(relative),
+      roll: attitude.bank * Math.cos(relative) + aircraftPitch * Math.sin(relative),
+    } });
     scene.requestRender();
   };
   removeTick = scene.preRender.addEventListener(update);

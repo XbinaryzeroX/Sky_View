@@ -1,10 +1,21 @@
+import { PlanningOverlay, type PlanOverlayState } from '../map/planningOverlay';
+import type { PlanDragTarget } from '../lib/usePlanning';
+
+/** Which plan entity ids can be dragged. */
+export function planDragTarget(id: string | null): PlanDragTarget | null {
+  if (!id) return null;
+  if (id === 'plan|site') return { kind: 'site' };
+  if (id.startsWith('plan|obs|')) return { kind: 'observer', id: id.slice(9) };
+  if (id === 'plan|route|a' || id === 'plan|route|b') return { kind: 'route', end: id.endsWith('a') ? 'a' : 'b' };
+  return null;
+}
 import { redactCredentialText } from '../../shared/sanitize';
 import { lightGlobe, nightLightsLayers, type EarthLighting } from '../map/earthLighting';
 import { profAdd } from '../lib/prof';
 import { buildImageryLayers, clampDate, gibsProduct, imageryDates, type ImageryState } from '../map/imageryOverlay';
 import { imageryHealth, observeImageryRequests } from '../lib/imageryHealth';
-import { expireFrames, fetchLatestFrame, frameLabel, frameUsable, GEO_SAT_LOOKUP_TIMEOUT_MS, GEO_SAT_MAX_LAT, GEO_SAT_REFRESH_MS, GEO_SATS, tileTemplate, type GeoFrames, type GeoSatId, type GeoSatProduct } from '../../shared/geoSatellite';
-import { publicAirlineCallsign, routeMapSegments, type RouteInfo } from '../../shared/route';
+import { EUMETSAT_WMS, eumetsatFrameTime, expireFrames, fetchLatestFrame, frameLabel, frameUsable, GEO_SAT_LOOKUP_TIMEOUT_MS, GEO_SAT_MAX_LAT, GEO_SAT_REFRESH_MS, GEO_SATS, tileTemplate, type GeoFrames, type GeoSatId, type GeoSatProduct } from '../../shared/geoSatellite';
+import { routeMapSegments, type RouteInfo } from '../../shared/route';
 import { airlineRouteBounds } from '../map/airlineRouteView';
 import '../lib/cesiumBase';
 import {
@@ -23,6 +34,8 @@ import {
   SkyAtmosphere,
   SkyBox,
   Cartesian2,
+  HeadingPitchRange,
+  Matrix4,
   Cartesian3,
   CallbackPositionProperty,
   Cartographic,
@@ -39,12 +52,16 @@ import {
   NearFarScalar,
   PolygonHierarchy,
   Rectangle,
+  SceneTransforms,
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
   VerticalOrigin,
   WebMapServiceImageryProvider,
   PolylineDashMaterialProperty,
   WebMercatorTilingScheme,
+  CesiumTerrainProvider,
+  IonResource,
+  GeographicTilingScheme,
   UrlTemplateImageryProvider,
   Credit,
   createGooglePhotorealistic3DTileset,
@@ -71,9 +88,17 @@ import { usgsStats } from '../map/usgsProvider';
 import { modelStats } from '../map/vehicleModels';
 import { packStats } from '../map/modelPack';
 import { geoidStats } from '../map/geoid';
-import { watchPhotorealSurface } from '../map/photorealSurface';
+import { shouldPreloadHidden, watchPhotorealSurface } from '../map/photorealSurface';
+import { applyUpscaleSharpen } from '../map/upscaleSharpen';
+import { CameraCards } from './CameraCards';
+import { googleRefusal, googleStatus } from '../../shared/googleErrors';
 import type { TrailKind, TrailPoint } from '../map/trailHeights';
-import { vectorStats, type VectorStats } from '../map/vectorTiles';
+import { WindOverlay } from '../map/windOverlay';
+import { TrafficSim } from '../map/trafficSim';
+import type { WindField } from '../../shared/wind';
+import { clampBack, satFrameBack, wmsTime } from '../../shared/weatherTimeline';
+import { nextTiltPitch } from '../../shared/viewModes';
+import { createVectorImageryProvider, vectorStats, type VectorStats } from '../map/vectorTiles';
 import { createTerrariumTerrain, seaStats, TERRAIN_INFO, type TerrainStats } from '../map/terrain';
 import { LayerRenderer } from '../map/layerRender';
 import { warningMapRecords, warningPickId } from '../map/warningGeometry';
@@ -148,14 +173,29 @@ export interface GlobeHandle {
   getCamera(): Camera | null;
   /** Current screen-center intersection; null while morphing or looking past the globe. */
   getMapCenter(): { lat: number; lon: number } | null;
+  /** Window position (CSS pixels) of a point on the ground, for automated checks; null when off screen. */
+  toScreen(lat: number, lon: number): { x: number; y: number } | null;
+  /** Id of the map entity under a window position (automated checks). */
+  pickId(x: number, y: number): string | null;
   setCamera(c: Camera, animate?: boolean): void;
   /** Queues across mount/morph; false if invalid, superseded, cancelled or unmounted. */
   restoreCamera(c: Camera, options?: RestoreCameraOptions): Promise<boolean>;
   flyHome(): void;
   flyRegion(region: 'us' | 'lower48' | 'alaska' | 'hawaii'): void;
   northUp(): void;
+  /**
+   * Switches between straight down and a 35° oblique around the point at the screen centre, keeping heading and
+   * distance. Returns the new pitch (radians), or null when there is nothing to tilt around (2D, or sky at the centre).
+   */
+  tilt(): number | null;
   focus(lat: number, lon: number, radiusKm?: number, minimumHeightM?: number): void;
   zoom(direction: 1 | -1): void;
+  /**
+   * Moves the camera along a route ([lon, lat] points), behind and above it, looking ahead. Any click, wheel or Escape
+   * ends it. With reduced motion, shows a still overview instead.
+   */
+  flyAlong(points: [number, number][], mode: 'walk' | 'drive', onEnd?: (why: 'done' | 'cancelled' | 'replaced') => void): void;
+  stopFlyAlong(): void;
 }
 
 interface Props {
@@ -168,14 +208,31 @@ interface Props {
   pickMode: boolean;
   onSelect(sel: GlobeSelection | null): void;
   onPick(lat: number, lon: number): void;
+  /** Protective planning: when set, the next click goes here (on the rendered surface: a roof, not the ground behind it). */
+  planPick?: ((lat: number, lon: number) => void) | null;
+  /** Dragging the plan's subject, points or route ends (final = the button was released). */
+  planDrag?: ((target: PlanDragTarget, lat: number, lon: number, final: boolean) => void) | null;
+  planOverlay?: PlanOverlayState | null;
+  /** Planning site view: dark imagery and dark grey buildings while the planning page is open. */
+  siteLook?: boolean;
   onReady(ok: boolean, error?: string): void;
   layerSnaps: Partial<Record<LayerId, LayerSnapshot>>;
   layersOn: LayerId[];
   trail: TrailPoint[] | null;
+  /** OpenSky's reported flight path for the selected aircraft (drawn apart from the recorded trail). */
+  flightPath?: TrailPoint[] | null;
+  /** GFS wind field to animate (wind layer on), or null. */
+  windField?: WindField | null;
+  /** Colour the wind particles by speed (legend in the Layers panel). */
+  windColorBySpeed?: boolean;
+  /** Observed-weather history: minutes back from the newest frames (0 = newest). */
+  weatherBackMin?: number;
   /** Whose trail it is (sets its vertical reference). */
   trailKind: TrailKind;
   trackedRecord: { layer: LayerId; id: string } | null;
   trackingMode?: TrackingMode;
+  passengerSeat: string;
+  onInteriorStatus?(status: 'loading' | 'ready' | 'error'): void;
   onTrackingUnavailable?(reason: string): void;
   showOrbitFor: string | null;
   onViewChange(v: ViewState): void;
@@ -193,7 +250,7 @@ interface Props {
   imagery?: ImageryState;
   archived?: ArchiveImage | null;
   onImagerySplit?(split: number): void;
-  imageryKeys: { esri: string | null; mapbox: string | null; google: string | null };
+  imageryKeys: { esri: string | null; mapbox: string | null; google: string | null; ion?: string | null; tomtom?: string | null };
   /** Shown to the user when a customer-credential provider (Google) refuses requests. */
   onProviderError?: (message: string) => void;
   eoxLicensed: boolean;
@@ -218,6 +275,32 @@ const RECTS = {
   lower48: Rectangle.fromDegrees(-125.5, 24, -66.5, 49.8),
   hawaii: Rectangle.fromDegrees(-160.6, 18.7, -154.5, 22.5),
 };
+
+/**
+ * Puts a new frame of an overlay on the map and takes the previous one away only once the new tiles have loaded (or
+ * after `maxMs`), so stepping through frames never blanks the overlay. While it waits, its "remove now" function
+ * sits in `pending`.
+ */
+function retireWhenLoaded(w: CesiumWidget, old: ImageryLayer, maxMs: number, pending: Set<() => void>): void {
+  let sawLoading = false;
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    off();
+    clearTimeout(timer);
+    pending.delete(finish);
+    if (w.isDestroyed()) return;
+    if (w.imageryLayers.contains(old)) w.imageryLayers.remove(old, true);
+    w.scene.requestRender();
+  };
+  const off = w.scene.globe.tileLoadProgressEvent.addEventListener((n: number) => {
+    if (n > 0) sawLoading = true;
+    else if (sawLoading) finish();
+  });
+  const timer = setTimeout(finish, maxMs);
+  pending.add(finish);
+}
 
 function linesOf(g: MultiLineString): Position[][] {
   return g.coordinates;
@@ -268,19 +351,6 @@ function ringPositions(ring: Position[]): Cartesian3[] {
   return Cartesian3.fromDegreesArray(flat);
 }
 
-/** Plain-language reason when Google refuses a Map Tiles request (status codes only; the key is never shown). */
-function googleRefusal(what: string, e: unknown): string {
-  const msg = e instanceof Error ? e.message : String(e);
-  const code = /(400|401|403|429)/.exec(msg)?.[1];
-  const why =
-    code === '400' || code === '403'
-      ? 'Google refused the key. Check that Map Tiles API is enabled for it, billing is attached, and the key restrictions allow Map Tiles API.'
-      : code === '429'
-        ? 'Google quota reached for today (your quota cap).'
-        : 'Google did not respond.';
-  return `Google ${what} unavailable: ${why} Showing keyless imagery.`;
-}
-
 export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const creditRef = useRef<HTMLDivElement>(null);
@@ -299,6 +369,9 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   const cockpitCleanupRef = useRef<(() => void) | null>(null);
   const passengerFollowRef = useRef<{ id: string; dispose(): void } | null>(null);
   const radarLayerRef = useRef<ImageryLayer | null>(null);
+  const lightningLayerRef = useRef<ImageryLayer | null>(null);
+  /** Previous radar and lightning frames still on screen while the next one loads. */
+  const weatherRetireRef = useRef(new Set<() => void>());
   // Place names drawn over imagery (the last basemap layer when on): weather-satellite frames go below it.
   const labelsLayerRef = useRef<ImageryLayer | null>(null);
   // Keep night imagery above the selected surface and below labels, weather and dated overlays.
@@ -330,7 +403,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     const current = [...geoLayersRef.current.values()].map((g) => g.layer).filter((l) => c.contains(l) && !geoRetiringRef.current.has(l));
     const order = [...current, ...retiring]; // bottom → top: new frames lowest, retiring frames over them until they go
     const anchor = () => {
-      const present = [labelsLayerRef.current, radarLayerRef.current].filter((l): l is ImageryLayer => !!l && c.contains(l));
+      const present = [labelsLayerRef.current, radarLayerRef.current, lightningLayerRef.current].filter((l): l is ImageryLayer => !!l && c.contains(l));
       return present.length ? present.reduce((lo, l) => (c.indexOf(l) < c.indexOf(lo) ? l : lo)) : null;
     };
     // From the top of the block down, each layer goes directly below the one that should be above it
@@ -347,6 +420,8 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     }
   };
   const postStageRef = useRef<PostProcessStage | null>(null);
+  const sharpenStageRef = useRef<PostProcessStage | null>(null);
+  const photorealStatsRef = useRef({ loaded: 0, failed: 0 });
   const annoSourceRef = useRef<CustomDataSource | null>(null);
   const playbackSourceRef = useRef<CustomDataSource | null>(null);
   const tilesetRef = useRef<Cesium3DTileset | null>(null);
@@ -364,6 +439,8 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
 
   const reduced = prefersReducedMotion(props.settings.reducedMotion);
   const reducedRef = useRef(reduced);
+  const flyAlongStopRef = useRef<((why: 'done' | 'cancelled' | 'replaced') => void) | null>(null);
+  useEffect(() => () => flyAlongStopRef.current?.('cancelled'), []);
   reducedRef.current = reduced;
 
   // ----- init -----
@@ -491,8 +568,54 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     widget.camera.setView({ destination: Cartesian3.fromDegrees(VIEWS.us.lon, VIEWS.us.lat, VIEWS.us.height) });
 
     const handler = new ScreenSpaceEventHandler(scene.canvas);
+    // Plan dragging: press on the subject, a point or a route end, move, release. The camera does not move meanwhile.
+    let drag: { target: PlanDragTarget; last: [number, number] | null; frame: number } | null = null;
+    let suppressClickUntil = 0;
+    const groundAt = (pos: Cartesian2): [number, number] | null => {
+      const ray = widget.camera.getPickRay(pos);
+      const cart = (ray && scene.globe.pick(ray, scene)) || widget.camera.pickEllipsoid(pos, scene.globe.ellipsoid);
+      if (!cart) return null;
+      const c = Cartographic.fromCartesian(cart);
+      return [CMath.toDegrees(c.longitude), CMath.toDegrees(c.latitude)];
+    };
+    /**
+     * The draggable plan item under the cursor, looking through everything stacked there: sight lines and outlines
+     * start at or cross the subject marker and would otherwise win the pick, so the marker could not be grabbed.
+     */
+    const draggableAt = (pos: Cartesian2): PlanDragTarget | null => {
+      for (const hit of scene.drillPick(pos, 12, 9, 9)) {
+        const t = planDragTarget(defined(hit) && hit.id instanceof Entity ? String(hit.id.id) : null);
+        if (t) return t;
+      }
+      return null;
+    };
+    const endDrag = (final: boolean) => {
+      if (!drag) return;
+      const d = drag;
+      drag = null;
+      cancelAnimationFrame(d.frame);
+      scene.screenSpaceCameraController.enableInputs = true;
+      scene.canvas.style.cursor = '';
+      if (d.last) {
+        suppressClickUntil = performance.now() + 350;
+        if (final) propsRef.current.planDrag?.(d.target, d.last[1], d.last[0], true);
+      }
+    };
+    handler.setInputAction((m: { position: Cartesian2 }) => {
+      const p = propsRef.current;
+      if (!p.planDrag || p.planPick || p.pickMode || p.tool !== 'none') return;
+      const target = draggableAt(m.position);
+      if (!target) return;
+      drag = { target, last: null, frame: 0 };
+      scene.screenSpaceCameraController.enableInputs = false;
+      scene.canvas.style.cursor = 'grabbing';
+    }, ScreenSpaceEventType.LEFT_DOWN);
+    handler.setInputAction(() => endDrag(true), ScreenSpaceEventType.LEFT_UP);
+    const onBlur = () => endDrag(true);
+    window.addEventListener('blur', onBlur);
     handler.setInputAction((movement: { position: Cartesian2 }) => {
       const p = propsRef.current;
+      if (performance.now() < suppressClickUntil) return; // the click that ends a drag selects nothing
       const pickLonLat = (): [number, number] | null => {
         const ray = widget.camera.getPickRay(movement.position);
         const cart = (ray && scene.globe.pick(ray, scene)) || widget.camera.pickEllipsoid(movement.position, scene.globe.ellipsoid);
@@ -500,6 +623,19 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
         const c = Cartographic.fromCartesian(cart);
         return [Number(CMath.toDegrees(c.longitude).toFixed(6)), Number(CMath.toDegrees(c.latitude).toFixed(6))];
       };
+      if (p.planPick) {
+        let ll: [number, number] | null = null;
+        if (scene.pickPositionSupported) {
+          const pos = scene.pickPosition(movement.position);
+          if (pos) {
+            const c = Cartographic.fromCartesian(pos);
+            if (c) ll = [Number(CMath.toDegrees(c.longitude).toFixed(6)), Number(CMath.toDegrees(c.latitude).toFixed(6))];
+          }
+        }
+        ll ??= pickLonLat();
+        if (ll) p.planPick(ll[1], ll[0]);
+        return;
+      }
       if (p.pickMode) {
         const ll = pickLonLat();
         if (ll) p.onPick(ll[1], ll[0]);
@@ -520,6 +656,20 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     // Hover: show the vehicle's label (when "hovered" labels are chosen) and a pointer cursor.
     let lastHover = 0;
     handler.setInputAction((m: { endPosition: Cartesian2 }) => {
+      if (drag) {
+        const ll = groundAt(m.endPosition);
+        if (!ll) return;
+        drag.last = ll;
+        // One update per frame, however fast the mouse moves.
+        if (!drag.frame) {
+          const d = drag;
+          d.frame = requestAnimationFrame(() => {
+            d.frame = 0;
+            if (drag === d && d.last) propsRef.current.planDrag?.(d.target, d.last[1], d.last[0], false);
+          });
+        }
+        return;
+      }
       const now = performance.now();
       if (now - lastHover < 80) return;
       lastHover = now;
@@ -527,7 +677,8 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       const sel = !defined(picked) ? null : picked.id instanceof Entity ? parseEntityId(String(picked.id.id)) : typeof picked.id === 'string' && (picked.id.startsWith('apt|') || picked.id.startsWith('rec|')) ? parseEntityId(picked.id) : null;
       const rec = sel && sel.kind === 'record' ? { layer: sel.layer, id: sel.id } : null;
       layerRendererRef.current?.setHovered(rec);
-      if (propsRef.current.tool === 'none' && !propsRef.current.pickMode) scene.canvas.style.cursor = sel ? 'pointer' : '';
+      const draggable = !!propsRef.current.planDrag && !propsRef.current.planPick && !!draggableAt(m.endPosition);
+      if (propsRef.current.tool === 'none' && !propsRef.current.pickMode && !propsRef.current.planPick) scene.canvas.style.cursor = draggable ? 'grab' : sel ? 'pointer' : '';
     }, ScreenSpaceEventType.MOUSE_MOVE);
 
     // Report the settled view (center, altitude, bounding box) for viewport-based layers.
@@ -592,6 +743,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       cameraRestoreRef.current?.detach(cameraAdapter);
       if (reportViewRef.current === reportView) reportViewRef.current = null;
       ro.disconnect();
+      window.removeEventListener('blur', onBlur);
       handler.destroy();
       layerRendererRef.current?.destroy();
       layerRendererRef.current = null;
@@ -635,7 +787,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     placeNightLights(w);
     placeGeoSatLayers();
     w.scene.requestRender();
-  }, [props.archived, props.settings.basemap, props.settings.labelsOverlay, props.imageryKeys.esri, props.imageryKeys.mapbox, props.imageryKeys.google, props.eoxLicensed, failed]);
+  }, [props.archived, props.settings.basemap, props.settings.labelsOverlay, props.imageryKeys.esri, props.imageryKeys.mapbox, props.imageryKeys.google, props.imageryKeys.ion, props.eoxLicensed, failed]);
 
 
   // ----- sun position and the dark hemisphere -----
@@ -679,7 +831,24 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   useEffect(() => {
     const w = widgetRef.current;
     if (!w) return;
-    if (props.settings.terrainEnabled) {
+    const ionToken = props.settings.ionTerrain ? props.imageryKeys.ion : null;
+    if (props.settings.terrainEnabled && ionToken) {
+      // Cesium World Terrain from the customer's ion account; the keyless terrain stays the default.
+      terrainStatsRef.current = null;
+      let cancelled = false;
+      void CesiumTerrainProvider.fromUrl(IonResource.fromAssetId(1, { accessToken: ionToken }), { requestVertexNormals: true })
+        .then((p) => { if (!cancelled && !w.isDestroyed()) { w.terrainProvider = p; w.scene.requestRender(); } })
+        .catch((e) => {
+          imageryErrorsRef.current.last = 'Cesium World Terrain: ' + redactCredentialText(e instanceof Error ? e.message : String(e), [ionToken]);
+          imageryErrorsRef.current.count++;
+          if (cancelled || w.isDestroyed()) return;
+          const t = createTerrariumTerrain();
+          terrainStatsRef.current = t.stats;
+          w.terrainProvider = t.provider;
+          w.scene.requestRender();
+        });
+      return () => { cancelled = true; };
+    } else if (props.settings.terrainEnabled) {
       const t = createTerrariumTerrain();
       terrainStatsRef.current = t.stats;
       w.terrainProvider = t.provider;
@@ -688,7 +857,39 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       w.terrainProvider = new EllipsoidTerrainProvider();
     }
     w.scene.requestRender();
-  }, [props.settings.terrainEnabled, failed]);
+  }, [props.settings.terrainEnabled, props.settings.ionTerrain, props.imageryKeys.ion, failed]);
+
+  // ----- TomTom live traffic flow tiles (customer key, metered per tile) -----
+  const tomtomLayerRef = useRef<ImageryLayer | null>(null);
+  useEffect(() => {
+    const w = widgetRef.current;
+    if (!w || !ready) return;
+    if (tomtomLayerRef.current) {
+      if (w.imageryLayers.contains(tomtomLayerRef.current)) w.imageryLayers.remove(tomtomLayerRef.current, true);
+      tomtomLayerRef.current = null;
+    }
+    const key = props.settings.tomtomTraffic ? props.imageryKeys.tomtom : null;
+    if (key) {
+      const layer = new ImageryLayer(new UrlTemplateImageryProvider({
+        // relative0: colour by speed relative to free flow (green → red); TomTom refreshes these about every minute.
+        url: `https://api.tomtom.com/traffic/map/4/tile/flow/relative0/{z}/{x}/{y}.png?key=${encodeURIComponent(key)}&tileSize=256&thickness=8`,
+        tilingScheme: new WebMercatorTilingScheme(), minimumLevel: 3, maximumLevel: 18, credit: new Credit('Traffic © TomTom'),
+      }), { minimumTerrainLevel: 3 });
+      w.imageryLayers.add(layer);
+      tomtomLayerRef.current = layer;
+    }
+    w.scene.requestRender();
+  }, [ready, props.settings.tomtomTraffic, props.imageryKeys.tomtom]);
+  // TomTom refreshes flow about once a minute; reload the overlay every 2 minutes while it is on.
+  useEffect(() => {
+    if (!props.settings.tomtomTraffic || !props.imageryKeys.tomtom) return;
+    const t = setInterval(() => {
+      const w = widgetRef.current;
+      const l = tomtomLayerRef.current;
+      if (w && l && w.imageryLayers.contains(l)) { const i = w.imageryLayers.indexOf(l); const fresh = new ImageryLayer(l.imageryProvider, { minimumTerrainLevel: 3 }); w.imageryLayers.add(fresh, i + 1); retireWhenLoaded(w, l, 8000, weatherRetireRef.current); tomtomLayerRef.current = fresh; }
+    }, 120_000);
+    return () => clearInterval(t);
+  }, [props.settings.tomtomTraffic, props.imageryKeys.tomtom]);
 
   // ----- boundaries visibility -----
   useEffect(() => {
@@ -904,7 +1105,9 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     w.scene.globe.maximumScreenSpaceError = max ? 1.2 : 2;
     w.scene.globe.tileCacheSize = max ? 1500 : 600;
     w.useBrowserRecommendedResolution = !max;
-    w.resolutionScale = 1;
+    // Below full resolution the scene is drawn with fewer pixels, sharpened, and stretched by the window.
+    w.resolutionScale = props.settings.renderScale;
+    sharpenStageRef.current = applyUpscaleSharpen(w.scene, sharpenStageRef.current, props.settings.renderScale < 1);
     w.scene.msaaSamples = max ? 4 : 1;
     w.scene.postProcessStages.fxaa.enabled = !max;
     buildingsRef.current?.setQuality(max);
@@ -914,10 +1117,11 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     if (ts) {
       ts.maximumScreenSpaceError = max ? 6 : 16;
       ts.cacheBytes = max ? 2 * 1024 ** 3 : 512 * 1024 ** 2;
-      ts.preloadWhenHidden = max && propsRef.current.lighting.mode === 'day' && !propsRef.current.archived;
+      ts.preloadWhenHidden = propsRef.current.lighting.mode === 'day' && !propsRef.current.archived
+        && shouldPreloadHidden(w.camera.positionCartographic.height, w.scene.mode === SceneMode.SCENE3D, max);
     }
     w.scene.requestRender();
-  }, [ready, props.settings.renderQuality]);
+  }, [ready, props.settings.renderQuality, props.settings.renderScale]);
 
   // ----- geographic labels (screen-space, collision-managed) -----
   useEffect(() => {
@@ -967,30 +1171,34 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   }, [props.showOrbitFor, props.layerSnaps.satellites]);
 
   useEffect(() => {
-    layerRendererRef.current?.showTrail(props.trail, props.trailKind);
-  }, [props.trail, props.trailKind]);
+    layerRendererRef.current?.showTrail(props.trail, props.trailKind, props.trackedRecord ?? null);
+  }, [props.trail, props.trailKind, props.trackedRecord?.layer, props.trackedRecord?.id]);
+  useEffect(() => {
+    layerRendererRef.current?.showFlightPath(props.flightPath ?? null);
+  }, [props.flightPath, ready]);
 
   // ----- camera follow (tracking) -----
   const passengerFollow = useMemo(() => {
     const target = props.trackedRecord;
-    if (target?.layer !== 'aircraft') return false;
-    const report = props.layerSnaps.aircraft?.records.find(record => record.id === target.id);
-    return !!report && !!publicAirlineCallsign('aircraft', report);
-  }, [props.trackedRecord?.layer, props.trackedRecord?.id, props.layerSnaps.aircraft?.records]);
+    return target?.layer === 'aircraft' || target?.layer === 'aircraftMil';
+  }, [props.trackedRecord?.layer, props.trackedRecord?.id]);
   useEffect(() => {
-    const previousPassenger = passengerFollowRef.current;
     passengerFollowRef.current = null;
     const w = widgetRef.current;
     if (!w || !ready) return;
     const t = props.trackedRecord;
     if (!t) { w.trackedEntity = undefined; return; }
-    if (props.trackingMode === 'cockpit') {
+    if (props.trackingMode === 'cockpit' || props.trackingMode === 'passenger') {
       const dispose = attachCockpit(w, {
         layer: t.layer,
         record: () => layerRendererRef.current?.recordFor(t.layer, t.id),
         position: () => layerRendererRef.current?.positionFor(t.layer, t.id),
+        heading: () => layerRendererRef.current?.displayedHeadingFor(t.layer, t.id),
+        attitude: () => layerRendererRef.current?.displayedAttitudeFor(t.layer, t.id),
+        seat: () => propsRef.current.passengerSeat,
+        interiorStatus: (status) => propsRef.current.onInteriorStatus?.(status),
         hideOwnVehicle: (hidden) => layerRendererRef.current?.setInteriorTarget(hidden ? t : null),
-      }, (reason) => propsRef.current.onTrackingUnavailable?.(reason));
+      }, (reason) => propsRef.current.onTrackingUnavailable?.(reason), props.trackingMode);
       cockpitCleanupRef.current = dispose;
       return () => { dispose(); if (cockpitCleanupRef.current === dispose) cockpitCleanupRef.current = null; };
     }
@@ -998,15 +1206,10 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       cameraRestoreRef.current?.cancel();
       const dispose = attachPassengerFollow(w, () => {
         const lr = layerRendererRef.current;
-        const current = lr?.recordFor(t.layer, t.id);
-        return current && publicAirlineCallsign(t.layer, current) ? lr?.positionFor(t.layer, t.id) : undefined;
+        return lr?.positionFor(t.layer, t.id);
       }, () => reportViewRef.current?.(), reason => propsRef.current.onTrackingUnavailable?.(reason));
       passengerFollowRef.current = { id: t.id, dispose };
       return dispose;
-    }
-    if (t.layer === 'aircraft' && previousPassenger?.id === t.id) {
-      propsRef.current.onTrackingUnavailable?.('Follow ended because this flight no longer has a current public airline report.');
-      return;
     }
     // A dedicated anchor survives entity ↔ batched rendering and exposes no provider/network access.
     const anchor = new Entity({
@@ -1020,6 +1223,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   }, [props.trackedRecord?.layer, props.trackedRecord?.id, props.trackingMode, passengerFollow, ready]);
 
   // ----- geostationary weather satellites (NASA GIBS): the newest frame is looked up every 10 minutes -----
+  const weatherBack = clampBack(props.weatherBackMin ?? 0);
   const geoOn = props.settings.geoSatEnabled;
   const geoProduct: GeoSatProduct = props.settings.geoSatProduct === 'color' ? 'color' : 'infrared';
   const [geoFrames, setGeoFrames] = useState<{ product: GeoSatProduct; times: GeoFrames }>({ product: 'infrared', times: {} });
@@ -1039,7 +1243,8 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       let time: string | null | undefined;
       let error: string | null = null;
       try {
-        time = await fetchLatestFrame(s.layers[geoProduct], Date.now(), { signal: AbortSignal.any([stop.signal, AbortSignal.timeout(GEO_SAT_LOOKUP_TIMEOUT_MS)]) });
+        // Meteosat is drawn from hourly frames, whose times are known: no lookup request.
+        time = s.source === 'eumetsat' ? eumetsatFrameTime(Date.now()) : await fetchLatestFrame(s.layers[geoProduct], Date.now(), { signal: AbortSignal.any([stop.signal, AbortSignal.timeout(GEO_SAT_LOOKUP_TIMEOUT_MS)]) });
       } catch (e) {
         time = undefined;
         error = `${s.name}: ${e instanceof Error ? (e.name === 'TimeoutError' ? 'timed out' : e.message) : 'lookup failed'}`;
@@ -1082,21 +1287,38 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     const want = new Map<GeoSatId, { key: string; make: () => ImageryLayer }>();
     if (geoOn && geoFrames.product === geoProduct)
       for (const s of GEO_SATS) {
-        const time = geoFrames.times[s.id] ?? null;
+        const latest = geoFrames.times[s.id] ?? null;
         // Checked at draw time too: frames kept while the layer was off must not come back once they are too old.
-        if (!frameUsable(time, Date.now())) continue;
+        if (!frameUsable(latest, Date.now())) continue;
+        // History: counted back from the newest frame (GIBS, 10-minute frames) or from the clock (Meteosat, hourly).
+        const time = weatherBack === 0 ? latest : s.source === 'eumetsat' ? eumetsatFrameTime(Date.now() - weatherBack * 60_000) : satFrameBack(latest, weatherBack);
+        if (!time) continue;
         const L = s.layers[geoProduct];
+        const clip = Rectangle.fromDegrees(s.west, -GEO_SAT_MAX_LAT, s.east, GEO_SAT_MAX_LAT);
         want.set(s.id, {
           key: `${L.id}|${time}`,
-          make: () =>
-            new ImageryLayer(
+          make: () => s.source === 'eumetsat'
+            ? new ImageryLayer(
+              new WebMapServiceImageryProvider({
+                url: EUMETSAT_WMS,
+                layers: L.id,
+                parameters: { transparent: true, format: 'image/png', styles: '', time },
+                tilingScheme: new GeographicTilingScheme(),
+                maximumLevel: L.maxLevel,
+                credit: new Credit(`${s.name} ${L.title}, ${frameLabel(time)} (© EUMETSAT)`),
+              }),
+              // The infrared frame is opaque grey with warm ground nearly black; dark pixels are made transparent on
+              // the GPU so clouds show over the map, as the GIBS infrared layers do.
+              { alpha: 0.85, rectangle: clip, ...(geoProduct === 'infrared' ? { colorToAlpha: Color.BLACK, colorToAlphaThreshold: 0.28 } : {}) },
+            )
+            : new ImageryLayer(
               new UrlTemplateImageryProvider({
                 url: tileTemplate(L, time),
                 tilingScheme: new WebMercatorTilingScheme(),
                 maximumLevel: L.maxLevel,
                 credit: new Credit(`${s.name} ${L.title}, ${frameLabel(time)} (${s.agency} via NASA GIBS)`),
               }),
-              { alpha: 0.85, rectangle: Rectangle.fromDegrees(s.west, -GEO_SAT_MAX_LAT, s.east, GEO_SAT_MAX_LAT) },
+              { alpha: 0.85, rectangle: clip },
             ),
         });
       }
@@ -1143,7 +1365,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     }
     placeGeoSatLayers();
     w.scene.requestRender();
-  }, [geoOn, geoProduct, geoFrames, ready]);
+  }, [geoOn, geoProduct, geoFrames, weatherBack, ready]);
   // On unmount the widget (and its layers) is destroyed elsewhere: only stop pending frame swaps and forget the layers.
   useEffect(
     () => () => {
@@ -1164,27 +1386,126 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   useEffect(() => {
     const w = widgetRef.current;
     if (!w) return;
-    if (radarLayerRef.current) {
-      w.imageryLayers.remove(radarLayerRef.current, true);
-      radarLayerRef.current = null;
-    }
+    const old = radarLayerRef.current;
+    radarLayerRef.current = null;
     if (props.settings.radarEnabled) {
+      // A past frame is asked for by time; nowCOAST answers with its nearest frame (about every 4 minutes).
+      const time = wmsTime(Date.now(), weatherBack);
       const layer = new ImageryLayer(
         new WebMapServiceImageryProvider({
           url: 'https://nowcoast.noaa.gov/geoserver/observations/weather_radar/ows',
           layers: 'base_reflectivity_mosaic',
-          parameters: { transparent: true, format: 'image/png', _refresh: String(radarTick) },
+          parameters: { transparent: true, format: 'image/png', ...(time ? { time } : { _refresh: String(radarTick) }) },
           tilingScheme: new WebMercatorTilingScheme(),
           maximumLevel: 10,
-          credit: 'Radar: NOAA nowCOAST (observed base reflectivity mosaic)',
+          credit: time ? `Radar: NOAA nowCOAST (observed base reflectivity, frame nearest ${time.slice(11, 16)} UTC)` : 'Radar: NOAA nowCOAST (observed base reflectivity mosaic)',
         }),
         { alpha: 0.65 },
       );
       w.imageryLayers.add(layer);
       radarLayerRef.current = layer;
     }
+    if (old && w.imageryLayers.contains(old)) {
+      if (radarLayerRef.current) retireWhenLoaded(w, old, 8000, weatherRetireRef.current);
+      else w.imageryLayers.remove(old, true);
+    }
     w.scene.requestRender();
-  }, [props.settings.radarEnabled, radarTick, props.settings.basemap, ready]);
+  }, [props.settings.radarEnabled, radarTick, weatherBack, props.settings.basemap, ready]);
+
+  // ----- rivers: OpenStreetMap waterways from OpenFreeMap vector tiles, drawn as a glowing overlay -----
+  const riversLayerRef = useRef<ImageryLayer | null>(null);
+  useEffect(() => {
+    const w = widgetRef.current;
+    if (!w || !ready) return;
+    if (props.settings.riversEnabled && !riversLayerRef.current) {
+      const layer = new ImageryLayer(createVectorImageryProvider('rivers'), { minimumTerrainLevel: 3 });
+      w.imageryLayers.add(layer);
+      riversLayerRef.current = layer;
+    } else if (!props.settings.riversEnabled && riversLayerRef.current) {
+      if (w.imageryLayers.contains(riversLayerRef.current)) w.imageryLayers.remove(riversLayerRef.current, true);
+      riversLayerRef.current = null;
+    }
+    w.scene.requestRender();
+  }, [ready, props.settings.riversEnabled]);
+  // Keep the river overlay above basemap changes.
+  useEffect(() => {
+    const w = widgetRef.current;
+    const l = riversLayerRef.current;
+    if (w && l && w.imageryLayers.contains(l)) w.imageryLayers.raiseToTop(l);
+  });
+
+  // ----- lightning strike density (NOAA nowCOAST WMS, 15-minute accumulation), refreshed every 5 minutes -----
+  const [lightningTick, setLightningTick] = useState(0);
+  useEffect(() => {
+    if (!props.settings.lightningEnabled) return;
+    const t = setInterval(() => setLightningTick((n) => n + 1), 5 * 60_000);
+    return () => clearInterval(t);
+  }, [props.settings.lightningEnabled]);
+  useEffect(() => {
+    const w = widgetRef.current;
+    if (!w) return;
+    const old = lightningLayerRef.current;
+    lightningLayerRef.current = null;
+    if (old && w.imageryLayers.contains(old)) {
+      if (props.settings.lightningEnabled) retireWhenLoaded(w, old, 8000, weatherRetireRef.current);
+      else w.imageryLayers.remove(old, true);
+    }
+    if (props.settings.lightningEnabled) {
+      // Past frames are 15 minutes apart; nowCOAST answers a requested time with its nearest frame.
+      const time = wmsTime(Date.now(), weatherBack);
+      const layer = new ImageryLayer(
+        new WebMapServiceImageryProvider({
+          url: 'https://nowcoast.noaa.gov/geoserver/observations/lightning_detection/ows',
+          layers: 'ldn_lightning_strike_density',
+          parameters: { transparent: true, format: 'image/png', ...(time ? { time } : { _refresh: String(lightningTick) }) },
+          tilingScheme: new WebMercatorTilingScheme(),
+          // The grid is about 8 km; deeper tiles add requests, not detail.
+          maximumLevel: 8,
+          credit: 'Lightning: NOAA nowCOAST (NLDN and GLD360 strike density, 15 minutes)',
+        }),
+        { alpha: 0.8 },
+      );
+      w.imageryLayers.add(layer);
+      lightningLayerRef.current = layer;
+    }
+    w.scene.requestRender();
+  }, [props.settings.lightningEnabled, lightningTick, weatherBack, props.settings.basemap, ready]);
+  // Unmount: stop waiting on frames that were being replaced (the widget and its layers are destroyed elsewhere).
+  useEffect(() => () => { for (const c of [...weatherRetireRef.current]) c(); weatherRetireRef.current.clear(); }, []);
+
+  // ----- animated wind (GFS forecast) on a canvas over the globe -----
+  const windOverlayRef = useRef<WindOverlay | null>(null);
+  useEffect(() => {
+    const w = widgetRef.current;
+    const field = props.windField ?? null;
+    if (!w || !field) {
+      windOverlayRef.current?.destroy();
+      windOverlayRef.current = null;
+      return;
+    }
+    if (windOverlayRef.current) windOverlayRef.current.setField(field);
+    else windOverlayRef.current = new WindOverlay(w, field, reducedRef.current, props.settings.renderQuality === 'maximum' ? 3500 : 2200, props.windColorBySpeed === true);
+  }, [props.windField, ready]);
+  useEffect(() => { windOverlayRef.current?.setColorBySpeed(props.windColorBySpeed === true); }, [props.windColorBySpeed]);
+  useEffect(() => { windOverlayRef.current?.setReduced(reduced); }, [reduced]);
+
+  // ----- simulated vehicles on traffic-flow roads (illustration from measured flow) -----
+  const trafficSimRef = useRef<TrafficSim | null>(null);
+  const simRecords = props.layerSnaps.trafficFlow?.records;
+  const simOn = !!props.settings.trafficSimEnabled && props.layersOn.includes('trafficFlow') && !props.playbackActive;
+  useEffect(() => {
+    const w = widgetRef.current;
+    if (!w || !ready || !simOn) {
+      trafficSimRef.current?.destroy();
+      trafficSimRef.current = null;
+      return;
+    }
+    if (!trafficSimRef.current) trafficSimRef.current = new TrafficSim(w, reducedRef.current);
+    trafficSimRef.current.setRecords(simRecords ?? []);
+  }, [simOn, simRecords, ready]);
+  useEffect(() => { trafficSimRef.current?.setReduced(reduced); }, [reduced]);
+  useEffect(() => () => { trafficSimRef.current?.destroy(); trafficSimRef.current = null; }, []);
+  useEffect(() => () => { windOverlayRef.current?.destroy(); windOverlayRef.current = null; }, []);
 
   // ----- visual display modes (post-processing; visual effect only) -----
   useEffect(() => {
@@ -1256,8 +1577,8 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     photorealCleanupRef.current?.();
     photorealCleanupRef.current = null;
     if (propsRef.current.lighting.mode === 'day' && !propsRef.current.archived) {
-      ts.preloadWhenHidden = propsRef.current.settings.renderQuality === 'maximum';
-      photorealCleanupRef.current = watchPhotorealSurface(w, ts, setPhotorealOn);
+      // The watcher also loads the hidden mesh during the approach (always, at Maximum quality).
+      photorealCleanupRef.current = watchPhotorealSurface(w, ts, setPhotorealOn, undefined, undefined, () => propsRef.current.settings.renderQuality === 'maximum');
     } else {
       ts.preloadWhenHidden = false;
       ts.show = false;
@@ -1287,8 +1608,9 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     if (props.google3dKey) {
       GoogleMaps.defaultApiKey = props.google3dKey;
       const maxQ = propsRef.current.settings.renderQuality === 'maximum';
-      // Session cache only (Google's terms do not allow pre-downloading or storing tiles). Maximum quality
-      // asks for finer detail, keeps up to 2 GB of tiles in memory and preloads flight destinations.
+      // Session cache only (Google's terms do not allow pre-downloading or storing tiles). Flight destinations
+      // are preloaded, and the watcher loads the hidden mesh on approach. Maximum quality asks for finer detail
+      // and keeps up to 2 GB of tiles in memory.
       void createGooglePhotorealistic3DTileset({ onlyUsingWithGoogleGeocoder: true }, { maximumScreenSpaceError: maxQ ? 6 : 16, cacheBytes: maxQ ? 2 * 1024 ** 3 : 512 * 1024 ** 2, preloadFlightDestinations: true, preloadWhenHidden: maxQ })
         .then((ts) => {
           if (cancelled) { ts.destroy(); return; }
@@ -1296,9 +1618,11 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
           // failing before any loads, go back to the normal globe instead of showing an empty scene.
           let loaded = 0;
           let failed = 0;
-          ts.tileLoad.addEventListener(() => loaded++);
+          photorealStatsRef.current = { loaded: 0, failed: 0 };
+          ts.tileLoad.addEventListener(() => { loaded++; photorealStatsRef.current.loaded++; });
           ts.tileFailed.addEventListener((e: { message?: string }) => {
             failed++;
+            photorealStatsRef.current.failed++;
             imageryErrorsRef.current.last = 'Google 3D Tiles: ' + redactCredentialText(e?.message ?? 'tile failed', [propsRef.current.google3dKey]);
             imageryErrorsRef.current.count++;
             if (loaded === 0 && failed === 3 && tilesetRef.current === ts) {
@@ -1316,7 +1640,8 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
           presentPhotoreal(w, ts);
         })
         .catch((e) => {
-          imageryErrorsRef.current.last = 'Google 3D Tiles: ' + redactCredentialText(e instanceof Error ? e.message : String(e), [propsRef.current.google3dKey]);
+          const status = googleStatus(e);
+          imageryErrorsRef.current.last = 'Google 3D Tiles: ' + (status ? 'HTTP ' + status : 'no HTTP answer') + ' · ' + redactCredentialText(e instanceof Error ? e.message : String(e), [propsRef.current.google3dKey]);
           imageryErrorsRef.current.count++;
           propsRef.current.onProviderError?.(googleRefusal('Photoreal 3D', e));
         });
@@ -1331,8 +1656,50 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
   // ----- pick-mode cursor -----
   useEffect(() => {
     const c = widgetRef.current?.canvas;
-    if (c) c.style.cursor = props.pickMode || props.tool !== 'none' ? 'crosshair' : '';
-  }, [props.pickMode, props.tool]);
+    if (c) c.style.cursor = props.pickMode || props.planPick || props.tool !== 'none' ? 'crosshair' : '';
+  }, [props.pickMode, props.tool, props.planPick]);
+
+  // ----- protective plan overlay -----
+  const planOverlayRef = useRef<PlanningOverlay | null>(null);
+  const siteLookRef = useRef(false);
+  useEffect(() => {
+    const w = widgetRef.current;
+    siteLookRef.current = !!props.siteLook;
+    buildingsRef.current?.setDark(!!props.siteLook);
+    if (!w || w.isDestroyed()) return;
+    // Dim and desaturate every imagery layer except the coverage picture; checked each frame so imagery added later
+    // (basemap switches, overlays) follows too.
+    const apply = () => {
+      const dark = siteLookRef.current;
+      const layers = w.imageryLayers;
+      for (let i = 0; i < layers.length; i++) {
+        const l = layers.get(i);
+        if ((l as unknown as { atlasPlanCoverage?: boolean }).atlasPlanCoverage) continue;
+        const b = dark ? 0.36 : 1;
+        const sat = dark ? 0.1 : 1;
+        if (l.brightness !== b) l.brightness = b;
+        if (l.saturation !== sat) l.saturation = sat;
+      }
+    };
+    const off = w.scene.preRender.addEventListener(apply);
+    w.scene.requestRender();
+    return off;
+  }, [props.siteLook, ready]);
+  useEffect(() => {
+    const w = widgetRef.current;
+    if (!w || !ready) return;
+    if (!props.planOverlay) {
+      planOverlayRef.current?.destroy();
+      planOverlayRef.current = null;
+      return;
+    }
+    planOverlayRef.current ??= new PlanningOverlay(w);
+    planOverlayRef.current.update(props.planOverlay);
+  }, [props.planOverlay, ready]);
+  useEffect(() => () => {
+    planOverlayRef.current?.destroy();
+    planOverlayRef.current = null;
+  }, []);
 
   useImperativeHandle(ref, () => {
     const fly = (destination: Cartesian3 | Rectangle) => {
@@ -1414,6 +1781,8 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
           lastRenderError: renderErrorsRef.current.last,
           imageryLayerCount: widgetRef.current?.imageryLayers.length ?? null,
           photorealLoaded: !!tilesetRef.current,
+          // Mesh loading state: drawn or only loading ahead, whether the current view is complete, tiles so far this session.
+          photoreal: tilesetRef.current ? { shown: tilesetRef.current.show, preloading: tilesetRef.current.preloadWhenHidden, complete: tilesetRef.current.tilesLoaded, ...photorealStatsRef.current } : null,
           lastImageryError: imageryErrorsRef.current.last,
           basemapSources: def.sources,
           terrain: ts ? { ...TERRAIN_INFO, ...ts } : null,
@@ -1421,13 +1790,15 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
           usgs: { ...usgsStats },
           models: { ...modelStats, textureBytes: [...modelStats.textureBytes], pack: { ...packStats }, geoid: { ...geoidStats } },
           sea: { ...seaStats, unavailableTiles: [...seaStats.unavailableTiles].slice(-20) },
-          buildings: { ...(buildingsRef.current?.stats ?? { tilesLoaded: 0, buildingsDrawn: 0, lastError: null, visible: false }), enabled: propsRef.current.settings.buildings3d, maxCameraM: BUILDINGS_MAX_CAMERA_M },
+          buildings: { ...(buildingsRef.current?.stats ?? { tilesLoaded: 0, buildingsDrawn: 0, lastError: null, visible: false, baseSpreadM: null, baseFallbacks: 0 }), enabled: propsRef.current.settings.buildings3d, maxCameraM: BUILDINGS_MAX_CAMERA_M },
           geoSat: { enabled: propsRef.current.settings.geoSatEnabled, product: propsRef.current.settings.geoSatProduct, frames: Object.fromEntries([...geoLayersRef.current].map(([id, g]) => [id, g.key.split('|')[1] ?? null])), ...geoStatsRef.current, layers: geoLayersRef.current.size },
           missingRequirement:
             def.requires === 'esri' && !propsRef.current.imageryKeys.esri
               ? 'Esri World Imagery needs your ArcGIS key (Providers). Showing keyless imagery.'
               : def.requires === 'mapbox' && !propsRef.current.imageryKeys.mapbox
                 ? 'Mapbox Satellite needs your token (Providers). Showing keyless imagery.'
+                : def.requires === 'cesium' && !propsRef.current.imageryKeys.ion
+                  ? 'Bing Maps via Cesium ion needs your Cesium ion token (Providers). Showing keyless imagery.'
                 : def.requires === 'eox' && !propsRef.current.eoxLicensed
                   ? 'Sentinel-2 cloudless needs an EOX commercial license confirmation (Providers). Showing keyless imagery.'
                   : def.id === 'google2d' && !propsRef.current.imageryKeys.google
@@ -1442,6 +1813,23 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
         if (!w || w.scene.mode === SceneMode.MORPHING) return null;
         const c = w.camera.positionCartographic;
         return capturedCamera({ lat: CMath.toDegrees(c.latitude), lon: CMath.toDegrees(c.longitude), heightM: c.height, heading: w.camera.heading, pitch: w.camera.pitch });
+      },
+      pickId: (x, y) => {
+        const w = widgetRef.current;
+        if (!w) return null;
+        const r = w.scene.canvas.getBoundingClientRect();
+        const picked = w.scene.pick(new Cartesian2(x - r.left, y - r.top));
+        return defined(picked) && picked.id instanceof Entity ? String(picked.id.id) : defined(picked) ? '(primitive)' : null;
+      },
+      toScreen: (lat, lon) => {
+        const w = widgetRef.current;
+        if (!w) return null;
+        const c = Cartographic.fromDegrees(lon, lat);
+        const h = w.scene.globe.getHeight(c) ?? 0;
+        const p = SceneTransforms.worldToWindowCoordinates(w.scene, Cartesian3.fromDegrees(lon, lat, h));
+        if (!p) return null;
+        const r = w.scene.canvas.getBoundingClientRect();
+        return { x: r.left + p.x, y: r.top + p.y };
       },
       getMapCenter: () => {
         const w = widgetRef.current;
@@ -1478,6 +1866,21 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
         c.setView({ destination: c.positionWC.clone(), orientation: { heading: 0, pitch: c.pitch, roll: 0 } });
         w.scene.requestRender();
       },
+      tilt: () => {
+        const w = widgetRef.current;
+        if (!w || w.scene.mode !== SceneMode.SCENE3D) return null;
+        const c = w.camera;
+        const target = c.pickEllipsoid(new Cartesian2(w.scene.canvas.clientWidth / 2, w.scene.canvas.clientHeight / 2), w.scene.globe.ellipsoid);
+        if (!target) return null;
+        cameraRestoreRef.current?.cancel();
+        const pitch = nextTiltPitch(c.pitch);
+        const range = Cartesian3.distance(c.positionWC, target);
+        c.lookAt(target, new HeadingPitchRange(c.heading, pitch, range));
+        // Release the look-at frame so the mouse controls keep working as before.
+        c.lookAtTransform(Matrix4.IDENTITY);
+        w.scene.requestRender();
+        return pitch;
+      },
       focus: (lat, lon, radiusKm, minimumHeightM) => {
         let height = Math.max(minimumHeightM ?? 120_000, (radiusKm ?? 50) * 1000 * 5);
         if (minimumHeightM !== undefined && propsRef.current.settings.terrainEnabled) {
@@ -1495,6 +1898,86 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
         else w.camera.zoomOut(h * 0.5);
         w.scene.requestRender();
       },
+      flyAlong: (points, mode, onEnd) => {
+        const w = widgetRef.current;
+        flyAlongStopRef.current?.('replaced');
+        if (!w || points.length < 2) { onEnd?.('replaced'); return; }
+        cameraRestoreRef.current?.cancel();
+        if (passengerFollowRef.current && w.trackedEntity) {
+          passengerFollowRef.current.dispose();
+          passengerFollowRef.current = null;
+        }
+        // Cumulative metres along the line.
+        const cum = [0];
+        for (let i = 1; i < points.length; i++) {
+          const [lo0, la0] = points[i - 1];
+          const [lo1, la1] = points[i];
+          cum.push(cum[i - 1] + Math.hypot((lo1 - lo0) * 111_320 * Math.cos((la0 * Math.PI) / 180), (la1 - la0) * 111_320));
+        }
+        const total = cum.at(-1)!;
+        if (reducedRef.current || total < 1) {
+          // Reduced motion: one still overview of the whole route instead of a moving camera.
+          const lons = points.map((p) => p[0]);
+          const lats = points.map((p) => p[1]);
+          const pad = 0.002;
+          w.camera.setView({ destination: Rectangle.fromDegrees(Math.min(...lons) - pad, Math.min(...lats) - pad, Math.max(...lons) + pad, Math.max(...lats) + pad) });
+          w.scene.requestRender();
+          onEnd?.('done');
+          return;
+        }
+        const at = (s: number): [number, number] => {
+          const d = Math.max(0, Math.min(total, s));
+          let i = 1;
+          while (i < cum.length - 1 && cum[i] < d) i++;
+          const seg = cum[i] - cum[i - 1] || 1;
+          const t = (d - cum[i - 1]) / seg;
+          return [points[i - 1][0] + (points[i][0] - points[i - 1][0]) * t, points[i - 1][1] + (points[i][1] - points[i - 1][1]) * t];
+        };
+        const ground = (lon: number, lat: number, fallback: number) => w.scene.globe.getHeight(Cartographic.fromDegrees(lon, lat)) ?? fallback;
+        // A drone-like view: behind and above the point, looking ahead along the route.
+        const above = mode === 'drive' ? 140 : 70;
+        const back = mode === 'drive' ? 220 : 110;
+        const ahead = mode === 'drive' ? 160 : 80;
+        // Ground speed of the view; long routes are sped up so a flight takes at most about 90 s.
+        const speed = Math.max(mode === 'drive' ? 40 : 15, total / 90);
+        const start = performance.now();
+        let heading: number | null = null;
+        let groundH = ground(points[0][0], points[0][1], 0);
+        let frame = 0;
+        const stop = (why: 'done' | 'cancelled' | 'replaced') => {
+          cancelAnimationFrame(frame);
+          w.canvas.removeEventListener('pointerdown', onInput);
+          w.canvas.removeEventListener('wheel', onInput);
+          window.removeEventListener('keydown', onKey);
+          if (flyAlongStopRef.current === stop) flyAlongStopRef.current = null;
+          onEnd?.(why);
+        };
+        const onInput = () => stop('cancelled');
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') stop('cancelled'); };
+        const step = () => {
+          if (w.isDestroyed()) return;
+          const s = ((performance.now() - start) / 1000) * speed;
+          const [lon, lat] = at(s);
+          const [alon, alat] = at(s + ahead);
+          const r = Math.PI / 180;
+          const target = Math.atan2(Math.sin((alon - lon) * r) * Math.cos(alat * r), Math.cos(lat * r) * Math.sin(alat * r) - Math.sin(lat * r) * Math.cos(alat * r) * Math.cos((alon - lon) * r));
+          // Ease the heading so junction kinks do not jerk the view.
+          heading = heading === null ? target : heading + Math.atan2(Math.sin(target - heading), Math.cos(target - heading)) * 0.08;
+          groundH = groundH + (ground(lon, lat, groundH) - groundH) * 0.1;
+          const dLat = (-back * Math.cos(heading)) / 111_320;
+          const dLon = (-back * Math.sin(heading)) / (111_320 * Math.cos(lat * r));
+          w.camera.setView({ destination: Cartesian3.fromDegrees(lon + dLon, lat + dLat, groundH + above), orientation: { heading, pitch: CMath.toRadians(-28), roll: 0 } });
+          w.scene.requestRender();
+          if (s >= total) { stop('done'); return; }
+          frame = requestAnimationFrame(step);
+        };
+        flyAlongStopRef.current = stop;
+        w.canvas.addEventListener('pointerdown', onInput);
+        w.canvas.addEventListener('wheel', onInput, { passive: true });
+        window.addEventListener('keydown', onKey);
+        frame = requestAnimationFrame(step);
+      },
+      stopFlyAlong: () => flyAlongStopRef.current?.('cancelled'),
     };
   }, []);
 
@@ -1544,6 +2027,9 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
         aria-label="Interactive globe. Use arrow keys to rotate and plus or minus to zoom. Click markers for details."
         onKeyDown={onKeyDown}
       />
+      <CameraCards widget={ready ? widgetRef.current : null} records={props.layerSnaps.cameras?.records ?? []}
+        enabled={ready && props.layersOn.includes('cameras') && !props.playbackActive}
+        onOpen={(id) => props.onSelect({ kind: 'record', layer: 'cameras', id })} />
       {failed && (
         <div className="globe-failed" role="alert">
           <strong>The 3D globe could not start.</strong>

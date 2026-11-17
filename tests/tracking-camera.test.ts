@@ -111,6 +111,55 @@ describe('passenger flight follow', () => {
 });
 
 describe('cockpit camera lifecycle', () => {
+  it('keeps the 3D interior attached to the aircraft while the camera looks around, then removes it', () => {
+    const h = cameraHarness();
+    const handlers = new Map<string, (event: PointerEvent) => void>();
+    let interior: { modelMatrix: Matrix4 } | undefined;
+    const remove = vi.fn();
+    Object.assign(h.scene, { canvas: { addEventListener: (type: string, fn: (event: PointerEvent) => void) => handlers.set(type, fn),
+      removeEventListener: (type: string) => handlers.delete(type), setPointerCapture: vi.fn() },
+      primitives: { add: (p: { modelMatrix: Matrix4 }) => { interior = p; return p; }, remove } });
+    const stop = attachCockpit(h.widget, h.source, h.unavailable);
+    const original = Matrix4.clone(interior!.modelMatrix);
+    handlers.get('pointerdown')!({ button: 0, pointerId: 1, clientX: 100, clientY: 100 } as PointerEvent);
+    handlers.get('pointermove')!({ pointerId: 1, clientX: 150, clientY: 125 } as PointerEvent);
+    vi.advanceTimersByTime(20); h.scene.preRender.raiseEvent();
+    expect(Matrix4.equals(interior!.modelMatrix, original)).toBe(true);
+    expect(h.camera.setView.mock.lastCall?.[0].orientation.heading).toBeCloseTo(CMath.PI_OVER_TWO + .2);
+    stop();
+    expect(remove).toHaveBeenCalledWith(interior);
+  });
+  it('looks out of the passenger side and responds to dragging, then removes its handlers', () => {
+    const h = cameraHarness();
+    const handlers = new Map<string, (event: PointerEvent) => void>();
+    const canvas = { addEventListener: (type: string, fn: (event: PointerEvent) => void) => handlers.set(type, fn),
+      removeEventListener: (type: string) => handlers.delete(type), setPointerCapture: vi.fn() };
+    Object.assign(h.scene, { canvas });
+    const stop = attachCockpit(h.widget, { ...h.source, heading: () => 80 }, h.unavailable, 'passenger');
+    expect(h.camera.setView.mock.lastCall?.[0].orientation.heading).toBeCloseTo(CMath.toRadians(170));
+    handlers.get('pointerdown')!({ button: 0, pointerId: 1, clientX: 100, clientY: 100 } as PointerEvent);
+    handlers.get('pointermove')!({ pointerId: 1, clientX: 150, clientY: 125 } as PointerEvent);
+    vi.advanceTimersByTime(20);
+    h.scene.preRender.raiseEvent();
+    expect(h.camera.setView.mock.lastCall?.[0].orientation.heading).toBeCloseTo(CMath.toRadians(170) + 0.2);
+    handlers.get('pointermove')!({ pointerId: 1, clientX: 10000, clientY: 10000 } as PointerEvent);
+    vi.advanceTimersByTime(20); h.scene.preRender.raiseEvent();
+    expect(h.camera.setView.mock.lastCall?.[0].orientation.heading).toBeCloseTo(CMath.toRadians(170) + CMath.negativePiToPi(39.6));
+    expect(h.camera.setView.mock.lastCall?.[0].orientation.pitch).toBeCloseTo(CMath.toRadians(-85));
+    stop();
+    expect(handlers.size).toBe(0);
+  });
+  it('smoothly adds simulated climb and bank to the view without changing the camera position', () => {
+    const h = cameraHarness();
+    const stop = attachCockpit(h.widget, { ...h.source, attitude: () => ({ pitch: 0.15, bank: 0.2 }) }, h.unavailable);
+    vi.advanceTimersByTime(1000); h.scene.preRender.raiseEvent();
+    const view = h.camera.setView.mock.lastCall![0];
+    expect(view.destination).toEqual(h.position);
+    expect(view.orientation.roll).toBeCloseTo(0.2);
+    expect(view.orientation.pitch).toBeGreaterThan(CMath.toRadians(-5));
+    expect(view.orientation.pitch).toBeLessThan(CMath.toRadians(-5) + 0.15);
+    stop();
+  });
   it('never calls a forbidden camera transform during a scene morph', () => {
     const h = cameraHarness();
     attachCockpit(h.widget, h.source, h.unavailable);

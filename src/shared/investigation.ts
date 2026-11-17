@@ -5,7 +5,7 @@ import { validImageryDate } from './imageryDates';
 import type { Settings } from './types';
 import { imageryYearSchema } from './satelliteYears';
 
-export const surfaceSchema = z.enum(['atlas', 'streets', 'usgsImageryTopo', 'usgsTopo', 'gibsDaily', 'esri', 'mapbox', 'eox', 'naturalEarth', 'neutral', 'google3d', 'google2d']);
+export const surfaceSchema = z.enum(['atlas', 'streets', 'usgsImageryTopo', 'usgsTopo', 'gibsDaily', 'esri', 'mapbox', 'eox', 'naturalEarth', 'neutral', 'google3d', 'google2d', 'ionBing']);
 export const visualModeSchema = z.enum(['normal', 'crt', 'nvg', 'thermal', 'anime', 'noir', 'snow']);
 export const investigationQuakeWindowSchema = z.enum(['hour', 'day', 'week', 'month']);
 export const investigationQuakeMagnitudeSchema = z.number().finite().min(-1).max(10);
@@ -35,7 +35,7 @@ export const investigationSchema = z.object({
 }).strict();
 export type Investigation = z.infer<typeof investigationSchema>;
 
-const explicitSurfaces = new Set<string>(['google3d', 'google2d', 'esri', 'mapbox', 'eox']);
+const explicitSurfaces = new Set<string>(['google3d', 'google2d', 'esri', 'mapbox', 'eox', 'ionBing']);
 export function needsSurfaceChoice(current: Settings['basemap'], requested: string): boolean {
   return current !== requested && explicitSurfaces.has(requested);
 }

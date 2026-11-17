@@ -14,7 +14,7 @@ function snapshot(patch: Partial<LayerStatus> = {}): LayerSnapshot {
 }
 function render(source?: LayerSnapshot, enabled = true, playbackActive = false) {
   vi.useFakeTimers(); vi.setSystemTime(new Date(NOW));
-  const html = renderToStaticMarkup(createElement(LayersPanel, { settings: { ...DEFAULT_SETTINGS, layersEnabled: enabled ? ['firePerimeters'] : [] },
+  const html = renderToStaticMarkup(createElement(LayersPanel, { groupsOpen: true, settings: { ...DEFAULT_SETTINGS, layersEnabled: enabled ? ['firePerimeters'] : [] },
     snaps: source ? { firePerimeters: source } : {}, playbackActive, onPatch: vi.fn(),
     imagery: { product: null, date: '', compare: false, compareDate: '', opacity: 1, split: 0.5 }, onImagery: vi.fn() }));
   // The existing row contains both its summary and the expanded source status.

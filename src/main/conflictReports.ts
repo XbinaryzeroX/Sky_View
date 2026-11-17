@@ -140,7 +140,7 @@ export function createConflictReportsLookup(fetchText: FetchText, store: Pick<At
       store, now, key, refreshMs: 30 * 60_000, validate: value => listSchema.safeParse(value).data ?? null,
       load: async () => {
         const res = await fetchText(url, { maxBytes: MAX_RSS, timeoutMs: 15_000, rejectRedirects: true,
-          headers: { Accept: 'application/rss+xml, application/xml', 'User-Agent': 'AtlasWatch/0.7.0 (humanitarian RSS reader)' } });
+          headers: { Accept: 'application/rss+xml, application/xml', 'User-Agent': 'SkyView/0.7.0 (humanitarian RSS reader)' } });
         if (res.status !== 200) throw new Error('The publisher did not return a complete RSS feed.');
         return parse(res.text, now());
       },

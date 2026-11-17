@@ -4,6 +4,7 @@ import type { AiStatus, Settings } from '../../shared/types';
 import { api, errorText } from '../lib/api';
 import { Modal } from './common';
 import { BASEMAPS } from '../map/basemaps';
+import { isRenderScale, RENDER_SCALES, renderScaleLabel } from '../../shared/renderScale';
 
 export function SettingsDialog({ settings, onClose }: { settings: Settings; onClose(): void }) {
   const [s, setS] = useState<Settings>(settings);
@@ -86,7 +87,7 @@ export function SettingsDialog({ settings, onClose }: { settings: Settings; onCl
           <label className="check">
             <input type="checkbox" checked={s.zoneLookupEnabled} onChange={(e) => set('zoneLookupEnabled', e.target.checked)} /> Look up NWS zones for saved locations
           </label>
-          <small className="muted">This lets Atlas Watch check alerts that have no polygon. Each location's coordinates are sent to api.weather.gov about once a month. If it is off, those alerts show as “cannot determine”.</small>
+          <small className="muted">This lets Sky_View check alerts that have no polygon. Each location's coordinates are sent to api.weather.gov about once a month. If it is off, those alerts show as “cannot determine”.</small>
         </section>
         <section>
           <h3 className="sub">Event history</h3>
@@ -121,7 +122,14 @@ export function SettingsDialog({ settings, onClose }: { settings: Settings; onCl
               <option value="balanced">Balanced (default)</option>
               <option value="maximum">Maximum: sharpest tiles, full screen resolution, 4× anti-aliasing, more 3D buildings</option>
             </select>
-            <small className="muted">Maximum uses more GPU memory and downloads more tiles. Google Photoreal 3D tiles load at higher detail and stay in memory for the session; Google’s terms do not allow pre-downloading them.</small>
+            <small className="muted">Maximum uses more GPU memory and downloads more tiles. Google Photoreal 3D tiles start loading while you approach (below 400 km; at any height on Maximum) and stay in memory for the session; Google’s terms do not allow pre-downloading or storing them.</small>
+          </label>
+          <label className="field">
+            <span>Render resolution</span>
+            <select value={s.renderScale} onChange={(e) => { const v = Number(e.target.value); if (isRenderScale(v)) set('renderScale', v); }}>
+              {RENDER_SCALES.map((v) => <option key={v} value={v}>{renderScaleLabel(v)}</option>)}
+            </select>
+            <small className="muted">Lower settings draw the globe with fewer pixels, sharpen it and stretch it to the window, which eases the load on the graphics card and softens fine detail. This is simple upscaling, not DLSS: the app draws through the browser engine, which cannot use DLSS.</small>
           </label>
           <label className="check">
             <input type="checkbox" checked={s.worldAircraft} onChange={(e) => set('worldAircraft', e.target.checked)} /> Worldwide aircraft when zoomed out (OpenSky Network snapshot: every 15 min anonymously, about every 90 s with your OpenSky client in Providers; OpenSky’s free API is for non-commercial use)
@@ -234,13 +242,16 @@ export function SettingsDialog({ settings, onClose }: { settings: Settings; onCl
             <input type="checkbox" checked={s.terrainEnabled} onChange={(e) => set('terrainEnabled', e.target.checked)} /> 3D terrain (keyless Terrain Tiles on AWS)
           </label>
           <label className="check">
+            <input type="checkbox" checked={s.ionTerrain} disabled={!s.terrainEnabled} onChange={(e) => set('ionTerrain', e.target.checked)} /> Use Cesium World Terrain instead (your Cesium ion token in Providers; counts against your ion plan)
+          </label>
+          <label className="check">
             <input type="checkbox" checked={s.reducedMotion} onChange={(e) => set('reducedMotion', e.target.checked)} /> Reduce motion (no camera fly animations)
           </label>
         </section>
         <section className="span-2">
           <h3 className="sub">Optional local AI (Ollama)</h3>
           <p className="muted small">
-            Atlas Watch is fully usable without AI. If you have installed <strong>Ollama</strong> yourself and downloaded a model, Atlas Watch can ask it to explain the computed results. It connects only to this
+            Sky_View is fully usable without AI. If you have installed <strong>Ollama</strong> yourself and downloaded a model, Sky_View can ask it to explain the computed results. It connects only to this
             computer (127.0.0.1). Models are never downloaded automatically. Local models need a capable CPU/GPU and enough memory. Answers can be wrong; always check the linked source records.
           </p>
           <div className="field-row">

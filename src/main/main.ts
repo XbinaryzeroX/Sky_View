@@ -27,8 +27,10 @@ import {
   registerAppScheme,
   rendererEntryUrl,
   serveAppProtocol,
+  setRadioRelay,
   setRendererRemoteOptions,
 } from './security';
+import { createRadio } from './radio';
 import { AtlasStore } from './store';
 import { loadMainGeoid } from './geoid';
 
@@ -38,6 +40,9 @@ registerAppScheme();
 app.enableSandbox();
 // Development/test only: isolated profile so automated runs never collide with a user's running instance.
 if (!app.isPackaged && process.env.ATLAS_WATCH_USER_DATA) app.setPath('userData', process.env.ATLAS_WATCH_USER_DATA);
+// The app was called Atlas Watch until 2026-11-17. Its data folder keeps that name so saved places, settings,
+// encrypted keys and history load unchanged after the rename to Sky_View.
+else if (!app.commandLine.hasSwitch('user-data-dir')) app.setPath('userData', join(app.getPath('appData'), 'Atlas Watch'));
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -133,12 +138,12 @@ function createWindow(): void {
     height: 900,
     minWidth: 1000,
     minHeight: 640,
-    title: 'Atlas Watch',
+    title: 'Sky_View',
     backgroundColor: '#0d141c',
     // The app's own top bar is the title bar: no separate OS strip or menu row. Windows draws its
     // minimize / maximize / close buttons over the right end of the top bar in matching colors.
     titleBarStyle: 'hidden',
-    titleBarOverlay: { color: '#111a24', symbolColor: '#dce4ec', height: 46 },
+    // No native button strip: the renderer draws its own window buttons in the same glass as its other controls.
     show: false,
     webPreferences: {
       preload: join(__dirname, '../preload/preload.cjs'),
@@ -247,7 +252,7 @@ app.whenReady().then(async () => {
   const markets = new MarketService(secrets, () => core!.settings, store, providers.credentials);
   providers.marketService = markets;
   const lemmy = new LemmyService(secrets, () => core!.settings);
-  const remoteOptions = () => ({ google3d: providers.credentials.available('google3d'), esri: secrets.has('esri-imagery'), mapbox: secrets.has('mapbox'), eox: providers.ackGiven('eox') });
+  const remoteOptions = () => ({ google3d: providers.credentials.available('google3d'), esri: secrets.has('esri-imagery'), mapbox: secrets.has('mapbox'), eox: providers.ackGiven('eox'), tomtom: secrets.has('tomtom'), cesium: secrets.has('cesium-ion') });
   setRendererRemoteOptions(remoteOptions());
   const ais = new AisStreamClient(() => secrets.get('aisstream'), () => scheduleLayerEmit('vessels'));
   layers = new LayerManager({
@@ -259,6 +264,7 @@ app.whenReady().then(async () => {
     userAgent: ua,
     localReceiverUrl: () => providers.localReceiverUrl(),
     openskyClient: () => secrets.get('opensky'),
+    launchToken: () => (secrets.has('launchlibrary') ? secrets.get('launchlibrary') : null),
     cameraKey: (id) => (secrets.has(id) ? secrets.get(id) : null),
     ais,
     aisConfigured: () => secrets.has('aisstream'),
@@ -276,6 +282,14 @@ app.whenReady().then(async () => {
       mainWindow?.setFullScreen(on);
       return on;
     },
+    windowControl: (action) => {
+      if (!mainWindow || mainWindow.isDestroyed()) return false;
+      if (action === 'minimize') mainWindow.minimize();
+      else if (action === 'close') mainWindow.close();
+      else if (mainWindow.isMaximized()) mainWindow.unmaximize();
+      else mainWindow.maximize();
+      return true;
+    },
     captureScreenshot: async () => {
       if (!mainWindow) return null;
       const img = await mainWindow.webContents.capturePage();
@@ -286,7 +300,9 @@ app.whenReady().then(async () => {
     },
     appVersion: version,
   };
-  const handlers = createHandlers(core, store, fetchJson, platform, { layers, providers, markets, lemmy, userAgent: ua });
+  const radio = createRadio(fetchJson, ua);
+  setRadioRelay(radio.relay);
+  const handlers = createHandlers(core, store, fetchJson, platform, { layers, providers, markets, lemmy, userAgent: ua, radio });
   const baseSetCredential = handlers[IPC.providersSetCredential];
   handlers[IPC.providersSetCredential] = async (args) => {
     const before = JSON.stringify(remoteOptions());

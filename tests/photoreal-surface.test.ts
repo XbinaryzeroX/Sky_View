@@ -1,6 +1,6 @@
 import { Cartesian3, Ellipsoid, Event, SceneMode, type Cesium3DTileset, type CesiumWidget } from 'cesium';
 import { afterEach, expect, it, vi } from 'vitest';
-import { watchPhotorealSurface } from '../src/renderer/map/photorealSurface';
+import { PRELOAD_M, shouldPreloadHidden, watchPhotorealSurface } from '../src/renderer/map/photorealSurface';
 import { oceanFocusPixel } from '../src/renderer/map/coastalFocus';
 import { Cartographic } from 'cesium';
 
@@ -102,5 +102,28 @@ it('checks detailed land before hiding a regional city view', async () => {
   vi.advanceTimersByTime(300); scene.postRender.raiseEvent();
   await vi.advanceTimersByTimeAsync(0);
   expect(tiles.show).toBe(true);
+  stop();
+});
+
+it('loads the hidden mesh during the approach, and at any height only when asked to', () => {
+  expect(shouldPreloadHidden(399_000, true, false)).toBe(true);
+  expect(shouldPreloadHidden(PRELOAD_M, true, false)).toBe(false);
+  expect(shouldPreloadHidden(100_000, false, false)).toBe(false);
+  expect(shouldPreloadHidden(20_000_000, false, true)).toBe(true);
+  const scene = { globe: { ellipsoid: Ellipsoid.WGS84 }, canvas: { clientWidth: 800, clientHeight: 600 }, mode: SceneMode.SCENE3D, requestRender: vi.fn(),
+    postRender: new Event(), morphStart: new Event(), morphComplete: new Event() };
+  const camera = { changed: new Event(), moveStart: new Event(), moveEnd: new Event(), positionCartographic: { height: 5_000_000 }, pickEllipsoid: () => undefined };
+  const tiles = { show: true, preloadWhenHidden: true, getHeight: () => undefined, tileLoad: new Event(), tileUnload: new Event(), allTilesLoaded: new Event() };
+  let always = false;
+  const stop = watchPhotorealSurface({ scene, camera } as unknown as CesiumWidget, tiles as unknown as Cesium3DTileset, vi.fn(), async () => false, async () => false, () => always);
+  expect([tiles.show, tiles.preloadWhenHidden]).toEqual([false, false]); // whole-globe view: nothing is fetched
+  camera.positionCartographic.height = 200_000; camera.changed.raiseEvent();
+  expect([tiles.show, tiles.preloadWhenHidden]).toEqual([false, true]); // approaching: fetched, not drawn
+  camera.positionCartographic.height = 30_000; camera.changed.raiseEvent();
+  expect(tiles.show).toBe(true);
+  scene.mode = SceneMode.SCENE2D; scene.morphComplete.raiseEvent();
+  expect([tiles.show, tiles.preloadWhenHidden]).toEqual([false, false]);
+  always = true; camera.positionCartographic.height = 5_000_000; camera.changed.raiseEvent();
+  expect(tiles.preloadWhenHidden).toBe(true);
   stop();
 });

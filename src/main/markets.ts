@@ -203,7 +203,7 @@ export class MarketService {
   trending(): Promise<TrendingMarkets> {
     return this.cached('trending:us:volume', 5 * 60_000, async () => {
       const response = await fetchJson(MOST_ACTIVE_URL, { maxBytes: 1024 * 1024, timeoutMs: 10_000, rejectRedirects: true,
-        headers: { Accept: 'application/json', 'User-Agent': 'AtlasWatch/0.7.0' } });
+        headers: { Accept: 'application/json', 'User-Agent': 'SkyView/0.7.0' } });
       if (response.status !== 200) throw new Error('Yahoo Finance did not return a complete ranking.');
       return { items: normalizeMostActive(response.body), source: 'Yahoo Finance', fetchedAt: new Date().toISOString() };
     });
@@ -214,7 +214,7 @@ export class MarketService {
       const url = equityNewsUrl(symbol);
       const result = await this.cached('news:yahoo:' + symbol, 15 * 60_000, async () => {
         const response = await fetchText(url, { maxBytes: MAX_RSS, timeoutMs: 10_000, rejectRedirects: true,
-          headers: { Accept: 'application/rss+xml, application/xml', 'User-Agent': 'AtlasWatch/0.7.0' } });
+          headers: { Accept: 'application/rss+xml, application/xml', 'User-Agent': 'SkyView/0.7.0' } });
         if (response.status !== 200) throw new Error('Yahoo Finance did not return a complete news feed.');
         return { articles: parseEquityNews(response.text, symbol, name), source: 'Yahoo Finance', fetchedAt: new Date().toISOString() };
       });

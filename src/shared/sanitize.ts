@@ -20,7 +20,17 @@ export const EXTERNAL_LINK_HOSTS = [
   'weather.gov', 'noaa.gov', 'usgs.gov', 'naturalearthdata.com', 'census.gov', 'cesium.com', 'ollama.com',
   'adsb.lol', 'digitraffic.fi', 'celestrak.org', 'nasa.gov', 'arcgis.com', 'aviationweather.gov', 'ca.gov', 'mbta.com',
   'aisstream.io', 'opendata.aws', 'github.com', 'google.com', 'opendatacommons.org', 'creativecommons.org', 'sketchfab.com',
-  'tfl.gov.uk', 'data.gov.hk', 'drivebc.ca', 'quebec511.info', 'donneesquebec.ca',
+  'tfl.gov.uk', 'data.gov.hk', 'drivebc.ca', 'quebec511.info', 'donneesquebec.ca', 'openstreetmap.org',
+  'thespacedevs.com', 'gpsjam.org', 'eumetsat.int',
+  'cityofnewyork.us', 'data.gov.hk', 'madrid.es', 'paris.fr',
+  'vegagerdin.is', 'calgary.ca',
+  // Transit operators' licence pages (shared/transitFeeds.ts).
+  'capmetro.org', 'hsl.fi', 'ovapi.nl', 'entur.org', 'toronto.ca', 'mississauga.ca', 'hamilton.ca', 'durham.ca', 'guelph.ca', 'cityofkingston.ca', 'barrie.ca', 'yrt.ca', 'burlington.ca', 'data.rio', 'zditm.szczecin.pl', 'pid.cz', 'transport.data.gouv.fr', 'ztm.poznan.pl', 'dane.gov.pl', 'edmonton.ca', 'halifax.ca', 'bctransit.com', 'avmspa.it', 'rtd-denver.com', 'mpkrzeszow.pl',
+  // Air traffic control audio: opened in the system browser only (LiveATC terms forbid in-app streaming without consent).
+  'liveatc.net',
+  'gbfs.org', 'citibikenyc.com', 'divvybikes.com', 'capitalbikeshare.com', 'lyft.com', 'bluebikes.com', 'oslobysykkel.no', 'bergenbysykkel.no', 'trondheimbysykkel.no',
+  'inaturalist.org', 'weather.gc.ca', 'eccc-msc.github.io', 'kartaview.org', 'panoramax.fr', 'panoramax.xyz', 'gtfs.org',
+  'mta.info', 'septa.org', 'mta.maryland.gov', 'translink.com.au', 'renfe.com', 'data.norge.no', 'data.gov.my', 'gtfs-data.jp',
   ...keyedCameraLinkHosts(),
 ];
 

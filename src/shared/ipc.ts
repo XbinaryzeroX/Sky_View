@@ -1,6 +1,7 @@
 // IPC contract: channel names and runtime validation of every renderer
 // request. The main process rejects anything that does not match.
 
+import { planExportSchema, planSchema } from './protectivePlan';
 import { KEYED_CAMERA_IDS } from './keyedCameras';
 import { z } from 'zod';
 import { validateInstance } from './lemmy';
@@ -10,7 +11,9 @@ import { areaWatchEventSchema, areaWatchRuleInputSchema, MAX_AREA_WATCH_EVENTS }
 import { investigationSchema, investigationQuakeMagnitudeSchema, investigationQuakeWindowSchema, surfaceSchema, visualModeSchema } from './investigation';
 import { LAYER_IDS, type LayerId } from './layers';
 import type { Settings } from './types';
+import { TRACK_MAX_RETENTION_HOURS, TRACK_STORAGE_MAX_MB, TRACK_STORAGE_MIN_MB } from './timeline';
 import { imageryYearSchema } from './satelliteYears';
+import { isRenderScale } from './renderScale';
 
 export const DEFAULT_SETTINGS: Settings = {
   marketProvider: 'twelvedata',
@@ -49,6 +52,7 @@ export const DEFAULT_SETTINGS: Settings = {
   vehicleModels: true,
   worldAircraft: false,
   renderQuality: 'balanced',
+  renderScale: 1,
   homeLat: null,
   homeLon: null,
   orgName: '',
@@ -56,7 +60,15 @@ export const DEFAULT_SETTINGS: Settings = {
   firmsRegion: 'us',
   satelliteGroups: ['stations', 'visual'],
   trackRetentionHours: 6,
+  trackStorageMB: 250,
   radarEnabled: false,
+  lightningEnabled: false,
+  riversEnabled: false,
+  tomtomTraffic: false,
+  ionTerrain: false,
+  windEnabled: false,
+  windColorBySpeed: false,
+  trafficSimEnabled: false,
   geoSatEnabled: false,
   geoSatProduct: 'infrared',
   visualMode: 'normal',
@@ -140,7 +152,7 @@ export const watchItemSchema = z
   .strict();
 const docKind = z.enum(['boards', 'people']);
 
-const providerId = z.enum(['twelvedata', 'alphavantage', 'opensky', 'openfreemap', 'esri-imagery', 'mapbox', 'eox', 'ourairports', 'nws', 'dwd', 'usgs-quakes', 'usgs-basemap', 'nasa-gibs', 'terrain-tiles', 'adsblol', 'local-adsb', 'digitraffic', 'aisstream', 'celestrak', 'firms', 'nifc', 'awc', 'nhc', 'nowcoast', 'caltrans', 'fintraffic-cams', 'mbta', 'faa-sua', 'census-geocoder', 'aerodatabox', 'google3d', 'ollama', ...KEYED_CAMERA_IDS]);
+const providerId = z.enum(['twelvedata', 'alphavantage', 'opensky', 'openfreemap', 'esri-imagery', 'mapbox', 'eox', 'ourairports', 'nws', 'dwd', 'usgs-quakes', 'usgs-basemap', 'nasa-gibs', 'terrain-tiles', 'adsblol', 'local-adsb', 'digitraffic', 'aisstream', 'celestrak', 'firms', 'nifc', 'awc', 'nhc', 'nowcoast', 'eumetsat', 'caltrans', 'fintraffic-cams', 'mbta', 'faa-sua', 'census-geocoder', 'aerodatabox', 'google3d', 'tomtom', 'launchlibrary', 'openai', 'cesium-ion', 'ollama', ...KEYED_CAMERA_IDS]);
 
 export const locationInputSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -175,7 +187,7 @@ export const settingsPatchSchema = z
     historyRetentionDays: z.number().int().min(1).max(365),
     historyMaxRecords: z.number().int().min(100).max(50000),
     zoneLookupEnabled: z.boolean(),
-    basemap: z.enum(['atlas', 'streets', 'usgsImageryTopo', 'usgsTopo', 'gibsDaily', 'esri', 'mapbox', 'eox', 'naturalEarth', 'neutral', 'google3d', 'google2d']),
+    basemap: z.enum(['atlas', 'streets', 'usgsImageryTopo', 'usgsTopo', 'gibsDaily', 'esri', 'mapbox', 'eox', 'naturalEarth', 'neutral', 'google3d', 'google2d', 'ionBing']),
     imageryYear: imageryYearSchema,
     terrainEnabled: z.boolean(),
     labelsOverlay: z.boolean(),
@@ -197,14 +209,23 @@ export const settingsPatchSchema = z
     vehicleModels: z.boolean(),
     worldAircraft: z.boolean(),
     renderQuality: z.enum(['balanced', 'maximum']),
+    renderScale: z.number().refine(isRenderScale),
     homeLat: z.number().finite().min(-90).max(90).nullable(),
     homeLon: z.number().finite().min(-180).max(180).nullable(),
     orgName: z.string().max(120),
-    layersEnabled: z.array(z.enum(LAYER_IDS as [LayerId, ...LayerId[]])).max(20),
+    layersEnabled: z.array(z.enum(LAYER_IDS as [LayerId, ...LayerId[]])).max(40),
     firmsRegion: z.enum(['us', 'global']),
-    satelliteGroups: z.array(z.enum(['stations', 'visual', 'gnss', 'weather', 'science', 'starlink'])).max(6),
-    trackRetentionHours: z.number().int().min(1).max(72),
+    satelliteGroups: z.array(z.enum(['stations', 'visual', 'gnss', 'weather', 'science', 'starlink', 'telecom', 'imaging', 'debris'])).max(9),
+    trackRetentionHours: z.number().int().min(1).max(TRACK_MAX_RETENTION_HOURS),
+    trackStorageMB: z.number().int().min(TRACK_STORAGE_MIN_MB).max(TRACK_STORAGE_MAX_MB),
     radarEnabled: z.boolean(),
+    lightningEnabled: z.boolean(),
+    riversEnabled: z.boolean(),
+    tomtomTraffic: z.boolean(),
+    ionTerrain: z.boolean(),
+    windEnabled: z.boolean(),
+    windColorBySpeed: z.boolean(),
+    trafficSimEnabled: z.boolean(),
     geoSatEnabled: z.boolean(),
     geoSatProduct: z.enum(['infrared', 'color']),
     visualMode: z.enum(['normal', 'crt', 'nvg', 'thermal', 'anime', 'noir', 'snow']),
@@ -267,6 +288,13 @@ export const IPC = {
   layersSetView: 'layers:setView',
   layersRefresh: 'layers:refresh',
   tracksTrail: 'tracks:trail',
+  /** OpenSky's reported path of an aircraft's current flight (kept apart from recorded history). */
+  tracksFlightPath: 'tracks:flightPath',
+  launchesTimeline: 'launches:timeline',
+  voiceTranscribe: 'voice:transcribe',
+  radioSearch: 'radio:search',
+  /** NOAA GFS 10 m wind forecast field for the wind layer. */
+  weatherWind: 'weather:wind',
   tracksRange: 'tracks:range',
   timelineRange: 'timeline:range',
   timelineFrame: 'timeline:frame',
@@ -276,6 +304,12 @@ export const IPC = {
   providersTest: 'providers:test',
   providersBrowserKey: 'providers:browserKey',
   geocodeAddress: 'geocode:address',
+  plansList: 'plans:list',
+  plansPut: 'plans:put',
+  plansDelete: 'plans:delete',
+  planExport: 'plans:export',
+  siteBuilding: 'site:building',
+  siteFacilities: 'site:facilities',
   geocodeGoogle: 'geocode:google',
   annotationsList: 'annotations:list',
   annotationsPut: 'annotations:put',
@@ -306,6 +340,7 @@ export const IPC = {
   docsPut: 'docs:put',
   docsDelete: 'docs:delete',
   windowKiosk: 'window:kiosk',
+  windowControl: 'window:control',
   captureScreenshot: 'capture:screenshot',
 } as const;
 
@@ -417,6 +452,17 @@ export const ipcArgSchemas = {
   [IPC.layersSetView]: z.tuple([viewStateSchema]),
   [IPC.layersRefresh]: z.tuple([layerId]),
   [IPC.tracksTrail]: z.tuple([layerId, recordId]),
+  [IPC.tracksFlightPath]: z.tuple([z.string().regex(/^[0-9a-f]{6}$/)]),
+  [IPC.launchesTimeline]: z.tuple([z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)]),
+  // One recorded voice command: at most 1 MB of audio (about 15 s of Opus), in a format the recorder produces.
+  [IPC.radioSearch]: z.tuple([z.object({
+    query: z.string().max(80),
+    kind: z.enum(['all', 'news', 'music', 'scanner', 'atc']),
+    country: z.string().regex(/^[A-Z]{2}$/).nullable(),
+    near: z.object({ lat: z.number().finite().min(-90).max(90), lon: z.number().finite().min(-180).max(180) }).strict().nullable(),
+  }).strict()]),
+  [IPC.voiceTranscribe]: z.tuple([z.instanceof(Uint8Array).refine((b) => b.byteLength >= 1 && b.byteLength <= 1_000_000), z.enum(['audio/webm', 'audio/ogg', 'audio/mp4'])]),
+  [IPC.weatherWind]: z.tuple([]),
   [IPC.tracksRange]: z.tuple([]),
   [IPC.tracksSnapshot]: z.tuple([layerId, z.string().datetime()]),
   [IPC.timelineRange]: z.tuple([]),
@@ -424,8 +470,14 @@ export const ipcArgSchemas = {
   [IPC.providersList]: z.tuple([]),
   [IPC.providersSetCredential]: z.tuple([providerId, z.string().max(500).nullable()]),
   [IPC.providersTest]: z.tuple([providerId]),
-  [IPC.providersBrowserKey]: z.tuple([z.enum(['google3d', 'google2d', 'esri-imagery', 'mapbox'])]),
+  [IPC.providersBrowserKey]: z.tuple([z.enum(['google3d', 'google2d', 'esri-imagery', 'mapbox', 'tomtom', 'cesium-ion'])]),
   [IPC.geocodeAddress]: z.tuple([z.string().trim().min(3).max(200)]),
+  [IPC.plansList]: z.tuple([]),
+  [IPC.plansPut]: z.tuple([planSchema]),
+  [IPC.plansDelete]: z.tuple([id]),
+  [IPC.planExport]: z.tuple([planExportSchema, z.enum(['html', 'pdf'])]),
+  [IPC.siteBuilding]: z.tuple([lat, lon]),
+  [IPC.siteFacilities]: z.tuple([lat, lon, z.number().finite().min(100).max(5000)]),
   [IPC.geocodeGoogle]: z.tuple([z.string().trim().min(2).max(200)]),
   [IPC.annotationsList]: z.tuple([]),
   [IPC.annotationsPut]: z.tuple([annotationSchema]),
@@ -463,6 +515,7 @@ export const ipcArgSchemas = {
   [IPC.docsPut]: z.tuple([docKind, z.object({ id, createdAt: z.string().datetime() }).passthrough().refine((d) => JSON.stringify(d).length <= 100_000, 'Document too large')]),
   [IPC.docsDelete]: z.tuple([docKind, id]),
   [IPC.windowKiosk]: z.tuple([z.boolean()]),
+  [IPC.windowControl]: z.tuple([z.enum(['minimize', 'maximize', 'close'])]),
   [IPC.captureScreenshot]: z.tuple([]),
 } as const;
 

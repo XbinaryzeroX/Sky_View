@@ -81,7 +81,7 @@ export function HistoryDrawer(p: Props) {
         <span aria-hidden="true">{p.open ? '▾' : '▸'}</span> Event history
         <span className="muted small">
           {' '}
-          — records observed while Atlas Watch was running{page ? ` · ${page.storedTotal} stored` : ''}
+          — records observed while Sky_View was running{page ? ` · ${page.storedTotal} stored` : ''}
         </span>
       </button>
       {p.open && (
@@ -146,7 +146,7 @@ export function HistoryDrawer(p: Props) {
           {error && <div className="error-line">{error}</div>}
           <div className="history-table-wrap">
             {page && page.records.length === 0 ? (
-              <Empty>{page.storedTotal === 0 ? 'No records observed yet. History fills as Atlas Watch retrieves feeds while running.' : 'No records match these filters.'}</Empty>
+              <Empty>{page.storedTotal === 0 ? 'No records observed yet. History fills as Sky_View retrieves feeds while running.' : 'No records match these filters.'}</Empty>
             ) : (
               <table className="history-table">
                 <thead>
@@ -207,7 +207,7 @@ export function HistoryDrawer(p: Props) {
             )}
           </div>
           <p className="muted small history-note">
-            This is not a complete archive: Atlas Watch records only what it retrieved while running, within the retention limits.
+            This is not a complete archive: Sky_View records only what it retrieved while running, within the retention limits.
             {page?.oldestObservedAt ? (
               <>
                 {' '}

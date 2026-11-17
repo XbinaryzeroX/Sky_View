@@ -1,4 +1,8 @@
 .tracking-controls { position:absolute; z-index:35; top:58px; left:50%; transform:translateX(-50%); width:min(380px, calc(100% - 32px)); padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--panel); box-shadow:0 5px 20px #0005; }
 .tracking-controls > div:first-child { display:grid; gap:3px; margin-bottom:7px; }
 .tracking-controls p { margin:6px 0 0; line-height:1.4; }
+.passenger-seat-map { display:grid; gap:4px; margin:8px 0; }
+.passenger-seat-row { display:flex; gap:4px; }
+.passenger-seat-row .seat-button { min-width:37px; padding:4px; }
+.passenger-seat-row .aisle { margin-left:20px; }
 @media (max-width:900px) { .tracking-controls { top:auto; bottom:78px; } }

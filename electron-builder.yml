@@ -1,6 +1,6 @@
 appId: app.atlaswatch.desktop
-productName: Atlas Watch
-copyright: Copyright © 2026 Atlas Watch
+productName: Sky_View
+copyright: Copyright © 2026 Sky_View
 directories:
   output: release
   buildResources: build
@@ -33,7 +33,7 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: Atlas Watch
-  artifactName: Atlas-Watch-Setup-${version}.exe
+  shortcutName: Sky_View
+  artifactName: Sky_View-Setup-${version}.exe
   deleteAppDataOnUninstall: false
 publish: null
