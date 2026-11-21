@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS } from '../../shared/ipc';
 import type { AiStatus, Settings } from '../../shared/types';
 import { api, errorText } from '../lib/api';
 import { Modal } from './common';
+import { McpSettings } from './McpSettings';
 import { BASEMAPS } from '../map/basemaps';
 import { isRenderScale, RENDER_SCALES, renderScaleLabel } from '../../shared/renderScale';
 
@@ -20,7 +21,8 @@ export function SettingsDialog({ settings, onClose }: { settings: Settings; onCl
   async function save() {
     try {
       const patch: Partial<Settings> = {};
-      for (const k of Object.keys(s) as (keyof Settings)[]) if (s[k] !== settings[k]) (patch as Record<string, unknown>)[k] = s[k];
+      // The agent bridge switch saves on its own; this dialog's copy of it may be stale.
+      for (const k of Object.keys(s) as (keyof Settings)[]) if (k !== 'mcpEnabled' && s[k] !== settings[k]) (patch as Record<string, unknown>)[k] = s[k];
       if (patch.basemap) patch.imageryYear = null;
       await api.updateSettings(patch);
       setSaved(true);
@@ -283,6 +285,7 @@ export function SettingsDialog({ settings, onClose }: { settings: Settings; onCl
             </select>
           </label>
         </section>
+        <McpSettings enabled={settings.mcpEnabled} />
       </div>
     </Modal>
   );

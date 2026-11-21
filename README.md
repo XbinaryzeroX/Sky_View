@@ -145,7 +145,7 @@ tower frequencies. Ships and aircraft can be followed and recorded for playback.
 
 ### Weather, hazards and the ground
 
-Weather radar, lightning, an animated wind forecast, weather-satellite frames with a **two-hour history timeline**,
+Weather radar, lightning, an animated wind forecast, weather-satellite frames with a **four-hour history timeline**,
 U.S. weather alerts, earthquakes (off by default), fires, wildfire perimeters, cyclones, disaster reports, and
 **landslide estimates** from USGS after significant earthquakes.
 
@@ -184,6 +184,66 @@ it, compares walking and driving routes, and exports a briefing. Results are geo
 safety.
 
 ![Protective planning site view](docs/screenshots/readme/planning.jpg)
+
+### Storm tracks and forecast cones worldwide
+
+**Tropical cyclones** now shows every active storm in every basin (GDACS, which republishes the regional centres'
+advisories), with the past track (solid), the forecast track (dashed), forecast positions with their UTC times and
+the forecast cone. NHC advisories still cover the Atlantic and eastern Pacific. Cones and forecast positions are
+predictions; the cone is where the centre is likely to go, and impacts reach well beyond it. Radar, lightning density
+and weather-satellite clouds can be scrubbed back **four hours** in 10-minute steps.
+
+![Forecast cone and track of a Bay of Bengal storm](docs/screenshots/group6/cyclone-cone.jpg)
+
+### Recent satellite images for a box you draw
+
+In **Map tools**, choose **Recent satellite image…** and drag a box (up to 55 km across), for example around a fire,
+or use **Around selection** on a selected record. Sky_View lists the Sentinel-2 passes from the last 45 days with
+their cloud cover and drapes the one you pick over the 3D terrain at up to 10 m per pixel. Keyless: scenes come from
+Earth Search and the AWS Open Data copy of Sentinel-2, and only the parts of the file under the box are downloaded.
+
+### Director mode
+
+**Map tools → Director mode** has pins, notes, lines, outlines, and freehand **Sketch path** and **Sketch outline**
+(press and drag; the map holds still while you draw), with six colours. Every drawing can carry a note. Drawings are
+saved locally, can be exported as GeoJSON or shared in scene files, and each one says who made it: you, an AI agent
+or an Ask answer.
+
+![Sketches, a note, an agent's finding and a Sentinel-2 image over Malibu](docs/screenshots/group6/director-sentinel2-agent.jpg)
+
+### Watch an area
+
+**Watch** in the top bar flies to the Strait of Hormuz, Bab-el-Mandeb, the Taiwan Strait or the Black Sea and turns on aircraft, military-flagged aircraft, ships, GPS accuracy anomalies, violence in the news (GDELT) and mapped military sites. Each layer keeps its own source and coverage: aircraft come from volunteer receivers (sparse over Iran and Yemen, and military aircraft often fly without ADS-B), ships outside the Baltic need your free AISStream key, and news reports are machine-coded, not confirmed events.
+
+**Record an area for replay.** In the same menu, **Record in the background** keeps polling one area while Sky_View is open, even when you look elsewhere: aircraft and military aircraft (every 90 s and 2 min, waiting whenever adsb.lol asks), ships from your AISStream key, GPS accuracy cells (every 3 min) and conflict reports (every 15 min). A **REC** chip in the top bar shows what each feed last recorded and stops it. **Playback** then replays the area: aircraft and ship fixes, the GPS cells and conflict reports as they stood at each moment ("not recorded" where a poll was missed), and satellites calculated for the replay time. Recording only stores observations; nothing is extrapolated, and a day that was not recorded cannot be replayed.
+
+**Timed events.** Any drawing in Map tools can be marked as a timed event (strike, explosion, airspace or sea closure, incident) with the time it happened and an https link to where it was reported. Replay shows it from that minute on, labelled as reported. You place every event yourself from open reporting; the app places none.
+
+![Strait of Hormuz watch view with the Ask drop-down open](docs/screenshots/group7/hormuz-watch-ask-open.png)
+
+### Ask the planet
+
+Click **Ask AI** at the top right of the globe and type a question in the box that drops down, or hold the microphone and speak it (with your OpenAI key). The box stays closed until you open it; Escape closes it.
+The answer is written from the records around your view (the layers you have on, plus earthquakes), and the records
+it refers to are ringed on the globe at their own positions; the AI never places anything itself. Answers can be
+wrong, and each one says how many records it saw and which engine wrote it. It uses your local Ollama model when the
+local AI is on in Settings, otherwise your OpenAI key (one request per question, billed to you).
+
+### AI agents (MCP)
+
+Turn on **Settings → AI agents (MCP)** and paste the configuration it shows into your MCP client (Claude Desktop,
+Claude Code and others). Agents can then read the view, the layers that are on and their records, and add findings
+to the shared canvas, where they appear labelled with the agent's name. They cannot change settings, keys, saved
+places or your own drawings. The bridge is a Windows named pipe with a random token: nothing listens on the network
+and no firewall rule is added. It is off by default and closes when you turn it off.
+
+### Satellites by kind, and your own receiver
+
+**Satellites** has 25 groups in five sections (stations and bright; navigation: GPS, GLONASS, Galileo, BeiDou, SBAS;
+communications: Starlink, OneWeb, Kuiper, Qianfan, Iridium, geostationary, amateur; Earth observation; science and
+other), each coloured by section. With your own ADS-B receiver (readsb or dump1090 on an SDR, set up in Providers),
+the Aircraft layer shows how many aircraft your receiver hears and can draw its coverage: the farthest position heard
+in each of 36 directions.
 
 ### And more
 
@@ -705,6 +765,18 @@ takes precedence. Included-key daily allowances apply per installation. Provider
 6. **Local ADS-B receiver.** Enter your readsb/tar1090 `aircraft.json` URL. Only literal private IP
    addresses are accepted.
 
+## License
+
+Sky_View is **source-available** under the [PolyForm Noncommercial License 1.0.0](LICENSE.md).
+
+- **You may** read, run, build, change and share the code for any noncommercial purpose: personal use, study, research, hobby projects, and use by charities, schools and public bodies.
+- **You may not** sell Sky_View or a modified version, or use its code in software or services you sell or run for commercial advantage.
+- Keep the `Required Notice` line from LICENSE.md in any copy you share.
+
+This is not an OSI-approved open-source licence, because those cannot forbid commercial use. For commercial licensing, open an issue to get in touch.
+
+Bundled third-party data, models and libraries keep their own licences (see the table below, `THIRD_PARTY_NOTICES.md` and the `ATTRIBUTION` files). The Boeing 757 cockpit model is CC BY-NC-SA 4.0 and the cabin model CC BY 4.0 (`public/interior-models/ATTRIBUTION.txt`).
+
 ## Data sources, licensing, and attribution
 
 Code licenses and data terms are reviewed separately. The rows below record known conditions; optional
@@ -739,7 +811,7 @@ providers, account entitlements and imported data have their own rights and redi
 | Traffic flow: Paris permanent counters (`opendata.paris.fr`, `comptages-routiers-permanents`) | **ODbL 1.0** | About 3,000 road arcs with the city's traffic state; hourly and about a day behind; checked hourly. |
 | NOAA GFS on the AWS Open Data registry (`noaa-gfs-bdp-pds`) | U.S. public domain ([registry entry](https://registry.opendata.aws/noaa-gfs-bdp-pds/)) | Wind layer: the newest 1° run's 10 m u/v wind, two byte-range reads of about 80 kB plus a 50 kB index, at most once an hour while the layer is on. A forecast. |
 | nowCOAST lightning strike density (`ldn_lightning_strike_density`) | U.S. public domain | Lightning layer: 15-minute strike density on an 8 km grid from NLDN and GLD360, 25° S–80° N, 110° E eastward to 0°. WMS tiles every 5 minutes while on. |
-| nowCOAST radar and lightning, past frames (WMS `time` parameter) | U.S. public domain | Observed-weather history: the frame nearest the requested time, up to two hours back in 10-minute steps (radar frames are about 4 minutes apart, lightning 15). Weather-satellite history uses the same GIBS and EUMETSAT sources at earlier frame times. |
+| nowCOAST radar and lightning, past frames (WMS `time` parameter) | U.S. public domain | Observed-weather history: the frame nearest the requested time, up to four hours back in 10-minute steps (radar frames are about 4 minutes apart, lightning 15). Weather-satellite history uses the same GIBS and EUMETSAT sources at earlier frame times. |
 | The Space Devs Launch Library 2 (`ll.thespacedevs.com`) | [Terms](https://thespacedevs.com/llapi): free use, courtesy attribution, no completeness guarantee; anonymous limit 15 requests per hour | Launches layer: one request per hour while on (30 days back, 14 ahead). |
 | The Space Devs Launch Library 2, launch detail (`/2.3.0/launches/{id}/?mode=detailed`) | Same terms and the same 15-requests-per-hour allowance | Launch event replay: one request when you press "Load the event timeline" for a selected launch, cached six hours. Published event times relative to liftoff, not telemetry; no trajectory is published, so none is drawn. |
 | adsb.lol aircraft quality fields (NIC, NACp, GPS loss) | **ODbL 1.0** | GPS accuracy layer: one 250 nm request around the view center at most once a minute per area, every 2 minutes while on. Cell score and bands from [gpsjam.org's published method](https://gpsjam.org/faq); per-aircraft rule ported from God's Eye View (MIT). Anomalies, not detections. |
@@ -806,6 +878,10 @@ providers, account entitlements and imported data have their own rights and redi
 | OpenAI speech-to-text (optional, `api.openai.com/v1/audio/transcriptions`, model whisper-1) | [OpenAI terms](https://openai.com/policies/terms-of-use), **metered** per minute of audio, customer key | Voice commands (one recording per held button press) |
 | Launch Library 2 token (optional) | [The Space Devs](https://thespacedevs.com/llapi), paid supporter plan | Higher allowance for launches and launch replay |
 | USGS Ground Failure (`earthquake.usgs.gov/fdsnws/event/1/query?producttype=ground-failure`) | U.S. government work, public domain | Landslide estimates after significant earthquakes (model, not observations) |
+| GDACS tropical cyclone events and storm geometry (`www.gdacs.org/gdacsapi`) | [GDACS](https://www.gdacs.org/): free use with attribution | Tropical cyclones worldwide: past track, forecast track, forecast positions and uncertainty cone per advisory; one list request and one geometry request per new advisory, every 30 minutes while the layer is on |
+| Earth Search STAC API (`earth-search.aws.element84.com`) | [Element 84 Earth Search](https://element84.com/earth-search/), free and keyless | Recent imagery: finds Sentinel-2 L2A scenes for a box you draw (one search per box or cloud setting) |
+| Sentinel-2 L2A cloud-optimised GeoTIFFs (`sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/`) | [Copernicus Sentinel data](https://sentinels.copernicus.eu/documents/247904/690755/Sentinel_Data_Legal_Notice), free and open; [AWS Open Data](https://registry.opendata.aws/sentinel-2-l2a-cogs/) | Recent imagery: the header and the tiles under the box of the true-colour file you pick (byte ranges, at most 36 tiles) |
+| OpenAI chat completions (`api.openai.com/v1/chat/completions`) | Your OpenAI account and terms; billed to you | Ask the planet, only when the local Ollama model is off; one request per question |
 | Radio Browser directory (`de1.api.radio-browser.info`) | [Radio Browser](https://www.radio-browser.info/): directory data public domain; audio is each station's own | Worldwide radio search; streams play through the app's audio relay (station ids only, public addresses only, audio types only) |
 | OpenFreeMap waterways (rivers overlay) | OpenMapTiles / © OpenStreetMap contributors (ODbL) | Rivers and canals overlay |
 | Google Maps Street View external link | Google Maps viewer terms and imagery attribution remain in Google's viewer | User-clicked browser handoff only; no embedded/static API, imagery download or reuse license. See [Street View notes](docs/STREET_VIEW.md). |

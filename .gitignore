@@ -49,3 +49,9 @@ public/vehicle-models/*
 !public/vehicle-models/crj.glb
 !public/vehicle-models/erj145.glb
 !public/vehicle-models/md11.glb
+
+# Local scratch and generated media (never commit)
+.qa/
+tmp/
+brag-output/
+brag-output-*/

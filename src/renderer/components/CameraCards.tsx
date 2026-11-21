@@ -3,7 +3,7 @@
 // the publisher's latest still, reloaded at the publisher's interval; nothing here is live video or analysis.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Cartesian3, Cartographic, EllipsoidalOccluder, SceneTransforms, type CesiumWidget } from 'cesium';
-import { CARD_H, CARD_W, cameraTag, NEXT_FRAME_COOLDOWN_MS, placeCameraCards, TAG_MAX_DISTANCE_M, type PlacedCard, type ScreenCamera } from '../../shared/cameraCards';
+import { CARD_H, CARD_W, cameraTag, camerasNear, NEXT_FRAME_COOLDOWN_MS, placeCameraCards, TAG_MAX_DISTANCE_M, type PlacedCard, type ScreenCamera } from '../../shared/cameraCards';
 import { Maximize2, RefreshCw } from 'lucide-react';
 import type { GeoRecord } from '../../shared/layers';
 import { refreshedImageUrl } from '../lib/cameraRecovery';
@@ -17,6 +17,8 @@ interface Props {
 }
 
 const UPDATE_MS = 16;
+/** Terrain height lookups per update; the rest wait a frame (each one is a ray pick against the loaded tiles). */
+const HEIGHT_LOOKUPS_PER_UPDATE = 24;
 
 export function CameraCards({ widget, records, enabled, onOpen }: Props) {
   const [layout, setLayout] = useState<{ cards: PlacedCard[]; tags: ScreenCamera[] }>({ cards: [], tags: [] });
@@ -35,17 +37,20 @@ export function CameraCards({ widget, records, enabled, onOpen }: Props) {
     const update = () => {
       pending = undefined;
       last = performance.now();
-      const height = widget.camera.positionCartographic.height;
+      const here = widget.camera.positionCartographic;
+      const height = here.height;
       if (height > TAG_MAX_DISTANCE_M) { shown.current = new Set(); setLayout((l) => (l.cards.length || l.tags.length ? { cards: [], tags: [] } : l)); return; }
       const canvas = scene.canvas;
       const eye = widget.camera.positionWC;
       // Horizon test from the camera position (an ellipsoid-radius shortcut fails at street height in mid-latitudes).
       const occluder = new EllipsoidalOccluder(scene.globe.ellipsoid, eye);
       const cams: ScreenCamera[] = [];
-      for (const r of recordsRef.current) {
+      let lookups = 0;
+      for (const r of camerasNear(recordsRef.current, here.latitude * 180 / Math.PI, here.longitude * 180 / Math.PI, TAG_MAX_DISTANCE_M)) {
         // The camera's point on the street: loaded ground height, kept per camera so the anchor does not wobble.
         let ground = groundCache.current.get(r.id);
-        if (ground === undefined) {
+        if (ground === undefined && lookups < HEIGHT_LOOKUPS_PER_UPDATE) {
+          lookups++;
           const h = scene.globe.getHeight(Cartographic.fromDegrees(r.lon, r.lat));
           if (h !== undefined) { ground = h; groundCache.current.set(r.id, h); }
         }
@@ -57,7 +62,7 @@ export function CameraCards({ widget, records, enabled, onOpen }: Props) {
       }
       // Keep cards and tags off the floating panels (Layers, details, tools) so they never cover them.
       const box = canvas.getBoundingClientRect();
-      const reserved = [...document.querySelectorAll('.floating-panel, .right-panel, .float-pill, .voice-control, .radio-now, .hud')].map((el) => {
+      const reserved = [...document.querySelectorAll('.floating-panel, .right-panel, .float-pill, .voice-control, .ask-planet, .radio-now, .hud')].map((el) => {
         const r = el.getBoundingClientRect();
         return { left: r.left - box.left - 8, top: r.top - box.top - 8, right: r.right - box.left + 8, bottom: r.bottom - box.top + 8 };
       }).filter((r) => r.right > r.left && r.bottom > r.top);

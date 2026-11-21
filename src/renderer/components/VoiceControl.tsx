@@ -16,7 +16,7 @@ function pickMime(): 'audio/webm' | 'audio/ogg' | 'audio/mp4' | null {
   return null;
 }
 
-export function VoiceControl({ onAction, onGo }: { onAction(a: VoiceAction): string | null; onGo(lat: number, lon: number, label: string): void }) {
+export function VoiceControl({ onAction, onGo, onQuestion, inline }: { onAction(a: VoiceAction): string | null; onGo(lat: number, lon: number, label: string): void; onQuestion?(text: string): void; inline?: boolean }) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [message, setMessage] = useState('Hold to speak');
   const [place, setPlace] = useState<string | null>(null);
@@ -54,6 +54,7 @@ export function VoiceControl({ onAction, onGo }: { onAction(a: VoiceAction): str
           const { text } = await api.voiceTranscribe(bytes, mime);
           const action = parseVoiceCommand(text);
           if (action.kind === 'go') { setMessage(`Heard “${text}”. Looking up ${action.place}…`); setPlace(action.place); return; }
+          if (action.kind === 'unknown' && onQuestion && text.trim().length > 2) { setPhase('done'); setMessage(`Asking: “${text}”`); onQuestion(text); return; }
           if (action.kind === 'unknown') { setPhase('error'); setMessage(text ? `Heard “${text}”, but that is not a command I know. Try “show aircraft” or “go to Paris”.` : 'Nothing was heard.'); return; }
           const done = onAction(action);
           setPhase('done');
@@ -71,7 +72,7 @@ export function VoiceControl({ onAction, onGo }: { onAction(a: VoiceAction): str
   function stop() { if (rec.current?.state === 'recording') rec.current.stop(); }
 
   return (
-    <div className={`voice-control voice-${phase}`}>
+    <div className={`${inline ? 'voice-inline' : 'voice-control'} voice-${phase}`}>
       <button className="voice-btn" aria-pressed={phase === 'listening'} aria-label={phase === 'listening' ? 'Stop recording and send the voice command' : 'Hold to give a voice command'}
         onPointerDown={(e) => { e.preventDefault(); void start(); }} onPointerUp={stop} onPointerLeave={stop}
         onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); if (phase === 'listening') stop(); else void start(); } }}>

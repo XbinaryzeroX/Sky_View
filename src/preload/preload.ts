@@ -48,6 +48,13 @@ const C = {
   launchesTimeline: 'launches:timeline',
   voiceTranscribe: 'voice:transcribe',
   radioSearch: 'radio:search',
+  sentinelSearch: 'imagery:sentinelSearch',
+  sentinelRender: 'imagery:sentinelRender',
+  askPlanet: 'ask:planet',
+  mcpStatus: 'mcp:status',
+  recordingStatus: 'recording:status',
+  sdrReceiver: 'sdr:receiver',
+  annotationsChanged: 'annotations:changed',
   weatherWind: 'weather:wind',
   tracksRange: 'tracks:range',
   timelineRange: 'timeline:range',
@@ -152,6 +159,19 @@ const api = {
   launchTimeline: (id: string) => ipcRenderer.invoke(C.launchesTimeline, id),
   voiceTranscribe: (audio: Uint8Array, mime: string) => ipcRenderer.invoke(C.voiceTranscribe, audio, mime),
   radioSearch: (q: unknown) => ipcRenderer.invoke(C.radioSearch, q),
+  sentinelSearch: (box: unknown, maxCloud: number) => ipcRenderer.invoke(C.sentinelSearch, box, maxCloud),
+  sentinelRender: (sceneId: string, box: unknown) => ipcRenderer.invoke(C.sentinelRender, sceneId, box),
+  askPlanet: (question: string, view: unknown) => ipcRenderer.invoke(C.askPlanet, question, view),
+  mcpStatus: () => ipcRenderer.invoke(C.mcpStatus),
+  recordingStatus: () => ipcRenderer.invoke(C.recordingStatus),
+  sdrReceiver: () => ipcRenderer.invoke(C.sdrReceiver),
+  onAnnotationsChanged: (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on(C.annotationsChanged, listener);
+    return () => {
+      ipcRenderer.removeListener(C.annotationsChanged, listener);
+    };
+  },
   wind: () => ipcRenderer.invoke(C.weatherWind),
   trackRange: () => ipcRenderer.invoke(C.tracksRange),
   timelineRange: () => ipcRenderer.invoke(C.timelineRange),

@@ -1675,3 +1675,136 @@ The owner approved a check with their Google key. It did not run: no mesh was re
 **Verified.** Typecheck, build, full suite: 103 files, 1,433 tests (new `tests/brand-data-folder.test.ts` guards the data folder, appId and names). Test window: title "Sky_View", no "Atlas Watch" text on screen.
 
 **Not verified.** First launch against the real profile after the rename (the owner's data was not touched), a packaged build and an installer upgrade from an Atlas Watch install.
+
+
+## 2026-11-17: Weather cones, satellite groups, recent Sentinel-2 imagery, Director mode, Ask the planet, AI agents (MCP), receiver coverage
+
+**Changed.**
+- **Tropical cyclones worldwide.** `shared/cycloneTracks.ts` reads the GDACS event list and, per current storm, the advisory geometry: advisory positions (circles labelled "17/11 12:00 UTC"), and the "Uncertainty Cones" polygon. Positions after the advisory time are forecasts. Records: storm point, past track, forecast track, forecast positions, cone. NHC records are kept; a GDACS storm point is dropped when NHC lists the same name. One cache row per storm holds its latest advisory, so each advisory is downloaded once. Markers sit 10 km up and keep the depth test, so storms on the far side of the Earth are hidden (before, the storm icon drew through the globe). Sources: https://www.gdacs.org/gdacsapi/swagger/index.html; the GDACS host was already allow-listed.
+- **Weather history** extended from two to four hours (radar keeps about 7 h, lightning about 4.5 h in nowCOAST).
+- **Satellites.** `shared/satelliteGroups.ts`: 25 groups (group names read from https://celestrak.org/NORAD/elements/ on 2026-11-17) in five sections with Okabe–Ito colours. The settings schema accepts the new ids (additive).
+- **Recent imagery.** `shared/sentinel.ts`, `shared/utm.ts` (Krüger series), `main/sentinel.ts`, `components/RecentImageryPanel.tsx`, `map/sentinelOverlay.ts`. Earth Search STAC search (POST, `query` on cloud cover), then the COG header (64 KB) and only the tiles under the box (≤ 36, 4 at a time), deflate + predictor 2 decoded with `node:zlib`, resampled north-up per output pixel through UTM, written as PNG in the main process; the renderer decodes it to an ImageBitmap (flipY) and drapes it as one imagery layer. No-data pixels are transparent. New allow-list entries: `earth-search.aws.element84.com` (host) and the Sentinel-2 bucket path prefix.
+- **Director mode.** Tools `draw-note`, `sketch-line`, `sketch-area`, `draw-box` (drag tools hold the camera; one LEFT_DOWN handler serves sketches and plan dragging). Strokes are thinned with Douglas–Peucker (`shared/sketch.ts`). Annotations gain optional `note`, `source` (user/agent/ask), `author` and `sketch` fields: additive, older annotations and scene files still load.
+- **Ask the planet.** `shared/askPlanet.ts`, `main/askPlanet.ts`, `components/AskPlanet.tsx`. Context: up to 80 nearest records in a radius from the camera height (satellites excluded: their stored positions are not current), as one-line quoted data with control characters and separators removed. The model returns JSON with refs; marks are placed at the records' own positions, unknown refs are dropped. Engine: local Ollama when on, else the customer's OpenAI key (model picked from the free `/v1/models` list). The voice button sits inside the bar; a sentence that is not a command becomes a question.
+- **AI agents (MCP).** `main/mcpBridge.ts`, `src/mcp/server.ts` (bundled to `dist/mcp/sky-view-mcp.cjs`), `shared/mcpTools.ts`, `components/McpSettings.tsx`. Named pipe `\\.\pipe\sky-view-mcp-<hash of the data folder>`, 32-byte token compared in constant time, 40 requests per 10 s per connection, 1 MB message cap, 500 agent findings at most. Tools: get_view, list_layers, query_records, list_findings, add_finding, remove_finding (agent findings only). The connection file is deleted when the bridge stops. The client config uses Sky_View's own executable with `ELECTRON_RUN_AS_NODE`.
+- **Your receiver.** `shared/sdrCoverage.ts`, `components/ReceiverCoverage.tsx`: readsb `receiver.json` beside the configured `aircraft.json` (the only new local address), farthest position per 10° sector, positions beyond 650 km ignored.
+- IPC channels added in all five places: `imagery:sentinelSearch`, `imagery:sentinelRender`, `ask:planet`, `mcp:status`, `sdr:receiver`; push event `annotations:changed`.
+
+**Verified.**
+- Typecheck, production build, full suite with `--maxWorkers=4`: 106 files, 1,483 tests. New: `tests/cyclone-tracks.test.ts` (real GDACS fixtures), `tests/sentinel.test.ts` (real Earth Search reply and the first 8 KB of a real TCI.tif; UTM against the CN Tower reference), `tests/group6.test.ts` (Ask parsing and injection, MCP bridge with a real named pipe, sketches, receiver coverage, satellite groups), new rejection cases in `tests/ipc-security.test.ts`. `tests/group5.test.ts` now expects chat completions to be reachable (needed by Ask) and `/v1/files` blocked.
+- Dev app on the LED monitor with a throwaway profile (deleted afterwards): the bridge listened; a test agent started the bundled server with Electron's runtime and called initialize, tools/list, get_view, list_layers, add_finding, list_findings; the finding appeared on the globe labelled "· Test agent" and survived a restart. Drawing a box over Malibu listed 7 Sentinel-2 passes (0–3% cloud) and draped the 8 Nov pass at 10 m, aligned with the coastline. Sketch path, sketch outline and a note saved; the note editor opened. Ask with no engine showed "Turn on the local AI (Ollama) in Settings, or add your OpenAI key in Providers." Cyclones: 2 live storms (Akvan, Xavier) with tracks, forecasts and cones; Akvan's cone and times drawn; Xavier no longer drawn through the Earth. Screenshots: `docs/screenshots/group6/`.
+
+**Not verified.**
+- An Ask answer from a real model: no Ollama model here, and the OpenAI path was not run (it would be a billed request).
+- The MCP server with a real client (Claude Desktop or Claude Code), and the packaged build (`ELECTRON_RUN_AS_NODE` in the packaged executable and copying the script out of the asar).
+- Receiver coverage against real readsb hardware; AIS from your own receiver (AIS-catcher) was not added because its JSON format could not be confirmed from its documentation.
+- In the scripted test the sketches picked up stray points from the real mouse cursor while synthetic pointer events were sent; normal drawing was not checked by hand.
+
+**Remaining.** AIS-catcher support once its JSON can be checked against a real receiver; GDACS wind-speed buffers (green/orange/red areas) are read but not drawn.
+
+
+## 2026-11-18: Far-side markers hidden, Ask drop-down, satellite height line, watch areas
+
+**Changed.**
+- **Markers showing through the earth.** Every layer label (and the landslide, launch and similar markers) is drawn without the depth test so terrain never hides it, which also let it show through the globe from the far side (seen with landslide and conflict labels). `LayerRenderer.cullBehindEarth` now applies the horizon test it used for aircraft and vessels to every layer's billboards, labels and points (3D only), on camera moves and on each satellite propagation step.
+- **Ask the planet** is now a closed **Ask AI** pill at the top right of the globe; the question box and the answer drop down from it (Escape closes; a spoken question opens it). It moved from the top centre because the aircraft altitude legend sits there.
+- **Satellites.** Positions were already drawn at their SGP4 height (checked: `geo.height * 1000` in `satPosition`). The selected satellite now also gets a dashed line straight down to the point under it, so its height reads against the globe.
+- **Watch areas** (`shared/watchAreas.ts`, top-bar **Watch** picker): Strait of Hormuz, Bab-el-Mandeb, Taiwan Strait, Black Sea. Flies there and turns on aircraft, military aircraft, vessels, GNSS anomalies, GDELT conflicts and OSM military sites, with a coverage note; the ship note appears only when no AISStream key is saved. No new source or host.
+- **LiveATC.** Not played in the app: LiveATC's terms (recorded 2026-11-16 above) forbid an app that plays their streams without their consent. The ATC button still opens their page in the browser.
+- **Reference repo check** (`C:\pinokio\api\gods-eye-view.git`, read only, no code run): it holds `.env.example` only, no key values. Keys it supports that Sky_View has too: AISStream, OpenSky client, Cesium ion, Google Maps, TomTom, Launch Library 2, OpenAI, FIRMS. Ones Sky_View does not use: Mapillary client token (street photos), World News API, Liveuamap (paid), Gemini, Ontario 511.
+
+**Verified.** Typecheck; full suite with `--maxWorkers=4`: 107 files, 1,486 tests (new `tests/group7.test.ts`: watch-area layers and coordinates, Ask renders closed with no input). Production build. Dev app on the LED monitor with a throwaway profile (deleted): over the Pacific with cyclones, landslides, conflicts and satellites on, no far-side labels showed; Ask opened from the pill with the input focused; Watch → Strait of Hormuz flew there and loaded military aircraft (99), conflicts and GPS cells; the drop-down sits clear of the altitude legend. Screenshot: `docs/screenshots/group7/hormuz-watch-ask-open.png`.
+
+**Not verified.** The satellite height line (selecting a satellite was not scripted). The all-aircraft layer in that run returned HTTP 429 from adsb.lol after several runs. Ships at Hormuz (no AISStream key in the test profile).
+
+
+## 2026-11-18 (later): Watch-area recording, replay of GPS cells, conflicts and satellites, timed event markers
+
+**Asked.** A Hormuz replay along the lines of a published open-source reconstruction (flights, satellites, GPS jamming, shipping, no-fly zones, strike points). The user chose: record a watch area, worldwide no-fly zones, strike and event markers.
+
+**Changed.**
+- **Recording** (`main/layers/areaRecorder.ts`, setting `recordAreaId`, default off). While the app runs it polls the chosen watch area independently of the view: aircraft every 90 s, military aircraft every 2 min (reuses the live layer's list when it is polling), AIS ships every 60 s from the AISStream socket (the area box is subscribed alongside the view, or alone when the vessel layer is off), GPS accuracy cells every 3 min, conflicts every 15 min (reuses the live list when on). Only records inside the area box are kept. It shares the live layers' adsb.lol backoff and skips a poll while that host asks to wait; an incomplete reply with no aircraft is reported as not recorded, never as an empty sky. Other errors pause that feed for 5 minutes.
+- **Snapshot archive** (`main/layerFrames.ts`, table `layer_frames`, additive). GPS cells and conflicts are stored as whole snapshots; an unchanged snapshot only moves its last-seen time. A snapshot stands for 10 min (GPS) or 45 min (conflicts) after it was last seen, then replay says "not recorded". Bounded by retention (the track retention setting), 20,000 rows and 96 MB; JSON is checked on read. Cleared with history.
+- **Replay** (`timeline:frame` now returns `layers`): Globe draws the recorded GPS cells and conflicts in playback, and the satellites layer (if on) at the replay time from the current elements (calculated, as live).
+- **Timed events** (annotation fields `eventAt`, `eventKind`, `sourceUrl`; additive and optional, older drawings and scene files load). Edited under each drawing in Map tools (`components/EventFields.tsx`): time entered in local time and stored in UTC, https links only. On the globe the label adds "Strike 09:12 UTC 18 Nov (reported)"; in replay the drawing appears from that time.
+- **Top bar**: the Watch menu has "Record in the background" and "Stop recording"; `components/RecordingChip.tsx` shows REC with each feed's last result in its tooltip, amber and "partial" when a feed failed.
+- New IPC channel `recording:status` in all five places.
+
+**Verified.** Typecheck; full suite with `--maxWorkers=4`: 108 files, 1,496 tests (new `tests/watch-recording.test.ts`: area boxes across the date line, setting validation, event schema and https-only links, snapshot standing/expiry/size limit, recorder storing only in-area aircraft, GPS cells and AIS ships, waiting on an adsb.lol pause, an empty incomplete reply reported as not recorded, which failed before its fix). Production build. Dev app, throwaway profile (deleted), view over Paris, recording Hormuz for 200 s: conflict reports recorded (5) and returned by the replay frame; GPS and military polls waited on an adsb.lol pause (this PC had been rate-limited by earlier test runs); ships reported "need an AISStream key"; the REC chip showed "partial".
+
+**Not verified.** A recorded aircraft or GPS-cell replay from a live source (adsb.lol was limiting this PC during the check). Ships (no AISStream key in the test profile). Drawing the recorded layers and replay-time satellites on screen in Playback. Hours-long recording size.
+
+**Not done: worldwide no-fly zones.** Airspace closures outside the U.S. are published as NOTAMs. The FAA NOTAM API needs a client id and secret from the FAA, its older endpoint is being retired in favour of the NOTAM Management Service, and credentials for that are requested by email to the FAA. The response format could not be confirmed without credentials, so nothing was built against a guessed format. Remaining: build it once the user has FAA credentials, with the reply checked against real NOTAMs.
+
+
+## 2026-11-18 (evening): Frame rate with all aircraft loaded
+
+**Changed.** Cameras are drawn as one batched GPU billboard collection instead of ~10,000 clustered entities (`LayerRenderer.updateCameraBatch`). Horizon culling writes marker visibility only when it changes. New debug-only test hooks: `__atlasDebug.measureFrames(ms)` (frames per second, per-frame main-thread time, entity counts), and `pickId` now also reports ids of batched primitives.
+
+**Verified.** Measured on the owner's settings, same route before and after: world view 16.7 → 251 fps, Europe 10.8 → 134 fps, London 8.2 → 184 fps (full table in `docs/PERFORMANCE.md`). Camera picking and selection checked in the app (screenshot `docs/screenshots/performance/cameras-batched-selected.png`). Typecheck, build, full suite (108 files, 1,496 tests).
+
+**Not verified.** With Photoreal 3D on (it would send requests billed to the owner's Google key). The packaged build. Other GPUs.
+
+**Changed behaviour.** Camera icons fade and shrink with distance instead of clustering into numbered groups, and only the selected camera shows its name on the globe.
+
+
+## 2026-11-18 (night): Zoom-in lag and disappearing aircraft
+
+**Changed.** `VehicleModelLayer.sync` starts at most 4 new models per pass with at most 8 loading (`MODELS_PER_PASS`, `MODELS_LOADING`); the layer renderer schedules another pass while some wait. `aircraftViewRadiusNm` sizes the adsb.lol request to the visible box as well as the height. `LayerManager.setView` skips aircraft requests for views inside the last request's circle (`aircraftCoverage`, `aircraftCoveredBy`). `fetchAircraft` fills the view from the held OpenSky snapshot while adsb.lol is paused or an area failed. Test hook `__atlasDebug.measureZoom`.
+
+**Verified.** New `tests/zoom-aircraft.test.ts` (tilted-view radius; covered and uncovered views; four zoom steps send no request where each did before; the held snapshot fills a paused view and is marked as a snapshot, and nothing is substituted with Worldwide aircraft off). `tests/layer-render-aging.test.ts`: its model stand-in gained `pendingCount` (no assertion changed). Typecheck, build, full suite 109 files, 1,500 tests. Measured zoom route in `docs/PERFORMANCE.md` (worst frame 1,742 → 523 ms on the first zoom, 1,421 → 116 ms on the second).
+
+**Not verified.** With live adsb.lol traffic (it was rate-limiting this PC; a loopback stand-in receiver supplied the aircraft). With Photoreal 3D on (billed to the owner's key). The packaged build.
+
+
+## 2026-11-18 (late): Crash while zooming into New York with cameras
+
+**Changed**
+- `src/main/crashRecovery.ts` (new) and `main.ts`: a renderer process that dies (`render-process-gone`, any reason except a clean exit) is reloaded automatically, up to three times in five minutes, then a dialog suggests Balanced quality or Satellite instead of Photoreal 3D. GPU process exits (`child-process-gone`) and unresponsive windows are logged too. Each event adds one line to `<userData>/logs/crashes.log`: time, process, reason, exit code; no coordinates or URLs; newest 200 lines.
+- `Globe.tsx`: a lost WebGL context reloads the page, at most three times in five minutes. After that a notice asks for Balanced quality and a manual reload. Before this, Cesium's render-error retry gave up after 20 tries and the globe stayed frozen. The last camera view is restored after a reload.
+- `usgsProvider.ts`: the shoreline blend no longer reads pixels back on the main thread (see PERFORMANCE.md).
+- `shared/cameraCards.ts` `camerasNear`, `CameraCards.tsx`: ground-height lookups only for cameras within 4 km, at most 24 per frame.
+
+**Verified**
+- `tests/nyc-zoom-crash.test.ts` (5 tests). The shoreline test fails against the previous `usgsProvider.ts` (it saw `getImageData`) and passes now. Also covered: `camerasNear` with 9,810 cameras, the date line and a pole; crash log line contents and the 200-line cap; the reload gate.
+- Typecheck; full suite 110 files, 1,505 tests; production build.
+- Built app, owner's display settings without Photoreal 3D, throwaway profiles (deleted): the Midtown zoom's worst frame went from 3.4–3.5 s to 0.48–0.49 s. Three laps of street-level panning showed no memory growth and no crash. Screenshot: `docs/screenshots/performance/nyc-times-square-camera-card.png`.
+
+**Not verified**
+- The original crash was not reproduced: there was no log of it, and Photoreal 3D over Manhattan was not run because it bills the Google key.
+- The reload paths were not triggered for real (no renderer was killed, no context was lost). Only the rules are unit-tested.
+- Packaged build and installer.
+
+**Remaining**
+- Shader linking (about 8 s per zoom route, spread across frames), Cesium's per-frame billboard pass over about 20,000 billboards, and OpenFreeMap vector tile drawing on the main thread still cause occasional long frames at street level.
+- Correction (2026-11-19): the run described on the next line did not load Photoreal 3D. No Google key was available to the throwaway profile, so this verified only the normal globe with that surface selected (see PERFORMANCE.md).
+- (Superseded) Photoreal 3D over Manhattan, run once with the owner’s approval, gave no crash, crash log empty, renderer at most 2.6 GB, GPU process at most 1.6 GB, worst frame 2.8 s while panning (see PERFORMANCE.md). Tiles stayed at coarse detail during constant motion, so a long stay at full detail is still untested.
+
+## 2026-11-18 (night): Freeze while zooming with the owner's settings; async safeStorage
+
+**Reported.** Zooming in with the owner's settings froze the app. The new crash log recorded three `unresponsive` events within 40 s (02:45:03, 02:45:19, 02:45:41 UTC), and the console showed Electron 45's deprecation warning for `safeStorage.decryptString`.
+
+**Changed**
+- `crashRecovery.ts` `stackSummary`, `main.ts`, `security.ts`: when the window stops responding, the main process collects the running JavaScript stack (`frame.collectJavaScriptCallStack()`, enabled by a `Document-Policy: include-js-call-stacks-in-crash-reports` header on the app's HTML) and adds it to the `unresponsive` line in `crashes.log`. Only function names, file names, lines and columns are kept, at most 14 frames.
+- `secrets.ts`, `store.ts` `metaKeys`, `main.ts`: saved keys are decrypted once at startup with `safeStorage.decryptStringAsync` and then served from memory. New keys are encrypted with `encryptStringAsync`. A removal wins over an older save that is still encrypting. The deprecated sync calls are used only when the async ones are missing (tests).
+
+**Verified**
+- `tests/secrets-async.test.ts` (4 tests): keys written in the old format load through the async calls, and no sync call is made; removal wins over an older save; re-encryption on request; the stack summary drops query strings and paths. Typecheck; full suite 111 files, 1,509 tests; production build. The new build started without the deprecation warning.
+- Real wheel input via the DevTools protocol (400 wheel steps into Manhattan down to about 330 m), using a copy of the owner's database with Photoreal 3D switched off in the copy: worst wait for a frame 44 ms, no freeze. The copy was deleted afterwards.
+
+**Found, not changed:** none of the 7 saved keys in the owner's profile (`google3d`, `cesium-ion`, `twelvedata`, `alphavantage`, `cam-nsw`, `cam-se`, `cam-wsdot`) can be decrypted, by the old sync call or the new async one, against the real profile folder with its own Local State (read-only probe; Local State byte-identical afterwards). The app therefore treats them as not configured, both before and after this change. They need to be entered again in Providers. Cause not determined. A plausible one is an earlier run that wrote to this database while using a different profile folder.
+
+**Not verified**
+- The freeze itself was not reproduced. It most likely needs Photoreal 3D, which is the owner's surface and was not run again. The next freeze with this build will write the stuck stack to `crashes.log`.
+
+## 2026-11-19: Freeze cause found from the owner's crash log
+
+**Evidence.** The owner reproduced the freeze with the diagnostics build. `crashes.log` recorded: `unresponsive … stack=… QU.getHeight < yCt.syncModels < yCt.requestModelSync`. The owner's screenshot shows the normal globe, not Photoreal 3D: the saved Google key cannot be decrypted, see the previous section.
+
+**Cause.** `LayerRenderer.syncModels` (globe surface, 3D vehicle models on) asked `globe.getHeight` for every parked aircraft in the data, worldwide and with no distance check, on every model sync. Each call is a ray pick against the loaded terrain. Since the zoom fix of 2026-11-18, the sync repeats every 120 ms while models are still loading, so close to New York's airports the lookups ran back to back and the window stopped responding.
+
+**Changed** (`src/renderer/map/layerRender.ts`): parked aircraft outside model range get no lookup. Heights are cached per position for 4 s (at most 2,000 entries), and at most 16 lookups run per sync.
+
+**Verified.** New test in `tests/nyc-zoom-crash.test.ts`: 3,000 parked aircraft worldwide plus 5 at JFK under the camera. Against the previous code, one sync made 3,005 lookups (test failed). Now it makes 5, and two more syncs make none. Typecheck; full suite 111 files, 1,510 tests; production build.
+
+**Not verified.** The owner's live zoom with this build. The owner reproduces the freeze reliably and will retry.

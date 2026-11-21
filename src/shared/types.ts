@@ -260,6 +260,10 @@ export interface Settings {
   visualMode: 'normal' | 'crt' | 'nvg' | 'thermal' | 'anime' | 'noir' | 'snow';
   reducedMotion: boolean;
   aiEnabled: boolean;
+  /** Local bridge for AI agents (MCP) over a named pipe; off by default. */
+  mcpEnabled: boolean;
+  /** Watch area recorded in the background for replay (aircraft, ships, GPS cells, conflict reports); null when off. */
+  recordAreaId: string | null;
   ollamaPort: number;
   ollamaModel: string;
 }

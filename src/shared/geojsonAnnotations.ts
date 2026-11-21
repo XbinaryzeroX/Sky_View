@@ -16,7 +16,15 @@ export interface AnnotationDocument {
   points: [number, number][];
   visible: boolean;
   createdAt: string;
+  note?: string;
+  source?: 'user' | 'agent' | 'ask';
+  author?: string;
+  sketch?: boolean;
+  eventAt?: string;
+  eventKind?: EventKind;
+  sourceUrl?: string;
 }
+export type EventKind = 'strike' | 'explosion' | 'closure' | 'incident' | 'other';
 export type AnnotationInput = Omit<AnnotationDocument, 'id' | 'createdAt'>;
 export interface GeoJsonIssue { feature: number; message: string }
 export interface GeoJsonPreview {

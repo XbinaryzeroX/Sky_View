@@ -1164,10 +1164,31 @@ h2 {
   max-width: 100%;
 }
 .sat-groups {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 4px 22px;
+}
+.sat-section {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px 8px 6px;
+  margin: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 2px 10px;
-  margin: 0 0 4px 22px;
+  gap: 2px 12px;
+}
+.sat-section legend {
+  font-weight: 600;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sat-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
 }
 .mono {
   font-family: var(--mono);
@@ -3558,6 +3579,8 @@ h2 {
 .topbar .seg .btn.primary, .topbar .seg .btn[aria-pressed='true'] { background: rgba(255, 255, 255, .15); color: var(--text-strong); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16); }
 .topbar .archive-year-control { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 4px 0 10px; }
 .topbar .archive-year-control select { background: rgba(255, 255, 255, .08); border: 0; border-radius: 8px; height: 24px; }
+.topbar .watch-area-control { flex: none; }
+.topbar .watch-area-control select { width: 8.5em; flex: none; }
 .topbar .search { height: 32px; }
 .topbar .search:focus-visible { border-color: var(--accent); }
 .topbar .fresh-group { height: 32px; padding: 0 8px; align-items: center; }
@@ -3787,3 +3810,81 @@ h2 {
 .source-list li { display: grid; grid-template-columns: 16px 86px minmax(0, 1fr); gap: 8px; align-items: start; }
 .source-list li svg { color: var(--muted); margin-top: 2px; }
 .source-list li > :last-child { overflow-wrap: anywhere; }
+
+/* ---------- Director mode, recent imagery, Ask the planet (2026-11-17) ---------- */
+.director-colors { display: flex; gap: 8px; margin: 6px 0 2px; }
+.director-swatch { width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(0, 0, 0, .55); cursor: pointer; transition: scale var(--dur-2) var(--spring, var(--ease-out)), box-shadow var(--dur-2) var(--ease-out); }
+.director-swatch:hover { scale: 1.12; }
+.director-swatch[aria-checked="true"] { box-shadow: 0 0 0 2px var(--text); }
+.director-swatch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.anno-note { flex-basis: 100%; margin: 2px 0 0 24px; }
+.anno-note summary { cursor: pointer; color: var(--muted); }
+.anno-note textarea { width: 100%; resize: vertical; margin-top: 4px; background: rgba(255, 255, 255, .04); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; font: inherit; font-size: 12.5px; }
+
+.floating-imagery { position: absolute; top: 64px; right: 16px; width: min(340px, calc(100vw - 32px)); max-height: calc(100vh - 180px); overflow: auto; z-index: 7; padding: 12px 14px; border-radius: 18px; background: var(--glass-bg); backdrop-filter: var(--glass-filter); border: 1px solid var(--glass-border); box-shadow: var(--glass-edge), var(--glass-drop); animation: imagery-in var(--dur-3) var(--spring, var(--ease-out)) both; }
+@keyframes imagery-in { from { opacity: 0; translate: 12px 0; } }
+.recent-imagery .diag-head strong { display: inline-flex; align-items: center; gap: 6px; }
+.recent-imagery .field { display: grid; gap: 4px; margin: 8px 0; }
+.recent-imagery .field span { display: inline-flex; align-items: center; gap: 6px; }
+.scene-list { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 4px; }
+.scene-btn { width: 100%; display: flex; justify-content: space-between; gap: 8px; padding: 7px 10px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255, 255, 255, .03); color: var(--text); font: inherit; font-size: 12.5px; cursor: pointer; text-align: left; transition: background var(--dur-2) var(--ease-out), translate var(--dur-2) var(--spring, var(--ease-out)); }
+.scene-btn:hover:not(:disabled) { background: rgba(255, 255, 255, .08); translate: 2px 0; }
+.scene-btn.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.scene-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.warn-text { color: var(--amber); }
+
+/* Closed by default: one small pill at the top centre of the globe; the question box and answer drop down from it. */
+/* Top right, beside the panel buttons: the top centre holds the aircraft altitude legend. */
+.ask-planet { position: absolute; right: 158px; top: 12px; z-index: 6; display: grid; justify-items: end; gap: 8px; pointer-events: none; }
+.ask-planet > * { pointer-events: auto; }
+.ask-trigger { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px 6px 8px; border-radius: 999px; font: inherit; font-size: 12.5px; color: var(--text); background: var(--glass-bg); backdrop-filter: var(--glass-filter); border: 1px solid var(--glass-border); box-shadow: var(--glass-edge), var(--glass-drop); cursor: pointer; transition: scale var(--dur-2) var(--spring, var(--ease-out)), box-shadow var(--dur-2) var(--ease-out); }
+.ask-trigger:hover { scale: 1.04; }
+.ask-trigger:active { scale: .97; }
+.ask-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ask-trigger .ask-icon { margin-left: 0; }
+.ask-chevron { color: var(--muted); transition: rotate var(--dur-2) var(--spring, var(--ease-out)); }
+.ask-expanded .ask-chevron { rotate: 180deg; }
+.ask-dot { width: 7px; height: 7px; border-radius: 50%; background: #cc79a7; }
+.ask-dropdown { width: min(520px, calc(100vw - 260px)); display: grid; gap: 8px; transform-origin: top right; animation: ask-drop var(--dur-3) var(--spring, var(--ease-out)) both; }
+@keyframes ask-drop { from { opacity: 0; translate: 0 -8px; scale: .97; } }
+.ask-bar { display: flex; align-items: center; gap: 8px; padding: 5px 6px 5px 6px; border-radius: 999px; background: var(--glass-bg); backdrop-filter: var(--glass-filter); border: 1px solid var(--glass-border); box-shadow: var(--glass-edge), var(--glass-drop); transition: box-shadow var(--dur-2) var(--ease-out), scale var(--dur-2) var(--spring, var(--ease-out)); }
+.ask-open .ask-bar { box-shadow: var(--glass-edge), var(--glass-drop), 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); }
+.ask-bar:focus-within { scale: 1.015; }
+.ask-bar input { flex: 1; min-width: 0; background: transparent; border: 0; color: var(--text); font: inherit; font-size: 13.5px; padding: 8px 4px; }
+.ask-bar input:focus { outline: none; }
+.ask-bar input::placeholder { color: var(--muted); }
+.ask-icon { color: #cc79a7; flex: none; margin-left: 6px; }
+.ask-card { padding: 12px 14px; border-radius: 18px; background: var(--glass-bg); backdrop-filter: var(--glass-filter); border: 1px solid var(--glass-border); box-shadow: var(--glass-edge), var(--glass-drop); max-height: 42vh; overflow: auto; animation: ask-in var(--dur-3) var(--spring, var(--ease-out)) both; }
+@keyframes ask-in { from { opacity: 0; translate: 0 10px; scale: .98; } }
+.ask-card-head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.ask-card-head strong { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; }
+.ask-answer { margin: 8px 0; font-size: 13.5px; line-height: 1.5; max-width: 70ch; }
+.ask-marks { list-style: none; padding: 0; margin: 0 0 8px; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.voice-inline { display: flex; align-items: center; gap: 6px; }
+.voice-inline .voice-btn { width: 36px; height: 36px; }
+.voice-inline .voice-msg { display: none; }
+.voice-inline.voice-listening .voice-msg, .voice-inline.voice-error .voice-msg, .voice-inline.voice-working .voice-msg { display: block; max-width: 160px; }
+@media (prefers-reduced-motion: reduce) {
+  .director-swatch, .scene-btn, .ask-bar { transition: none; }
+  .floating-imagery, .ask-card, .ask-dropdown { animation: none; }
+  .ask-trigger, .ask-chevron { transition: none; }
+  .ask-trigger:hover, .ask-trigger:active { scale: none; }
+  .ask-bar:focus-within, .director-swatch:hover, .scene-btn:hover:not(:disabled) { scale: none; translate: none; }
+}
+.receiver-box { margin: 6px 0 4px 22px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; display: grid; gap: 4px; }
+.receiver-box strong { display: inline-flex; gap: 6px; align-items: center; }
+.receiver-box p { margin: 0; }
+.anno-list .anno-name { flex: 1 1 120px; min-width: 110px; }
+
+/* ---------- Watch-area recording chip ---------- */
+.topbar .rec-chip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 4px 0 10px; border-radius: 999px; font-size: 12px; white-space: nowrap; background: var(--glass-bg); border: 1px solid var(--glass-border); app-region: no-drag; }
+.rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); animation: rec-pulse 2s var(--ease-out) infinite; }
+.rec-partial .rec-dot { background: var(--amber); }
+@keyframes rec-pulse { 50% { opacity: .35; } }
+.event-fields { display: grid; gap: 6px; margin-top: 6px; }
+.event-fields .field input, .event-fields .field select { width: 100%; }
+@media (prefers-reduced-motion: reduce) { .rec-dot { animation: none; } }
+.reduced-motion .rec-dot { animation: none; }
+
+/* ---- Map stopped (WebGL context lost repeatedly) ---- */
+.map-stopped { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); max-width: 420px; padding: 14px 18px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); z-index: 5; }

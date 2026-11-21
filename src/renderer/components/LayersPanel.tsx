@@ -5,6 +5,8 @@ import type { ArchiveImage } from '../../shared/satelliteYears';
 import { archiveCaption } from '../map/historicalImagery';
 import type { Settings } from '../../shared/types';
 import { compassPoint, sampleWind, WIND_SPEED_BANDS, windFromDeg, type WindField } from '../../shared/wind';
+import { ReceiverCoverage } from './ReceiverCoverage';
+import { SATELLITE_GROUPS, SATELLITE_SECTIONS, sectionColor } from '../../shared/satelliteGroups';
 import { backLabel, clampBack, stepBack, WEATHER_MAX_BACK_MIN, WEATHER_STEP_MIN } from '../../shared/weatherTimeline';
 import { api } from '../lib/api';
 import { FRESHNESS_META, METAR_COLORS, METAR_UNKNOWN_COLOR, relativeTime } from '../lib/format';
@@ -49,7 +51,7 @@ function WeatherTimeline({ weather, reducedMotion }: { weather: WeatherTimeState
         <input type="range" aria-label="Minutes before the newest frames" min={-WEATHER_MAX_BACK_MIN} max={0} step={WEATHER_STEP_MIN} value={-backMin}
           aria-valuetext={backLabel(backMin)} onChange={(event) => weather.onBack(clampBack(-Number(event.target.value)))} />
         <button className="icon-btn" title="Newer frame" aria-label="Newer frame" disabled={backMin === 0} onClick={() => weather.onBack(stepBack(backMin, -1))}><ChevronRight size={16} aria-hidden="true" /></button>
-        <button className="btn small" aria-pressed={playing} disabled={reducedMotion} title={reducedMotion ? 'Playing is off while reduced motion is on; step through the frames instead.' : 'Play the last two hours in a loop'}
+        <button className="btn small" aria-pressed={playing} disabled={reducedMotion} title={reducedMotion ? 'Playing is off while reduced motion is on; step through the frames instead.' : 'Play the last four hours in a loop'}
           onClick={() => weather.onPlaying(!playing)}>{playing ? <Pause size={14} aria-hidden="true" /> : <Play size={14} aria-hidden="true" />}{playing ? 'Pause' : 'Play'}</button>
         <button className="btn small" disabled={backMin === 0 && !playing} onClick={() => weather.onBack(0)}>Newest</button>
       </div>
@@ -240,6 +242,7 @@ function LiveTab({ settings, snaps, onPatch, alertsContent, airportsOn, onAirpor
                         <button className="link-btn small" onClick={() => void api.refreshLayer(id)}>Refresh</button>
                       </>}
                       {enabled && id === 'trafficFlow' && <p className="muted">Simulated traffic: moving dots on the New York and Paris roads (the sources that publish road shapes). Each dot is invented; its speed is the road’s measured speed (Paris: assumed from the published state) and the number of dots follows the published flow count where there is one, otherwise a typical density for the state. Direction of travel is not published, so dots follow the line’s drawn order. Roads with unknown readings get none. Shown when zoomed in below about 60 km; still with reduced motion.</p>}
+                      {enabled && id === 'aircraft' && <ReceiverCoverage records={snaps.aircraft?.records ?? []} />}
                       {enabled && id === 'fires' && (
                         <select aria-label="Fire detection region" value={settings.firmsRegion}
                           onChange={event => onPatch({ firmsRegion: event.target.value as Settings['firmsRegion'] })}>
@@ -248,14 +251,20 @@ function LiveTab({ settings, snaps, onPatch, alertsContent, airportsOn, onAirpor
                       )}
                       {enabled && id === 'satellites' && (
                         <div className="sat-groups small">
-                          {(['stations', 'visual', 'gnss', 'weather', 'science', 'telecom', 'imaging', 'debris', 'starlink'] as const).map(satelliteGroup => (
-                            <label key={satelliteGroup}>
-                              <input type="checkbox" checked={settings.satelliteGroups.includes(satelliteGroup)} onChange={event => onPatch({
-                                satelliteGroups: event.target.checked ? [...settings.satelliteGroups, satelliteGroup]
-                                  : settings.satelliteGroups.filter(value => value !== satelliteGroup),
-                              })} />{satelliteGroup === 'starlink' ? 'Starlink (≈8,000)' : satelliteGroup === 'telecom' ? 'telecom (geostationary)' : satelliteGroup === 'imaging' ? 'imaging (Earth resources)' : satelliteGroup === 'debris' ? 'debris (Fengyun-1C breakup, ≈2,000)' : satelliteGroup}
-                            </label>
+                          {SATELLITE_SECTIONS.map(section => (
+                            <fieldset key={section} className="sat-section">
+                              <legend><span className="sat-swatch" style={{ background: sectionColor(section) }} aria-hidden="true" />{section}</legend>
+                              {SATELLITE_GROUPS.filter(group => group.section === section).map(group => (
+                                <label key={group.id}>
+                                  <input type="checkbox" checked={settings.satelliteGroups.includes(group.id)} onChange={event => onPatch({
+                                    satelliteGroups: event.target.checked ? [...settings.satelliteGroups, group.id]
+                                      : settings.satelliteGroups.filter(value => value !== group.id),
+                                  })} />{group.label} <span className="muted">≈{group.approx.toLocaleString()}</span>
+                                </label>
+                              ))}
+                            </fieldset>
                           ))}
+                          <p className="muted">Each group is one CelesTrak download at most every 2 hours. Positions are calculated from orbital elements. Groups overlap; each satellite is shown once.</p>
                         </div>
                       )}
                     </div>

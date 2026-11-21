@@ -33,6 +33,30 @@ export const NEXT_FRAME_COOLDOWN_MS = 3_000;
 const GAP = 40;
 const MARGIN = 8;
 
+/**
+ * Cameras whose ground point can lie within `maxM` of a viewer above (lat, lon): a cheap flat-earth test that runs
+ * before any terrain height lookup. The card overlay used to ask the globe for the ground height under all ~9,800
+ * cameras on every frame below 4 km (most are on tiles that are not loaded, so nothing was cached), which was the
+ * largest scripted cost while zooming into Manhattan (profiled 2026-11-18). Longitudes wrap at ±180°.
+ */
+export function camerasNear<T extends { lat: number; lon: number }>(records: readonly T[], lat: number, lon: number, maxM: number): T[] {
+  const mPerDegLat = 111_320;
+  const cosLat = Math.cos((lat * Math.PI) / 180);
+  const dLatMax = maxM / mPerDegLat;
+  const out: T[] = [];
+  for (const r of records) {
+    const dLat = r.lat - lat;
+    if (Math.abs(dLat) > dLatMax) continue;
+    let dLon = Math.abs(r.lon - lon) % 360;
+    if (dLon > 180) dLon = 360 - dLon;
+    // The smaller of the two latitude scales errs towards keeping a camera, never towards dropping one near a pole.
+    const cosR = Math.max(0, Math.min(cosLat, Math.cos((r.lat * Math.PI) / 180)));
+    if ((dLat * mPerDegLat) ** 2 + (dLon * mPerDegLat * cosR) ** 2 > maxM * maxM) continue;
+    out.push(r);
+  }
+  return out;
+}
+
 /** Short tag shown next to a camera, built from its record id (never from coordinates). */
 export function cameraTag(id: string): string {
   const tail = id.replace(/[^A-Za-z0-9]/g, '').slice(-5).toUpperCase();

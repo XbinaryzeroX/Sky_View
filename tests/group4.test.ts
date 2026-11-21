@@ -24,13 +24,13 @@ describe('observed-weather history timeline', () => {
     expect(clampBack(999)).toBe(WEATHER_MAX_BACK_MIN);
     expect(clampBack(Number.NaN)).toBe(0);
     expect(stepBack(0, -1)).toBe(0);
-    expect(stepBack(110, 1)).toBe(120);
-    expect(stepBack(120, 1)).toBe(120);
+    expect(stepBack(230, 1)).toBe(240);
+    expect(stepBack(240, 1)).toBe(240);
   });
   it('plays towards the present and wraps from the newest frame to the oldest', () => {
-    expect(nextPlayFrame(120)).toBe(110);
+    expect(nextPlayFrame(240)).toBe(230);
     expect(nextPlayFrame(10)).toBe(0);
-    expect(nextPlayFrame(0)).toBe(120);
+    expect(nextPlayFrame(0)).toBe(240);
   });
   it('asks nowCOAST for no time at the newest frame and for a floored past time otherwise', () => {
     expect(wmsTime(NOW, 0)).toBeNull();

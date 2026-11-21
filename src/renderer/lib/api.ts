@@ -10,6 +10,7 @@ import type { BriefingExportRequest, BriefingPreview, BriefingRequest } from '..
 import type { RouteInfo } from '../../shared/route';
 import type { FlightPath } from '../../shared/flightPath';
 import type { LaunchTimeline } from '../../shared/launchTimeline';
+import type { AskAnswer } from '../../shared/askPlanet';
 import type { RadioQuery, RadioStation } from '../../shared/radio';
 import type { WindField } from '../../shared/wind';
 import type { DatedFlightStatus } from '../../shared/flightStatus';
@@ -93,6 +94,19 @@ export interface AtlasApi {
   voiceTranscribe(audio: Uint8Array, mime: 'audio/webm' | 'audio/ogg' | 'audio/mp4'): Promise<{ text: string }>;
   /** Searches the Radio Browser directory; play a result at app://atlas/radio-stream/<id>. */
   radioSearch(q: RadioQuery): Promise<{ stations: RadioStation[]; note: string | null }>;
+  /** Recent Sentinel-2 scenes (newest first) covering a box [west, south, east, north]. */
+  sentinelSearch(box: [number, number, number, number], maxCloud: number): Promise<{ scenes: SentinelSceneSummary[]; skipped: number }>;
+  /** A north-up true-colour PNG of one scene, cut to the box. */
+  sentinelRender(sceneId: string, box: [number, number, number, number]): Promise<SentinelImageResult>;
+  /** Ask the planet: answer from the records around the view, with marks on records only. */
+  askPlanet(question: string, view: { lat: number; lon: number; heightM: number }): Promise<AskAnswer>;
+  mcpStatus(): Promise<McpStatusInfo>;
+  /** Background recording of a watch area for replay. */
+  recordingStatus(): Promise<import('../../shared/watchAreas').AreaRecordingStatus>;
+  /** Your own receiver's position, or null when none is configured or it publishes no location. */
+  sdrReceiver(): Promise<{ lat: number; lon: number; version: string | null } | null>;
+  /** An AI agent changed the shared canvas. */
+  onAnnotationsChanged(cb: () => void): () => void;
   /** GFS 10 m wind forecast; staleReason is set when an older field is kept after a failed refresh. */
   wind(): Promise<{ field: WindField; staleReason: string | null }>;
   trackRange(): Promise<{ oldest: string | null; newest: string | null; points: number }>;
@@ -158,6 +172,9 @@ export interface Camera {
   heading: number;
   pitch: number;
 }
+export interface SentinelSceneSummary { id: string; datetime: string; cloudCover: number | null; epsg: number; previewHref: string | null; platform: string | null }
+export interface SentinelImageResult { sceneId: string; datetime: string; cloudCover: number | null; box: [number, number, number, number]; width: number; height: number; pixelM: number; png: Uint8Array }
+export interface McpStatusInfo { enabled: boolean; listening: boolean; pipe: string | null; serverPath: string | null; connections: number; lastCallAt: string | null; error: string | null; runtime: string | null }
 export interface Annotation {
   id: string;
   kind: 'pin' | 'line' | 'area';
@@ -166,6 +183,14 @@ export interface Annotation {
   points: [number, number][];
   visible: boolean;
   createdAt: string;
+  note?: string;
+  source?: 'user' | 'agent' | 'ask';
+  author?: string;
+  sketch?: boolean;
+  /** Timed event placed from open reporting (UTC), its kind and where it was reported. */
+  eventAt?: string;
+  eventKind?: import('../../shared/geojsonAnnotations').EventKind;
+  sourceUrl?: string;
 }
 export type SavedView = SharedSavedView;
 export type Scene = SharedScene;

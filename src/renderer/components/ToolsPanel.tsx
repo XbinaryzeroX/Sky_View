@@ -6,6 +6,7 @@ import { VISUAL_MODE_LABEL, type VisualMode } from '../map/visualModes';
 import type { ToolMode } from './Globe';
 import { GeoJsonTools } from './GeoJsonTools';
 import { StreetViewAction } from './StreetViewAction';
+import { EventFields } from './EventFields';
 import { AreaWatchControl, AreaWatchStatus, type AreaWatchControls } from './AreaWatchControl';
 
 interface Props {
@@ -36,6 +37,13 @@ interface Props {
   onClose(): void;
   onPlayback(): void;
   playbackActive: boolean;
+  /** Director mode: colour for the next drawing. */
+  drawColor?: string;
+  onDrawColor?(c: string): void;
+  /** Annotation whose note editor opens (a note pin just dropped). */
+  focusNoteId?: string | null;
+  /** Opens Recent imagery (Sentinel-2 for a drawn box). */
+  onRecentImagery?(): void;
 }
 
 function fmtKm(km: number): string {
@@ -44,7 +52,7 @@ function fmtKm(km: number): string {
 
 export function measurementText(tool: ToolMode, pts: [number, number][]): string | null {
   if (pts.length < 2) return null;
-  if (tool === 'measure-area' || tool === 'draw-area') {
+  if (tool === 'measure-area' || tool === 'draw-area' || tool === 'sketch-area') {
     if (pts.length < 3) return `Perimeter so far: ${fmtKm(pathLengthKm(pts))}`;
     const { areaKm2, perimeterKm } = polygonAreaKm2(pts);
     return `Area: ${areaKm2 < 1 ? `${Math.round(areaKm2 * 1e6).toLocaleString()} m²` : `${areaKm2.toFixed(2)} km² (${(areaKm2 * 0.386102).toFixed(2)} mi²)`} · perimeter ${fmtKm(perimeterKm)}`;
@@ -53,6 +61,13 @@ export function measurementText(tool: ToolMode, pts: [number, number][]): string
 }
 
 const COLORS = ['#ffd166', '#5fd0e6', '#ef476f', '#06d6a0', '#b07be8', '#ffffff'];
+const COLOR_NAMES: Record<string, string> = { '#ffd166': 'Yellow', '#5fd0e6': 'Cyan', '#ef476f': 'Red', '#06d6a0': 'Green', '#b07be8': 'Violet', '#ffffff': 'White' };
+const HINT: Partial<Record<ToolMode, string>> = {
+  'draw-pin': 'Click the globe to drop a pin. Esc cancels.',
+  'draw-note': 'Click the globe to drop a note, then write it in the list below. Esc cancels.',
+  'sketch-line': 'Press and drag on the globe to sketch a path; release to save. The map holds still while you draw.',
+  'sketch-area': 'Press and drag around an area to sketch its outline; release to save.',
+};
 
 export function ToolsPanel(p: Props) {
   const [viewName, setViewName] = useState('');
@@ -70,7 +85,8 @@ export function ToolsPanel(p: Props) {
     return counts;
   }, [p.areaWatch?.state.events]);
   const m = measurementText(p.tool, p.draft);
-  const drawing = p.tool.startsWith('draw');
+  const drawing = p.tool.startsWith('draw') || p.tool.startsWith('sketch');
+  const freehand = p.tool.startsWith('sketch');
   const toolBtn = (t: ToolMode, label: string) => (
     <button className={`btn small-btn ${p.tool === t ? 'primary' : ''}`} onClick={() => p.onTool(p.tool === t ? 'none' : t)} aria-pressed={p.tool === t}>
       {label}
@@ -90,21 +106,34 @@ export function ToolsPanel(p: Props) {
         {toolBtn('measure-line', 'Distance')}
         {toolBtn('measure-area', 'Area')}
       </div>
-      <div className="diag-sub">Draw annotations</div>
+      <div className="diag-sub">Director mode</div>
       <div className="btn-row">
         {toolBtn('draw-pin', 'Pin')}
+        {toolBtn('draw-note', 'Note')}
         {toolBtn('draw-line', 'Line / route')}
-        {toolBtn('draw-area', 'Area')}
+        {toolBtn('draw-area', 'Outline')}
       </div>
-      {p.tool !== 'none' && (
+      <div className="btn-row">
+        {toolBtn('sketch-line', 'Sketch path')}
+        {toolBtn('sketch-area', 'Sketch outline')}
+        {p.onRecentImagery && <button className="btn small-btn" onClick={p.onRecentImagery}>Recent satellite image…</button>}
+      </div>
+      {p.onDrawColor && (
+        <div className="director-colors" role="radiogroup" aria-label="Colour for new drawings">
+          {COLORS.map((c) => (
+            <button key={c} role="radio" aria-checked={p.drawColor === c} aria-label={COLOR_NAMES[c]} title={COLOR_NAMES[c]} className="director-swatch" style={{ background: c }} onClick={() => p.onDrawColor?.(c)} />
+          ))}
+        </div>
+      )}
+      {p.tool !== 'none' && p.tool !== 'draw-box' && (
         <div className="note small">
-          Click the globe to add points{p.tool === 'draw-pin' ? '' : '; double-click or press Finish to complete'}. Esc cancels.
+          {HINT[p.tool] ?? 'Click the globe to add points; double-click or press Finish to complete. Esc cancels.'}
           {m && <div className="measure">{m}</div>}
-          <div className="btn-row">
+          {!freehand && <div className="btn-row">
             <button className="btn small-btn" onClick={p.onUndo} disabled={p.draft.length === 0}>
               Undo point
             </button>
-            {(drawing || p.tool.startsWith('measure')) && p.tool !== 'draw-pin' && (
+            {(drawing || p.tool.startsWith('measure')) && p.tool !== 'draw-pin' && p.tool !== 'draw-note' && (
               <button className="btn small-btn primary" onClick={p.onFinish} disabled={p.draft.length < 2}>
                 {drawing ? 'Finish & save' : 'Finish'}
               </button>
@@ -112,7 +141,7 @@ export function ToolsPanel(p: Props) {
             <button className="btn small-btn" onClick={p.onClear}>
               Clear
             </button>
-          </div>
+          </div>}
         </div>
       )}
       {p.annotations.length > 0 && (
@@ -131,12 +160,19 @@ export function ToolsPanel(p: Props) {
                 </select>
                 <input className="anno-name" value={a.name} maxLength={120} onChange={(e) => p.onAnnotationChange({ ...a, name: e.target.value || 'Untitled' })} aria-label="Annotation name" />
                 <span className="muted small">{info}</span>
+                {a.source && a.source !== 'user' && <span className="tag small" title={a.source === 'agent' ? 'Added by an AI agent through the agent bridge' : 'Saved from an Ask the planet answer'}>{a.source === 'agent' ? `Agent: ${a.author ?? 'AI'}` : 'Ask'}</span>}
                 <button className="link-btn small" onClick={() => p.onFlyTo(a.points[0][0], a.points[0][1])}>
                   Go
                 </button>
                 <button className="link-btn small" onClick={() => p.onAnnotationDelete(a.id)}>
                   Delete
                 </button>
+                <details className="anno-note" open={p.focusNoteId === a.id || undefined}>
+                  <summary className="small">{a.note ? 'Note' : 'Add note'}</summary>
+                  <textarea maxLength={1000} rows={3} value={a.note ?? ''} autoFocus={p.focusNoteId === a.id} aria-label={`Note for ${a.name}`}
+                    onChange={(e) => p.onAnnotationChange({ ...a, note: e.target.value || undefined })} />
+                </details>
+                {(!a.source || a.source === 'user') && <EventFields a={a} onChange={p.onAnnotationChange} />}
                 {a.kind === 'area' && p.areaWatch && <AreaWatchControl area={a} controls={p.areaWatch} rule={watchRules.get(a.id)} matchCount={matchCounts.get(a.id) ?? 0} quakeMinMagnitude={p.settings.quakeMinMagnitude} />}
               </li>
             );

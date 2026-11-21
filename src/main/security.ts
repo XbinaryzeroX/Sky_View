@@ -115,7 +115,11 @@ export function serveAppProtocol(rendererRoot: string): void {
       const body = await readFile(file);
       const type = MIME[extname(file).toLowerCase()] ?? 'application/octet-stream';
       const headers: Record<string, string> = { 'Content-Type': type, 'X-Content-Type-Options': 'nosniff' };
-      if (type.startsWith('text/html')) headers['Content-Security-Policy'] = currentCsp();
+      if (type.startsWith('text/html')) {
+        headers['Content-Security-Policy'] = currentCsp();
+        // Lets the main process read the running JS stack when the window stops responding (crashRecovery.ts).
+        headers['Document-Policy'] = 'include-js-call-stacks-in-crash-reports';
+      }
       return new Response(body, { status: 200, headers });
     } catch {
       return new Response('Not found', { status: 404 });
@@ -181,7 +185,10 @@ export function lockDownSession(log: (m: string) => void): void {
   if (devOrigin) {
     ses.webRequest.onHeadersReceived((details, callback) => {
       const headers = { ...details.responseHeaders };
-      if (details.url.startsWith(devOrigin) && details.resourceType === 'mainFrame') headers['Content-Security-Policy'] = [currentCsp()];
+      if (details.url.startsWith(devOrigin) && details.resourceType === 'mainFrame') {
+        headers['Content-Security-Policy'] = [currentCsp()];
+        headers['Document-Policy'] = ['include-js-call-stacks-in-crash-reports'];
+      }
       callback({ responseHeaders: headers });
     });
   }

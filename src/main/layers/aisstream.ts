@@ -25,6 +25,9 @@ type WS = { binaryType?: string; send(d: string): void; close(): void; onopen: (
 export class AisStreamClient {
   private ws: WS | null = null;
   private bbox: [number, number, number, number] | null = null;
+  /** A recorded watch area, subscribed alongside the view (or alone when the vessel layer is off). */
+  private extra: [number, number, number, number] | null = null;
+  private subscribedExtra: [number, number, number, number] | null = null;
   private vessels = new Map<string, GeoRecord>();
   /** Static/voyage data (message 5 / 24) keyed by MMSI, merged into positions. */
   private statics = new Map<string, { data: VesselStatic; receivedAt: number; sourceAt: number }>();
@@ -43,14 +46,16 @@ export class AisStreamClient {
     private readonly makeSocket: (url: string) => WS = (u) => new (globalThis as unknown as { WebSocket: new (u: string) => WS }).WebSocket(u),
   ) {}
 
-  start(bbox: [number, number, number, number]): void {
-    const [w, s, e, n] = bbox;
-    if (!isValidLon(w) || !isValidLon(e) || !isValidLat(s) || !isValidLat(n) || s > n) return;
+  start(bbox: [number, number, number, number], extra: [number, number, number, number] | null = null): void {
+    const valid = (b: [number, number, number, number]) => isValidLon(b[0]) && isValidLon(b[2]) && isValidLat(b[1]) && isValidLat(b[3]) && b[1] <= b[3];
+    if (!valid(bbox) || (extra && !valid(extra))) return;
     this.stopped = false;
     this.bbox = [...bbox];
+    const extraChanged = (extra === null) !== (this.subscribedExtra === null) || (!!extra && extra.some((v, i) => Math.abs(v - this.subscribedExtra![i]) > 0.05));
+    this.extra = extra ? [...extra] : null;
     // View updates must not bypass a pending reconnect backoff.
     if (!this.ws && !this.retryTimer) this.connect();
-    else if (!this.subscribedBbox || bbox.some((v, i) => Math.abs(v - this.subscribedBbox![i]) > 0.05)) this.subscribe();
+    else if (!this.subscribedBbox || extraChanged || bbox.some((v, i) => Math.abs(v - this.subscribedBbox![i]) > 0.05)) this.subscribe();
   }
 
   stop(): void {
@@ -81,6 +86,7 @@ export class AisStreamClient {
     if (this.subscriptionTimer) clearTimeout(this.subscriptionTimer);
     this.subscriptionTimer = null;
     this.subscribedBbox = null;
+    this.subscribedExtra = null;
     this.lastSubscriptionAt = -Infinity;
   }
 
@@ -97,12 +103,13 @@ export class AisStreamClient {
       }, delay);
       return;
     }
-    const [w, s, e, n] = this.bbox;
-    const boxes = w <= e ? [[[s, w], [n, e]]] : [[[s, w], [n, 180]], [[s, -180], [n, e]]];
+    const split = ([w, s, e, n]: [number, number, number, number]) => w <= e ? [[[s, w], [n, e]]] : [[[s, w], [n, 180]], [[s, -180], [n, e]]];
+    const boxes = [...split(this.bbox), ...(this.extra ? split(this.extra) : [])];
     try {
       this.ws.send(JSON.stringify({ APIKey: key, BoundingBoxes: boxes, FilterMessageTypes: ['PositionReport', 'StandardClassBPositionReport', 'ExtendedClassBPositionReport', 'ShipStaticData', 'StaticDataReport'] }));
       this.lastSubscriptionAt = Date.now();
       this.subscribedBbox = [...this.bbox];
+      this.subscribedExtra = this.extra ? [...this.extra] : null;
     } catch {
       this.status.error = 'AISStream subscription could not be sent';
       this.ws.close();

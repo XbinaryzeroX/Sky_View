@@ -78,7 +78,15 @@ import type { GeometryCollection, Topology } from 'topojson-specification';
 import countriesTopo from 'world-atlas/countries-50m.json';
 import statesTopo from 'us-atlas/states-10m.json';
 import type { Earthquake, SavedLocation, Settings, WeatherAlert } from '../../shared/types';
-import type { TimelineFrame } from '../../shared/timeline';
+import { FRAME_LAYERS, type TimelineFrame } from '../../shared/timeline';
+import { EVENT_KIND_LABEL } from './EventFields';
+
+/** "Strike 14:05 UTC 18 Nov": event times on the globe are given in UTC, the time reports use. */
+function eventLabel(a: { eventAt?: string; eventKind?: keyof typeof EVENT_KIND_LABEL }): string {
+  const d = new Date(a.eventAt ?? '');
+  const when = Number.isFinite(d.getTime()) ? `${d.toISOString().slice(11, 16)} UTC ${d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' })}` : '';
+  return `${EVENT_KIND_LABEL[a.eventKind ?? 'other']} ${when} (reported)`.trim();
+}
 import { quakeClass, SEVERITY_META, prefersReducedMotion } from '../lib/format';
 import { BASEMAPS, isBasemapId, labelsOverlayLayer, needsContextFills, imagerySourcesHere, previousUtcDay } from '../map/basemaps';
 import { BuildingManager, BUILDINGS_MAX_CAMERA_M, type BuildingStats } from '../map/buildings';
@@ -91,6 +99,9 @@ import { geoidStats } from '../map/geoid';
 import { shouldPreloadHidden, watchPhotorealSurface } from '../map/photorealSurface';
 import { applyUpscaleSharpen } from '../map/upscaleSharpen';
 import { CameraCards } from './CameraCards';
+import { sentinelImageryLayer, type SentinelOverlay } from '../map/sentinelOverlay';
+import { boxFromCorners, boxRing } from '../../shared/sketch';
+import type { AskMark } from '../../shared/askPlanet';
 import { googleRefusal, googleStatus } from '../../shared/googleErrors';
 import type { TrailKind, TrailPoint } from '../map/trailHeights';
 import { WindOverlay } from '../map/windOverlay';
@@ -115,7 +126,9 @@ import type { Annotation, Camera } from '../lib/api';
 
 export type GlobeSelection = { kind: 'location' | 'alert' | 'quake' | 'airport'; id: string } | { kind: 'record'; layer: LayerId; id: string };
 
-export type ToolMode = 'none' | 'measure-line' | 'measure-area' | 'draw-pin' | 'draw-line' | 'draw-area';
+export type ToolMode = 'none' | 'measure-line' | 'measure-area' | 'draw-pin' | 'draw-line' | 'draw-area' | 'draw-note' | 'sketch-line' | 'sketch-area' | 'draw-box';
+/** Tools drawn by dragging (the camera holds still meanwhile). */
+export const DRAG_TOOLS: readonly ToolMode[] = ['sketch-line', 'sketch-area', 'draw-box'];
 
 export type PlaybackFrame = TimelineFrame;
 
@@ -160,6 +173,10 @@ export interface GlobeDiagnostics {
 }
 
 export interface GlobeHandle {
+  /** Test hook: turns the camera slowly for `ms` and reports frames per second and per-frame main-thread time. */
+  /** Test hook: zooms from `fromH` to `toH` metres over `ms`, reporting frame gaps and how many aircraft stay drawn. */
+  measureZoom(lat: number, lon: number, fromH: number, toH: number, ms: number): Promise<{ fps: number; gapMsP95: number; gapMsMax: number; longFrames: number; samples: { t: number; h: number; records: number; icons: number; models: number }[] }>;
+  measureFrames(ms: number): Promise<{ frames: number; fps: number; cpuMsAvg: number; cpuMsP95: number; intervalMsP95: number; entities?: Record<string, number> }>;
   replayMap(kind?: 'alert' | 'quake', id?: string): {
     active: boolean; cursor: string | null; alertCount: number; quakeCount: number;
     positions: [number, number][]; screen: { x: number; y: number } | null;
@@ -240,7 +257,13 @@ interface Props {
   draftPoints: [number, number][];
   onToolPoint(lon: number, lat: number): void;
   onToolFinish(): void;
+  /** Replaces the whole draft (box drawing). */
+  onToolDraft?(points: [number, number][]): void;
   annotations: Annotation[];
+  /** Records an "Ask the planet" answer points at. */
+  askMarks?: AskMark[];
+  /** Sentinel-2 image cut to a drawn box. */
+  sentinelOverlay?: SentinelOverlay | null;
   playback: PlaybackFrame | null;
   playbackActive: boolean;
   google3dKey: string | null;
@@ -505,6 +528,22 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
         }
       }, 250);
     });
+    // A lost WebGL context (GPU process reset, driver timeout, graphics memory exhausted) never comes back for
+    // Cesium: the render-error retries above would just freeze. Reload the page, at most three times in five minutes.
+    scene.canvas.addEventListener('webglcontextlost', () => {
+      let recent: number[] = [];
+      try { recent = (JSON.parse(sessionStorage.getItem('sv-context-lost') ?? '[]') as number[]).filter((t) => Date.now() - t < 5 * 60_000); } catch { recent = []; }
+      if (recent.length >= 3) {
+        const note = document.createElement('div');
+        note.className = 'map-stopped';
+        note.setAttribute('role', 'alert');
+        note.textContent = 'The map’s graphics stopped three times in five minutes. Switch Rendering quality to Balanced in Settings, then reload with Ctrl+R.';
+        scene.canvas.parentElement?.appendChild(note);
+        return;
+      }
+      try { sessionStorage.setItem('sv-context-lost', JSON.stringify([...recent, Date.now()])); } catch { /* reload anyway */ }
+      setTimeout(() => window.location.reload(), 300);
+    });
     scene.globe.depthTestAgainstTerrain = false;
     // Keep revisited tiles resident and give visible tiles priority over offscreen siblings.
     scene.globe.tileCacheSize = 600;
@@ -601,7 +640,28 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
         if (final) propsRef.current.planDrag?.(d.target, d.last[1], d.last[0], true);
       }
     };
+    // Director mode: freehand strokes and boxes are drawn by dragging.
+    let sketch: { start: [number, number]; last: Cartesian2 } | null = null;
+    const startSketch = (m: { position: Cartesian2 }): boolean => {
+      const p = propsRef.current;
+      if (!DRAG_TOOLS.includes(p.tool)) return false;
+      const ll = groundAt(m.position);
+      if (!ll) return true;
+      sketch = { start: ll, last: Cartesian2.clone(m.position) };
+      scene.screenSpaceCameraController.enableInputs = false;
+      if (p.tool === 'draw-box') p.onToolDraft?.([ll]);
+      else p.onToolPoint(ll[0], ll[1]);
+      return true;
+    };
+    const endSketch = () => {
+      if (!sketch) return;
+      sketch = null;
+      scene.screenSpaceCameraController.enableInputs = true;
+      suppressClickUntil = performance.now() + 350;
+      propsRef.current.onToolFinish();
+    };
     handler.setInputAction((m: { position: Cartesian2 }) => {
+      if (startSketch(m)) return;
       const p = propsRef.current;
       if (!p.planDrag || p.planPick || p.pickMode || p.tool !== 'none') return;
       const target = draggableAt(m.position);
@@ -610,8 +670,8 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       scene.screenSpaceCameraController.enableInputs = false;
       scene.canvas.style.cursor = 'grabbing';
     }, ScreenSpaceEventType.LEFT_DOWN);
-    handler.setInputAction(() => endDrag(true), ScreenSpaceEventType.LEFT_UP);
-    const onBlur = () => endDrag(true);
+    handler.setInputAction(() => { endSketch(); endDrag(true); }, ScreenSpaceEventType.LEFT_UP);
+    const onBlur = () => { endSketch(); endDrag(true); };
     window.addEventListener('blur', onBlur);
     handler.setInputAction((movement: { position: Cartesian2 }) => {
       const p = propsRef.current;
@@ -641,6 +701,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
         if (ll) p.onPick(ll[1], ll[0]);
         return;
       }
+      if (DRAG_TOOLS.includes(p.tool)) return; // drawn by dragging, not by clicks
       if (p.tool !== 'none') {
         const ll = pickLonLat();
         if (ll) p.onToolPoint(ll[0], ll[1]);
@@ -656,6 +717,19 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     // Hover: show the vehicle's label (when "hovered" labels are chosen) and a pointer cursor.
     let lastHover = 0;
     handler.setInputAction((m: { endPosition: Cartesian2 }) => {
+      if (sketch) {
+        const p = propsRef.current;
+        // A point every few pixels keeps the stroke smooth without thousands of points.
+        if (Cartesian2.distance(sketch.last, m.endPosition) < 4) return;
+        const ll = groundAt(m.endPosition);
+        if (!ll) return;
+        sketch.last = Cartesian2.clone(m.endPosition);
+        if (p.tool === 'draw-box') {
+          const [w, s, e, n] = boxFromCorners(sketch.start, ll);
+          p.onToolDraft?.(boxRing([w, s, e, n]));
+        } else p.onToolPoint(ll[0], ll[1]);
+        return;
+      }
       if (drag) {
         const ll = groundAt(m.endPosition);
         if (!ll) return;
@@ -1044,7 +1118,23 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
         });
       lr.setVisible(lid, on);
     }
-  }, [props.layerSnaps, props.layersOn, selRecord?.layer, selRecord?.id, props.playbackActive, ready, props.aircraftFilter, props.vesselClasses, props.settings.smoothMotion, props.settings.aircraftLabels, props.settings.vesselLabels, props.settings.vehicleModels, props.settings.renderQuality]);
+    // Replay: recorded snapshots of area layers stand in for the live ones, and satellites are calculated for the
+    // replay time from their current elements (labelled as calculated, like the live layer).
+    const frameLayers = props.playbackActive ? props.playback?.layers : undefined;
+    for (const lid of FRAME_LAYERS) {
+      const f = frameLayers?.[lid];
+      if (f?.state === 'recorded') {
+        lr.update(lid, f.records, { selectedId: selRecord?.id ?? null, selectedLayer: selRecord?.layer ?? null, trackedId: null, aircraftFilter: props.aircraftFilter, vesselClasses: props.vesselClasses, smoothMotion: false, aircraftLabels: props.settings.aircraftLabels, vesselLabels: props.settings.vesselLabels, vehicleModels: false, modelBudget: 0 });
+        lr.setVisible(lid, true);
+      }
+    }
+    const satsInReplay = props.playbackActive && props.layersOn.includes('satellites') && !!props.layerSnaps.satellites;
+    if (satsInReplay) {
+      lr.update('satellites', props.layerSnaps.satellites!.records, { selectedId: selRecord?.id ?? null, selectedLayer: selRecord?.layer ?? null, trackedId: null, aircraftFilter: props.aircraftFilter, vesselClasses: props.vesselClasses, smoothMotion: false, aircraftLabels: props.settings.aircraftLabels, vesselLabels: props.settings.vesselLabels, vehicleModels: false, modelBudget: 0 });
+      lr.setVisible('satellites', true);
+    }
+    lr.setSatelliteTime(satsInReplay && props.playback ? new Date(props.playback.t) : null);
+  }, [props.playback, props.layerSnaps, props.layersOn, selRecord?.layer, selRecord?.id, props.playbackActive, ready, props.aircraftFilter, props.vesselClasses, props.settings.smoothMotion, props.settings.aircraftLabels, props.settings.vesselLabels, props.settings.vehicleModels, props.settings.renderQuality]);
 
   // ----- dated imagery overlay -----
   const imageryLayersRef = useRef<ImageryLayer[]>([]);
@@ -1534,13 +1624,40 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
       if (kind === 'area' && pts.length > 2) src.entities.add({ id: id + '|fill', polygon: { hierarchy: new PolygonHierarchy(positions), material: color.withAlpha(0.18) } });
       if (name) src.entities.add({ id: id + '|label', position: positions[0], label: lbl(name) });
     };
-    for (const a of props.annotations) if (a.visible) add('anno|' + a.id, a.kind, a.points, Color.fromCssColorString(a.color), a.name, false);
+    // Who drew it is part of the label, so an agent's finding is never mistaken for the user's own.
+    const byline = (a: Annotation) => (a.source === 'agent' ? `${a.name} · ${a.author ?? 'AI agent'}` : a.source === 'ask' ? `${a.name} · Ask` : a.name);
+    // Timed events show in replay only from the time they were reported to have happened.
+    const replayAt = props.playback ? Date.parse(props.playback.t) : null;
+    for (const a of props.annotations) {
+      if (!a.visible) continue;
+      if (replayAt !== null && a.eventAt && Date.parse(a.eventAt) > replayAt) continue;
+      const name = a.eventAt ? `${byline(a)} · ${eventLabel(a)}` : byline(a);
+      add('anno|' + a.id, a.kind, a.points, Color.fromCssColorString(a.color), name, !!a.source && a.source !== 'user');
+    }
     if (props.tool !== 'none' && props.draftPoints.length) {
-      const kind = props.tool === 'draw-pin' ? 'pin' : props.tool === 'measure-area' || props.tool === 'draw-area' ? 'area' : 'line';
-      add('draft', kind, props.draftPoints, Color.fromCssColorString('#ffd166'), null, true);
+      const kind = props.tool === 'draw-pin' || props.tool === 'draw-note' ? 'pin' : props.tool === 'measure-area' || props.tool === 'draw-area' || props.tool === 'sketch-area' || props.tool === 'draw-box' ? 'area' : 'line';
+      add('draft', kind, props.draftPoints, Color.fromCssColorString(props.tool === 'draw-box' ? '#56b4e9' : '#ffd166'), null, true);
+    }
+    // Ask the planet: hollow rings on the records the answer refers to, at the records' own positions.
+    for (const m of props.askMarks ?? []) {
+      src.entities.add({ id: 'ask|' + m.ref, position: Cartesian3.fromDegrees(m.lon, m.lat), point: { pixelSize: 18, color: Color.TRANSPARENT, outlineColor: Color.fromCssColorString('#cc79a7'), outlineWidth: 3, disableDepthTestDistance: Number.POSITIVE_INFINITY }, label: lbl(m.note ? `${m.ref} · ${m.note}` : m.ref) });
     }
     w.scene.requestRender();
-  }, [props.annotations, props.draftPoints, props.tool]);
+  }, [props.annotations, props.draftPoints, props.tool, props.askMarks, props.playback?.t]);
+
+  // ----- Sentinel-2 image for a drawn box -----
+  const sentinelLayerRef = useRef<ImageryLayer | null>(null);
+  useEffect(() => {
+    const w = widgetRef.current;
+    if (!w || !ready) return;
+    if (sentinelLayerRef.current) { w.imageryLayers.remove(sentinelLayerRef.current, true); sentinelLayerRef.current = null; }
+    if (props.sentinelOverlay) {
+      const layer = sentinelImageryLayer(props.sentinelOverlay);
+      w.imageryLayers.add(layer);
+      sentinelLayerRef.current = layer;
+    }
+    w.scene.requestRender();
+  }, [props.sentinelOverlay, ready]);
 
   // ----- playback of recorded observations -----
   useEffect(() => {
@@ -1819,7 +1936,7 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
         if (!w) return null;
         const r = w.scene.canvas.getBoundingClientRect();
         const picked = w.scene.pick(new Cartesian2(x - r.left, y - r.top));
-        return defined(picked) && picked.id instanceof Entity ? String(picked.id.id) : defined(picked) ? '(primitive)' : null;
+        return defined(picked) && picked.id instanceof Entity ? String(picked.id.id) : defined(picked) ? (typeof picked.id === 'string' ? picked.id : '(primitive)') : null;
       },
       toScreen: (lat, lon) => {
         const w = widgetRef.current;
@@ -1843,6 +1960,54 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
         void cameraRestoreRef.current?.restore(cam, { mode: propsRef.current.sceneMode, animate });
       },
       restoreCamera: (cam, options) => cameraRestoreRef.current?.restore(cam, { ...options, mode: options?.mode ?? propsRef.current.sceneMode }) ?? Promise.resolve(false),
+      measureZoom: (lat, lon, fromH, toH, ms) => new Promise((resolve) => {
+        const w = widgetRef.current;
+        const lr = layerRendererRef.current;
+        if (!w || !lr) { resolve({ fps: 0, gapMsP95: 0, gapMsMax: 0, longFrames: 0, samples: [] }); return; }
+        const gaps: number[] = [];
+        const samples: { t: number; h: number; records: number; icons: number; models: number }[] = [];
+        let last = 0, lastSample = -1e9;
+        const start = performance.now();
+        const step = () => {
+          const now = performance.now();
+          const el = now - start;
+          if (last) gaps.push(now - last);
+          last = now;
+          const f = Math.min(1, el / ms);
+          const h = fromH * Math.pow(toH / fromH, f);
+          w.camera.setView({ destination: Cartesian3.fromDegrees(lon, lat, h), orientation: { heading: 0, pitch: CMath.toRadians(-60), roll: 0 } });
+          w.scene.requestRender();
+          if (now - lastSample >= 250) { lastSample = now; samples.push({ t: Math.round(el), h: Math.round(h), ...lr.debugVehicleCounts() }); }
+          if (el < ms + 3000) { requestAnimationFrame(step); return; }
+          const s = [...gaps].sort((a, b) => a - b);
+          resolve({ fps: Math.round((gaps.length / (el / 1000)) * 10) / 10, gapMsP95: Math.round(s[Math.floor(s.length * 0.95)] ?? 0), gapMsMax: Math.round(s[s.length - 1] ?? 0), longFrames: gaps.filter((g) => g > 50).length, samples });
+        };
+        requestAnimationFrame(step);
+      }),
+      measureFrames: (ms) => new Promise((resolve) => {
+        const w = widgetRef.current;
+        if (!w) { resolve({ frames: 0, fps: 0, cpuMsAvg: 0, cpuMsP95: 0, intervalMsP95: 0 }); return; }
+        const cpu: number[] = [], gaps: number[] = [];
+        let t0 = 0, last = 0;
+        const offPre = w.scene.preUpdate.addEventListener(() => { t0 = performance.now(); });
+        const offPost = w.scene.postRender.addEventListener(() => { const n = performance.now(); cpu.push(n - t0); if (last) gaps.push(n - last); last = n; });
+        const start = performance.now();
+        const p95 = (a: number[]) => { const s = [...a].sort((x, y) => x - y); return s.length ? Math.round(s[Math.floor(s.length * 0.95)] * 10) / 10 : 0; };
+        const spin = () => {
+          const el = performance.now() - start;
+          if (el >= ms) {
+            offPre(); offPost();
+            const entities: Record<string, number> = { _widget: w.entities.values.length };
+            for (let i = 0; i < w.dataSources.length; i++) { const ds = w.dataSources.get(i); entities[(ds.name || 'ds' + i) + (ds.show ? '' : ' (hidden)')] = ds.entities.values.length; }
+            resolve({ entities, frames: cpu.length, fps: Math.round((cpu.length / el) * 10000) / 10, cpuMsAvg: Math.round((cpu.reduce((s, x) => s + x, 0) / Math.max(1, cpu.length)) * 10) / 10, cpuMsP95: p95(cpu), intervalMsP95: p95(gaps) });
+            return;
+          }
+          w.camera.rotate(Cartesian3.UNIT_Z, 0.0015);
+          w.scene.requestRender();
+          requestAnimationFrame(spin);
+        };
+        requestAnimationFrame(spin);
+      }),
       setView: (lat, lon, heightM, pitchDeg = -90) => {
         void cameraRestoreRef.current?.restore({ lat, lon, heightM, heading: 0, pitch: CMath.toRadians(pitchDeg) }, { mode: propsRef.current.sceneMode, animate: false });
       },

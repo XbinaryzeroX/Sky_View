@@ -46,6 +46,8 @@ The installer is built by electron-builder (`electron-builder.yml`): it packs `d
 - `src/main/security.ts`: `app://` protocol, CSP header, session lock-down, navigation and permission denial.
 - `src/main/secrets.ts`, `credentials.ts`: customer keys encrypted with Electron `safeStorage`; optional build-time keys, obfuscated only.
 - `src/renderer/App.tsx`: top-level state and layout. `components/Globe.tsx`: the Cesium widget. `map/`: imagery providers, terrain, vector tiles, vehicle rendering, overlays, workers.
+- `src/main/mcpBridge.ts` and `src/mcp/server.ts`: the local AI agent (MCP) bridge. Off by default (`mcpEnabled`); a Windows named pipe with a token file in `<userData>/mcp/`, no network socket. The stdio server is bundled to `dist/mcp/sky-view-mcp.cjs` and copied next to the token file when the bridge starts. Tools are fixed in `shared/mcpTools.ts`; agents read and add findings only.
+- `src/main/sentinel.ts`: recent Sentinel-2 imagery for a drawn box (STAC search, COG byte ranges, PNG made in the main process). `src/main/askPlanet.ts`: questions answered from records near the view; the model can only point at records by reference.
 - `src/shared/`: pure logic and types used by both processes. This is where most tested behaviour lives.
 
 ## 3. Folder map
@@ -288,7 +290,7 @@ To isolate the packaged executable, pass `--user-data-dir=<temp folder>` and set
 52. *Making tests pass by weakening them.* No skips, raised timeouts or deleted assertions. The known flaky timeout in `passenger-routes` is handled by rerunning.
 53. *Claiming a performance gain without measurement.* Measure before and after on the same route, and report raw numbers with their limits.
 54. *Running `npm run dev` or a build while another instance is open.* Port 5173 must be free, and a running packaged app locks `release/win-unpacked`. `start.bat` selects among a hard-coded list of release folders, so a new side-by-side folder needs an entry there.
-55. *Committing generated output or reverting other work.* The root `.gitignore` is currently missing from the working tree (a copy sits in `samples/.gitignore`), so `git add -A` would stage `node_modules`, `dist` and `release`. Stage files by name. Other sessions may be editing this working tree at the same time, so re-run `git status` right before staging and expect files you did not touch to have changed. Never `reset`, `stash`, `checkout --` or delete uncommitted changes you did not make. Do not commit or push unless asked.
+55. *Committing generated output or reverting other work.* The root `.gitignore` excludes `node_modules`, `dist`, `release`, `.qa`, `tmp` and `brag-output*`; still stage files by name. Other sessions may be editing this working tree at the same time, so re-run `git status` right before staging and expect files you did not touch to have changed. Never `reset`, `stash`, `checkout --` or delete uncommitted changes you did not make. Do not commit or push unless asked.
 56. *Finishing without updating the record.* Add the dated `docs/PROGRESS.md` section, update README or `FEATURES-v0.4.md` if behaviour changed, and correct any doc line your change made false.
 
 ## 9. Checklist before saying a task is done

@@ -1,4 +1,4 @@
-import type { LayerId } from './layers';
+import type { GeoRecord, LayerId } from './layers';
 import type { Earthquake, WeatherAlert } from './types';
 
 export interface TimelineRange {
@@ -65,6 +65,24 @@ export interface TimelineFrame extends TimelineHazards {
     heading: number | null;
     onGround: boolean | null;
   }[];
+  /** Snapshots of area layers recorded by a watch-area recording (absent from older main processes). */
+  layers?: Partial<Record<FrameLayer, RecordedLayerFrame>>;
+}
+
+/** Layers replayed as whole recorded snapshots rather than per-object fixes. */
+export const FRAME_LAYERS = ['gnss', 'conflicts'] as const satisfies readonly LayerId[];
+export type FrameLayer = (typeof FRAME_LAYERS)[number];
+/** How long one recorded snapshot stands for the area before replay shows it as not recorded. */
+export const FRAME_VALID_MS: Record<FrameLayer, number> = { gnss: 10 * 60_000, conflicts: 45 * 60_000 };
+
+export interface RecordedLayerFrame {
+  state: 'recorded' | 'unknown';
+  /** When the app first retrieved this snapshot, and when it last saw it unchanged. */
+  observedAt: string | null;
+  lastSeenAt: string | null;
+  area: string | null;
+  reason: string | null;
+  records: GeoRecord[];
 }
 
 /** Map entities and detail links share a source identifier. Keep the newest

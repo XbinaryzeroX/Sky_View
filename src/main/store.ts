@@ -10,6 +10,9 @@ import type { AnnotationWatchPlan } from './areaWatches';
 import { MAX_STORED_ANNOTATIONS, previewGeoJsonAnnotations, type AnnotationDocument, type GeoJsonImportResult } from '../shared/geojsonAnnotations';
 import { areaWatchEventSchema, areaWatchRuleSchema, MAX_AREA_WATCH_EVENTS, MAX_AREA_WATCH_RULES, type AreaWatchEvent, type AreaWatchRule, type AreaWatchState } from '../shared/areaWatch';
 import { TimelineArchive, type TimelineObservation, type TimelineStats } from './timeline';
+import { LayerFrameArchive } from './layerFrames';
+import type { FrameLayer, RecordedLayerFrame } from '../shared/timeline';
+import type { GeoRecord } from '../shared/layers';
 import type { TimelineHazards, TimelineRange } from '../shared/timeline';
 import type { VisitBriefing } from '../shared/visitBriefing';
 import { readFeedCoverage } from '../shared/monitoring';
@@ -68,12 +71,14 @@ function escapeLike(s: string): string {
 export class AtlasStore {
   readonly db: DatabaseSync;
   private readonly timeline: TimelineArchive;
+  private readonly frames: LayerFrameArchive;
 
   constructor(path: string) {
     this.db = new DatabaseSync(path);
     this.db.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = ON;');
     this.migrate();
     this.timeline = new TimelineArchive(this.db);
+    this.frames = new LayerFrameArchive(this.db);
   }
 
   close(): void {
@@ -169,6 +174,11 @@ export class AtlasStore {
 
   setMeta(key: string, value: string): void {
     this.db.prepare('INSERT INTO meta(key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, value);
+  }
+
+  /** Meta keys starting with `prefix` (a fixed string, matched literally). */
+  metaKeys(prefix: string): string[] {
+    return (this.db.prepare('SELECT key FROM meta WHERE substr(key, 1, ?) = ? ORDER BY key').all(prefix.length, prefix) as Row[]).map((r) => String(r.key));
   }
 
   deleteMeta(key: string): void {
@@ -463,6 +473,9 @@ export class AtlasStore {
   }
 
   timelineFrame(t: string): TimelineHazards { return this.timeline.frame(t); }
+  /** Watch-area snapshots of GPS cells and conflict reports, for replay. */
+  recordLayerFrame(layer: FrameLayer, area: string, at: string, records: readonly GeoRecord[], retentionHours: number): boolean { return this.frames.record(layer, area, at, records, retentionHours); }
+  layerFrame(layer: FrameLayer, t: string): RecordedLayerFrame { return this.frames.frame(layer, t); }
   timelineStats(): TimelineStats { return this.timeline.stats(); }
   beginVisit(at: string): void { this.timeline.beginVisit(at); }
   visitBriefing(at: string): VisitBriefing { return this.timeline.visitBriefing(at); }
@@ -804,6 +817,7 @@ export class AtlasStore {
     return this.tx(() => {
       const removed = Number(this.db.prepare('DELETE FROM events').run().changes);
       this.timeline.clearWithinTransaction();
+      this.frames.clear();
       return removed;
     });
   }

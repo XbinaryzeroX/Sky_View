@@ -45,7 +45,7 @@ function waterMask(level: number, x: number, y: number) {
   return mask;
 }
 
-async function blendShore(source: ImageBitmap | OffscreenCanvas, level: number, x: number, y: number) {
+export async function blendShore(source: ImageBitmap | OffscreenCanvas, level: number, x: number, y: number) {
   const size = 256;
   const masks = await Promise.all(Array.from({length: 9}, (_, i) => waterMask(level, x + i % 3 - 1, y + Math.floor(i / 3) - 1)));
   if (masks.some(mask => !mask)) return createImageBitmap(source, { imageOrientation: 'flipY' });
@@ -63,19 +63,26 @@ async function blendShore(source: ImageBitmap | OffscreenCanvas, level: number, 
   const bg = blurred.getContext('2d')!;
   bg.filter = `blur(${radius}px)`;
   bg.drawImage(land, 0, 0);
-  const crop = new OffscreenCanvas(size, size), cg = crop.getContext('2d', {willReadFrequently:true})!;
+  // Raise the land influence (alpha ×4, clamped) before inverting it so the full USGS photograph extends into the
+  // nearshore water, followed by a short smooth transition. Done with canvas compositing so it stays on the GPU:
+  // the earlier per-pixel readback (and willReadFrequently, which moved the 768 px blur onto the CPU) held the
+  // main thread for 1.7 s while zooming into Manhattan (profiled 2026-11-18).
+  const crop = new OffscreenCanvas(size, size), cg = crop.getContext('2d')!;
   cg.drawImage(blurred, size, size, size, size, 0, 0, size, size);
-  const alpha = cg.getImageData(0, 0, size, size);
-  // Raise the land influence before inverting it so the full USGS photograph
-  // extends into the nearshore water, followed by a short smooth transition.
-  for (let i = 3; i < alpha.data.length; i += 4) alpha.data[i] = 255 - Math.min(255, alpha.data[i] * 4);
-  cg.putImageData(alpha, 0, 0);
-  cg.globalCompositeOperation = 'destination-in';
-  cg.drawImage(masks[4]!, 0, 0);
+  cg.globalCompositeOperation = 'lighter';
+  cg.drawImage(crop, 0, 0); // 2a
+  cg.drawImage(crop, 0, 0); // 4a, clamped at 1
+  const shore = new OffscreenCanvas(size, size), sg = shore.getContext('2d')!;
+  sg.fillStyle = '#fff';
+  sg.fillRect(0, 0, size, size);
+  sg.globalCompositeOperation = 'destination-out';
+  sg.drawImage(crop, 0, 0); // 1 − 4a
+  sg.globalCompositeOperation = 'destination-in';
+  sg.drawImage(masks[4]!, 0, 0);
   const result = new OffscreenCanvas(size, size), rg = result.getContext('2d')!;
   rg.drawImage(source, 0, 0, size, size);
   rg.globalCompositeOperation = 'destination-out';
-  rg.drawImage(crop, 0, 0);
+  rg.drawImage(shore, 0, 0);
   return createImageBitmap(result, { imageOrientation: 'flipY' });
 }
 

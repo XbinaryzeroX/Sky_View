@@ -32,7 +32,7 @@ function harness(r: GeoRecord, modelsEnabled = false) {
     records: new Map([['aircraft', new Map([[r.id, r]])]]), entities: new Map(), sources: new Map(),
     bulk: new Map([['aircraft', { byId: new Map([[r.id, billboard]]), coll: { show: true } }]]), staticPoints: new Map(),
     modelled: new Set(), modelOpts: { enabled: modelsEnabled, budget: 1 }, lastType: new Map(),
-    models: { sync: modelSync, has: () => false }, sel: { layer: 'aircraft', id: r.id },
+    models: { sync: modelSync, has: () => false, pendingCount: () => 0 }, sel: { layer: 'aircraft', id: r.id },
   });
   const internals = renderer as unknown as { tickMotion(): void; syncModels(): void };
   return { renderer, billboard, modelSync, tick: () => internals.tickMotion(), syncModels: () => internals.syncModels() };

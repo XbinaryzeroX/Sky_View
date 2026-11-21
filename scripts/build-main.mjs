@@ -22,6 +22,8 @@ const common = {
 const configs = [
   { ...common, define: builtinDefine, entryPoints: ['src/main/main.ts'], outfile: 'dist/main/main.cjs' },
   { ...common, entryPoints: ['src/preload/preload.ts'], outfile: 'dist/preload/preload.cjs' },
+  // Stdio MCP server that AI agents start; copied next to the user's data when the agent bridge is turned on.
+  { ...common, external: [], entryPoints: ['src/mcp/server.ts'], outfile: 'dist/mcp/sky-view-mcp.cjs' },
 ];
 
 if (watch) {

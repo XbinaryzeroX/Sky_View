@@ -176,6 +176,9 @@ interface Live {
 }
 
 const SELECTED = Color.fromCssColorString('#ffd84a');
+/** New models started per pass, and the most loading at once (see sync). */
+export const MODELS_PER_PASS = 4;
+export const MODELS_LOADING = 8;
 
 export class VehicleModelLayer {
   private live = new Map<string, Live>();
@@ -184,6 +187,8 @@ export class VehicleModelLayer {
   /** When each vehicle last lost its model (flip diagnostics: model → icon → model within 5 s). */
   private removedAt = new Map<string, number>();
   private destroyed = false;
+  /** Candidates left for a later pass because this one had started enough new models. */
+  private deferred = 0;
 
   /** `onReadyChange` runs when a model becomes ready or fails, so icons can be reconciled immediately. */
   constructor(
@@ -207,10 +212,19 @@ export class VehicleModelLayer {
         }
       }
     const shown = new Set<string>();
+    // Each new model is parsed, uploaded and its shaders built on the main thread. Starting all of them at once when
+    // a zoom brings 150 aircraft into range froze the app for up to 1.7 s (measured 2026-11-18), so a pass starts at
+    // most MODELS_PER_PASS and keeps at most MODELS_LOADING in flight; the rest wait for the next pass. Icons stay
+    // until each model is ready, so nothing disappears meanwhile. Candidates come nearest first.
+    let loading = 0;
+    for (const l of this.live.values()) if (!l.ready && !l.failed) loading++;
+    let budget = Math.max(0, Math.min(MODELS_PER_PASS, MODELS_LOADING - loading));
+    this.deferred = 0;
     for (const c of candidates) {
       const l = this.live.get(c.key);
       if (!l) {
-        if (!this.failedVariants.has(c.variant)) this.create(c);
+        if (this.failedVariants.has(c.variant)) continue;
+        if (budget > 0) { budget--; this.create(c); } else this.deferred++;
         continue;
       }
       l.candidate = c;
@@ -289,6 +303,11 @@ export class VehicleModelLayer {
         if (this.live.get(c.key) === entry) this.fail(c.key, entry, c.variant, error);
       }
     })();
+  }
+
+  /** How many wanted models the last pass left for later (the caller schedules another pass). */
+  pendingCount(): number {
+    return this.deferred;
   }
 
   /** Whether a model variant failed this session (callers fall back to another variant). */

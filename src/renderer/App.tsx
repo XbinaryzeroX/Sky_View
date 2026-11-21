@@ -31,6 +31,14 @@ import { TrackingControls } from './components/TrackingControls';
 import type { TrackingMode } from '../shared/trackingCamera';
 import { SearchBox } from './components/SearchBox';
 import { VoiceControl } from './components/VoiceControl';
+import { AskPlanet } from './components/AskPlanet';
+import { WATCH_AREAS, watchArea, withWatchLayers } from '../shared/watchAreas';
+import { RecordingChip } from './components/RecordingChip';
+import { receiverOverlay } from './lib/receiverOverlay';
+import { RecentImageryPanel } from './components/RecentImageryPanel';
+import type { SentinelOverlay } from './map/sentinelOverlay';
+import type { AskMark } from '../shared/askPlanet';
+import { boxFromCorners, simplifyPath, sketchTolerance, SKETCH_MAX_POINTS } from '../shared/sketch';
 import { RadioNowPlaying } from './components/RadioPage';
 import { placeSearchMode } from '../shared/geocoding';
 import { ToolsPanel, measurementText } from './components/ToolsPanel';
@@ -141,9 +149,23 @@ export function App() {
   const [orbitFor, setOrbitFor] = useState<string | null>(null);
   const [tool, setTool] = useState<ToolMode>('none');
   const [draft, setDraft] = useState<[number, number][]>([]);
+  // Dragged strokes add points faster than renders; the ref always holds the whole draft.
+  const draftRef = useRef<[number, number][]>([]);
+  useEffect(() => { draftRef.current = draft; }, [draft]);
+  const setDraftNow = (pts: [number, number][]) => { draftRef.current = pts; setDraft(pts); };
+  const [drawColor, setDrawColor] = useState('#ffd166');
+  const [focusNoteId, setFocusNoteId] = useState<string | null>(null);
+  const [imageryPanel, setImageryPanel] = useState(false);
+  const [imageryBox, setImageryBox] = useState<[number, number, number, number] | null>(null);
+  const [sentinelOverlay, setSentinelOverlay] = useState<SentinelOverlay | null>(null);
+  const [askMarks, setAskMarks] = useState<AskMark[]>([]);
+  const [askPending, setAskPending] = useState<string | null>(null);
+  const receiverRing = useSyncExternalStore(receiverOverlay.subscribe, receiverOverlay.get);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [views, setViews] = useState<SavedView[]>([]);
   const [toolsOpen, setToolsOpen] = useState(false);
+  // Recent imagery and Map tools share the right-hand slot; the draped image stays when the panel closes.
+  useEffect(() => { if (toolsOpen) setImageryPanel(false); }, [toolsOpen]);
   // Navigation names are shown only when the user expands the rail; the choice is remembered on this computer.
   const [railOpen, setRailOpenState] = useState(() => { try { return localStorage.getItem('atlas.railOpen') === '1'; } catch { return false; } });
   const setRailOpen = (open: boolean) => { setRailOpenState(open); try { localStorage.setItem('atlas.railOpen', open ? '1' : '0'); } catch { /* storage unavailable: the choice lasts for this session */ } };
@@ -271,7 +293,7 @@ export function App() {
   const [kiosk, setKiosk] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const [areaMatchLimit, setAreaMatchLimit] = useState(20);
-  const lastViewRef = useRef<{ lat: number; lon: number; bbox: [number, number, number, number] } | null>(null);
+  const lastViewRef = useRef<{ lat: number; lon: number; heightM: number; bbox: [number, number, number, number] } | null>(null);
   useEffect(() => {
     void api.getWatchlist().then(setWatchlistState);
   }, []);
@@ -384,6 +406,8 @@ export function App() {
       setView: (lat: number, lon: number, h: number, pitch?: number) => globeRef.current?.setView(lat, lon, h, pitch),
       setWaterEffect: (enabled: boolean) => globeRef.current?.setWaterEffect(enabled),
       diag: () => globeRef.current?.getDiagnostics() ?? null,
+      measureFrames: (ms: number) => globeRef.current?.measureFrames(ms) ?? null,
+      measureZoom: (lat: number, lon: number, a: number, b: number, ms: number) => globeRef.current?.measureZoom(lat, lon, a, b, ms) ?? null,
       replayMap: (kind?: 'alert' | 'quake', id?: string) => globeRef.current?.replayMap(kind, id) ?? null,
       camera: () => globeRef.current?.getCamera() ?? null,
       viewCenter: () => globeRef.current?.getMapCenter() ?? null,
@@ -435,8 +459,10 @@ export function App() {
       unsub = api.onLayer((l) => setLayerSnaps((prev) => ({ ...prev, [l.status.id]: l })));
     });
     void api.listAnnotations().then(setAnnotations);
+    // AI agents add findings to the shared canvas through the agent bridge.
+    const offCanvas = api.onAnnotationsChanged(() => void api.listAnnotations().then(setAnnotations));
     void api.listViews().then(setViews);
-    return () => unsub();
+    return () => { unsub(); offCanvas(); };
   }, []);
 
   // Recorded trail for the tracked object, refreshed as new fixes arrive.
@@ -518,7 +544,7 @@ export function App() {
   // Restore the last camera view (per-viewer convenience; falls back to the U.S. view).
   const restoredRef = useRef(false);
   const onViewChange = useCallback((v: Parameters<typeof api.setView>[0]) => {
-    lastViewRef.current = { lat: v.lat, lon: v.lon, bbox: v.bbox };
+    lastViewRef.current = { lat: v.lat, lon: v.lon, heightM: v.heightM, bbox: v.bbox };
     void api.setView(v).catch(() => {});
     try {
       const cam = globeRef.current?.getCamera();
@@ -652,18 +678,27 @@ export function App() {
   );
 
   const finishTool = async (pts: [number, number][], t: ToolMode) => {
-    if (t.startsWith('draw')) {
-      const kind = t === 'draw-pin' ? 'pin' : t === 'draw-line' ? 'line' : 'area';
-      if ((kind === 'line' && pts.length < 2) || (kind === 'area' && pts.length < 3) || pts.length === 0) return;
-      const a: Annotation = { id: crypto.randomUUID().replace(/[^A-Za-z0-9_-]/g, ''), kind, name: kind === 'pin' ? 'Pin' : kind === 'line' ? 'Route' : 'Area', color: '#ffd166', points: pts, visible: true, createdAt: new Date().toISOString() };
+    if (t === 'draw-box') {
+      setDraftNow([]);
+      if (pts.length === 4) { setImageryBox(boxFromCorners(pts[0], pts[2])); setTool('none'); }
+      return;
+    }
+    if (t.startsWith('draw') || t.startsWith('sketch')) {
+      const kind = t === 'draw-pin' || t === 'draw-note' ? 'pin' : t === 'draw-line' || t === 'sketch-line' ? 'line' : 'area';
+      const sketch = t.startsWith('sketch');
+      const points = sketch ? simplifyPath(pts, sketchTolerance(lastViewRef.current?.heightM ?? 5000)).slice(0, SKETCH_MAX_POINTS) : pts;
+      if ((kind === 'line' && points.length < 2) || (kind === 'area' && points.length < 3) || points.length === 0) { setDraftNow([]); return; }
+      const name = t === 'draw-note' ? 'Note' : kind === 'pin' ? 'Pin' : sketch ? (kind === 'line' ? 'Sketched path' : 'Sketched outline') : kind === 'line' ? 'Route' : 'Outline';
+      const a: Annotation = { id: crypto.randomUUID().replace(/[^A-Za-z0-9_-]/g, ''), kind, name, color: drawColor, points, visible: true, createdAt: new Date().toISOString(), source: 'user', ...(sketch ? { sketch: true } : {}) };
       try {
         await api.putAnnotation(a);
         setAnnotations((prev) => [...prev, a]);
-        setToast(kind === 'pin' ? 'Pin saved' : measurementText(t, pts) ?? 'Saved');
+        if (t === 'draw-note') { setFocusNoteId(a.id); setToolsOpen(true); setTool('none'); }
+        setToast(t === 'draw-note' ? 'Note dropped: write it in Map tools' : kind === 'pin' ? 'Pin saved' : measurementText(kind === 'area' ? 'draw-area' : 'draw-line', points) ?? 'Saved');
       } catch (e) {
         setToast(errorText(e));
       }
-      setDraft([]);
+      setDraftNow([]);
     } else {
       const m = measurementText(t, pts);
       if (m) setToast(m);
@@ -993,6 +1028,45 @@ export function App() {
             ATC
           </button>
         </div>
+        <label className="archive-year-control watch-area-control" title="Fly to a strait or sea and turn on aircraft, military aircraft, ships, GPS accuracy, violence in the news and mapped military sites">
+          <span>Watch</span>
+          <select aria-label="Watch an area" value="" onChange={(event) => {
+            const value = event.target.value;
+            if (value === 'stop-recording') {
+              void patchSettings({ recordAreaId: null });
+              setToast('Recording stopped. What was recorded stays available in Playback.');
+              return;
+            }
+            if (value.startsWith('record:')) {
+              const target = watchArea(value.slice(7));
+              if (!target) return;
+              void patchSettings({ recordAreaId: target.id as Settings['recordAreaId'] });
+              setToast(`Recording ${target.name} in the background while Sky_View is open: aircraft, military aircraft, ships (with your AISStream key), GPS accuracy cells and conflict reports. Replay it in Playback.`);
+              return;
+            }
+            const area = watchArea(value);
+            if (!area) return;
+            if (playbackOn) exitPlayback();
+            setPage('globe');
+            setTracked(null);
+            void patchSettings({ layersEnabled: withWatchLayers(snap.settings.layersEnabled as LayerId[]) });
+            globeRef.current?.focus(area.lat, area.lon, area.radiusKm);
+            void api.listProviders().then((list) => {
+              const ships = list.some((p) => p.id === 'aisstream' && p.configured) ? '' : ' Ships outside the Baltic need your free AISStream key in Providers.';
+              setToast(`${area.name}: aircraft, military aircraft, ships, GPS accuracy, violence in the news and military sites on. ${area.coverageNote}${ships}`);
+            }).catch(() => setToast(`${area.name}: layers on. ${area.coverageNote}`));
+          }}>
+            <option value="">Choose…</option>
+            <optgroup label="Go there">
+              {WATCH_AREAS.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </optgroup>
+            <optgroup label="Record in the background">
+              {WATCH_AREAS.map((a) => <option key={a.id} value={'record:' + a.id} disabled={snap.settings.recordAreaId === a.id}>Record {a.name}</option>)}
+              {snap.settings.recordAreaId && <option value="stop-recording">Stop recording</option>}
+            </optgroup>
+          </select>
+        </label>
+        {snap.settings.recordAreaId && <RecordingChip areaId={snap.settings.recordAreaId} onStop={() => { void patchSettings({ recordAreaId: null }); setToast('Recording stopped. What was recorded stays available in Playback.'); }} />}
         <div className="seg" role="group" aria-label="Google imagery (your key)">
           <button
             className={`btn small-btn ${!archived && snap.settings.basemap === 'google2d' ? 'primary' : ''}`}
@@ -1185,14 +1259,17 @@ export function App() {
             tool={tool}
             draftPoints={draft}
             onToolPoint={(lon, lat) => {
-              if (tool === 'draw-pin') void finishTool([[lon, lat]], tool);
-              else setDraft((d) => [...d, [lon, lat]]);
+              if (tool === 'draw-pin' || tool === 'draw-note') void finishTool([[lon, lat]], tool);
+              else setDraftNow([...draftRef.current, [lon, lat]]);
             }}
+            onToolDraft={setDraftNow}
             onToolFinish={() => {
-              void finishTool(draft, tool);
+              void finishTool(draftRef.current, tool);
               if (tool.startsWith('measure')) setTool('none');
             }}
-            annotations={annotations}
+            annotations={receiverRing ? [...annotations, { id: 'sdr-coverage', kind: 'area', name: 'Your receiver: coverage heard', color: '#009e73', points: receiverRing, visible: true, createdAt: '1970-01-01T00:00:00.000Z', source: 'user' }] : annotations}
+            askMarks={askMarks}
+            sentinelOverlay={page === 'globe' ? sentinelOverlay : null}
             playback={playbackOn ? playbackFrame : null}
             playbackActive={playbackOn}
             google3dKey={google3dKey}
@@ -1226,18 +1303,48 @@ export function App() {
             interiorStatus={interiorStatus}
             onMode={setTrackingMode} onStop={() => { setTracked(null); setTrackingMode('follow'); }} />}
           {page !== 'radio' && <RadioNowPlaying onOpen={() => setPage('radio')} />}
-          {!widePage && voiceReady && <VoiceControl
-            onGo={(lat, lon, label) => { setPage('globe'); setTracked(null); globeRef.current?.focus(lat, lon, 6, 1_500); setToast(`Flying to ${label}`); }}
-            onAction={(a) => {
-              if (a.kind === 'layer') {
-                const set = new Set(snap.settings.layersEnabled);
-                if (a.on) set.add(a.layer); else set.delete(a.layer);
-                void patchSettings({ layersEnabled: [...set] as Settings['layersEnabled'] });
+          {!widePage && page === 'globe' && imageryPanel && (
+            <div className="floating-panel floating-imagery">
+              <RecentImageryPanel
+                box={imageryBox}
+                drawing={tool === 'draw-box'}
+                onDraw={() => { setTool(tool === 'draw-box' ? 'none' : 'draw-box'); setDraftNow([]); }}
+                aroundSelection={recordSel ? () => {
+                  const r = layerSnaps[recordSel.layer]?.records.find((x) => x.id === recordSel.id);
+                  if (!r) return null;
+                  const dLon = 0.05 / Math.max(0.2, Math.cos((r.lat * Math.PI) / 180));
+                  return [Math.max(-180, r.lon - dLon), Math.max(-82, r.lat - 0.05), Math.min(180, r.lon + dLon), Math.min(82, r.lat + 0.05)];
+                } : null}
+                onBox={setImageryBox}
+                overlay={sentinelOverlay}
+                onOverlay={setSentinelOverlay}
+                onClose={() => { setImageryPanel(false); if (tool === 'draw-box') setTool('none'); }} />
+            </div>
+          )}
+          {!widePage && page === 'globe' && <AskPlanet
+            view={() => lastViewRef.current}
+            onMarks={setAskMarks}
+            onFocus={(m) => globeRef.current?.focus(m.lat, m.lon, 5)}
+            pending={askPending}
+            onPendingTaken={() => setAskPending(null)}
+            onSave={(answer, question) => {
+              const now = new Date().toISOString();
+              const docs: Annotation[] = answer.marks.map((m) => ({ id: crypto.randomUUID().replace(/[^A-Za-z0-9_-]/g, ''), kind: 'pin', name: m.label.slice(0, 120) || m.ref, color: '#cc79a7', points: [[m.lon, m.lat]], visible: true, createdAt: now, note: `${question}\n${m.note}`.slice(0, 1000), source: 'ask', author: answer.engine.slice(0, 60) }));
+              void Promise.all(docs.map((d) => api.putAnnotation(d))).then(() => { setAnnotations((prev) => [...prev, ...docs]); setAskMarks([]); setToast(`Saved ${docs.length} marks to the canvas`); }).catch((e) => setToast(errorText(e)));
+            }}
+            voice={voiceReady ? <VoiceControl inline
+              onQuestion={setAskPending}
+              onGo={(lat, lon, label) => { setPage('globe'); setTracked(null); globeRef.current?.focus(lat, lon, 6, 1_500); setToast(`Flying to ${label}`); }}
+              onAction={(a) => {
+                if (a.kind === 'layer') {
+                  const set = new Set(snap.settings.layersEnabled);
+                  if (a.on) set.add(a.layer); else set.delete(a.layer);
+                  void patchSettings({ layersEnabled: [...set] as Settings['layersEnabled'] });
+                  return null;
+                }
+                if (a.kind === 'surface') { void patchSettings({ basemap: a.basemap, imageryYear: null }); return `Switching the map surface`; }
                 return null;
-              }
-              if (a.kind === 'surface') { void patchSettings({ basemap: a.basemap, imageryYear: null }); return `Switching the map surface`; }
-              return null;
-            }} />}
+              }} /> : undefined} />}
           {!widePage && <FloatingMapControls
             left={page === 'globe' ? leftFloat : null} onLeft={toggleLeft}
             solarLighting={lighting.mode !== 'day'}
@@ -1443,6 +1550,10 @@ export function App() {
                 if (tool.startsWith('measure')) setTool('none');
               }}
               onClear={() => setDraft([])}
+              drawColor={drawColor}
+              onDrawColor={setDrawColor}
+              focusNoteId={focusNoteId}
+              onRecentImagery={() => { setImageryPanel(true); setToolsOpen(false); setTool('draw-box'); setDraftNow([]); }}
               annotations={annotations}
               onAnnotationChange={updateAnnotation}
               areaWatch={{

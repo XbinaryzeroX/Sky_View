@@ -7,6 +7,8 @@ import { z } from 'zod';
 import { validateInstance } from './lemmy';
 import { MAX_IMPORT_ROWS, MAX_RADIUS_KM } from './csv';
 import { GEOJSON_MAX_BYTES } from './geojsonAnnotations';
+import { SATELLITE_GROUP_IDS } from './satelliteGroups';
+import { WATCH_AREA_IDS } from './watchAreas';
 import { areaWatchEventSchema, areaWatchRuleInputSchema, MAX_AREA_WATCH_EVENTS } from './areaWatch';
 import { investigationSchema, investigationQuakeMagnitudeSchema, investigationQuakeWindowSchema, surfaceSchema, visualModeSchema } from './investigation';
 import { LAYER_IDS, type LayerId } from './layers';
@@ -74,6 +76,8 @@ export const DEFAULT_SETTINGS: Settings = {
   visualMode: 'normal',
   reducedMotion: false,
   aiEnabled: false,
+  mcpEnabled: false,
+  recordAreaId: null,
   ollamaPort: 11434,
   ollamaModel: '',
 };
@@ -106,6 +110,18 @@ export const annotationSchema = z
     points: z.array(z.tuple([lon, lat])).min(1).max(5000),
     visible: z.boolean(),
     createdAt: z.string().datetime(),
+    /** Director mode: free text shown with the drawing. Optional; older annotations have none. */
+    note: z.string().max(1000).optional(),
+    /** Who drew it: the user, an AI agent through the MCP bridge, or an "Ask the planet" answer. */
+    source: z.enum(['user', 'agent', 'ask']).optional(),
+    author: z.string().trim().max(60).optional(),
+    /** Freehand sketch (drawn by dragging) rather than clicked points. */
+    sketch: z.boolean().optional(),
+    /** Timed event (strike, closure, incident) placed from open reporting: when it happened, in UTC. Replay shows it from then. */
+    eventAt: z.string().datetime({ precision: 3 }).optional(),
+    eventKind: z.enum(['strike', 'explosion', 'closure', 'incident', 'other']).optional(),
+    /** Where the user read about it. Opened only through the external-link allow-list. */
+    sourceUrl: z.string().url().max(500).regex(/^https:\/\//).optional(),
   })
   .strict();
 
@@ -215,7 +231,7 @@ export const settingsPatchSchema = z
     orgName: z.string().max(120),
     layersEnabled: z.array(z.enum(LAYER_IDS as [LayerId, ...LayerId[]])).max(40),
     firmsRegion: z.enum(['us', 'global']),
-    satelliteGroups: z.array(z.enum(['stations', 'visual', 'gnss', 'weather', 'science', 'starlink', 'telecom', 'imaging', 'debris'])).max(9),
+    satelliteGroups: z.array(z.enum(SATELLITE_GROUP_IDS)).max(SATELLITE_GROUP_IDS.length),
     trackRetentionHours: z.number().int().min(1).max(TRACK_MAX_RETENTION_HOURS),
     trackStorageMB: z.number().int().min(TRACK_STORAGE_MIN_MB).max(TRACK_STORAGE_MAX_MB),
     radarEnabled: z.boolean(),
@@ -231,6 +247,8 @@ export const settingsPatchSchema = z
     visualMode: z.enum(['normal', 'crt', 'nvg', 'thermal', 'anime', 'noir', 'snow']),
     reducedMotion: z.boolean(),
     aiEnabled: z.boolean(),
+    mcpEnabled: z.boolean(),
+    recordAreaId: z.enum(WATCH_AREA_IDS).nullable(),
     ollamaPort: z.number().int().min(1).max(65535),
     ollamaModel: z.string().max(200).regex(/^[A-Za-z0-9._:\/-]*$/),
   })
@@ -293,6 +311,16 @@ export const IPC = {
   launchesTimeline: 'launches:timeline',
   voiceTranscribe: 'voice:transcribe',
   radioSearch: 'radio:search',
+  /** Recent Sentinel-2 scenes for a drawn box, and a true-colour image of one scene cut to the box. */
+  sentinelSearch: 'imagery:sentinelSearch',
+  sentinelRender: 'imagery:sentinelRender',
+  /** A plain-language question answered from the records around the view. */
+  askPlanet: 'ask:planet',
+  /** State of the local AI agent (MCP) bridge. */
+  mcpStatus: 'mcp:status',
+  recordingStatus: 'recording:status',
+  /** Position of the user's own ADS-B receiver (readsb receiver.json), when one is configured. */
+  sdrReceiver: 'sdr:receiver',
   /** NOAA GFS 10 m wind forecast field for the wind layer. */
   weatherWind: 'weather:wind',
   tracksRange: 'tracks:range',
@@ -454,6 +482,12 @@ export const ipcArgSchemas = {
   [IPC.tracksTrail]: z.tuple([layerId, recordId]),
   [IPC.tracksFlightPath]: z.tuple([z.string().regex(/^[0-9a-f]{6}$/)]),
   [IPC.launchesTimeline]: z.tuple([z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)]),
+  [IPC.sentinelSearch]: z.tuple([z.tuple([z.number().finite().min(-180).max(180), z.number().finite().min(-90).max(90), z.number().finite().min(-180).max(180), z.number().finite().min(-90).max(90)]), z.number().int().min(1).max(100)]),
+  [IPC.sentinelRender]: z.tuple([z.string().regex(/^[A-Za-z0-9_]{5,80}$/), z.tuple([z.number().finite().min(-180).max(180), z.number().finite().min(-90).max(90), z.number().finite().min(-180).max(180), z.number().finite().min(-90).max(90)])]),
+  [IPC.askPlanet]: z.tuple([z.string().trim().min(2).max(500), z.object({ lat: z.number().finite().min(-90).max(90), lon: z.number().finite().min(-180).max(180), heightM: z.number().finite().min(1).max(100_000_000) }).strict()]),
+  [IPC.mcpStatus]: z.tuple([]),
+  [IPC.recordingStatus]: z.tuple([]),
+  [IPC.sdrReceiver]: z.tuple([]),
   // One recorded voice command: at most 1 MB of audio (about 15 s of Opus), in a format the recorder produces.
   [IPC.radioSearch]: z.tuple([z.object({
     query: z.string().max(80),

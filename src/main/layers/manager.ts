@@ -13,9 +13,10 @@ import { computeBackoffMs, FeedHttpError, type FetchJson, type FetchText } from 
 import { deadlineAfter, timerDelayUntil } from '../feeds/timing';
 import type { AtlasStore } from '../store';
 import type { AisStreamClient } from './aisstream';
-import { aircraftProviderHost, FETCHERS, type FetchResult, type SourceState } from './fetchers';
+import { aircraftCoverage, aircraftCoveredBy, aircraftProviderHost, FETCHERS, type FetchResult, type SourceState } from './fetchers';
 import { REPLAY_LAYERS, TRACK_MAX_RETENTION_HOURS, TRACK_THIN_AFTER_HOURS, trackPointBudget } from '../../shared/timeline';
 import { dwdFreshness, type DwdSource } from './dwdSource';
+import { AreaRecorder, type AreaRecordingStatus } from './areaRecorder';
 
 const TRACKED_LAYERS: LayerId[] = [...REPLAY_LAYERS];
 const VIEW_REFETCH_MIN_MS: Partial<Record<LayerId, number>> = { aircraft: 8000, metar: 15_000 };
@@ -37,6 +38,8 @@ export interface LayerManagerDeps {
   ais: AisStreamClient | null;
   aisConfigured: () => boolean;
   emit: (id: LayerId) => void;
+  /** The watch-area recording started, stopped or finished a poll. */
+  onRecordingChange?: () => void;
   now?: () => Date;
   log?: (m: string) => void;
 }
@@ -86,10 +89,20 @@ export class LayerManager {
   private dwdDisplayDeadline = Infinity;
   private running = false;
   private lastAircraftHost: string | null = null;
+  private readonly recorder: AreaRecorder;
 
   constructor(private readonly d: LayerManagerDeps) {
     this.now = d.now ?? (() => new Date());
     this.log = d.log ?? (() => {});
+    this.recorder = new AreaRecorder({
+      store: d.store, fetchJson: d.fetchJson, fetchText: d.fetchText, getSettings: d.getSettings, userAgent: d.userAgent,
+      sources: (id) => this.sourceState(id),
+      isLayerOn: (id) => this.isEnabled(id) && this.snaps.get(id)?.status.state === 'ok',
+      liveRecords: (id) => this.snaps.get(id)?.records ?? [],
+      aisRecords: () => (this.d.ais && this.d.aisConfigured() ? this.d.ais.records(this.now().getTime()) : null),
+      onChange: () => d.onRecordingChange?.(),
+      now: this.now, log: this.log,
+    });
     for (const id of LAYER_IDS) this.snaps.set(id, { status: emptyStatus(id, this.isEnabled(id)), records: [] });
   }
 
@@ -100,7 +113,12 @@ export class LayerManager {
   start(): void {
     this.running = true;
     for (const id of LAYER_IDS) if (this.isEnabled(id)) this.schedule(id, 0);
+    this.recorder.start();
     this.syncAis();
+  }
+
+  recordingStatus(): AreaRecordingStatus {
+    return this.recorder.status;
   }
 
   stop(): void {
@@ -108,6 +126,7 @@ export class LayerManager {
     this.scheduleDwdDisplay(Infinity);
     for (const t of this.timers.values()) clearTimeout(t);
     this.timers.clear();
+    this.recorder.stop();
     if (this.viewTimer) clearTimeout(this.viewTimer);
     if (this.aisTimer) clearInterval(this.aisTimer);
     this.aisTimer = null;
@@ -141,6 +160,7 @@ export class LayerManager {
       if (this.inFlight.has('aircraft')) this.rerun.add('aircraft');
       else this.schedule('aircraft', 0);
     }
+    this.recorder.sync();
     this.syncAis();
   }
 
@@ -153,6 +173,14 @@ export class LayerManager {
         if (!LAYERS[id].viewport || !this.isEnabled(id)) continue;
         const changedProvider = id === 'aircraft' && this.lastAircraftHost !== aircraftProviderHost(v, this.d.getSettings());
         if (!viewMovedEnough(this.lastFetchView.get(id) ?? null, v) && !changedProvider) continue;
+        // Zooming into (or panning within) the area the last aircraft request covered needs no new request: the
+        // records are already loaded, and re-asking on every zoom step made adsb.lol rate-limit the app until
+        // the traffic expired off the map. The regular poll still refreshes them.
+        if (id === 'aircraft' && !changedProvider) {
+          const prev = aircraftCoverage(this.lastFetchView.get(id) ?? null, this.d.getSettings());
+          const next = aircraftCoverage(v, this.d.getSettings());
+          if (prev && next && aircraftCoveredBy(prev, next)) continue;
+        }
         if (changedProvider && this.inFlight.has(id)) { this.rerun.add(id); continue; }
         const since = this.now().getTime() - (this.lastFetchAt.get(id) ?? 0);
         const min = changedProvider ? 0 : VIEW_REFETCH_MIN_MS[id] ?? 30_000;
@@ -458,12 +486,17 @@ export class LayerManager {
   private syncAis(): void {
     const ais = this.d.ais;
     if (!ais) return;
-    const want = this.running && this.isEnabled('vessels') && this.d.aisConfigured() && this.view !== null;
+    const area = this.recorder.box();
+    const live = this.isEnabled('vessels') && this.view !== null;
+    const want = this.running && this.d.aisConfigured() && (live || area !== null);
     if (want) {
-      ais.start(this.view!.bbox);
+      // A recorded watch area is subscribed alongside the view; with the vessel layer off it is the only box.
+      if (live) ais.start(this.view!.bbox, area);
+      else ais.start(area!);
       if (!this.aisTimer) {
         // Publish streamed positions every 10 s between Digitraffic polls.
         this.aisTimer = setInterval(() => {
+          if (!this.isEnabled('vessels')) return;
           const snap = this.snaps.get('vessels')!;
           const base = snap.records.filter((r) => !r.source.startsWith('AISStream'));
           snap.records = this.mergeAis(base);

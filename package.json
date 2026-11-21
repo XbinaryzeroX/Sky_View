@@ -7,7 +7,7 @@
   "type": "module",
   "main": "dist/main/main.cjs",
   "author": "Sky_View",
-  "license": "UNLICENSED",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "devDependencies": {
     "@gltf-transform/core": "^4.5.1",
     "@gltf-transform/extensions": "^4.5.1",

@@ -10,11 +10,15 @@ import { createFlightPathLookup } from './flightPathLookup';
 import { createLaunchTimelineLookup } from './launchTimelineLookup';
 import { createVoiceTranscriber } from './voice';
 import { createRadio } from './radio';
+import { SentinelService } from './sentinel';
+import { parseReceiverJson, receiverJsonUrl } from '../shared/sdrCoverage';
+import { createAskPlanet } from './askPlanet';
+import type { McpStatus } from './mcpBridge';
 import { createWindService } from './windService';
 import { commonsSearchUrl, parseAdsbdb, parseAirportData, parseCommons, type VehicleInfo } from '../shared/vehicleInfo';
 import { buildBriefing, buildVisitBriefing, type BriefingPreview } from '../shared/briefing';
 import { randomUUID } from 'node:crypto';
-import { LAYER_IDS } from '../shared/layers';
+import { LAYER_IDS, type GeoRecord, type LayerId } from '../shared/layers';
 import { locationsToCsv } from '../shared/csv';
 import { IPC, isInvokeChannel, IpcValidationError, validateIpcArgs, type InvokeChannel } from '../shared/ipc';
 import type { AppCore } from './core';
@@ -28,7 +32,7 @@ import { sceneSchema } from '../shared/ipc';
 import { classifyAircraftQuery } from '../shared/aircraft';
 import { normalizeAdsb } from '../shared/layerNormalize';
 import type { AtlasStore } from './store';
-import { REPLAY_LAYERS, REPLAY_FIX_WINDOW_MS, type TimelineFrame } from '../shared/timeline';
+import { FRAME_LAYERS, REPLAY_LAYERS, REPLAY_FIX_WINDOW_MS, type TimelineFrame } from '../shared/timeline';
 import { isKeyedCameraId } from '../shared/keyedCameras';
 import { mainGeoidHeight } from './geoid';
 import { placeSearchMode } from '../shared/geocoding';
@@ -58,6 +62,8 @@ export interface ExtraServices {
   userAgent?: () => string;
   /** Radio Browser search and relay (shared with the app:// protocol handler). */
   radio?: ReturnType<typeof createRadio>;
+  /** Local AI agent (MCP) bridge; null when the platform has none (tests). */
+  mcp?: { status(enabled: boolean): McpStatus; runtime: string | null } | null;
 }
 
 export type Handler = (args: unknown[]) => Promise<unknown> | unknown;
@@ -71,6 +77,18 @@ export function createHandlers(core: AppCore, store: AtlasStore, fetchJson: Fetc
   const wind = createWindService(fetchText, fetchBytes, () => extra.userAgent?.() ?? 'SkyView (desktop monitoring app)');
   const flightPath = createFlightPathLookup(fetchJson, () => extra.userAgent?.() ?? 'SkyView (desktop monitoring app)');
   const radio = extra.radio ?? createRadio(fetchJson, () => extra.userAgent?.() ?? 'SkyView (desktop monitoring app)');
+  const sentinel = new SentinelService(fetchJson, fetchBytes, extra.userAgent?.() ?? 'SkyView (desktop monitoring app)');
+  const ask = createAskPlanet({
+    fetchJson,
+    settings: () => core.settings,
+    openAiKey: () => extra.providers?.credentials.userKey('openai') ?? null,
+    layers: () => (core.settings.layersEnabled as LayerId[]).map((id) => {
+      const s = extra.layers?.snapshot(id);
+      return s && s.status.enabled ? { id, records: s.records } : null;
+    }).filter((l): l is { id: LayerId; records: GeoRecord[] } => !!l),
+    quakes: () => core.snapshot().quakes,
+    userAgent: () => extra.userAgent?.() ?? 'SkyView (desktop monitoring app)',
+  });
   const transcribe = createVoiceTranscriber(fetchJson, () => extra.providers?.credentials.userKey('openai') ?? null, () => extra.userAgent?.() ?? 'SkyView (desktop monitoring app)');
   const launchTimeline = createLaunchTimelineLookup(fetchJson, () => extra.userAgent?.() ?? 'SkyView (desktop monitoring app)', Date.now, () => extra.providers?.credentials.userKey('launchlibrary') ?? null);
   const datedStatus = createAirlineStatusLookup(fetchJson, id => {
@@ -200,7 +218,7 @@ export function createHandlers(core: AppCore, store: AtlasStore, fetchJson: Fetc
       const [patch] = validateIpcArgs(IPC.settingsUpdate, a);
       if (patch.lemmyInstance) extra.lemmy?.changeInstance(patch.lemmyInstance);
       const r = core.updateSettings(patch);
-      if (patch.layersEnabled || patch.firmsRegion || patch.satelliteGroups) {
+      if (patch.layersEnabled || patch.firmsRegion || patch.satelliteGroups || patch.recordAreaId !== undefined) {
         extra.layers?.syncEnabled();
         if (patch.firmsRegion && r.layersEnabled.includes('fires')) void extra.layers?.refresh('fires');
         if (patch.satelliteGroups && r.layersEnabled.includes('satellites')) void extra.layers?.refresh('satellites');
@@ -289,6 +307,36 @@ export function createHandlers(core: AppCore, store: AtlasStore, fetchJson: Fetc
       const [id] = validateIpcArgs(IPC.launchesTimeline, a);
       return launchTimeline(id);
     },
+    [IPC.sentinelSearch]: (a) => {
+      const [box, maxCloud] = validateIpcArgs(IPC.sentinelSearch, a);
+      return sentinel.search(box, maxCloud);
+    },
+    [IPC.sentinelRender]: (a) => {
+      const [sceneId, box] = validateIpcArgs(IPC.sentinelRender, a);
+      return sentinel.render(sceneId, box);
+    },
+    [IPC.askPlanet]: (a) => {
+      const [question, view] = validateIpcArgs(IPC.askPlanet, a);
+      return ask(question, view);
+    },
+    [IPC.sdrReceiver]: async (a) => {
+      validateIpcArgs(IPC.sdrReceiver, a);
+      const base = extra.providers?.localReceiverUrl();
+      const url = base ? receiverJsonUrl(base) : null;
+      if (!url) return null;
+      const res = await fetchJson(url, { timeoutMs: 8000, maxBytes: 64 * 1024 });
+      return parseReceiverJson(res.body);
+    },
+    [IPC.recordingStatus]: (a) => {
+      validateIpcArgs(IPC.recordingStatus, a);
+      return extra.layers?.recordingStatus() ?? { areaId: null, areaName: null, startedAt: null, tasks: {} };
+    },
+    [IPC.mcpStatus]: (a) => {
+      validateIpcArgs(IPC.mcpStatus, a);
+      const enabled = core.settings.mcpEnabled;
+      const s = extra.mcp?.status(enabled) ?? { enabled, listening: false, pipe: null, serverPath: null, connections: 0, lastCallAt: null, error: 'The agent bridge is not available in this build.' };
+      return { ...s, runtime: extra.mcp?.runtime ?? null };
+    },
     [IPC.radioSearch]: (a) => {
       const [q] = validateIpcArgs(IPC.radioSearch, a);
       return radio.search(q);
@@ -316,7 +364,8 @@ export function createHandlers(core: AppCore, store: AtlasStore, fetchJson: Fetc
     [IPC.timelineFrame]: (a): TimelineFrame => {
       const [t] = validateIpcArgs(IPC.timelineFrame, a);
       const points = REPLAY_LAYERS.flatMap(layer => store.trackSnapshot(layer, t, REPLAY_FIX_WINDOW_MS).map(fix => ({ ...fix, layer })));
-      return { t, points, ...store.timelineFrame(t) };
+      const layers = Object.fromEntries(FRAME_LAYERS.map((l) => [l, store.layerFrame(l, t)])) as TimelineFrame['layers'];
+      return { t, points, layers, ...store.timelineFrame(t) };
     },
     [IPC.providersList]: (a) => {
       validateIpcArgs(IPC.providersList, a);

@@ -147,7 +147,9 @@ describe('new provider keys', () => {
   it('lets the main process reach only the exact OpenAI, TomTom and Cesium paths it needs', () => {
     expect(() => assertAllowedUrl(OPENAI_TRANSCRIBE_URL)).not.toThrow();
     expect(() => assertAllowedUrl('https://api.openai.com/v1/models')).not.toThrow();
-    expect(() => assertAllowedUrl('https://api.openai.com/v1/chat/completions')).toThrow();
+    // Ask the planet uses chat completions with the customer's key; nothing else on the OpenAI API is reachable.
+    expect(() => assertAllowedUrl('https://api.openai.com/v1/chat/completions')).not.toThrow();
+    expect(() => assertAllowedUrl('https://api.openai.com/v1/files')).toThrow();
     expect(() => assertAllowedUrl('https://api.cesium.com/v1/me')).not.toThrow();
     expect(() => assertAllowedUrl('https://api.cesium.com/v1/assets/1/endpoint')).toThrow();
   });

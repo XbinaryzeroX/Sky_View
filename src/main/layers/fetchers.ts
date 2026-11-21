@@ -1,5 +1,9 @@
 import { normalizeOpenSky, OPENSKY_REFRESH_ANON_S, OPENSKY_REFRESH_AUTH_S } from '../../shared/opensky';
+import { geodesicDistanceKm } from '../../shared/geo';
+import { trackState } from '../../shared/aircraft';
 import { mergeIncidents, normalizeEonet, normalizeGdacs } from '../../shared/incidents';
+import { celestrakGroup } from '../../shared/satelliteGroups';
+import { dropDuplicateStormPoints, GDACS_TC_MAX_STORMS, gdacsTcListUrl, normalizeGdacsTcGeometry, parseGdacsTcList } from '../../shared/cycloneTracks';
 // Per-layer fetch functions. URLs come from fixed templates; the only
 // variable inputs are validated numbers (view center/bbox) and enum values.
 
@@ -99,7 +103,7 @@ const EARTH_R = 6_371_000;
  * `partial` is true when the view needs more circles than that.
  */
 export function aircraftQueryPlan(v: ViewState): { centers: { lat: number; lon: number }[]; radiusNm: number; partial: boolean } {
-  if (v.heightM <= VIEW_LIMIT_AIRCRAFT_M) return { centers: [{ lat: v.lat, lon: v.lon }], radiusNm: aircraftRadiusNm(v.heightM), partial: false };
+  if (v.heightM <= VIEW_LIMIT_AIRCRAFT_M) return { centers: [{ lat: v.lat, lon: v.lon }], radiusNm: aircraftViewRadiusNm(v), partial: false };
   // Angular radius of the visible cap (horizon) from the camera height.
   const horizonDeg = (Math.acos(EARTH_R / (EARTH_R + v.heightM)) * 180) / Math.PI;
   const lat0 = (v.lat * Math.PI) / 180;
@@ -120,6 +124,22 @@ export function aircraftQueryPlan(v: ViewState): { centers: { lat: number; lon: 
 }
 
 const areaCache = new Map<string, { at: number; body: unknown }>();
+
+/** Adds snapshot aircraft inside the planned areas that live data did not supply. Returns how many were added. */
+function openSkyFallback(plan: { centers: { lat: number; lon: number }[]; radiusNm: number }, nowMs: number, seen: Map<string, number>, out: GeoRecord[]): number {
+  const snap = openSkyCache;
+  if (!snap) return 0;
+  const radiusKm = (plan.radiusNm * NM) / 1000;
+  let added = 0;
+  for (const r of snap.records) {
+    if (seen.has(r.id) || trackState(r, nowMs) === 'expired') continue;
+    if (!plan.centers.some((c) => geodesicDistanceKm(c.lat, c.lon, r.lat, r.lon) <= radiusKm)) continue;
+    seen.set(r.id, out.length);
+    out.push(r);
+    added++;
+  }
+  return added;
+}
 
 let openSkyCache: { at: number; authed: boolean; records: GeoRecord[]; skipped: number; time: string | null } | null = null;
 let openSkyToken: { token: string; exp: number } | null = null;
@@ -155,6 +175,31 @@ async function openSkyWorld(ctx: FetchContext): Promise<{ records: GeoRecord[]; 
 /** Query radius (nautical miles) for an aircraft point query from camera height. */
 export function aircraftRadiusNm(heightM: number): number {
   return Math.round(Math.max(25, Math.min(250, (heightM * 0.9) / NM)));
+}
+
+/**
+ * Query radius for one view: wide enough for the visible box as well as the camera height, so a tilted view keeps the
+ * aircraft toward its horizon (the height rule alone dropped them on every zoom-in). Capped at adsb.lol's 250 nm.
+ */
+export function aircraftViewRadiusNm(v: ViewState): number {
+  const [w, s, e, n] = v.bbox;
+  let farKm = 0;
+  for (const [la, lo] of [[s, w], [s, e], [n, w], [n, e], [v.lat, w], [v.lat, e], [s, v.lon], [n, v.lon]] as [number, number][]) {
+    if (Number.isFinite(la) && Number.isFinite(lo)) farKm = Math.max(farKm, geodesicDistanceKm(v.lat, v.lon, la, lo));
+  }
+  return Math.round(Math.max(aircraftRadiusNm(v.heightM), Math.min(250, (farKm * 1000) / NM)));
+}
+
+/** The circle one adsb.lol request covers for this view, or null when the view needs several areas or another provider. */
+export function aircraftCoverage(v: ViewState | null, settings: Pick<Settings, 'worldAircraft'>): { lat: number; lon: number; radiusNm: number } | null {
+  if (!v || aircraftProviderHost(v, settings) !== 'api.adsb.lol' || v.heightM > VIEW_LIMIT_AIRCRAFT_M) return null;
+  return { lat: v.lat, lon: v.lon, radiusNm: aircraftViewRadiusNm(v) };
+}
+
+/** True when `next` lies wholly inside the area `prev` already loaded (zooming in, small pans): no new request is needed. */
+export function aircraftCoveredBy(prev: { lat: number; lon: number; radiusNm: number }, next: { lat: number; lon: number; radiusNm: number }): boolean {
+  const apartNm = (geodesicDistanceKm(prev.lat, prev.lon, next.lat, next.lon) * 1000) / NM;
+  return apartNm + next.radiusNm <= prev.radiusNm + 1;
 }
 
 const dtHeaders = (ua: string) => ({ 'User-Agent': ua, 'Digitraffic-User': ua, 'Accept-Encoding': 'gzip' });
@@ -250,8 +295,12 @@ async function fetchAircraft(ctx: FetchContext): Promise<FetchResult> {
       for (const [k, val] of areaCache) if (clock() - val.at > AREA_CACHE_MS) areaCache.delete(k);
       while (areaCache.size > 200) areaCache.delete(areaCache.keys().next().value!);
     }
+    // adsb.lol asked the app to wait, or some areas failed: fill the view from the OpenSky worldwide snapshot already
+    // held (no new request), so the traffic does not vanish while live data is paused. Those aircraft keep their own
+    // snapshot time and are drawn as a snapshot; live adsb.lol fixes win for the same aircraft.
+    const fellBack = (limited || ok < plan.centers.length) && ctx.settings.worldAircraft ? openSkyFallback(plan, clock(), seenIds, out) : 0;
     note = !multi
-      ? `Showing aircraft within ${plan.radiusNm} nm of the view center.`
+      ? `Showing aircraft within ${plan.radiusNm} nm of the view center.${fellBack ? ` adsb.lol is paused, so ${fellBack.toLocaleString()} aircraft come from the OpenSky worldwide snapshot of ${openSkyCache?.time ? new Date(openSkyCache.time).toISOString().slice(11, 16) + ' UTC' : 'earlier'}.` : ''}`
       : `Showing aircraft in ${ok} areas of 250 nm around the view center${plan.partial ? ' (not the whole visible globe: adsb.lol answers one 250 nm area per request, so the nearest areas are loaded first; zoom in or pan to see others)' : ''}.`;
   }
   if (ctx.localReceiverUrl) {
@@ -343,7 +392,6 @@ async function fetchVessels(ctx: FetchContext): Promise<FetchResult> {
   return { records: fresh, skipped: n.skipped, sourceUpdatedAt: n.sourceUpdatedAt, note: `Keyless AIS covers Finnish and northern Baltic waters (Fintraffic). ${hidden.toLocaleString()} vessels with no report in the last 2 hours are hidden. Add an AISStream key in Provider settings for your view area.` };
 }
 
-const CELESTRAK_GROUPS: Record<string, string> = { stations: 'stations', visual: 'visual', gnss: 'gnss', weather: 'weather', science: 'science', starlink: 'starlink', telecom: 'geo', imaging: 'resource', debris: 'fengyun-1c-debris' };
 
 async function fetchSatellites(ctx: FetchContext): Promise<FetchResult> {
   const out: GeoRecord[] = [];
@@ -351,7 +399,7 @@ async function fetchSatellites(ctx: FetchContext): Promise<FetchResult> {
   const notes: string[] = [];
   let oldestFetch: string | null = null;
   for (const g of ctx.settings.satelliteGroups) {
-    const group = CELESTRAK_GROUPS[g];
+    const group = celestrakGroup(g);
     if (!group) continue;
     const key = `celestrak:${group}`;
     const cached = ctx.store.getFeedCache<string>(key);
@@ -380,6 +428,63 @@ async function fetchSatellites(ctx: FetchContext): Promise<FetchResult> {
   // De-duplicate objects present in several groups.
   const uniq = [...new Map(out.map((r) => [r.id, r])).values()];
   return { records: uniq, skipped, sourceUpdatedAt: oldestFetch, note: ['Positions are calculated (SGP4) from orbital elements, not observed.', ...notes].join(' ') };
+}
+
+/**
+ * NHC advisories (Atlantic, East and Central Pacific) plus GDACS tracks and forecast cones for every basin.
+ * One source failing leaves the other's records and says so; both failing is a failed refresh.
+ */
+async function fetchCyclones(ctx: FetchContext): Promise<FetchResult> {
+  const notes: string[] = [];
+  let nhc: GeoRecord[] | null = null;
+  let nhcUpdated: string | null = null;
+  try {
+    const res = await ctx.fetchJson('https://www.nhc.noaa.gov/CurrentStorms.json', { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 20000 });
+    const n = normalizeNhc(res.body);
+    nhc = n.records;
+    nhcUpdated = n.sourceUpdatedAt;
+  } catch (e) {
+    notes.push(`NHC unavailable (${(e as Error).message}).`);
+  }
+  let gdacs: GeoRecord[] | null = null;
+  let skipped = 0;
+  let latest: string | null = nhcUpdated;
+  try {
+    const list = await ctx.fetchJson(gdacsTcListUrl(ctx.now), { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 30000, maxBytes: 5 * 1024 * 1024 });
+    const { storms, skipped: s } = parseGdacsTcList(list.body);
+    skipped += s;
+    gdacs = [];
+    for (const storm of storms.slice(0, GDACS_TC_MAX_STORMS)) {
+      // An advisory's geometry never changes, so it is downloaded once; one cache row per storm holds its latest advisory.
+      const key = `gdacs-tc:${storm.eventId}`;
+      const cached = ctx.store.getFeedCache<{ episodeId: number; body: unknown }>(key)?.payload;
+      let body = cached && cached.episodeId === storm.episodeId ? cached.body : null;
+      try {
+        if (body === null) {
+          body = (await ctx.fetchJson(storm.geometryUrl, { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 30000, maxBytes: 8 * 1024 * 1024 })).body;
+          ctx.store.setFeedCache(key, { fetchedAt: ctx.now.toISOString(), sourceUpdatedAt: storm.advisoryAt, payload: { episodeId: storm.episodeId, body } });
+        }
+        const n = normalizeGdacsTcGeometry(body, storm);
+        gdacs.push(...n.records);
+        skipped += n.skipped;
+        if (!latest || storm.advisoryAt > latest) latest = storm.advisoryAt;
+      } catch (e) {
+        notes.push(`${storm.name}: track unavailable (${(e as Error).message}).`);
+      }
+    }
+    if (storms.length > GDACS_TC_MAX_STORMS) notes.push(`Tracks shown for the ${GDACS_TC_MAX_STORMS} most recently updated of ${storms.length} storms.`);
+  } catch (e) {
+    notes.push(`GDACS unavailable (${(e as Error).message}).`);
+  }
+  if (!nhc && !gdacs) throw new Error(notes.join(' '));
+  const records = [...(nhc ?? []), ...(gdacs ? dropDuplicateStormPoints(nhc ?? [], gdacs) : [])];
+  const storms = records.filter((r) => r.props.kind === 'storm' || r.source === 'NOAA NHC').length;
+  return {
+    records,
+    skipped,
+    sourceUpdatedAt: latest,
+    note: [storms === 0 ? 'No active tropical cyclones (both requests succeeded).' : 'Forecast tracks and cones are predictions issued with each advisory; the cone is the likely path of the centre, and impacts reach well beyond it.', ...notes].join(' '),
+  };
 }
 
 async function fetchFires(ctx: FetchContext): Promise<FetchResult> {
@@ -1028,11 +1133,7 @@ export const FETCHERS: Record<LayerId, (ctx: FetchContext) => Promise<FetchResul
       'perimeter',
     ),
   metar: fetchMetar,
-  cyclones: async (ctx) => {
-    const res = await ctx.fetchJson('https://www.nhc.noaa.gov/CurrentStorms.json', { headers: { 'User-Agent': ctx.userAgent }, timeoutMs: 20000 });
-    const n = normalizeNhc(res.body);
-    return { ...n, note: n.records.length === 0 ? 'No active storms in NHC/CPHC basins (request succeeded).' : 'Forecast tracks and cones: open the NHC link on a storm.' };
-  },
+  cyclones: fetchCyclones,
   cameras: fetchCameras,
   incidents: fetchIncidents,
   transit: fetchTransit,

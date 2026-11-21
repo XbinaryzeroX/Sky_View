@@ -7,6 +7,7 @@ import { isMarketFeedUrl } from '../../shared/markets';
 import { CFR_TRACKER_URL, RELIEFWEB_SITUATIONS_URL, UN_NEWS_AID_URL } from '../../shared/conflictReports';
 import { keyedCameraApiHosts } from '../../shared/keyedCameras';
 import { parseRetryAfter } from '../../shared/retryAfter';
+import { receiverJsonUrl } from '../../shared/sdrCoverage';
 import { deadlineAfter, MAX_DATE_MS } from './timing';
 import { DWD_CAP_LIMITS } from '../../shared/dwd';
 export const DWD_STATUS_URL = 'https://opendata.dwd.de/weather/alerts/cap/COMMUNEUNION_DWD_STAT/Z_CAP_C_EDZW_LATEST_PVW_STATUS_PREMIUMDWD_COMMUNEUNION_DE.zip';
@@ -65,6 +66,8 @@ export const ALLOWED_HOSTS = new Set([
   'ibasemaps-api.arcgis.com',
   'api.mapbox.com',
   'tiles.maps.eox.at',
+  // Earth Search STAC API (Element 84): finds recent Sentinel-2 scenes for a box the user draws.
+  'earth-search.aws.element84.com',
   // Keyed camera systems (called only with the customer's own key).
   ...keyedCameraApiHosts(),
 ]);
@@ -76,10 +79,15 @@ export const ALLOWED_PREFIXES = [
   // OpenAI with the customer's key: key check and speech-to-text for voice commands.
   'https://api.openai.com/v1/models',
   'https://api.openai.com/v1/audio/transcriptions',
+  // Ask the planet with the customer's OpenAI key: one chat request per question (only when local Ollama is off).
+  'https://api.openai.com/v1/chat/completions',
   // Google Geocoding, only with the customer's own key while Google 3D Tiles are enabled.
   'https://maps.googleapis.com/maps/api/geocode/json?',
   'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters_Current/',
   'https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services/Special_Use_Airspace/',
+  // Sentinel-2 L2A cloud-optimised GeoTIFFs on the AWS Open Data registry (shared S3 host): byte ranges of the
+  // true-colour file of a scene the user picked.
+  'https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/',
   // NOAA GFS on the Open Data registry (shared S3 host): forecast index files and 10 m wind messages by byte range.
   'https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.',
   // Traffic flow on shared open-data hosts: the exact datasets.
@@ -208,6 +216,8 @@ export function assertAllowedUrl(raw: string): URL {
   if (url.protocol === 'https:' && ALLOWED_PREFIXES.some((p) => url.href.startsWith(p))) return url;
   if (url.protocol === 'http:' && url.hostname === LOOPBACK_HOST) return url;
   if (localReceiverUrl && url.href === new URL(localReceiverUrl).href) return url;
+  // readsb's receiver.json beside the configured aircraft.json (the receiver's own position).
+  if (localReceiverUrl && url.href === receiverJsonUrl(localReceiverUrl)) return url;
   throw new FeedHttpError(`Blocked request to non-allow-listed host ${url.hostname}`, null, null, 'blocked');
 }
 

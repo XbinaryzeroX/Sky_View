@@ -3,7 +3,8 @@
 import { MarketService } from './markets';
 import { LemmyService } from './lemmy';
 import { app, BrowserWindow, contentTracing, dialog, ipcMain, Menu, nativeTheme, safeStorage, screen, session } from 'electron';
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { appendCrashLine, crashLine, ReloadGate, shouldRecover, stackSummary, type CrashKind } from './crashRecovery';
 import { join } from 'node:path';
 import { buildBriefing } from '../shared/briefing';
 import { IPC, ipcArgSchemas, type InvokeChannel } from '../shared/ipc';
@@ -17,6 +18,8 @@ import { SecretStore, redactSecrets } from './secrets';
 import type { LayerId } from '../shared/layers';
 import { buildUserAgent, NwsAlertSource, UsgsQuakeSource } from './feeds/sources';
 import { createHandlers, type PlatformServices } from './handlers';
+import { McpBridge } from './mcpBridge';
+import type { AnnotationDocument } from '../shared/geojsonAnnotations';
 import {
   APP_ORIGIN,
   DEV_SERVER_URL,
@@ -88,6 +91,8 @@ async function openTextFile(filters: { name: string; extensions: string[] }[], m
   } finally { await file.close(); }
 }
 
+let mcp: McpBridge | null = null;
+
 function scheduleStateEmit(): void {
   if (emitTimer) return;
   emitTimer = setTimeout(() => {
@@ -131,6 +136,21 @@ async function saveTextFile(defaultName: string, filters: { name: string; extens
   return res.filePath;
 }
 
+const reloadGate = new ReloadGate();
+// Local only: <userData>/logs/crashes.log, so the next "it crashed" can be traced to a renderer, GPU or memory exit.
+async function recordCrash(kind: CrashKind, reason: string, exitCode: number | null, detail = ''): Promise<void> {
+  const line = crashLine(new Date(), kind, reason, exitCode) + (detail ? ` ${detail}` : '');
+  log(`CRASH ${line}`);
+  try {
+    const dir = join(app.getPath('userData'), 'logs');
+    await mkdir(dir, { recursive: true });
+    const file = join(dir, 'crashes.log');
+    await writeFile(file, appendCrashLine(await readFile(file, 'utf8').catch(() => ''), line));
+  } catch {
+    // Logging must never stop the recovery.
+  }
+}
+
 function createWindow(): void {
   nativeTheme.themeSource = 'dark';
   mainWindow = new BrowserWindow({
@@ -163,7 +183,27 @@ function createWindow(): void {
     const primary = screen.getPrimaryDisplay();
     const target = want === 'secondary' ? displays.find((d) => d.id !== primary.id) : displays.find((d) => d.label === want);
     if (target) mainWindow.setBounds({ ...target.workArea });
-  }  hardenWebContents(mainWindow.webContents);
+  }
+  hardenWebContents(mainWindow.webContents);
+  // A dead renderer (out of memory, GPU loss it could not survive, a crash) leaves a blank window: reload it a few
+  // times, then ask. Settings, places and history live in the main process, so a reload loses only the open panels.
+  mainWindow.webContents.on('render-process-gone', (_e, d) => {
+    void recordCrash('renderer', d.reason, d.exitCode);
+    const win = mainWindow;
+    if (!win || win.isDestroyed() || !shouldRecover(d.reason)) return;
+    if (reloadGate.allow(Date.now())) { win.webContents.reload(); return; }
+    void dialog.showMessageBox(win, { type: 'error', buttons: ['Reload', 'Close'], defaultId: 0, title: 'Sky_View',
+      message: 'The map stopped several times in a few minutes.',
+      detail: 'Before reloading, try Settings → Rendering quality → Balanced, or switch from Photoreal 3D to Satellite. Each stop is listed in logs\\crashes.log in the app data folder.' })
+      .then((r) => { if (r.response === 0 && !win.isDestroyed()) win.webContents.reload(); else if (!win.isDestroyed()) win.close(); });
+  });
+  // Where the page is stuck: the running JS stack (Electron 34+, needs the Document-Policy header from security.ts).
+  // A frame running no JS never answers, so the wait is capped.
+  mainWindow.webContents.on('unresponsive', () => {
+    const frame = mainWindow?.webContents.mainFrame;
+    const stack = frame ? Promise.race([frame.collectJavaScriptCallStack().catch(() => undefined), new Promise<undefined>((r) => setTimeout(() => r(undefined), 5_000))]) : Promise.resolve(undefined);
+    void stack.then((s) => recordCrash('unresponsive', 'unresponsive', null, stackSummary(s ?? null)));
+  });
   // When a target monitor is requested (automated runs), show without taking keyboard focus.
   mainWindow.once('ready-to-show', () => (process.env.ATLAS_WATCH_WINDOW_DISPLAY ? mainWindow?.showInactive() : mainWindow?.show()));
   mainWindow.on('closed', () => {
@@ -192,6 +232,11 @@ function buildMenu(): void {
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
+
+// Chromium restarts a dead GPU process itself; the map's WebGL context is lost with it and the renderer reloads.
+app.on('child-process-gone', (_e, d) => {
+  if (d.type === 'GPU') void recordCrash('gpu', d.reason, d.exitCode);
+});
 
 app.on('second-instance', () => {
   if (mainWindow) {
@@ -244,6 +289,7 @@ app.whenReady().then(async () => {
   core.init();
 
   const secrets = new SecretStore(store, safeStorage);
+  await secrets.load();
   const providers = new ProviderService(store, secrets, fetchJson, fetchText, ua, makeAisTester());
   const dwd = new DwdSource(store, devHooks && process.env.ATLAS_WATCH_SIMULATE_OFFLINE === '1'
     ? async () => { throw new FeedHttpError('Simulated offline', null, null, 'network'); }
@@ -302,7 +348,30 @@ app.whenReady().then(async () => {
   };
   const radio = createRadio(fetchJson, ua);
   setRadioRelay(radio.relay);
-  const handlers = createHandlers(core, store, fetchJson, platform, { layers, providers, markets, lemmy, userAgent: ua, radio });
+  mcp = new McpBridge({
+    userDataDir: app.getPath('userData'),
+    serverScript: join(__dirname, '..', 'mcp', 'sky-view-mcp.cjs'),
+    enabledLayers: () => core!.settings.layersEnabled as LayerId[],
+    layer: (id) => {
+      const s = layers?.snapshot(id);
+      return s && s.status.enabled ? s : null;
+    },
+    view: () => layers?.getView() ?? null,
+    annotations: () => store!.listDocs<AnnotationDocument>('annotations'),
+    putAnnotation: (a) => core!.putAnnotation(a),
+    deleteAnnotation: (id) => core!.deleteAnnotation(id),
+    onCanvasChanged: () => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('annotations:changed'); },
+  });
+  const bridge = mcp;
+  if (core.settings.mcpEnabled) void bridge.setEnabled(true).catch((e: Error) => log(`AI agent bridge: ${e.message}`));
+  const handlers = createHandlers(core, store, fetchJson, platform, { layers, providers, markets, lemmy, userAgent: ua, radio, mcp: { status: (on) => bridge.status(on), runtime: process.execPath } });
+  const baseSettingsUpdate = handlers[IPC.settingsUpdate];
+  handlers[IPC.settingsUpdate] = async (args) => {
+    const r = await baseSettingsUpdate(args);
+    // Open or close the local pipe as the setting changes; a failure is reported in the bridge status.
+    await bridge.setEnabled(core!.settings.mcpEnabled).catch((e: Error) => log(`AI agent bridge: ${e.message}`));
+    return r;
+  };
   const baseSetCredential = handlers[IPC.providersSetCredential];
   handlers[IPC.providersSetCredential] = async (args) => {
     const before = JSON.stringify(remoteOptions());
@@ -448,6 +517,7 @@ app.whenReady().then(async () => {
 
 app.on('window-all-closed', () => {
   layers?.stop();
+  mcp?.stop();
   core?.stop();
   store?.close();
   app.quit();

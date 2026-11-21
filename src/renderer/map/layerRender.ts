@@ -2,6 +2,7 @@
 // moved, not recreated), clustering for dense point layers, and SGP4
 // propagation for satellites (calculated positions, labeled as such).
 
+import { satelliteColor } from '../../shared/satelliteGroups';
 import {
   BillboardCollection,
   PointPrimitiveCollection,
@@ -213,6 +214,10 @@ const MODEL_MAX_CAMERA_M = 400_000;
  */
 const KEEP_DISTANCE_FACTOR = 0.7;
 const KEEP_RANGE_FACTOR = 1.3;
+/** Terrain height lookups for parked aircraft per model sync, how long one is reused, and how many are kept. */
+const GROUND_LOOKUPS_PER_SYNC = 16;
+const GROUND_REFRESH_MS = 4_000;
+const GROUND_CACHE_MAX = 2_000;
 const KEEP_EDGE_RADIUS_M = 3000;
 
 /** Above this many records a vehicle layer is drawn as one batched billboard collection. */
@@ -224,6 +229,14 @@ export class LayerRenderer {
   private satrecs = new Map<string, SatRec>();
   private satTimer: ReturnType<typeof setInterval> | null = null;
   private orbitEntity: Entity | null = null;
+  /** Dashed line from the selected satellite straight down to the point under it, so its height above the earth reads. */
+  private nadirEntity: Entity | null = null;
+  /** Last horizon visibility written per entity, so unchanged markers are not touched (see cullBehindEarth). */
+  private horizonShown = new WeakMap<Entity, boolean>();
+  /** Label of the selected camera (cameras are batched icons without per-icon labels). */
+  private cameraLabel: Entity | null = null;
+  /** Replay time for satellite positions (calculated from the elements for that moment); null follows the clock. */
+  private satTime: Date | null = null;
   private trailEntity: Entity | null = null;
   private trailConnector: Entity | null = null;
   private flightPathEntity: Entity | null = null;
@@ -254,6 +267,7 @@ export class LayerRenderer {
   private interiorTarget: string | null = null;
   private modelOpts = { enabled: true, budget: 60 };
   private lastModelSync = 0;
+  private terrainGroundCache?: Map<string, { h: number | undefined; at: number }>;
   /**
    * Last reported ICAO type per aircraft key, captured from every update (before filtering or model selection),
    * so a later report without type data keeps the typed model. Bounded: least recently reported first out.
@@ -421,6 +435,7 @@ export class LayerRenderer {
       const camFlat = Cartesian3.fromRadians(camCarto.longitude, camCarto.latitude, 0);
       const scratchFlat = new Cartesian3();
       const near: { d: number; score: number; lid: LayerId; r: GeoRecord; pos: Cartesian3 }[] = [];
+      const lookups = { left: GROUND_LOOKUPS_PER_SYNC };
       for (const lid of ['aircraft', 'aircraftMil', 'vessels'] as LayerId[]) {
         const recs = this.records.get(lid);
         if (!recs || this.sources.get(lid)?.show === false || this.bulk.get(lid)?.coll.show === false) continue;
@@ -452,9 +467,12 @@ export class LayerRenderer {
               pos = Cartesian3.fromDegrees(r.lon, r.lat, ground);
             }
           } else if (r.props.onGround === true) {
-            // Icons of parked aircraft sit at sea level; use the loaded terrain height (airports can be 2 km up),
-            // re-read on every sync so it improves as terrain tiles arrive.
-            const ground = scene.globe.getHeight(Cartographic.fromDegrees(r.lon, r.lat));
+            // Icons of parked aircraft sit at sea level; use the loaded terrain height (airports can be 2 km up).
+            // Out of model range it cannot matter, so no lookup. Each lookup is a ray pick against the loaded
+            // terrain: one per parked aircraft worldwide on every sync froze the window over New York (stack in
+            // the owner's crashes.log, 2026-11-19), so heights are cached briefly and lookups are capped per sync.
+            if (Cartesian3.distance(Cartesian3.fromDegrees(r.lon, r.lat, 0, Ellipsoid.WGS84, scratchFlat), camFlat) > range * KEEP_RANGE_FACTOR) continue;
+            const ground = this.terrainGround(r.lat, r.lon, lookups);
             if (ground !== undefined && ground > 1) pos = Cartesian3.fromDegrees(r.lon, r.lat, ground);
           }
           const d = Cartesian3.distance(pos, cam.positionWC);
@@ -472,11 +490,34 @@ export class LayerRenderer {
       const sel = near.find((n) => n.lid === this.sel.layer && n.r.id === this.sel.id);
       let chosen = near.slice(0, budget);
       if (sel && !chosen.includes(sel)) chosen = [...near.slice(0, budget - 1), sel];
+      // Models start nearest first a few at a time; the selected vehicle goes first of all.
+      if (sel) chosen = [sel, ...chosen.filter((n) => n !== sel)];
       picked = chosen.map(({ lid, r, pos }) => this.candidate(lid, r, pos));
     }
     this.modelled = this.models.sync(picked);
+    // Models left for later (see VehicleModelLayer.sync) start on the next pass, a few frames from now.
+    if (this.models.pendingCount() > 0) this.requestModelSync(120);
     // Always reconcile: new entities start visible, and icons swap with ready models.
     this.cullBehindEarth();
+  }
+
+  /**
+   * Loaded terrain height under a parked aircraft (globe surface): read again after GROUND_REFRESH_MS so it improves
+   * as finer tiles arrive, and only while `lookups.left` allows; otherwise the last value (or undefined) is used.
+   */
+  private terrainGround(lat: number, lon: number, lookups: { left: number }): number | undefined {
+    const cache = (this.terrainGroundCache ??= new Map());
+    const key = `${lat.toFixed(5)},${lon.toFixed(5)}`;
+    const hit = cache.get(key);
+    const now = performance.now();
+    if (hit && now - hit.at < GROUND_REFRESH_MS) return hit.h;
+    if (lookups.left <= 0) return hit?.h;
+    lookups.left--;
+    const h = this.widget.scene.globe.getHeight(Cartographic.fromDegrees(lon, lat));
+    cache.delete(key);
+    cache.set(key, { h, at: now });
+    if (cache.size > GROUND_CACHE_MAX) cache.delete(cache.keys().next().value!);
+    return h;
   }
 
   private candidate(lid: LayerId, r: GeoRecord, position: Cartesian3): ModelCandidate {
@@ -606,6 +647,30 @@ export class LayerRenderer {
         if (e.point) e.point.show = visible as never;
       }
     }
+    // Every other layer's markers and labels are drawn without the depth test (so terrain never hides them), which
+    // also let them show through the earth from the far side. Hide the ones below the horizon.
+    // Only flips are written: setting an entity graphic re-raises Cesium's change events (and re-clusters the layer)
+    // even when the value is unchanged, which cost 10–20 ms a frame with ~10,000 camera entities (measured 2026-11-18).
+    for (const [lid, ents] of this.entities) {
+      if (lid === 'aircraft' || lid === 'aircraftMil' || lid === 'vessels') continue;
+      if (this.sources.get(lid)?.show === false) continue;
+      for (const e of ents.values()) {
+        const p = e.position?.getValue(now);
+        if (!p) continue;
+        const visible = !in3D || occluder.isPointVisible(horizonPoint(p));
+        if (this.horizonShown.get(e) === visible) continue;
+        this.horizonShown.set(e, visible);
+        if (e.billboard) e.billboard.show = visible as never;
+        if (e.label) e.label.show = visible as never;
+        if (e.point) e.point.show = visible as never;
+      }
+    }
+    // Batched camera icons: the same horizon test, written straight to the GPU billboards.
+    const cams = this.bulk.get('cameras');
+    if (cams && cams.coll.show) for (const bb of cams.byId.values()) {
+      const visible = !in3D || occluder.isPointVisible(horizonPoint(bb.position));
+      if (bb.show !== visible) bb.show = visible;
+    }
   }
 
   private source(id: LayerId): CustomDataSource {
@@ -644,6 +709,7 @@ export class LayerRenderer {
     if (s) s.show = visible;
     const bk = this.bulk.get(id);
     if (bk) bk.coll.show = visible;
+    if (id === 'cameras' && this.cameraLabel) this.cameraLabel.show = visible;
     const sp = this.staticPoints.get(id);
     if (sp) sp.coll.show = visible;
     if (id === 'cables') {
@@ -663,6 +729,41 @@ export class LayerRenderer {
   }
 
   /** Replaces a layer's records, reusing entities by stable id. */
+  /**
+   * Cameras as one GPU billboard batch (catalogs reach ~10,000 cameras). As entities with clustering they cost 10–20 ms
+   * of main-thread time per frame even while hidden (measured 2026-11-18: 22 fps with cameras on, 263 fps without).
+   * Icons shrink and fade with distance instead of clustering; the selected camera gets the only label.
+   */
+  private updateCameraBatch(records: GeoRecord[], opts: RenderOptions): void {
+    let b = this.bulk.get('cameras');
+    if (!b) {
+      b = { coll: this.widget.scene.primitives.add(new BillboardCollection({ scene: this.widget.scene })) as BillboardCollection, byId: new Map() };
+      this.bulk.set('cameras', b);
+    }
+    const sel = opts.selectedLayer === 'cameras' ? opts.selectedId : null;
+    const keep = new Set<string>();
+    const icon = glyph('camera', '#6fd0e2', 20);
+    const scale = new NearFarScalar(2e4, 1.1, 6e6, 0.35);
+    const fade = new NearFarScalar(3e6, 1, 1.5e7, 0.25);
+    for (const r of records) {
+      keep.add(r.id);
+      const position = Cartesian3.fromDegrees(r.lon, r.lat, this.heightFor('cameras', r, r));
+      const ex = b.byId.get(r.id);
+      const s = sel === r.id ? 1.5 : 1;
+      if (ex) {
+        if (!Cartesian3.equals(ex.position, position)) ex.position = position;
+        if (ex.scale !== s) ex.scale = s;
+      } else b.byId.set(r.id, b.coll.add({ id: `rec|cameras|${r.id}`, position, image: icon, scale: s, scaleByDistance: scale, translucencyByDistance: fade }));
+    }
+    for (const [rid, bb] of b.byId) if (!keep.has(rid)) { b.coll.remove(bb); b.byId.delete(rid); }
+    if (this.cameraLabel) { this.widget.entities.remove(this.cameraLabel); this.cameraLabel = null; }
+    const picked = sel ? records.find((r) => r.id === sel) : undefined;
+    if (picked) this.cameraLabel = this.widget.entities.add({ id: `rec|cameras|${picked.id}`, position: Cartesian3.fromDegrees(picked.lon, picked.lat, this.heightFor('cameras', picked, picked)),
+      label: { text: picked.label, font: '600 12px "Segoe UI", sans-serif', fillColor: Color.WHITE, outlineColor: Color.BLACK, outlineWidth: 3, style: LabelStyle.FILL_AND_OUTLINE, verticalOrigin: VerticalOrigin.BOTTOM, pixelOffset: new Cartesian2(0, -16), disableDepthTestDistance: Number.POSITIVE_INFINITY } });
+    this.cullBehindEarth();
+    this.widget.scene.requestRender();
+  }
+
   /** Batched points for static layers: added once, restyled only when the selection changes. */
   private updateStaticPoints(id: LayerId, records: GeoRecord[], opts: RenderOptions): void {
     let s = this.staticPoints.get(id);
@@ -787,6 +888,11 @@ export class LayerRenderer {
     if (id === 'trafficFlow') {
       this.records.set(id, new Map(all.map((r) => [r.id, r])));
       this.updateFlow(all, opts);
+      return;
+    }
+    if (id === 'cameras') {
+      this.records.set(id, new Map(all.map((r) => [r.id, r])));
+      this.updateCameraBatch(all, opts);
       return;
     }
     if (id === 'datacenters' || id === 'dams' || id === 'milSites' || id === 'alpr') {
@@ -1066,6 +1172,21 @@ export class LayerRenderer {
     return { pitch: pitchFromRates(r.props.verticalRateFpm, r.speedKts), bank: passengerVisualBank(this.passengerMotions.get(id + '|' + rid), Date.now()) };
   }
 
+  /** Test hook: how many aircraft are drawn right now (icons shown, models shown, records held). */
+  debugVehicleCounts(): { records: number; icons: number; models: number } {
+    let icons = 0, records = 0;
+    for (const lid of ['aircraft', 'aircraftMil'] as LayerId[]) {
+      records += this.records.get(lid)?.size ?? 0;
+      const bk = this.bulk.get(lid);
+      if (bk && bk.coll.show) for (const bb of bk.byId.values()) if (bb.show) icons++;
+      const src = this.sources.get(lid);
+      if (src?.show !== false) for (const e of this.entities.get(lid)?.values() ?? []) if (e.billboard?.show?.getValue(JulianDate.now()) !== false && e.billboard) icons++;
+    }
+    let models = 0;
+    for (const k of this.modelled) if (k.startsWith('rec|aircraft')) models++;
+    return { records, icons, models };
+  }
+
   /** Tracking works with entity and batched rendering, including a switch between them. */
   positionFor(id: LayerId, rid: string, now = Date.now()): Cartesian3 | undefined {
     if (this.sources.get(id)?.show === false || this.bulk.get(id)?.coll.show === false) return undefined;
@@ -1112,6 +1233,7 @@ export class LayerRenderer {
   private heightFor(id: LayerId, r: GeoRecord, at: { lat: number; lon: number; altM?: number | null } = r): number {
     const air = id === 'aircraft' || id === 'aircraftMil';
     // Only vehicles follow the scene's vertical reference (and are re-placed when it changes); other layers keep height 0.
+    if (id === 'cyclones') return 10_000;
     if (!air && id !== 'vessels') return 0;
     if (id === 'vessels') return this.waterline(at.lat, at.lon) ?? 0;
     const sea = this.seaLevel(at.lat, at.lon) ?? 0;
@@ -1273,7 +1395,7 @@ export class LayerRenderer {
         return new Entity({
           id: base.id,
           position: new ConstantPositionProperty(Cartesian3.fromDegrees(0, 0, 400_000)),
-          billboard: { image: glyph('sat', r.category === 'stations' ? '#f2c94c' : '#b9c7f5', 24), scale: selected ? 1.3 : 0.8, disableDepthTestDistance: 0 },
+          billboard: { image: glyph('sat', satelliteColor(r.category), 24), scale: selected ? 1.3 : 0.8, disableDepthTestDistance: 0 },
           label: label(r.label, r.category === 'stations' ? 4e7 : 6e6),
         });
       case 'fires': {
@@ -1304,8 +1426,24 @@ export class LayerRenderer {
           point: { pixelSize: 9, color: metarColor(r.category), outlineColor: Color.BLACK, outlineWidth: 1 },
           label: label(r.label, 6e5, -10),
         });
-      case 'cyclones':
-        return new Entity({ ...base, billboard: { image: glyph('storm', '#ff5a4f', 36), scale: 1, disableDepthTestDistance: Number.POSITIVE_INFINITY }, label: label(r.label, 4e7, -22) });
+      case 'cyclones': {
+        // GDACS advisories: cone (prediction, translucent), past track (solid), forecast track (dashed) and forecast
+        // positions (hollow rings with their time). Shape and text carry the meaning, not colour alone.
+        const kind = r.props.kind;
+        if (kind === 'cone' && r.geometry?.type === 'Polygon') {
+          return new Entity({ ...base, polygon: { hierarchy: new PolygonHierarchy(Cartesian3.fromDegreesArray(r.geometry.coordinates[0].flatMap(([x, y]) => [x, y]))), material: Color.WHITE.withAlpha(selected ? 0.22 : 0.1), outline: true, outlineColor: Color.WHITE.withAlpha(0.7), height: 0 } });
+        }
+        if ((kind === 'track' || kind === 'forecast') && r.geometry?.type === 'LineString') {
+          const color = C(kind === 'track' ? '#ff8c5a' : '#ffffff');
+          return new Entity({ ...base, polyline: { positions: Cartesian3.fromDegreesArray(r.geometry.coordinates.flatMap(([x, y]) => [x, y])), width: selected ? 5 : 3, material: kind === 'forecast' ? new PolylineDashMaterialProperty({ color, dashLength: 16 }) : color } });
+        }
+        if (kind === 'forecastPoint') {
+          return new Entity({ ...base, point: { pixelSize: 9, color: Color.TRANSPARENT, outlineColor: Color.WHITE, outlineWidth: 2, disableDepthTestDistance: 0 }, label: { ...label(r.label, 8e6, -10), disableDepthTestDistance: 0 } });
+        }
+        // Storms are seen from far away: the markers sit 10 km up and keep the depth test, so a storm on the far side
+        // of the Earth is hidden instead of being drawn through it.
+        return new Entity({ ...base, billboard: { image: glyph('storm', '#ff5a4f', 36), scale: 1, disableDepthTestDistance: 0 }, label: { ...label(r.label, 4e7, -22), disableDepthTestDistance: 0 } });
+      }
       case 'incidents': {
         const lvl = String(r.props.alertLevel ?? '');
         const color = lvl === 'Red' ? '#e5534b' : lvl === 'Orange' ? '#f0883e' : lvl === 'Green' ? '#57ab5a' : '#9fb3c8';
@@ -1432,10 +1570,17 @@ export class LayerRenderer {
     return Cartesian3.fromRadians(geo.longitude, geo.latitude, geo.height * 1000);
   }
 
+  /** Satellites are drawn where their elements put them at `t` (replay), or now when null. */
+  setSatelliteTime(t: Date | null): void {
+    if ((t?.getTime() ?? null) === (this.satTime?.getTime() ?? null)) return;
+    this.satTime = t;
+    this.propagateAll();
+  }
+
   private propagateAll(): void {
     const map = this.entities.get('satellites');
     if (!map) return;
-    const now = new Date();
+    const now = this.satTime ?? new Date();
     for (const [rid, e] of map) {
       const p = this.satPosition(rid, now);
       if (p) {
@@ -1443,6 +1588,8 @@ export class LayerRenderer {
         e.show = true;
       } else e.show = false;
     }
+    // Satellites move between camera changes, so their horizon check runs with each step.
+    this.cullBehindEarth();
     this.widget.scene.requestRender();
   }
 
@@ -1452,8 +1599,26 @@ export class LayerRenderer {
       this.widget.entities.remove(this.orbitEntity);
       this.orbitEntity = null;
     }
+    if (this.nadirEntity) {
+      this.widget.entities.remove(this.nadirEntity);
+      this.nadirEntity = null;
+    }
     const rec = id ? this.satrecs.get(id) : null;
     if (!id || !rec) return;
+    const satId = id;
+    this.nadirEntity = this.widget.entities.add({
+      id: 'orbit|nadir',
+      polyline: {
+        positions: new CallbackProperty(() => {
+          const p = this.satPosition(satId, this.satTime ?? new Date());
+          if (!p) return [];
+          const c = Ellipsoid.WGS84.cartesianToCartographic(p);
+          return c ? [p, Cartesian3.fromRadians(c.longitude, c.latitude, 0)] : [];
+        }, false),
+        width: 1,
+        material: new PolylineDashMaterialProperty({ color: C('#b9c7f5').withAlpha(0.55), dashLength: 10 }),
+      },
+    });
     const periodMin = (2 * Math.PI) / rec.no; // rec.no is rad/min
     const pts: Cartesian3[] = [];
     const t0 = Date.now();
