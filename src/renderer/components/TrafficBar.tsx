@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ALTITUDE_STOPS, specialCode, type AircraftClass, type AircraftFilter } from '../../shared/aircraft';
+import { AIRCRAFT_ROLE_COLOR, AIRCRAFT_ROLE_LABEL, specialCode, type AircraftClass, type AircraftFilter } from '../../shared/aircraft';
 import type { GeoRecord } from '../../shared/layers';
 import { relativeTime } from '../lib/format';
 
@@ -31,15 +31,14 @@ export function TrafficBar(p: {
   const [emOpen, setEmOpen] = useState(false);
   const specials = p.aircraft.filter((r) => specialCode(r));
   if (!p.aircraftOn && !p.vesselsOn) return null;
-  const grad = `linear-gradient(90deg, ${ALTITUDE_STOPS.map((s, i) => `${s.color} ${(i / (ALTITUDE_STOPS.length - 1)) * 100}%`).join(', ')})`;
   return (
     <div className="traffic-bar">
       {p.aircraftOn && (
         <>
-          <div className="alt-legend" title="Aircraft color = reported barometric altitude">
-            <span>GND</span>
-            <span className="alt-ramp" style={{ background: grad }} />
-            <span>FL400+</span>
+          <div className="alt-legend" title="Aircraft colour: airliners white (by type or ADS-B size category; includes cargo airliners), military yellow, all others blue. Altitude is in each aircraft's label and details.">
+            {(['airliner', 'military', 'other'] as const).map((role) => (
+              <span key={role} className="role-key"><i style={{ background: AIRCRAFT_ROLE_COLOR[role] }} aria-hidden="true" />{AIRCRAFT_ROLE_LABEL[role]}</span>
+            ))}
           </div>
           <button className={`btn small-btn ${open ? 'primary' : ''}`} onClick={() => setOpen(!open)} aria-expanded={open}>
             Filters

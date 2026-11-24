@@ -3888,3 +3888,7 @@ h2 {
 
 /* ---- Map stopped (WebGL context lost repeatedly) ---- */
 .map-stopped { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); max-width: 420px; padding: 14px 18px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); z-index: 5; }
+
+/* ---- Aircraft colour key (traffic bar) ---- */
+.alt-legend .role-key { display: inline-flex; align-items: center; gap: 6px; margin-right: 10px; white-space: nowrap; }
+.alt-legend .role-key i { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.55); display: inline-block; }

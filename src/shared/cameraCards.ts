@@ -26,7 +26,10 @@ export const CARD_H = 150;
 export const CARD_MAX_DISTANCE_M = 900;
 export const TAG_MAX_DISTANCE_M = 4_000;
 export const MAX_CARDS = 3;
-export const MAX_TAGS = 30;
+export const MAX_TAGS = 20;
+/** Screen box of a camera tag (drawn 8 px right of and centred on its camera point; `CAM-XXXXX` in 10.5 px mono). */
+export const TAG_W = 76;
+export const TAG_H = 18;
 /** Shortest wait between two manual "next frame" requests for one camera. */
 export const NEXT_FRAME_COOLDOWN_MS = 3_000;
 /** Height of the leader line between the card and its camera's point on the street. */
@@ -63,6 +66,13 @@ export function cameraTag(id: string): string {
   return `CAM-${tail || '?'}`;
 }
 
+export interface Box { left: number; top: number; right: number; bottom: number }
+
+/** Where a camera's tag is drawn (CameraCards renders it at left = x + 8, top = y - 9). */
+export function tagBox(c: { x: number; y: number }): Box {
+  return { left: c.x + 8, top: c.y - 9, right: c.x + 8 + TAG_W, bottom: c.y - 9 + TAG_H };
+}
+
 function overlaps(a: { left: number; top: number }, b: { left: number; top: number }): boolean {
   return a.left < b.left + CARD_W + 6 && b.left < a.left + CARD_W + 6 && a.top < b.top + CARD_H + 6 && b.top < a.top + CARD_H + 6;
 }
@@ -90,5 +100,18 @@ export function placeCameraCards(cams: ScreenCamera[], width: number, height: nu
     if (fits) cards.push({ id: c.id, left: Math.round(spot.left), top: Math.round(spot.top), x: c.x, y: c.y });
   }
   const carded = new Set(cards.map((c) => c.id));
-  return { cards, tags: ordered.filter((c) => !carded.has(c.id)).slice(0, MAX_TAGS) };
+  // Tags were capped but never spaced, so in dense blocks (Midtown) they stacked into an unreadable column and ran
+  // under the cards (reported 2026-11-23). Nearest first; a tag that would touch a card or another tag is
+  // dropped, and its camera is still reachable from its map marker.
+  const boxes: Box[] = cards.map((c) => ({ left: c.left, top: c.top, right: c.left + CARD_W, bottom: c.y }));
+  const tags: ScreenCamera[] = [];
+  for (const c of ordered) {
+    if (tags.length >= MAX_TAGS) break;
+    if (carded.has(c.id)) continue;
+    const b = tagBox(c);
+    if (boxes.some((o) => b.left < o.right + 4 && o.left < b.right + 4 && b.top < o.bottom + 2 && o.top < b.bottom + 2)) continue;
+    boxes.push(b);
+    tags.push(c);
+  }
+  return { cards, tags };
 }

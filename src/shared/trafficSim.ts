@@ -17,6 +17,10 @@ export interface SimRoad {
   dots: number;
   speedBasis: 'measured' | 'assumed from published state';
   densityBasis: 'from measured flow' | 'assumed for the state';
+  /** Lanes the dots are spread across. No source here publishes per-lane counts or speeds, so every lane moves at the
+   * road's one measured or assumed speed; only the lane count can come from the source. */
+  lanes: number;
+  laneBasis: 'published' | 'assumed';
 }
 
 export interface SimPlan {
@@ -35,6 +39,11 @@ const ASSUMED_KMH: Record<string, number> = { free: 35, slow: 20, heavy: 10, sto
 const ASSUMED_PER_KM: Record<string, number> = { free: 20, slow: 35, heavy: 60, stopped: 100 };
 /** Upper bound on density from flow / speed, so near-zero speeds do not explode the count. */
 const MAX_PER_KM = 150;
+/** Lanes assumed where the source does not say (NYC DOT and Paris publish none): one direction of a city street. */
+export const ASSUMED_LANES = 2;
+export const MAX_LANES = 6;
+/** Typical urban lane width, used only to space the simulated dots across the road. */
+export const LANE_WIDTH_M = 3.2;
 
 const R = 6_371_008.8;
 export function lineLengthM(coords: readonly [number, number][]): number {
@@ -64,11 +73,29 @@ export function simRoad(r: GeoRecord): SimRoad | null {
   const flow = num(r.props.vehiclesPerHour);
   const perKm = flow !== null && flow > 0 ? Math.min(MAX_PER_KM, flow / Math.max(kmh, 3)) : ASSUMED_PER_KM[state];
   const vehicles = Math.max(1, Math.round((perKm * lengthM) / 1000));
+  const published = num(r.props.lanes);
+  const lanes = published !== null && published >= 1 ? Math.min(MAX_LANES, Math.round(published)) : ASSUMED_LANES;
   return {
     id: r.id, coords, lengthM, speedMps: kmh / 3.6, state, vehicles, dots: vehicles,
     speedBasis: measuredKmh !== null && measuredKmh >= 0 ? 'measured' : 'assumed from published state',
     densityBasis: flow !== null && flow > 0 ? 'from measured flow' : 'assumed for the state',
+    lanes, laneBasis: published !== null && published >= 1 ? 'published' : 'assumed',
   };
+}
+
+/** Stable lane for a dot (same road id and index give the same lane across refreshes). */
+export function laneOf(id: string, dotIndex: number, lanes: number): number {
+  if (lanes <= 1) return 0;
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
+  h = Math.imul(h ^ (dotIndex + 1), 2246822507) >>> 0;
+  return h % lanes;
+}
+
+/** Sideways offset of a lane's centre from the drawn road line, in metres (positive to the right of travel). The
+ * line is treated as the middle of the carriageway because the sources do not say which edge they trace. */
+export function laneOffsetM(lane: number, lanes: number): number {
+  return (lane - (lanes - 1) / 2) * LANE_WIDTH_M;
 }
 
 /** Dot colours by published road state (Okabe–Ito, as the traffic-flow lines), so congestion reads at a glance. */

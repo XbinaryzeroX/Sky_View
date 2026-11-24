@@ -63,6 +63,8 @@ import type { WindState } from './components/LayersPanel';
 import { nextPlayFrame, WEATHER_PLAY_FRAME_MS } from '../shared/weatherTimeline';
 import { enterGlobalPicture, GLOBAL_PICTURE_HEIGHT_M, isTilted, leaveGlobalPicture, parseGlobalPictureState, type GlobalPictureState } from '../shared/viewModes';
 import { api, errorText } from './lib/api';
+import { dismissSplash, setSplashStatus } from './lib/splash';
+import { SPLASH_MAX_MS, splashDone, splashStatus } from '../shared/splash';
 import { localTime, quakeClass, SEVERITY_META, SEVERITY_ORDER } from './lib/format';
 
 const BASEMAP_CREDIT: Record<string, string> = {
@@ -91,6 +93,17 @@ export function App() {
     return () => window.removeEventListener('atlas-link-error', onLinkError);
   }, []);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Startup screen (index.html #boot): stays until state, globe and first tiles are in, or SPLASH_MAX_MS passes.
+  const [globeBuilt, setGlobeBuilt] = useState(false);
+  const [firstTiles, setFirstTiles] = useState(false);
+  const [splashTimedOut, setSplashTimedOut] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setSplashTimedOut(true), SPLASH_MAX_MS); return () => clearTimeout(t); }, []);
+  const splashReducedMotion = !!snap?.settings.reducedMotion;
+  useEffect(() => {
+    const p = { stateLoaded: !!snap, globeReady: globeBuilt, tilesLoaded: firstTiles, failed: !!loadError };
+    setSplashStatus(splashStatus(p));
+    if (splashDone(p, splashTimedOut ? SPLASH_MAX_MS : 0)) dismissSplash(splashReducedMotion);
+  }, [snap, globeBuilt, firstTiles, loadError, splashTimedOut, splashReducedMotion]);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [layers, setLayers] = useState<GlobeLayers>({ alerts: true, quakes: false, locations: true, radii: true, boundaries: true });
   const [severityFilter, setSeverityFilter] = useState<Set<AlertSeverity>>(new Set(SEVERITY_ORDER));
@@ -1281,7 +1294,9 @@ export function App() {
             showAirports={showAirports}
             sceneMode={sceneMode}
             lighting={lighting}
+            onFirstTiles={() => setFirstTiles(true)}
             onReady={(ok, err) => {
+              setGlobeBuilt(true);
               if (ok) {
                 try {
                   const raw = localStorage.getItem('atlas.lastCamera');

@@ -233,6 +233,8 @@ interface Props {
   /** Planning site view: dark imagery and dark grey buildings while the planning page is open. */
   siteLook?: boolean;
   onReady(ok: boolean, error?: string): void;
+  /** Called once, when the first visible tiles have finished loading after start-up (drives the startup screen). */
+  onFirstTiles?(): void;
   layerSnaps: Partial<Record<LayerId, LayerSnapshot>>;
   layersOn: LayerId[];
   trail: TrailPoint[] | null;
@@ -557,8 +559,11 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     }
     if (scene.sun) scene.sun.show = false;
     if (scene.moon) scene.moon.show = false;
+    let sawTiles = false, firstTilesSent = false;
     scene.globe.tileLoadProgressEvent.addEventListener((n: number) => {
       tilesPendingRef.current = n;
+      if (n > 0) sawTiles = true;
+      else if (sawTiles && !firstTilesSent) { firstTilesSent = true; propsRef.current.onFirstTiles?.(); }
     });
     scene.screenSpaceCameraController.inertiaSpin = 0.6;
     scene.screenSpaceCameraController.inertiaZoom = 0.5;
@@ -1593,6 +1598,8 @@ export const Globe = forwardRef<GlobeHandle, Props>(function Globe(props, ref) {
     if (!trafficSimRef.current) trafficSimRef.current = new TrafficSim(w, reducedRef.current);
     trafficSimRef.current.setRecords(simRecords ?? []);
   }, [simOn, simRecords, ready]);
+  // Seat the dots on Google's 3D surface while it shows (it sits above the globe's terrain), else on the terrain.
+  useEffect(() => { trafficSimRef.current?.setSurface(photorealOn ? tilesetRef.current : null); }, [photorealOn, simOn, simRecords, ready]);
   useEffect(() => { trafficSimRef.current?.setReduced(reduced); }, [reduced]);
   useEffect(() => () => { trafficSimRef.current?.destroy(); trafficSimRef.current = null; }, []);
   useEffect(() => () => { windOverlayRef.current?.destroy(); windOverlayRef.current = null; }, []);
