@@ -1808,3 +1808,108 @@ The owner approved a check with their Google key. It did not run: no mesh was re
 **Verified.** New test in `tests/nyc-zoom-crash.test.ts`: 3,000 parked aircraft worldwide plus 5 at JFK under the camera. Against the previous code, one sync made 3,005 lookups (test failed). Now it makes 5, and two more syncs make none. Typecheck; full suite 111 files, 1,510 tests; production build.
 
 **Not verified.** The owner's live zoom with this build. The owner reproduces the freeze reliably and will retry.
+
+## 2026-11-23: Startup screen with the logo
+
+**Changed**
+- `index.html`: an inline startup screen (`#boot`) that paints before the app code loads. The new Sky_View mark rises in, its orbit draws itself, and the satellite travels the orbit (SVG `animateMotion`). Corners, the wordmark (letter by letter), an indeterminate loading bar and a status line follow. Inline CSS only (the CSP already allows `'unsafe-inline'` styles); no remote assets. Under `prefers-reduced-motion` everything shows still.
+- `src/shared/splash.ts`: when the screen may go (state loaded, globe built and first tiles loaded; or a startup error; or `SPLASH_MAX_MS` = 15 s, so a slow or offline network never traps the user), and the status text ("Loading your settings…", "Building the globe…", "Loading map tiles…").
+- `src/renderer/lib/splash.ts`: updates the status line and fades the screen out (650 ms ease-out, slight scale and blur), then removes it. Removed at once with the app's reduced-motion setting or the OS preference.
+- `Globe.tsx`: optional `onFirstTiles` prop, called once when the first visible tiles finish loading. `App.tsx` combines it with state and globe readiness.
+
+**Verified**
+- `tests/splash.test.ts` (4 tests): the dismiss rule, the time limit and the error path, the status text, and the `index.html` markup the renderer drives (ids, reduced-motion rule, no remote assets).
+- Typecheck; full suite 112 files, 1,514 tests (8 unrelated 5 s timeouts under parallel load on the first run; all pass with `--maxWorkers=4`). The production build has no built-in keys.
+- Animation frames captured from the built `index.html` at 0.25, 0.7, 1.3 and 2.6 s.
+- Built app, throwaway profile, LED monitor: the screen was gone 6.4 s after navigation, before the 15 s limit, so it left on readiness.
+
+**Not verified:** the fade itself on screen (captures show the before state and the removal), the packaged installer, and a slow-network start.
+
+## 2026-11-23: far-side markers, traffic on the road surface, lanes, decluttering, aircraft colours
+
+Reported with four screenshots: new conflict reports showed through the globe, simulated traffic floated above the
+roads, labels piled up (SIM tags, camera tags, aircraft at regional zoom), and a request for per-lane real-time traffic
+and white airliners / yellow military aircraft.
+
+What changed:
+
+- **Far-side markers** (`map/layerRender.ts`). The horizon cull cached each marker's last shown state. A refresh that
+  swaps in fresh graphics (conflicts, launches, AQHI, rail, wildlife, bike share) resets them to shown, and the cache
+  then skipped the hide. The cull now compares against the marker's current `show`. Test:
+  `tests/far-side-markers.test.ts` (fails on the previous code, checked by restoring it).
+- **Traffic on the road surface** (`map/trafficSim.ts`). Dots took heights from the globe terrain only, and 0 m above
+  the ellipsoid where terrain was not loaded: about 30 m above New York streets, and above Google's 3D surface. They now
+  sample the photoreal mesh when it shows (`Cesium3DTileset.getHeight`), else terrain, else the geoid (never the bare
+  ellipsoid). Heights near the camera (6 km) are re-sampled, 300 points every 400 ms, as tiles load. Lift is 0.6 m.
+  On the 3D surface the dots are depth-tested, so buildings and overpasses hide them.
+- **Lanes** (`shared/trafficSim.ts`). Dots are spread across lanes, offset sideways from the drawn line (3.2 m per lane,
+  centred on the line), with a stable lane per dot. The lane count comes from a source `lanes` property where one is
+  published (none of the current sources publish one), else 2 is assumed (`laneBasis: 'assumed'`). **No public source
+  used here publishes per-lane counts or speeds**: NYC DOT and Paris give one speed or state per road link, so every
+  lane moves at that link's measured or assumed speed. The lane spread is part of the simulation, not data.
+- **Decluttering.**
+  - Camera tags are spaced: nearest first, a tag that would touch a card or another tag is dropped (its camera keeps its
+    map marker). `MAX_TAGS` is down from 30 to 20.
+  - SIM tags: at most 10 (was 40), 150 × 60 px apart (was 90 × 30), only below 2.5 km (was 4 km), and kept clear of
+    camera cards and tags through a small screen-reservation module (`lib/screenReserve.ts`).
+  - Aircraft icons shrink with distance more steeply (`NearFarScalar(3e4, 1, 2.5e6, 0.38)`) in both the bulk and
+    entity paths.
+- **Aircraft colours** (`shared/aircraft.ts`, `TrafficBar.tsx`). Airliners are white, by ICAO type family or ADS-B size
+  category A3–A5, cargo airliners included. Military is yellow, by the military layer, the military flag or a fighter
+  type. Everything else is blue. The altitude colour ramp is replaced by a three-entry legend with text. Altitude stays
+  in each label and the details. The selection outline is now orange, since yellow means military.
+
+Verified: `npm run typecheck` passes. `npx vitest run --maxWorkers=4` gives 115 files and 1,523 tests, all passing.
+New tests: `far-side-markers`, `traffic-lanes` (surface seating, lane spread, lane basis), `aircraft-colors`, and a
+camera-tag spacing case in `group5`. `npm run build` passes with `ATLAS_WATCH_BUILTIN_KEYS` pointing at `{}`, and it
+printed "Built-in credential providers: none".
+
+Changed test: in `group5`, the first camera-card case asserted that every camera got a card or a tag. Spacing now drops
+tags that would overlap, so it asserts at most that number and at least one tag. The new spacing case checks the
+overlap rule directly.
+
+Not verified:
+
+- None of this was exercised in the running app.
+- The photoreal seating was not checked on Google's 3D tiles, because that is a metered request. It is covered by unit
+  tests with a stub surface only.
+- Neither the aircraft colours on live ADS-B data nor the decluttering at Midtown density were looked at.
+
+Remaining: an in-app check with a throwaway profile; real lane counts if a source with lane attributes is added.
+
+## 2026-11-23 (later): traffic lines "in the water", smoother cable lines
+
+**Traffic lines.** Reported: some traffic-flow lines looked off the road or in the East River near Corlears Hook.
+Checked against the source and an independent map:
+
+- NYC Open Data (`i4gi-tjb9`, free, no key) was fetched for every FDR Drive link. The encoded line of each
+  NYC DOT FDR link between 40.705° and 40.725° N was compared with OpenStreetMap's `FDR Drive` ways, fetched once
+  from the public Overpass API for this diagnosis only (the app does not use Overpass).
+- Every published point is within 25 m of OSM's FDR Drive except three on FDR S near the Brooklyn Bridge (33, 32 and
+  46 m).
+- The app draws the published lines without any offset.
+- In the running app (dev smoke, throwaway profile, keyless Atlas imagery, top-down and tilted views at Corlears Hook)
+  both directions and their simulated dots sit on the drive. Screenshots:
+  `docs/screenshots/cables-traffic-2026-11-23/fdr-corlears-hook-*.png`.
+
+The reported view was not reproduced. No change was made to the traffic geometry: shapes are drawn as published and
+never repaired. Not yet known: the exact place, basemap, imagery year and 2D/3D mode of the user's view.
+
+**Cable lines.** Under-water cables were ground-clamped polylines, which broke into beads at ocean scale. They are now
+one batched geodesic `PolylineGeometry` primitive 60 m above the sea surface. The terrain draws the sea at 0 m, and the
+globe still hides the far side. Corners are rounded for display by `smoothCableLine` (`shared/cables.ts`): each
+corner becomes a short curve that starts and ends at most 12 km, and at most a quarter of the leg, from the mapped
+vertex. Ends are kept. The date line is unwrapped. The layer note says so. Record details and picking keep the
+mapped points. Under-ground cables stay ground-clamped and unsmoothed.
+
+Verified:
+
+- `npm run typecheck` passes.
+- `npx vitest run --maxWorkers=4` gives 116 files and 1,527 tests, all passing. This includes the new
+  `tests/cable-smoothing.test.ts` (ends kept, corner limit, short legs, date line).
+- `npm run build` passes with no built-in keys ("Built-in credential providers: none").
+- Dev smoke with a throwaway profile shows solid, continuous cable lines with rounded corners:
+  `cables-smoothed-atlantic.png`.
+
+Not verified: the cable look over Indonesia (the smoke view opened on the Atlantic), cable picking, and the selected
+cable highlight in the app.

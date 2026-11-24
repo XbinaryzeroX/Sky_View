@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import listFixture from './fixtures/usgs-ground-failure-list.json';
 import detailFixture from './fixtures/usgs-ground-failure-us7000tymu.json';
-import { CARD_H, CARD_MAX_DISTANCE_M, CARD_W, cameraTag, NEXT_FRAME_COOLDOWN_MS, placeCameraCards, TAG_MAX_DISTANCE_M } from '../src/shared/cameraCards';
+import { CARD_H, CARD_MAX_DISTANCE_M, CARD_W, cameraTag, MAX_TAGS, NEXT_FRAME_COOLDOWN_MS, placeCameraCards, TAG_MAX_DISTANCE_M, tagBox } from '../src/shared/cameraCards';
 import { SIM_STATE_COLOR, simRoad, simTag } from '../src/shared/trafficSim';
 import { landslideRecord, landslideRecords, listedLandslideEvents, LANDSLIDE_DETAIL_URL, LANDSLIDE_LIST_URL } from '../src/shared/landslides';
 import { parseVoiceCommand } from '../src/shared/voiceCommands';
@@ -32,7 +32,23 @@ describe('floating camera cards', () => {
       expect(a.top + CARD_H).toBeLessThanOrEqual(800);
       for (const b of cards) if (a !== b) expect(a.left + CARD_W <= b.left || b.left + CARD_W <= a.left || a.top + CARD_H <= b.top || b.top + CARD_H <= a.top).toBe(true);
     }
-    expect(tags.length + cards.length).toBe(12);
+    // Every camera gets a card or a tag unless its tag would sit on top of something already drawn (next test).
+    expect(tags.length + cards.length).toBeLessThanOrEqual(12);
+    expect(tags.length).toBeGreaterThan(0);
+  });
+  it('spaces tags so they never cover each other or a card (dense blocks stacked into a column, 2026-11-23)', () => {
+    // 40 cameras packed into one block, 6 px apart.
+    const cams = Array.from({ length: 40 }, (_, i) => ({ id: `c${i}`, x: 500 + (i % 8) * 6, y: 400 + Math.floor(i / 8) * 6, hasImage: true, distM: 500 + i }));
+    const { cards, tags } = placeCameraCards(cams, 1280, 800, 3);
+    expect(tags.length).toBeGreaterThan(0);
+    expect(tags.length).toBeLessThanOrEqual(MAX_TAGS);
+    const boxes = tags.map(tagBox);
+    const hit = (a: { left: number; top: number; right: number; bottom: number }, b: typeof a) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+    for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) expect(hit(boxes[i], boxes[j])).toBe(false);
+    for (const c of cards) for (const b of boxes) expect(hit({ left: c.left, top: c.top, right: c.left + CARD_W, bottom: c.y }, b)).toBe(false);
+    // Spread-out cameras all keep their tags, nearest first.
+    const spread = Array.from({ length: 5 }, (_, i) => ({ id: `s${i}`, x: 100 + i * 200, y: 600, hasImage: false, distM: 1000 + i }));
+    expect(placeCameraCards(spread, 1280, 800).tags.map((t) => t.id)).toEqual(['s0', 's1', 's2', 's3', 's4']);
   });
   it('ignores off-screen cameras, keeps cards clear of reserved panels, and builds tags from ids only', () => {
     const { cards, tags } = placeCameraCards([{ id: 'a', x: -5, y: 10, hasImage: true, distM: 200 }, { id: 'b', x: 600, y: 400, hasImage: true, distM: 200 }], 1200, 800, 5, [{ left: 0, top: 0, right: 1200, bottom: 800 }]);

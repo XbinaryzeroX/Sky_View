@@ -3,11 +3,12 @@
 // the publisher's latest still, reloaded at the publisher's interval; nothing here is live video or analysis.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Cartesian3, Cartographic, EllipsoidalOccluder, SceneTransforms, type CesiumWidget } from 'cesium';
-import { CARD_H, CARD_W, cameraTag, camerasNear, NEXT_FRAME_COOLDOWN_MS, placeCameraCards, TAG_MAX_DISTANCE_M, type PlacedCard, type ScreenCamera } from '../../shared/cameraCards';
+import { CARD_H, CARD_W, cameraTag, camerasNear, NEXT_FRAME_COOLDOWN_MS, placeCameraCards, TAG_MAX_DISTANCE_M, tagBox, type PlacedCard, type ScreenCamera } from '../../shared/cameraCards';
 import { Maximize2, RefreshCw } from 'lucide-react';
 import type { GeoRecord } from '../../shared/layers';
 import { refreshedImageUrl } from '../lib/cameraRecovery';
 import { relativeTime } from '../lib/format';
+import { setReservedBoxes } from '../lib/screenReserve';
 
 interface Props {
   widget: CesiumWidget | null;
@@ -39,7 +40,7 @@ export function CameraCards({ widget, records, enabled, onOpen }: Props) {
       last = performance.now();
       const here = widget.camera.positionCartographic;
       const height = here.height;
-      if (height > TAG_MAX_DISTANCE_M) { shown.current = new Set(); setLayout((l) => (l.cards.length || l.tags.length ? { cards: [], tags: [] } : l)); return; }
+      if (height > TAG_MAX_DISTANCE_M) { shown.current = new Set(); setReservedBoxes('cameras', []); setLayout((l) => (l.cards.length || l.tags.length ? { cards: [], tags: [] } : l)); return; }
       const canvas = scene.canvas;
       const eye = widget.camera.positionWC;
       // Horizon test from the camera position (an ellipsoid-radius shortcut fails at street height in mid-latitudes).
@@ -68,6 +69,8 @@ export function CameraCards({ widget, records, enabled, onOpen }: Props) {
       }).filter((r) => r.right > r.left && r.bottom > r.top);
       const next = placeCameraCards(cams, canvas.clientWidth, canvas.clientHeight, undefined, reserved, shown.current);
       shown.current = new Set(next.cards.map((c) => c.id));
+      // Simulated-traffic tags keep clear of these (they are drawn by the map, under the cards).
+      setReservedBoxes('cameras', [...next.cards.map((c) => ({ left: c.left, top: c.top, right: c.left + CARD_W, bottom: c.y })), ...next.tags.map(tagBox)]);
       setLayout(next);
     };
     // Every rendered frame, so cards stay on their street while the map moves instead of trailing behind it.
@@ -77,7 +80,7 @@ export function CameraCards({ widget, records, enabled, onOpen }: Props) {
     };
     const off = scene.postRender.addEventListener(schedule);
     update();
-    return () => { off(); clearTimeout(pending); };
+    return () => { off(); clearTimeout(pending); setReservedBoxes('cameras', []); };
   }, [widget, enabled]);
 
   useEffect(() => { widget?.scene.requestRender(); }, [records, widget]);

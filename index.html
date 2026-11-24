@@ -4,8 +4,79 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sky_View</title>
+    <!-- Startup screen: shown before the app code loads, removed by src/renderer/lib/splash.ts once the globe's
+         first tiles are in. Inline so it paints immediately; the CSP allows inline styles ('unsafe-inline'). -->
+    <style>
+      #boot { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 42%, #132332 0%, #0d141c 55%, #070b10 100%);
+        color: #dce4ec; font-family: 'Segoe UI', system-ui, sans-serif; transition: opacity 650ms cubic-bezier(0.16, 1, 0.3, 1), transform 650ms cubic-bezier(0.16, 1, 0.3, 1), filter 650ms ease; }
+      #boot.boot-done { opacity: 0; transform: scale(1.04); filter: blur(6px); pointer-events: none; }
+      #boot .bx { display: flex; flex-direction: column; align-items: center; gap: 26px; }
+      #boot svg.mark { width: 168px; height: 168px; filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.45)); animation: boot-rise 900ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+      #boot .orbit { stroke-dasharray: 760; stroke-dashoffset: 760; animation: boot-draw 1100ms cubic-bezier(0.65, 0, 0.35, 1) 200ms forwards; }
+      #boot .horizon { opacity: 0; animation: boot-fade 900ms ease 120ms forwards; }
+      #boot .corners { opacity: 0; animation: boot-fade 600ms ease 700ms forwards, boot-breathe 2400ms ease-in-out 1300ms infinite; }
+      #boot .sat { opacity: 0; animation: boot-fade 400ms ease 900ms forwards; }
+      #boot .word { font-size: 40px; font-weight: 700; letter-spacing: -0.03em; display: flex; align-items: baseline; }
+      #boot .word span { display: inline-block; opacity: 0; transform: translateY(14px); animation: boot-letter 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      #boot .word .us { width: 0.42em; height: 0.075em; margin: 0 0.04em; background: #5fc3d6; border-radius: 1px; }
+      #boot .bar { position: relative; width: 180px; height: 3px; border-radius: 2px; background: #1c2833; overflow: hidden; opacity: 0; animation: boot-fade 400ms ease 1000ms forwards; }
+      #boot .bar i { position: absolute; top: 0; bottom: 0; width: 38%; border-radius: 2px; background: linear-gradient(90deg, rgba(95, 195, 214, 0), #5fc3d6, rgba(95, 195, 214, 0)); animation: boot-sweep 1400ms cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+      #boot .status { font-size: 14px; color: #8b9cb0; letter-spacing: 0.02em; min-height: 1.2em; opacity: 0; animation: boot-fade 400ms ease 1100ms forwards; }
+      @keyframes boot-rise { from { opacity: 0; transform: translateY(16px) scale(0.92); } to { opacity: 1; transform: none; } }
+      @keyframes boot-draw { to { stroke-dashoffset: 0; } }
+      @keyframes boot-fade { to { opacity: 1; } }
+      @keyframes boot-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+      @keyframes boot-letter { to { opacity: 1; transform: none; } }
+      @keyframes boot-sweep { from { left: -40%; } to { left: 100%; } }
+      @media (prefers-reduced-motion: reduce) {
+        #boot, #boot * { animation: none !important; transition: none !important; }
+        #boot .orbit { stroke-dashoffset: 0; }
+        #boot .horizon, #boot .corners, #boot .sat, #boot .bar, #boot .status, #boot .word span { opacity: 1; transform: none; }
+      }
+    </style>
   </head>
   <body>
+    <div id="boot" role="status" aria-live="polite" aria-label="Loading Sky_View">
+      <div class="bx">
+        <svg class="mark" viewBox="0 0 512 512" aria-hidden="true">
+          <defs>
+            <linearGradient id="bt-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#132332"/><stop offset="1" stop-color="#060b11"/></linearGradient>
+            <radialGradient id="bt-planet" cx="0.5" cy="0.18" r="0.75"><stop offset="0" stop-color="#1f5a6c"/><stop offset="0.55" stop-color="#103343"/><stop offset="1" stop-color="#08161f"/></radialGradient>
+            <linearGradient id="bt-rim" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5fc3d6" stop-opacity="0.15"/><stop offset="0.5" stop-color="#8fe3f2"/><stop offset="1" stop-color="#5fc3d6" stop-opacity="0.15"/></linearGradient>
+            <radialGradient id="bt-glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#e8a33a" stop-opacity="0.75"/><stop offset="1" stop-color="#e8a33a" stop-opacity="0"/></radialGradient>
+            <clipPath id="bt-tile"><rect x="16" y="16" width="480" height="480" rx="112"/></clipPath>
+            <clipPath id="bt-ball"><circle cx="256" cy="676" r="360"/></clipPath>
+          </defs>
+          <g clip-path="url(#bt-tile)">
+            <rect x="16" y="16" width="480" height="480" fill="url(#bt-bg)"/>
+            <g class="horizon">
+              <circle cx="256" cy="676" r="360" fill="url(#bt-planet)"/>
+              <g clip-path="url(#bt-ball)" fill="none" stroke="#5fc3d6" stroke-opacity=".28" stroke-width="5">
+                <ellipse cx="256" cy="676" rx="360" ry="250"/><ellipse cx="256" cy="676" rx="360" ry="130"/>
+                <ellipse cx="256" cy="676" rx="120" ry="360"/><ellipse cx="256" cy="676" rx="250" ry="360"/>
+              </g>
+              <circle cx="256" cy="676" r="360" fill="none" stroke="url(#bt-rim)" stroke-width="9"/>
+            </g>
+          </g>
+          <g transform="rotate(-16 256 236)">
+            <ellipse class="orbit" cx="256" cy="236" rx="176" ry="58" fill="none" stroke="#5fc3d6" stroke-width="9" stroke-linecap="round"/>
+            <g class="sat">
+              <circle r="46" fill="url(#bt-glow)"/>
+              <circle r="22" fill="#e8a33a" stroke="#0a1118" stroke-width="8"/>
+              <animateMotion dur="3.6s" repeatCount="indefinite" begin="0.9s" path="M 432 236 A 176 58 0 1 1 80 236 A 176 58 0 1 1 432 236"/>
+            </g>
+          </g>
+          <g class="corners" fill="none" stroke="#dce4ec" stroke-width="13" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M84 148 V108 Q84 84 108 84 H148"/><path d="M428 364 V404 Q428 428 404 428 H364" opacity=".85"/>
+          </g>
+        </svg>
+        <div class="word" aria-hidden="true">
+          <span style="animation-delay:520ms">S</span><span style="animation-delay:560ms">k</span><span style="animation-delay:600ms">y</span><span class="us" style="animation-delay:640ms"></span><span style="animation-delay:680ms">V</span><span style="animation-delay:720ms">i</span><span style="animation-delay:760ms">e</span><span style="animation-delay:800ms">w</span>
+        </div>
+        <div class="bar" aria-hidden="true"><i></i></div>
+        <div class="status" id="boot-status">Starting…</div>
+      </div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/renderer/main.tsx"></script>
   </body>

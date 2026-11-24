@@ -8,6 +8,9 @@ import {
   PointPrimitiveCollection,
   GroundPolylinePrimitive,
   GroundPolylineGeometry,
+  PolylineGeometry,
+  Primitive,
+  ArcType,
   GeometryInstance,
   ColorGeometryInstanceAttribute,
   PolylineColorAppearance,
@@ -46,9 +49,9 @@ import { classifyAircraft, classifyVessel } from '../../shared/vehicleClass';
 import { aircraftSymbol, vesselSymbol } from './symbols';
 import { eciToGeodetic, gstime, propagate, twoline2satrec, type SatRec } from 'satellite.js';
 import type { GeoRecord, LayerId } from '../../shared/layers';
-import { CABLE_STYLE } from '../../shared/cables';
+import { CABLE_STYLE, smoothCableLine } from '../../shared/cables';
 import { LANDSLIDE_ALERT_META } from '../../shared/landslides';
-import { altitudeColor, drawnPosition, MAX_EXTRAPOLATION_S, passengerMotionEndMs, passengerPose, passengerVisualBank, passesFilter, specialCode, trackState, updatePassengerMotion, type AircraftFilter, type PassengerMotion } from '../../shared/aircraft';
+import { AIRCRAFT_ROLE_COLOR, aircraftColorRole, drawnPosition, MAX_EXTRAPOLATION_S, passengerMotionEndMs, passengerPose, passengerVisualBank, passesFilter, specialCode, trackState, updatePassengerMotion, type AircraftFilter, type PassengerMotion } from '../../shared/aircraft';
 import { COCKPIT_CONTACT_RANGE_M } from '../../shared/trackingCamera';
 import { pitchFromRates } from '../../shared/vehicleDims';
 import { aircraftAppearance, vesselAppearance } from './vehicleAppearance';
@@ -166,13 +169,18 @@ function glyph(kind: 'plane' | 'ship' | 'camera' | 'storm' | 'sat', fill: string
 }
 
 const C = (css: string) => Color.fromCssColorString(css);
+/** Whether an entity's marker is currently set to show (graphics without a show value are shown). */
+function shownNow(e: Entity, t: JulianDate): boolean {
+  const g = e.point ?? e.billboard ?? e.label;
+  return g?.show ? g.show.getValue(t) !== false : true;
+}
 function metarColor(category: string | null): Color {
   return C(METAR_COLORS.get(category ?? '') ?? METAR_UNKNOWN_COLOR);
 }
 
-function aircraftColor(r: GeoRecord): string {
-  // Color encodes reported altitude (legend: GND → FL400). Special codes are outlined separately.
-  return altitudeColor(typeof r.props.altitudeFt === 'number' ? r.props.altitudeFt : null, r.props.onGround === true);
+function aircraftColor(r: GeoRecord, layer: 'aircraft' | 'aircraftMil'): string {
+  // Airliners white, military yellow, others blue (legend in the traffic bar). Special codes are outlined separately.
+  return AIRCRAFT_ROLE_COLOR[aircraftColorRole(r, layer)];
 }
 function vesselColor(r: GeoRecord): string {
   switch (r.category) {
@@ -222,6 +230,9 @@ const KEEP_EDGE_RADIUS_M = 3000;
 
 /** Above this many records a vehicle layer is drawn as one batched billboard collection. */
 const BULK_THRESHOLD = 1500;
+/** Height of under-water cable lines: above the 0 m sea surface the terrain draws, low enough to read as on it. */
+const SEA_CABLE_HEIGHT_M = 60;
+const AIRCRAFT_ICON_SCALE = new NearFarScalar(3e4, 1, 2.5e6, 0.38);
 
 export class LayerRenderer {
   private sources = new Map<LayerId, CustomDataSource>();
@@ -232,7 +243,6 @@ export class LayerRenderer {
   /** Dashed line from the selected satellite straight down to the point under it, so its height above the earth reads. */
   private nadirEntity: Entity | null = null;
   /** Last horizon visibility written per entity, so unchanged markers are not touched (see cullBehindEarth). */
-  private horizonShown = new WeakMap<Entity, boolean>();
   /** Label of the selected camera (cameras are batched icons without per-icon labels). */
   private cameraLabel: Entity | null = null;
   /** Replay time for satellite positions (calculated from the elements for that moment); null follows the clock. */
@@ -247,7 +257,7 @@ export class LayerRenderer {
   /** Static reference layers with thousands of sites (data centres, dams): one batched point collection each. */
   private staticPoints = new Map<LayerId, { coll: PointPrimitiveCollection; byId: Map<string, PointPrimitive>; selected: string | null }>();
   /** Traffic flow: road lines as one ground-clamped primitive (rebuilt per update), sensors as one point collection. */
-  private cableDraw: { lines: GroundPolylinePrimitive | null; picked: GroundPolylinePrimitive | null; key: string; pickedId: string | null; show: boolean } = { lines: null, picked: null, key: '', pickedId: null, show: true };
+  private cableDraw: { lines: GroundPolylinePrimitive | null; sea: Primitive | null; picked: GroundPolylinePrimitive | Primitive | null; key: string; pickedId: string | null; show: boolean } = { lines: null, sea: null, picked: null, key: '', pickedId: null, show: true };
   private flowDraw: { lines: GroundPolylinePrimitive | null; points: PointPrimitiveCollection | null; show: boolean } = { lines: null, points: null, show: true };
   private smooth = true;
   private passengerMotions = new Map<string, PassengerMotion>();
@@ -583,7 +593,8 @@ export class LayerRenderer {
     }
     const now = Date.now();
     const keep = new Set<string>();
-    const near = id === 'vessels' ? new NearFarScalar(2e4, 1, 3e6, 0.4) : new NearFarScalar(5e4, 1, 8e6, 0.45);
+    // Aircraft shrink from 30 km out so a busy region does not pile up (full size close in, 38% from 2,500 km).
+    const near = id === 'vessels' ? new NearFarScalar(2e4, 1, 3e6, 0.4) : AIRCRAFT_ICON_SCALE;
     for (const r of records) {
       keep.add(r.id);
       const sel = opts.selectedLayer === id && opts.selectedId === r.id;
@@ -658,8 +669,9 @@ export class LayerRenderer {
         const p = e.position?.getValue(now);
         if (!p) continue;
         const visible = !in3D || occluder.isPointVisible(horizonPoint(p));
-        if (this.horizonShown.get(e) === visible) continue;
-        this.horizonShown.set(e, visible);
+        // Compare with what the marker shows now, not a cached value: a refresh that swaps in fresh graphics
+        // (conflicts, launches, AQHI…) resets them to shown, and a stale cache then left far-side markers visible.
+        if (shownNow(e, now) === visible) continue;
         if (e.billboard) e.billboard.show = visible as never;
         if (e.label) e.label.show = visible as never;
         if (e.point) e.point.show = visible as never;
@@ -715,6 +727,7 @@ export class LayerRenderer {
     if (id === 'cables') {
       this.cableDraw.show = visible;
       if (this.cableDraw.lines) this.cableDraw.lines.show = visible;
+      if (this.cableDraw.sea) this.cableDraw.sea.show = visible;
       if (this.cableDraw.picked) this.cableDraw.picked.show = visible;
     }
     if (id === 'trafficFlow') {
@@ -843,35 +856,56 @@ export class LayerRenderer {
   private updateCables(records: GeoRecord[], opts: RenderOptions): void {
     const scene = this.widget.scene;
     const d = this.cableDraw;
-    const line = (r: GeoRecord, width: number, color: Color) => r.geometry?.type === 'LineString' && r.geometry.coordinates.length >= 2
-      ? new GeometryInstance({
-        id: `rec|cables|${r.id}`,
-        geometry: new GroundPolylineGeometry({ positions: Cartesian3.fromDegreesArray(r.geometry.coordinates.flatMap(([x, y]) => [x, y])), width }),
-        attributes: { color: ColorGeometryInstanceAttribute.fromColor(color) },
-      }) : null;
+    const isLine = (r: GeoRecord) => r.geometry?.type === 'LineString' && r.geometry.coordinates.length >= 2;
+    const ground = (r: GeoRecord, width: number, color: Color) => new GeometryInstance({
+      id: `rec|cables|${r.id}`,
+      geometry: new GroundPolylineGeometry({ positions: Cartesian3.fromDegreesArray((r.geometry!.coordinates as [number, number][]).flatMap(([x, y]) => [x, y])), width }),
+      attributes: { color: ColorGeometryInstanceAttribute.fromColor(color) },
+    });
+    // Under-water cables are plain geodesic lines just above the sea surface (the terrain draws the sea at 0 m). As
+    // ground-clamped lines they broke into beads at ocean scale; corners are rounded for display (smoothCableLine).
+    const sea = (r: GeoRecord, width: number, color: Color) => new GeometryInstance({
+      id: `rec|cables|${r.id}`,
+      geometry: new PolylineGeometry({ positions: Cartesian3.fromDegreesArrayHeights(smoothCableLine(r.geometry!.coordinates as [number, number][]).flatMap(([x, y]) => [x, y, SEA_CABLE_HEIGHT_M])), width, arcType: ArcType.GEODESIC, vertexFormat: PolylineColorAppearance.VERTEX_FORMAT }),
+      attributes: { color: ColorGeometryInstanceAttribute.fromColor(color) },
+    });
+    const drop = (p: GroundPolylinePrimitive | Primitive | null) => {
+      if (!p) return;
+      if (p instanceof GroundPolylinePrimitive) scene.groundPrimitives.remove(p);
+      else scene.primitives.remove(p);
+    };
     const key = records.length + '|' + (records[0]?.id ?? '') + '|' + (records[records.length - 1]?.id ?? '');
     if (key !== d.key) {
       d.key = key;
-      if (d.lines) { scene.groundPrimitives.remove(d.lines); d.lines = null; }
-      const instances: GeometryInstance[] = [];
+      drop(d.lines); d.lines = null;
+      drop(d.sea); d.sea = null;
+      const landLines: GeometryInstance[] = [];
+      const seaLines: GeometryInstance[] = [];
       for (const r of records) {
-        const style = CABLE_STYLE[r.category === 'submarine' ? 'submarine' : 'underground'];
-        const g = line(r, style.width, C(style.color).withAlpha(0.9));
-        if (g) instances.push(g);
+        if (!isLine(r)) continue;
+        const under = r.category === 'submarine';
+        const style = CABLE_STYLE[under ? 'submarine' : 'underground'];
+        if (under) seaLines.push(sea(r, style.width, C(style.color).withAlpha(0.9)));
+        else landLines.push(ground(r, style.width, C(style.color).withAlpha(0.9)));
       }
-      if (instances.length) {
-        d.lines = scene.groundPrimitives.add(new GroundPolylinePrimitive({ geometryInstances: instances, appearance: new PolylineColorAppearance(), asynchronous: true })) as GroundPolylinePrimitive;
+      if (landLines.length) {
+        d.lines = scene.groundPrimitives.add(new GroundPolylinePrimitive({ geometryInstances: landLines, appearance: new PolylineColorAppearance(), asynchronous: true })) as GroundPolylinePrimitive;
         d.lines.show = d.show;
+      }
+      if (seaLines.length) {
+        d.sea = scene.primitives.add(new Primitive({ geometryInstances: seaLines, appearance: new PolylineColorAppearance({ translucent: true }), asynchronous: true })) as Primitive;
+        d.sea.show = d.show;
       }
     }
     const sel = opts.selectedLayer === 'cables' ? opts.selectedId ?? null : null;
     if (sel !== d.pickedId || (sel && !d.picked)) {
       d.pickedId = sel;
-      if (d.picked) { scene.groundPrimitives.remove(d.picked); d.picked = null; }
+      drop(d.picked); d.picked = null;
       const r = sel ? records.find((x) => x.id === sel) : undefined;
-      const g = r ? line(r, 6, Color.WHITE) : null;
-      if (g) {
-        d.picked = scene.groundPrimitives.add(new GroundPolylinePrimitive({ geometryInstances: [g], appearance: new PolylineColorAppearance(), asynchronous: true })) as GroundPolylinePrimitive;
+      if (r && isLine(r)) {
+        d.picked = r.category === 'submarine'
+          ? scene.primitives.add(new Primitive({ geometryInstances: [sea(r, 5, Color.WHITE)], appearance: new PolylineColorAppearance(), asynchronous: true })) as Primitive
+          : scene.groundPrimitives.add(new GroundPolylinePrimitive({ geometryInstances: [ground(r, 6, Color.WHITE)], appearance: new PolylineColorAppearance(), asynchronous: true })) as GroundPolylinePrimitive;
         d.picked.show = d.show;
       }
     }
@@ -1338,7 +1372,7 @@ export class LayerRenderer {
   /** Class silhouette (exact type → family → category → unknown), with a ring when selected. */
   private iconFor(id: LayerId, r: GeoRecord, selected: boolean): string {
     if (id === 'vessels') return vesselSymbol(classifyVessel(typeof r.props.shipType === 'number' ? r.props.shipType : null).symbol, vesselColor(r), 30, selected ? '#ffd84a' : undefined);
-    if (id === 'aircraft' || id === 'aircraftMil') return aircraftSymbol(classifyAircraft(r.props.type as string | null, r.props.emitterCategory as string | null).symbol, aircraftColor(r), 40, selected ? '#ffd84a' : undefined);
+    if (id === 'aircraft' || id === 'aircraftMil') return aircraftSymbol(classifyAircraft(r.props.type as string | null, r.props.emitterCategory as string | null).symbol, aircraftColor(r, id), 40, selected ? '#ff9f43' : undefined); // orange: yellow now means military
     return glyph('plane', '#fff');
   }
 
@@ -1375,7 +1409,7 @@ export class LayerRenderer {
             rotation: this.rotationFor(pose),
             alignedAxis: Cartesian3.UNIT_Z,
             scale: selected ? 1.35 : 1,
-            scaleByDistance: new NearFarScalar(5e4, 1, 8e6, 0.45),
+            scaleByDistance: AIRCRAFT_ICON_SCALE,
             // Airborne: depth-tested (hidden behind 3D buildings and Google 3D tiles). Parked: never (see depthTestFor).
             // The far side of the earth is culled in cullBehindEarth().
             disableDepthTestDistance: this.depthTestFor(id, r),

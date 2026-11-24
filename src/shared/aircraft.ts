@@ -4,6 +4,7 @@
 
 import type { GeoRecord } from './layers';
 import { geodesicDistanceKm } from './geo';
+import { classifyAircraft } from './vehicleClass';
 
 export const STALE_AFTER_S = 60;
 export const EXPIRE_AFTER_S = 300;
@@ -19,6 +20,23 @@ export const ALTITUDE_STOPS: { ft: number; color: string; label: string }[] = [
   { ft: 30000, color: '#eb5757', label: 'FL300' },
   { ft: 40000, color: '#bb6bd9', label: 'FL400' },
 ];
+
+/**
+ * Icon colour roles. Airliners (wide-body, narrow-body and regional jets, by ICAO type or ADS-B emitter category
+ * A3-A5) are white, military aircraft yellow, everything else blue. Fixed colours rather than the altitude ramp,
+ * whose 10,000 ft yellow would read as military. Cargo airliners count as airliners: the data does not say who is on
+ * board. Altitude stays in labels, details and the altitude filter. The legend names each colour in text.
+ */
+export type AircraftColorRole = 'military' | 'airliner' | 'other';
+export const AIRCRAFT_ROLE_COLOR: Record<AircraftColorRole, string> = { airliner: '#ffffff', military: '#ffd400', other: '#56b4e9' };
+export const AIRCRAFT_ROLE_LABEL: Record<AircraftColorRole, string> = { airliner: 'Airliners', military: 'Military', other: 'Other aircraft' };
+const AIRLINER_SYMBOLS = new Set(['widebody', 'narrowbody', 'regional']);
+
+export function aircraftColorRole(r: GeoRecord, layer: 'aircraft' | 'aircraftMil' = 'aircraft'): AircraftColorRole {
+  if (layer === 'aircraftMil' || r.props.militaryFlag === true || isFighterType(r.props.type)) return 'military';
+  const sym = classifyAircraft(typeof r.props.type === 'string' ? r.props.type : null, typeof r.props.emitterCategory === 'string' ? r.props.emitterCategory : null).symbol;
+  return AIRLINER_SYMBOLS.has(sym) ? 'airliner' : 'other';
+}
 
 function hex(c: string): [number, number, number] {
   return [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)];

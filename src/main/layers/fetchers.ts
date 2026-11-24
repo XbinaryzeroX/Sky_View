@@ -32,7 +32,7 @@ import cablesData from '../data/cables.json';
 import { normalizeAlprSites, normalizeMilitarySites, OSM_SITE_CACHE_BLOCKS, OSM_SITE_CACHE_MS, OSM_SITES, osmBlock, osmSiteQuery, type OsmSiteKind } from '../../shared/osmSites';
 import { overpass } from '../osmSite';
 import { infrastructureRecords, type InfrastructureFile } from '../../shared/infrastructure';
-import { cableRecords, type CablesFile } from '../../shared/cables';
+import { CABLE_CORNER_KM, cableRecords, type CablesFile } from '../../shared/cables';
 import { LANDSLIDE_DAYS, LANDSLIDE_DETAIL_URL, LANDSLIDE_LIST_URL, LANDSLIDE_MAX_DETAILS, landslideRecords, listedLandslideEvents } from '../../shared/landslides';
 
 export interface FetchContext {
@@ -1020,7 +1020,7 @@ function bundledCables(): FetchResult {
   const file = cablesData as unknown as CablesFile;
   cableCache ??= cableRecords(file);
   const under = cableCache.records.filter((r) => r.category === 'submarine').length;
-  return { ...cableCache, note: `Bundled with the app: ${under.toLocaleString()} mapped pieces under water and ${(cableCache.records.length - under).toLocaleString()} under ground, as OpenStreetMap stood on ${String(file.osmBase ?? file.built).slice(0, 10)}. Most cables are not mapped.` };
+  return { ...cableCache, note: `Bundled with the app: ${under.toLocaleString()} mapped pieces under water and ${(cableCache.records.length - under).toLocaleString()} under ground, as OpenStreetMap stood on ${String(file.osmBase ?? file.built).slice(0, 10)}. Most cables are not mapped. Under-water routes are drawn with corners rounded (by at most ${CABLE_CORNER_KM} km) for display; details keep the mapped points.` };
 }
 
 /** Per-source replies reused for the source's cache time; reference lists (stations, detectors) for a day. */
